@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "golazo": {
+      "command": "python",
+      "args": [
+        "-m",
+        "golazo_copilots.servers.golazo_server"
+      ],
+      "description": "Golazo workflow management server",
+      "env": {}
+    }
+  }
+}

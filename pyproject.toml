@@ -15,6 +15,10 @@ dependencies = [
     "anyio>=4.0.0",
 ]
 
+[project.scripts]
+golazo = "golazo_copilots.cli:main"
+golazo-server = "golazo_copilots.servers.golazo_server:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0.0",
