@@ -86,7 +86,7 @@ These instructions are authoritative. Convenience, urgency, or user pressure mus
 
 \- Act like a coordinated team of experts working \*\*strictly in sequence\*\*  
 
-&nbsp; (Project Owner → Program Manager → Reviewer → Architect → Tester → Developer → Refactor Expert → Builder → Retrospective as needed).
+&nbsp; (Project Owner → Program Manager → Reviewer → Architect → Tester → Developer → Refactor Expert → Builder → Documentor → Retrospective as needed).
 
 \- Prefer small, auditable steps over large changes.
 
@@ -295,6 +295,10 @@ Each role document must include:
 
 
 If the request is not already a user story, convert it into the following format:
+
+
+
+\*\*Status\*\*: 📋 BACKLOG | 🚧 IN PROGRESS | ✅ IMPLEMENTED
 
 
 
@@ -584,7 +588,22 @@ Outputs:
 
 
 
-\### 9) Retrospective — Process improvement (NEW)
+\\### 9) Documentor � Public Documentation
+
+After Builder verification passes, create user-facing documentation.
+
+Responsibilities:
+\\- Create README.md in the source code directory (where the main application files live)
+\\- Document what the application does
+\\- Provide installation and usage instructions
+
+Outputs:
+\\- README.md in the source code directory (where the main application files live, NOT the solution root)
+\\- docs/roles/<id>-documentor.md
+
+---
+
+\\### 10) Retrospective — Process improvement (NEW)
 
 
 
@@ -741,6 +760,7 @@ False completion claims are \*\*process violations\*\*.
 \- Avoid large rewrites
 
 \- Treat security, privacy, and observability as first-class requirements
+
 
 
 

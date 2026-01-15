@@ -1,0 +1,116 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>8b94cddc-2ad1-49dc-8de2-95da0e8f0413</ProjectGuid>
+    <ProjectHome>.</ProjectHome>
+    <StartupFile>TicTacToe\tictactoe.py</StartupFile>
+    <SearchPath>
+    </SearchPath>
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <Name>TicTacToe</Name>
+    <RootNamespace>TicTacToe</RootNamespace>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <ItemGroup>
+    <Folder Include="docs\" />
+    <Folder Include="docs\design\" />
+    <Folder Include="docs\roles\" />
+    <Folder Include="docs\tests\" />
+    <Folder Include="docs\workitems\" />
+    <Folder Include="docs\workitems\Implemented\" />
+    <Folder Include="docs\workitems\NotImplemented\" />
+    <Folder Include="TicTacToe\" />
+    <Folder Include="TicTacToe\TicTacToe\" />
+    <Folder Include="TicTacToe\__pycache__\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="docs\design\WIP-001-design-review.md" />
+    <Content Include="docs\design\WIP-001-review-notes.md" />
+    <Content Include="docs\design\WIP-002-design-review.md" />
+    <Content Include="docs\design\WIP-002-review-notes.md" />
+    <Content Include="docs\design\WIP-007-design-review.md" />
+    <Content Include="docs\design\WIP-007-review-notes.md" />
+    <Content Include="docs\design\WIP-008-design-review.md" />
+    <Content Include="docs\design\WIP-008-review-notes.md" />
+    <Content Include="docs\roles\WIP-001-architect.md" />
+    <Content Include="docs\roles\WIP-001-builder.md" />
+    <Content Include="docs\roles\WIP-001-developer.md" />
+    <Content Include="docs\roles\WIP-001-program-manager.md" />
+    <Content Include="docs\roles\WIP-001-project-owner.md" />
+    <Content Include="docs\roles\WIP-001-refactor.md" />
+    <Content Include="docs\roles\WIP-001-reviewer.md" />
+    <Content Include="docs\roles\WIP-001-tester.md" />
+    <Content Include="docs\roles\WIP-002-architect.md" />
+    <Content Include="docs\roles\WIP-002-builder.md" />
+    <Content Include="docs\roles\WIP-002-developer.md" />
+    <Content Include="docs\roles\WIP-002-program-manager.md" />
+    <Content Include="docs\roles\WIP-002-project-owner.md" />
+    <Content Include="docs\roles\WIP-002-refactor.md" />
+    <Content Include="docs\roles\WIP-002-reviewer.md" />
+    <Content Include="docs\roles\WIP-002-tester.md" />
+    <Content Include="docs\roles\WIP-003-project-owner.md" />
+    <Content Include="docs\roles\WIP-004-project-owner.md" />
+    <Content Include="docs\roles\WIP-005-project-owner.md" />
+    <Content Include="docs\roles\WIP-006-project-owner.md" />
+    <Content Include="docs\roles\WIP-007-architect.md" />
+    <Content Include="docs\roles\WIP-007-builder.md" />
+    <Content Include="docs\roles\WIP-007-developer.md" />
+    <Content Include="docs\roles\WIP-007-program-manager.md" />
+    <Content Include="docs\roles\WIP-007-project-owner.md" />
+    <Content Include="docs\roles\WIP-007-refactor.md" />
+    <Content Include="docs\roles\WIP-007-reviewer.md" />
+    <Content Include="docs\roles\WIP-007-tester.md" />
+    <Content Include="docs\roles\WIP-008-architect.md" />
+    <Content Include="docs\roles\WIP-008-builder.md" />
+    <Content Include="docs\roles\WIP-008-developer.md" />
+    <Content Include="docs\roles\WIP-008-program-manager.md" />
+    <Content Include="docs\roles\WIP-008-project-owner.md" />
+    <Content Include="docs\roles\WIP-008-refactor.md" />
+    <Content Include="docs\roles\WIP-008-reviewer.md" />
+    <Content Include="docs\roles\WIP-008-tester.md" />
+    <Content Include="docs\tests\WIP-001-test-cases.md" />
+    <Content Include="docs\tests\WIP-002-test-cases.md" />
+    <Content Include="docs\tests\WIP-007-test-cases.md" />
+    <Content Include="docs\tests\WIP-008-test-cases.md" />
+    <Content Include="docs\workitems\Implemented\RETRO-001-retrospective.md" />
+    <Content Include="docs\workitems\Implemented\RETRO-002-retrospective.md" />
+    <Content Include="docs\workitems\Implemented\RETRO-003-retrospective.md" />
+    <Content Include="docs\workitems\Implemented\RETRO-004-retrospective.md" />
+    <Content Include="docs\workitems\Implemented\RETRO-005-retrospective.md" />
+    <Content Include="docs\workitems\Implemented\RETRO-006-retrospective.md" />
+    <Content Include="docs\workitems\Implemented\WIP-001-user-story.md" />
+    <Content Include="docs\workitems\Implemented\WIP-002-user-story.md" />
+    <Content Include="docs\workitems\Implemented\WIP-005-user-story.md" />
+    <Content Include="docs\workitems\Implemented\WIP-006-user-story.md" />
+    <Content Include="docs\workitems\Implemented\WIP-007-user-story.md" />
+    <Content Include="docs\workitems\NotImplemented\WIP-003-user-story.md" />
+    <Content Include="docs\workitems\NotImplemented\WIP-004-user-story.md" />
+    <Content Include="docs\workitems\WIP-008-user-story.md" />
+    <Content Include="TicTacToe\game_log.json" />
+    <Content Include="TicTacToe\__pycache__\PythonApplication2.cpython-313.pyc" />
+    <Content Include="TicTacToe\__pycache__\test_tictactoe.cpython-313.pyc" />
+    <Content Include="TicTacToe\__pycache__\tictactoe.cpython-313.pyc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="TicTacToe\test_tictactoe.py" />
+    <Compile Include="TicTacToe\tictactoe.py" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
+  <!-- Uncomment the CoreCompile target to enable the Build command in
+       Visual Studio and specify your pre- and post-build commands in
+       the BeforeBuild and AfterBuild targets below. -->
+  <!--<Target Name="CoreCompile" />-->
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+</Project>
