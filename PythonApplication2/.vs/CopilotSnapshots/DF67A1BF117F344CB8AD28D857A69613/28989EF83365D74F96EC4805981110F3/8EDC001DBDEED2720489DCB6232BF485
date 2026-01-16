@@ -1,0 +1,138 @@
+﻿# California Jack
+
+A 2-player trick-taking card game implemented with Python and Pygame.
+
+## About
+
+California Jack is a classic 2-player card game where players compete to capture valuable trump cards. This implementation provides a graphical interface for playing the game locally (hot-seat multiplayer).
+
+## Current Status
+
+**Version**: CALJACK-002 (Card Dealing)
+
+This release includes:
+- ? Main menu with New Game and Help options
+- ? State management system for screen navigation
+- ? Card dealing and initial game setup (CALJACK-002)
+- ?? Trick-taking mechanics (CALJACK-003)
+- ?? Scoring system (CALJACK-004)
+- ?? Win condition (CALJACK-005)
+- ?? Help screen with rules (CALJACK-006)
+
+## Requirements
+
+- Python 3.10+
+- Pygame 2.5+
+
+## Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Brentster311/Golazo-Copilots.git
+   cd Golazo-Copilots/PythonApplication2/PythonApplication2
+   ```
+
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+## Usage
+
+### Running the Game
+
+```bash
+python main.py
+```
+
+### Controls
+
+- **Mouse**: Click buttons to navigate
+- **Close Button (X)**: Exit the game
+
+### Main Menu
+
+From the main menu you can:
+- **New Game**: Start a new game with dealt cards
+- **Help**: View game rules (placeholder)
+
+### Game Screen
+
+When you start a new game:
+- **Your Hand**: 6 cards displayed face-up at the bottom
+- **Opponent's Hand**: 6 cards displayed face-down at the top
+- **Stock Pile**: 40 remaining cards with top card visible (left side)
+- **Trump Indicator**: Shows the trump suit (right side)
+- **Turn Indicator**: Shows whose turn it is (center)
+
+## Development
+
+### Running Tests
+
+```bash
+pip install pytest
+python -m pytest tests/ -v
+```
+
+### Project Structure
+
+```
+PythonApplication2/
+??? main.py                 # Entry point
+??? requirements.txt        # Dependencies
+??? pytest.ini              # Test configuration
+??? game/
+?   ??? constants.py        # Window size, colors, state names
+?   ??? state_manager.py    # State machine for screen navigation
+?   ??? models/
+?   ?   ??? card.py         # Card dataclass (suit, rank, values)
+?   ?   ??? deck.py         # Deck class (shuffle, deal, draw)
+?   ?   ??? california_jack.py  # Game state model
+?   ??? states/
+?   ?   ??? base_state.py   # Abstract state interface
+?   ?   ??? menu_state.py   # Main menu screen
+?   ?   ??? game_state.py   # Game screen with card display
+?   ?   ??? help_state.py   # Help screen (placeholder)
+?   ?   ??? placeholder_state.py  # Base for placeholder screens
+?   ??? ui/
+?       ??? button.py       # Reusable button component
+?       ??? card_renderer.py # Programmatic card rendering
+??? tests/
+    ??? test_card.py        # Card model tests
+    ??? test_deck.py        # Deck model tests
+    ??? test_game_state_model.py  # Game state tests
+    ??? test_constants.py
+    ??? test_menu_state.py
+    ??? test_state_manager.py
+```
+
+## Game Rules (Preview)
+
+California Jack will follow the classic rules:
+
+### Objective
+First player to 10 points wins.
+
+### Scoring (per hand)
+- **High**: Ace of trumps (1 point)
+- **Low**: 2 of trumps (1 point)  
+- **Jack**: Jack of trumps (1 point)
+- **Game**: Most counting card points (1 point)
+
+### Card Values (for "Game" point)
+- 10 = 10 points
+- Ace = 4 points
+- King = 3 points
+- Queen = 2 points
+- Jack = 1 point
+
+For complete rules, see [Bicycle Cards - California Jack](https://bicyclecards.com/how-to-play/california-jack/).
+
+## License
+
+This project is for educational purposes.
+
+## Credits
+
+- Game rules from [Bicycle Cards](https://bicyclecards.com/how-to-play/california-jack/)
+- Built with [Pygame](https://www.pygame.org/)

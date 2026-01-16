@@ -1,0 +1,144 @@
+﻿# User Story: CALJACK-001
+
+**Status**: BACKLOG
+
+---
+
+## User Story
+
+**Title**: California Jack Card Game with GUI
+
+**As a**: Player
+
+**I want**: A graphical implementation of the California Jack card game
+
+**So that**: I can play the classic 2-player trick-taking card game against another local player using an intuitive visual interface
+
+---
+
+## Out of Scope
+
+- AI opponent (planned for next iteration)
+- Network/online multiplayer
+- Sound effects
+- Save/load game state
+- Animations beyond basic card movement
+- Custom card deck themes
+
+---
+
+## Assumptions
+
+- **Assumption (explicit)**: Game runs on Windows desktop (primary target)
+- **Assumption (explicit)**: Players take turns on the same computer (hot-seat multiplayer)
+- **Assumption (explicit)**: Standard 52-card deck with no jokers
+- **Assumption (explicit)**: Pygame is the GUI framework
+- **Assumption (explicit)**: Card images will be generated programmatically or use simple representations
+
+---
+
+## Game Rules (from Bicycle Cards)
+
+### Rank of Cards
+A (high), K, Q, J, 10, 9, 8, 7, 6, 5, 4, 3, 2.
+
+### Deal
+- Deal cards either one or three at a time, beginning with the opponent, until each player has six cards
+- Remaining cards are squared and turned face up in the center of the table, serving as a stock
+- The top card determines the trump suit for that deal
+
+### The Play
+- The player on the dealer's left leads
+- The card led loses the trick to a higher card of the same suit or to a trump, but wins the trick otherwise
+- The winner of each trick leads next
+- The second player to each trick must either follow suit or trump, if possible
+- If unable to follow suit or trump, they may play any card
+- The winner of each trick draws the top card of the stock, and the loser takes the next card
+- Since the top card of the stock is always exposed, an object of play frequently is to win or lose a trick depending on whether the player wishes to draw the top card of the stock or take a chance on what the next card will be
+- When the stock is exhausted, the last six cards of each player's hand are played out until all cards have been played
+
+### Scoring
+One point each is scored for taking the tricks that contain:
+- **High**: Ace of trumps (1 point)
+- **Low**: Deuce (2) of trumps (1 point)
+- **Jack**: Jack of trumps (1 point)
+- **Game**: Greatest number of points in counting cards (1 point)
+  - Each ten = 10 points
+  - Each ace = 4 points
+  - Each king = 3 points
+  - Each queen = 2 points
+  - Each jack = 1 point
+
+### Winning
+- First player to score 10 points wins the game
+- If both players reach 10 in the same hand, points count in order: High, Low, Jack, Game
+
+---
+
+## Acceptance Criteria (bulleted, testable)
+
+### Game Setup
+- [ ] Game launches with a main menu offering "New Game" and "Help" options
+- [ ] New game initializes with a shuffled 52-card deck
+- [ ] Each player is dealt 6 cards at game start
+- [ ] Remaining deck is displayed face-up as the stock (top card visible)
+- [ ] Trump suit is determined by the top card of the stock and clearly indicated
+
+### Gameplay
+- [ ] Player 1 (non-dealer) leads the first trick
+- [ ] Players can only play valid cards (must follow suit or trump if able)
+- [ ] Invalid card plays are rejected with visual feedback
+- [ ] Trick winner is correctly determined based on rules
+- [ ] Winner of trick draws top card from stock; loser draws next card
+- [ ] Turn indicator shows whose turn it is
+- [ ] Cards in hand are displayed clearly for the current player
+- [ ] Stock shows top card face-up at all times until exhausted
+- [ ] Game continues until all cards are played (no stock + empty hands)
+
+### Scoring
+- [ ] High (Ace of trumps) awards 1 point to capturing player
+- [ ] Low (2 of trumps) awards 1 point to capturing player
+- [ ] Jack (Jack of trumps) awards 1 point to capturing player
+- [ ] Game (most counting card points) awards 1 point to winner
+- [ ] Tie in Game points results in no point awarded for Game
+- [ ] Score is displayed and updated after each hand
+- [ ] Game ends when a player reaches 10 points
+- [ ] Tiebreaker (both reach 10) resolved in order: High, Low, Jack, Game
+
+### User Interface
+- [ ] Cards are visually distinguishable (suit and rank clearly visible)
+- [ ] Current trump suit is always visible on screen
+- [ ] Player hands are displayed (current player's cards face-up)
+- [ ] Stock pile shows card count and top card
+- [ ] Won tricks area shows captured cards or count
+- [ ] Score display shows both players' current scores
+- [ ] Game over screen announces winner
+
+### Help Screen
+- [ ] Help screen accessible from main menu
+- [ ] Help screen displays complete rules (as provided above)
+- [ ] Help screen credits Bicycle Cards as source
+- [ ] Help screen includes clickable hyperlink to https://bicyclecards.com/how-to-play/california-jack/
+- [ ] Help screen has button/option to return to main menu
+
+---
+
+## Non-functional Requirements
+
+- Game should respond to user input within 100ms
+- Window should be resizable or have a reasonable fixed size (e.g., 1024x768)
+- Code should be structured to facilitate adding AI opponent in future iteration
+- Game state should be encapsulated to allow future save/load feature
+
+---
+
+## Telemetry / Metrics Expected
+
+- None for this iteration (local game only)
+
+---
+
+## Rollout / Rollback Notes
+
+- Initial release; no rollback considerations
+- Ensure pygame dependency is documented in requirements.txt

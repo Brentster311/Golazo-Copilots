@@ -1,0 +1,61 @@
+﻿# User Story: CALJACK-001
+
+**Status**: BACKLOG
+
+---
+
+## User Story
+
+**Title**: Main Menu and Game Window Foundation
+
+**As a**: Player
+
+**I want**: To launch the California Jack game and see a main menu with options
+
+**So that**: I can start a new game or access help before playing
+
+---
+
+## Out of Scope
+
+- Actual gameplay (see CALJACK-002)
+- Help screen content (see CALJACK-006)
+- Scoring display (see CALJACK-004)
+
+---
+
+## Assumptions
+
+- **Assumption (explicit)**: Game runs on Windows desktop (primary target)
+- **Assumption (explicit)**: Pygame is the GUI framework
+- **Assumption (explicit)**: Fixed window size of 1024x768
+
+---
+
+## Acceptance Criteria (bulleted, testable)
+
+- [ ] Game launches a pygame window (1024x768)
+- [ ] Main menu displays "New Game" button
+- [ ] Main menu displays "Help" button
+- [ ] Clicking "New Game" transitions to game screen (placeholder for CALJACK-002)
+- [ ] Clicking "Help" transitions to help screen (placeholder for CALJACK-006)
+
+---
+
+## Non-functional Requirements
+
+- Window responds to close button
+- Menu buttons respond within 100ms
+
+---
+
+## Telemetry / Metrics Expected
+
+- None
+
+---
+
+## Rollout / Rollback Notes
+
+- Initial release; creates foundation for subsequent stories
+- Ensure pygame in requirements.txt

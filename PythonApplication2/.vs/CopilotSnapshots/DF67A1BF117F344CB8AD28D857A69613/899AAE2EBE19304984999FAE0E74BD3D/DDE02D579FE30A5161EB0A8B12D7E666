@@ -1,0 +1,227 @@
+﻿# Review Notes: CALJACK-003
+
+**Work Item**: CALJACK-003 - Trick-Taking Gameplay and Card Drawing  
+**Reviewer**: Golazo Reviewer Role  
+**Date**: 2025-01-XX
+
+---
+
+## Review Summary
+
+**Verdict**: ✅ **Approved with minor observations**
+
+The User Story and Design Doc are clear, well-scoped, and feasible. The trick-taking logic is well-defined with proper California Jack rules.
+
+---
+
+## Clarity and Completeness
+
+| Aspect | Status | Notes |
+|--------|--------|-------|
+| User Story format | ✅ Pass | All required sections present |
+| Acceptance Criteria | ✅ Pass | 6 items, all testable |
+| Design Doc sections | ✅ Pass | All required sections present |
+| Requirements traceability | ✅ Pass | FR-001 through FR-008 map to ACs |
+| Rules reference | ✅ Pass | California Jack rules clearly stated |
+
+---
+
+## Feasibility and Sequencing
+
+| Aspect | Status | Notes |
+|--------|--------|-------|
+| Trick model | ✅ Pass | Clean separation of concerns |
+| Game state updates | ✅ Pass | Logical extension of CALJACK-002 |
+| UI interaction | ✅ Pass | Click-to-play is intuitive |
+| Rollout sequence | ✅ Pass | Model → Logic → UI |
+
+---
+
+## Risk Coverage
+
+| Risk | Coverage | Notes |
+|------|----------|-------|
+| Follow-suit logic bugs | ✅ Covered | Extensive unit tests planned |
+| Click detection | ✅ Covered | Right-to-left check for overlap |
+| Turn order | ✅ Covered | Clear indicator mentioned |
+
+---
+
+## Edge Cases and Failure Modes
+
+| Edge Case | Addressed? | Notes |
+|-----------|------------|-------|
+| Empty hand but stock remains | ⚠️ Minor | Should not happen with proper dealing |
+| Stock exhausted mid-trick | ✅ Yes | Rules state play 6 remaining tricks |
+| Both players have no valid play | ✅ N/A | Rules allow any card if can't follow/trump |
+| Rapid clicking | ⚠️ Minor | Consider debounce |
+
+---
+
+## Naming Clarity
+
+| Item | Status | Notes |
+|------|--------|-------|
+| `Trick` class | ✅ Good | Clear domain term |
+| `can_play_card()` | ✅ Good | Descriptive |
+| `resolve_trick()` | ✅ Good | Clear action |
+| `lead_card`, `follow_card` | ✅ Good | Domain appropriate |
+
+---
+
+## Observations (Non-Blocking)
+
+1. **Debounce clicks**: Consider preventing rapid double-clicks that could play two cards
+2. **Animation**: Brief card movement animation could improve UX (defer to future)
+3. **Trick history**: Consider storing trick history for review (defer to future)
+
+---
+
+## Changes Requiring New User Stories
+
+**None identified.**
+
+All observations are implementation details or future enhancements.
+
+---
+
+## Conclusion
+
+The design is sound, rules are correctly captured, and ready for Architect review.
+
+---
+---
+
+# Architect Notes: CALJACK-003
+
+**Work Item**: CALJACK-003 - Trick-Taking Gameplay and Card Drawing  
+**Architect**: Golazo Architect Role  
+**Date**: 2025-01-XX
+
+---
+
+## Architecture Review Summary
+
+**Verdict**: ✅ **Approved**
+
+The architecture extends the existing model cleanly with a new Trick class and game state methods. Contracts are clear and the design maintains separation of concerns.
+
+---
+
+## Architectural Alignment and Boundaries
+
+| Aspect | Status | Notes |
+|--------|--------|-------|
+| Model separation | ✅ Pass | Trick is a separate dataclass |
+| Game logic in model | ✅ Pass | `can_play_card`, `play_card`, `resolve_trick` in model |
+| UI handles display only | ✅ Pass | Click detection and rendering in UI |
+| State encapsulation | ✅ Pass | All game state in CaliforniaJackGame |
+
+---
+
+## APIs and Data Contracts
+
+### Trick Contract
+
+```python
+@dataclass
+class Trick:
+    lead_card: Optional[Card] = None
+    follow_card: Optional[Card] = None
+    lead_player: int = 1
+    
+    def is_complete(self) -> bool:
+        """Return True if both cards have been played."""
+    
+    def winner(self, trump_suit: str) -> int:
+        """Return player number (1 or 2) who won the trick."""
+```
+
+### CaliforniaJackGame Extended Contract
+
+```python
+@dataclass
+class CaliforniaJackGame:
+    # Existing fields...
+    current_trick: Optional[Trick] = None
+    
+    def get_legal_cards(self, player: int) -> List[Card]:
+        """Return list of cards the player can legally play."""
+    
+    def can_play_card(self, player: int, card: Card) -> bool:
+        """Return True if the card is a legal play."""
+    
+    def play_card(self, player: int, card: Card) -> None:
+        """Play a card from player's hand to current trick."""
+        # Raises ValueError if illegal play
+    
+    def resolve_trick(self) -> int:
+        """Resolve completed trick, return winner (1 or 2)."""
+    
+    def draw_cards(self, winner: int) -> None:
+        """Winner draws first, loser draws second from stock."""
+    
+    def is_game_over(self) -> bool:
+        """Return True if all 52 cards have been played."""
+```
+
+**Verdict**: ✅ Clear contracts defined.
+
+---
+
+## Security and Privacy
+
+| Concern | Status | Notes |
+|---------|--------|-------|
+| Card visibility | ✅ Noted | Hot-seat: opponent hand in memory but face-down |
+| Input validation | ✅ Pass | `can_play_card` validates before play |
+
+**Verdict**: ✅ No security concerns for local game.
+
+---
+
+## Failure Isolation
+
+| Failure Mode | Impact | Mitigation |
+|--------------|--------|------------|
+| Invalid card play | Game stuck | Validate and reject with feedback |
+| Click on non-card | No action | Check bounds before processing |
+| Stock empty during draw | Error | Check stock length before draw |
+
+**Recommendation**: Defensive checks in all public methods.
+
+---
+
+## Coupling and Blast Radius
+
+| Component | Coupling | Blast Radius |
+|-----------|----------|--------------|
+| Trick | Low (uses Card) | Trick resolution only |
+| CaliforniaJackGame | Medium (uses Trick, Card, Deck) | Core game logic |
+| GameState UI | Medium (uses CaliforniaJackGame) | Display and interaction |
+
+**Verdict**: ✅ Acceptable coupling.
+
+---
+
+## Changes Requiring New User Stories
+
+**None identified.**
+
+Architecture is sound and appropriate for scope.
+
+---
+
+## Architect Observations (Non-Blocking)
+
+1. **Method naming**: `get_legal_cards()` in addition to `can_play_card()` would simplify UI (can disable/gray out illegal cards in future)
+
+2. **State machine for trick**: Consider explicit states (WAITING_FOR_LEAD, WAITING_FOR_FOLLOW, COMPLETE) for clarity
+
+3. **Event system**: For future extensibility, consider events for card_played, trick_won, game_over (defer to later)
+
+---
+
+## Conclusion
+
+Architecture is appropriate, contracts are defined, separation of concerns maintained. Ready for Tester to create failing tests.

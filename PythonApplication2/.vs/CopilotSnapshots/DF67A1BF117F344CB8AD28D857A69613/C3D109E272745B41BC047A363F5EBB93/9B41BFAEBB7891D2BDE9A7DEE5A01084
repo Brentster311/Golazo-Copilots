@@ -1,0 +1,196 @@
+﻿"""Game state for California Jack - CALJACK-002."""
+
+from typing import Optional, List
+
+import pygame
+
+from game.states.base_state import BaseState
+from game.ui.button import Button
+from game.ui.card_renderer import CardRenderer, CARD_WIDTH, CARD_HEIGHT
+from game.models.california_jack import CaliforniaJackGame
+from game.models.card import Card
+from game.constants import (
+    WINDOW_WIDTH,
+    WINDOW_HEIGHT,
+    COLOR_BACKGROUND,
+    COLOR_WHITE,
+    STATE_MENU,
+)
+
+
+class GameState(BaseState):
+    """Game screen showing dealt cards, stock, and trump indicator."""
+
+    def __init__(self):
+        """Initialize game state with a new game."""
+        self.game: Optional[CaliforniaJackGame] = None
+        self.card_renderer = CardRenderer()
+        self.font = pygame.font.Font(None, 36)
+        self.small_font = pygame.font.Font(None, 24)
+        
+        # Back button
+        self.back_button = Button(
+            x=80,
+            y=WINDOW_HEIGHT - 50,
+            width=100,
+            height=40,
+            text="Back",
+        )
+        
+        # Start a new game
+        self._start_new_game()
+    
+    def _start_new_game(self) -> None:
+        """Start a new California Jack game."""
+        self.game = CaliforniaJackGame.new_game()
+    
+    def _draw_hand(
+        self, 
+        screen: pygame.Surface, 
+        cards: List[Card], 
+        y: int, 
+        face_up: bool = True,
+        label: str = ""
+    ) -> None:
+        """
+        Draw a player's hand.
+        
+        Args:
+            screen: Surface to draw on
+            cards: List of cards in hand
+            y: Y position for the hand
+            face_up: Whether to show cards face up
+            label: Label to show above the hand
+        """
+        # Draw label
+        if label:
+            label_surface = self.small_font.render(label, True, COLOR_WHITE)
+            label_rect = label_surface.get_rect(center=(WINDOW_WIDTH // 2, y - 20))
+            screen.blit(label_surface, label_rect)
+        
+        # Calculate hand layout
+        num_cards = len(cards)
+        if num_cards == 0:
+            return
+            
+        # Card spacing (overlap if many cards)
+        total_width = CARD_WIDTH + (num_cards - 1) * min(CARD_WIDTH + 10, 50)
+        start_x = (WINDOW_WIDTH - total_width) // 2
+        spacing = min(CARD_WIDTH + 10, 50)
+        
+        for i, card in enumerate(cards):
+            x = start_x + i * spacing
+            self.card_renderer.draw_card(screen, card, x, y, face_up=face_up)
+    
+    def _draw_stock(self, screen: pygame.Surface) -> None:
+        """Draw the stock pile with top card visible."""
+        if self.game is None:
+            return
+            
+        stock_x = 100
+        stock_y = WINDOW_HEIGHT // 2 - CARD_HEIGHT // 2
+        
+        # Draw stock count
+        stock_label = f"Stock: {len(self.game.stock)}"
+        label_surface = self.small_font.render(stock_label, True, COLOR_WHITE)
+        screen.blit(label_surface, (stock_x, stock_y - 25))
+        
+        # Draw top card face-up (California Jack rule)
+        top_card = self.game.stock.top_card()
+        if top_card:
+            self.card_renderer.draw_card(screen, top_card, stock_x, stock_y, face_up=True)
+        else:
+            # Empty stock
+            empty_label = self.small_font.render("Empty", True, COLOR_WHITE)
+            screen.blit(empty_label, (stock_x, stock_y + CARD_HEIGHT // 2))
+    
+    def _draw_trump_indicator(self, screen: pygame.Surface) -> None:
+        """Draw the trump suit indicator."""
+        if self.game is None:
+            return
+            
+        trump_x = WINDOW_WIDTH - 200
+        trump_y = WINDOW_HEIGHT // 2 - 30
+        
+        # Get suit display name
+        suit_names = {
+            'hearts': 'Hearts',
+            'diamonds': 'Diamonds',
+            'clubs': 'Clubs',
+            'spades': 'Spades'
+        }
+        suit_name = suit_names.get(self.game.trump_suit, self.game.trump_suit)
+        
+        # Color based on suit
+        if self.game.trump_suit in ('hearts', 'diamonds'):
+            color = (211, 47, 47)  # Red
+        else:
+            color = COLOR_WHITE
+        
+        # Draw trump label with full suit name
+        trump_label = f"Trump: {suit_name}"
+        label_surface = self.font.render(trump_label, True, color)
+        screen.blit(label_surface, (trump_x, trump_y))
+    
+    def _draw_turn_indicator(self, screen: pygame.Surface) -> None:
+        """Draw which player's turn it is."""
+        if self.game is None:
+            return
+            
+        turn_text = f"Player {self.game.current_player}'s Turn"
+        turn_surface = self.font.render(turn_text, True, COLOR_WHITE)
+        turn_rect = turn_surface.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2))
+        screen.blit(turn_surface, turn_rect)
+
+    def handle_event(self, event: pygame.event.Event) -> Optional[str]:
+        """
+        Handle game events.
+
+        Args:
+            event: Pygame event
+
+        Returns:
+            'menu' if back button clicked, None otherwise
+        """
+        if self.back_button.is_clicked(event):
+            return STATE_MENU
+        return None
+
+    def update(self, dt: float) -> None:
+        """Update game state."""
+        pass
+
+    def draw(self, screen: pygame.Surface) -> None:
+        """Draw the game screen."""
+        screen.fill(COLOR_BACKGROUND)
+        
+        if self.game:
+            # Draw Player 2's hand (top, face down for hot-seat)
+            self._draw_hand(
+                screen, 
+                self.game.player2_hand, 
+                y=50, 
+                face_up=False,  # Face down for opponent
+                label="Player 2"
+            )
+            
+            # Draw stock pile (left side)
+            self._draw_stock(screen)
+            
+            # Draw trump indicator (right side)
+            self._draw_trump_indicator(screen)
+            
+            # Draw turn indicator (center)
+            self._draw_turn_indicator(screen)
+            
+            # Draw Player 1's hand (bottom, face up)
+            self._draw_hand(
+                screen, 
+                self.game.player1_hand, 
+                y=WINDOW_HEIGHT - CARD_HEIGHT - 80,
+                face_up=True,
+                label="Player 1 (You)"
+            )
+        
+        # Draw back button
+        self.back_button.draw(screen)
