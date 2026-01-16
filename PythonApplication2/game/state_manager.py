@@ -1,5 +1,5 @@
 import pygame
-from game.constants import STATE_MENU, STATE_GAME, STATE_HELP
+from game.constants import STATE_MENU, STATE_GAME, STATE_HELP, STATE_SETTINGS
 
 class StateManager:
     def __init__(self):
@@ -18,6 +18,9 @@ class StateManager:
             elif state_name == STATE_HELP:
                 from game.states.help_state import HelpState
                 self._states[state_name] = HelpState()
+            elif state_name == STATE_SETTINGS:
+                from game.states.settings_state import SettingsState
+                self._states[state_name] = SettingsState()
         self._current_state = self._states[state_name]
         self._current_state_name = state_name
 
