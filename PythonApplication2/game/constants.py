@@ -10,3 +10,4 @@ COLOR_BUTTON_TEXT = (255, 255, 255)
 STATE_MENU = 'menu'
 STATE_GAME = 'game'
 STATE_HELP = 'help'
+STATE_SETTINGS = 'settings'
