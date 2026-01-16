@@ -1,0 +1,159 @@
+"""Card rendering for California Jack game."""
+
+import pygame
+from typing import Tuple
+
+from game.models.card import Card
+from game.constants import COLOR_WHITE
+
+
+# Card rendering constants
+CARD_WIDTH = 70
+CARD_HEIGHT = 100
+CARD_BORDER_WIDTH = 2
+
+# Colors for card rendering
+COLOR_CARD_BACK = (25, 55, 100)  # Dark blue
+COLOR_CARD_FACE = (255, 255, 255)  # White
+COLOR_RED = (211, 47, 47)  # Red for hearts/diamonds
+COLOR_BLACK_SUIT = (33, 33, 33)  # Black for clubs/spades
+
+# Unicode suit symbols
+SUIT_SYMBOLS = {
+    'hearts': '\u2665',      # ?
+    'diamonds': '\u2666',    # ?
+    'clubs': '\u2663',       # ?
+    'spades': '\u2660'       # ?
+}
+
+
+class CardRenderer:
+    """Renders playing cards using pygame."""
+    
+    def __init__(self):
+        """Initialize the card renderer with fonts."""
+        # Use Segoe UI Symbol for Unicode suit symbols (available on Windows)
+        try:
+            self.rank_font = pygame.font.SysFont('segoeuisymbol', 20)
+            self.suit_font = pygame.font.SysFont('segoeuisymbol', 32)
+        except Exception:
+            # Fallback to default font if Segoe UI Symbol not available
+            self.rank_font = pygame.font.Font(None, 24)
+            self.suit_font = pygame.font.Font(None, 36)
+        self._card_cache = {}  # Cache rendered card surfaces
+    
+    def _get_suit_color(self, suit: str) -> Tuple[int, int, int]:
+        """Get the color for a suit."""
+        if suit in ('hearts', 'diamonds'):
+            return COLOR_RED
+        return COLOR_BLACK_SUIT
+    
+    def _render_card_surface(self, card: Card) -> pygame.Surface:
+        """
+        Render a card to a surface (cached).
+        
+        Args:
+            card: The card to render
+            
+        Returns:
+            A pygame Surface with the rendered card
+        """
+        surface = pygame.Surface((CARD_WIDTH, CARD_HEIGHT), pygame.SRCALPHA)
+        
+        # Draw card background (white with rounded corners effect)
+        pygame.draw.rect(surface, COLOR_CARD_FACE, (0, 0, CARD_WIDTH, CARD_HEIGHT))
+        pygame.draw.rect(surface, COLOR_BLACK_SUIT, (0, 0, CARD_WIDTH, CARD_HEIGHT), CARD_BORDER_WIDTH)
+        
+        # Get suit color and symbol
+        suit_color = self._get_suit_color(card.suit)
+        suit_symbol = SUIT_SYMBOLS.get(card.suit, card.suit[0].upper())
+        
+        # Draw rank in top-left
+        rank_surface = self.rank_font.render(card.rank, True, suit_color)
+        surface.blit(rank_surface, (5, 3))
+        
+        # Draw suit symbol in center
+        suit_surface = self.suit_font.render(suit_symbol, True, suit_color)
+        suit_rect = suit_surface.get_rect(center=(CARD_WIDTH // 2, CARD_HEIGHT // 2))
+        surface.blit(suit_surface, suit_rect)
+        
+        # Draw rank in bottom-right (mirror of top-left positioning)
+        rank_surface_bottom = self.rank_font.render(card.rank, True, suit_color)
+        rank_width = rank_surface_bottom.get_width()
+        rank_height = rank_surface_bottom.get_height()
+        surface.blit(rank_surface_bottom, (CARD_WIDTH - rank_width - 5, CARD_HEIGHT - rank_height - 3))
+        
+        return surface
+    
+    def _render_card_back_surface(self) -> pygame.Surface:
+        """
+        Render a card back to a surface.
+        
+        Returns:
+            A pygame Surface with the card back
+        """
+        surface = pygame.Surface((CARD_WIDTH, CARD_HEIGHT), pygame.SRCALPHA)
+        
+        # Draw card back (dark blue with pattern)
+        pygame.draw.rect(surface, COLOR_CARD_BACK, (0, 0, CARD_WIDTH, CARD_HEIGHT))
+        pygame.draw.rect(surface, COLOR_WHITE, (0, 0, CARD_WIDTH, CARD_HEIGHT), CARD_BORDER_WIDTH)
+        
+        # Draw simple pattern (inner rectangle)
+        inner_margin = 8
+        pygame.draw.rect(
+            surface, 
+            (35, 75, 130),  # Slightly lighter blue
+            (inner_margin, inner_margin, CARD_WIDTH - 2*inner_margin, CARD_HEIGHT - 2*inner_margin)
+        )
+        pygame.draw.rect(
+            surface,
+            COLOR_WHITE,
+            (inner_margin, inner_margin, CARD_WIDTH - 2*inner_margin, CARD_HEIGHT - 2*inner_margin),
+            1
+        )
+        
+        return surface
+    
+    def draw_card(
+        self, 
+        screen: pygame.Surface, 
+        card: Card, 
+        x: int, 
+        y: int, 
+        face_up: bool = True
+    ) -> None:
+        """
+        Draw a card on the screen.
+        
+        Args:
+            screen: Pygame surface to draw on
+            card: The card to draw
+            x: X position (top-left corner)
+            y: Y position (top-left corner)
+            face_up: Whether to show the card face (True) or back (False)
+        """
+        if face_up:
+            # Check cache first
+            cache_key = (card.suit, card.rank)
+            if cache_key not in self._card_cache:
+                self._card_cache[cache_key] = self._render_card_surface(card)
+            surface = self._card_cache[cache_key]
+        else:
+            if 'back' not in self._card_cache:
+                self._card_cache['back'] = self._render_card_back_surface()
+            surface = self._card_cache['back']
+        
+        screen.blit(surface, (x, y))
+    
+    def draw_card_back(self, screen: pygame.Surface, x: int, y: int) -> None:
+        """
+        Draw a card back on the screen.
+        
+        Args:
+            screen: Pygame surface to draw on
+            x: X position (top-left corner)
+            y: Y position (top-left corner)
+        """
+        if 'back' not in self._card_cache:
+            self._card_cache['back'] = self._render_card_back_surface()
+        screen.blit(self._card_cache['back'], (x, y))
