@@ -1,6 +1,6 @@
 # User Story: WIP-001
 
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 ## User Story
 
@@ -24,12 +24,12 @@
 - **Assumption (explicit)**: Python 3.8+ is the target runtime
 
 ## Acceptance Criteria (bulleted, testable)
-- [ ] User can specify a source folder containing photos
-- [ ] User can specify a destination folder for organized output
-- [ ] Photos are copied into `YYYY/MM/` subfolders based on date taken
-- [ ] If EXIF date is missing, file modification date is used
-- [ ] Unsupported file types are skipped with a warning message
-- [ ] A summary is displayed showing count of photos organized
+- [x] User can specify a source folder containing photos
+- [x] User can specify a destination folder for organized output
+- [x] Photos are copied into `YYYY/MM/` subfolders based on date taken
+- [x] If EXIF date is missing, file modification date is used
+- [x] Unsupported file types are skipped with a warning message
+- [x] A summary is displayed showing count of photos organized
 
 ## Non-functional Requirements
 - Must handle folders with 1000+ photos without crashing
