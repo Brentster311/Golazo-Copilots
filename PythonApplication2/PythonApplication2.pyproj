@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>98fc4a44-2d6e-4d34-b3db-4d4880d92fe7</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>PythonApplication2\main.py</StartupFile>
+    <StartupFile>main.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -21,33 +21,6 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="PythonApplication2\game\constants.py" />
-    <Compile Include="PythonApplication2\game\states\base_state.py" />
-    <Compile Include="PythonApplication2\game\states\help_state.py" />
-    <Compile Include="PythonApplication2\game\states\menu_state.py" />
-    <Compile Include="PythonApplication2\game\states\placeholder_state.py" />
-    <Compile Include="PythonApplication2\game\states\__init__.py" />
-    <Compile Include="PythonApplication2\game\state_manager.py" />
-    <Compile Include="PythonApplication2\game\ui\button.py" />
-    <Compile Include="PythonApplication2\game\ui\__init__.py" />
-    <Compile Include="PythonApplication2\game\__init__.py" />
-    <Compile Include="PythonApplication2\main.py" />
-    <Compile Include="PythonApplication2\PythonApplication2\game\models\california_jack.py" />
-    <Compile Include="PythonApplication2\PythonApplication2\game\models\card.py" />
-    <Compile Include="PythonApplication2\PythonApplication2\game\models\deck.py" />
-    <Compile Include="PythonApplication2\PythonApplication2\game\models\trick.py" />
-    <Compile Include="PythonApplication2\PythonApplication2\game\models\__init__.py" />
-    <Compile Include="PythonApplication2\PythonApplication2\game\states\game_state.py" />
-    <Compile Include="PythonApplication2\PythonApplication2\tests\test_card.py" />
-    <Compile Include="PythonApplication2\PythonApplication2\tests\test_deck.py" />
-    <Compile Include="PythonApplication2\PythonApplication2\tests\test_game_state_model.py" />
-    <Compile Include="PythonApplication2\PythonApplication2\tests\test_trick.py" />
-    <Compile Include="PythonApplication2\tests\test_constants.py" />
-    <Compile Include="PythonApplication2\tests\test_menu_state.py" />
-    <Compile Include="PythonApplication2\tests\test_state_manager.py" />
-    <Compile Include="PythonApplication2\tests\__init__.py" />
-  </ItemGroup>
-  <ItemGroup>
     <Folder Include=".github\" />
     <Folder Include=".github\roles\" />
     <Folder Include="docs\" />
@@ -55,22 +28,29 @@
     <Folder Include="docs\roles\" />
     <Folder Include="docs\tests\" />
     <Folder Include="docs\workitems\" />
+    <Folder Include="game\" />
+    <Folder Include="game\models\" />
+    <Folder Include="game\models\__pycache__\" />
+    <Folder Include="game\states\" />
+    <Folder Include="game\states\__pycache__\" />
+    <Folder Include="game\ui\" />
+    <Folder Include="game\ui\__pycache__\" />
+    <Folder Include="game\__pycache__\" />
     <Folder Include="PythonApplication2\" />
+    <Folder Include="PythonApplication2\docs\" />
+    <Folder Include="PythonApplication2\docs\design\" />
+    <Folder Include="PythonApplication2\docs\roles\" />
+    <Folder Include="PythonApplication2\docs\tests\" />
     <Folder Include="PythonApplication2\game\" />
+    <Folder Include="PythonApplication2\game\i18n\" />
     <Folder Include="PythonApplication2\game\states\" />
-    <Folder Include="PythonApplication2\game\ui\" />
-    <Folder Include="PythonApplication2\PythonApplication2\" />
-    <Folder Include="PythonApplication2\PythonApplication2\game\" />
-    <Folder Include="PythonApplication2\PythonApplication2\game\models\" />
-    <Folder Include="PythonApplication2\PythonApplication2\game\states\" />
-    <Folder Include="PythonApplication2\PythonApplication2\game\ui\" />
-    <Folder Include="PythonApplication2\PythonApplication2\tests\" />
     <Folder Include="PythonApplication2\tests\" />
+    <Folder Include="tests\" />
+    <Folder Include="tests\__pycache__\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include=".github\copilot-instructions.md" />
-    <Content Include=".github\roles\developer.md" />
-    <Content Include=".github\roles\tester.md" />
+    <Content Include=".github\roles\builder.md" />
     <Content Include="docs\design\CALJACK-001-design-doc.md" />
     <Content Include="docs\design\CALJACK-001-review-notes.md" />
     <Content Include="docs\design\CALJACK-002-design-doc.md" />
@@ -106,6 +86,8 @@
     <Content Include="docs\roles\CALJACK-003-refactor.md" />
     <Content Include="docs\roles\CALJACK-003-reviewer.md" />
     <Content Include="docs\roles\CALJACK-003-tester.md" />
+    <Content Include="docs\roles\CALJACK-008-010-project-owner-assistant.md" />
+    <Content Include="docs\roles\RETRO-001-retrospective.md" />
     <Content Include="docs\tests\CALJACK-001-test-cases.md" />
     <Content Include="docs\tests\CALJACK-002-test-cases.md" />
     <Content Include="docs\tests\CALJACK-003-test-cases.md" />
@@ -116,9 +98,72 @@
     <Content Include="docs\workitems\CALJACK-005-user-story.md" />
     <Content Include="docs\workitems\CALJACK-006-user-story.md" />
     <Content Include="docs\workitems\CALJACK-007-user-story.md" />
-    <Content Include="PythonApplication2\pytest.ini" />
-    <Content Include="PythonApplication2\PythonApplication2\README.md" />
-    <Content Include="PythonApplication2\requirements.txt" />
+    <Content Include="docs\workitems\CALJACK-008-user-story.md" />
+    <Content Include="docs\workitems\CALJACK-009-user-story.md" />
+    <Content Include="docs\workitems\CALJACK-010-user-story.md" />
+    <Content Include="game\models\__pycache__\california_jack.cpython-313.pyc" />
+    <Content Include="game\models\__pycache__\card.cpython-313.pyc" />
+    <Content Include="game\models\__pycache__\deck.cpython-313.pyc" />
+    <Content Include="game\models\__pycache__\trick.cpython-313.pyc" />
+    <Content Include="game\models\__pycache__\__init__.cpython-313.pyc" />
+    <Content Include="game\states\__pycache__\base_state.cpython-313.pyc" />
+    <Content Include="game\states\__pycache__\game_state.cpython-313.pyc" />
+    <Content Include="game\states\__pycache__\menu_state.cpython-313.pyc" />
+    <Content Include="game\states\__pycache__\__init__.cpython-313.pyc" />
+    <Content Include="game\ui\__pycache__\button.cpython-313.pyc" />
+    <Content Include="game\ui\__pycache__\card_renderer.cpython-313.pyc" />
+    <Content Include="game\ui\__pycache__\__init__.cpython-313.pyc" />
+    <Content Include="game\__pycache__\constants.cpython-313.pyc" />
+    <Content Include="game\__pycache__\state_manager.cpython-313.pyc" />
+    <Content Include="game\__pycache__\__init__.cpython-313.pyc" />
+    <Content Include="PythonApplication2\docs\design\CALJACK-010-design-doc.md" />
+    <Content Include="PythonApplication2\docs\design\CALJACK-010-review-notes.md" />
+    <Content Include="PythonApplication2\docs\roles\CALJACK-010-architect.md" />
+    <Content Include="PythonApplication2\docs\roles\CALJACK-010-builder.md" />
+    <Content Include="PythonApplication2\docs\roles\CALJACK-010-developer.md" />
+    <Content Include="PythonApplication2\docs\roles\CALJACK-010-program-manager.md" />
+    <Content Include="PythonApplication2\docs\roles\CALJACK-010-reviewer.md" />
+    <Content Include="PythonApplication2\docs\roles\CALJACK-010-tester.md" />
+    <Content Include="PythonApplication2\docs\tests\CALJACK-010-test-cases.md" />
+    <Content Include="tests\__pycache__\test_card.cpython-313-pytest-9.0.2.pyc" />
+    <Content Include="tests\__pycache__\test_constants.cpython-313-pytest-9.0.2.pyc" />
+    <Content Include="tests\__pycache__\test_deck.cpython-313-pytest-9.0.2.pyc" />
+    <Content Include="tests\__pycache__\test_game_state_model.cpython-313-pytest-9.0.2.pyc" />
+    <Content Include="tests\__pycache__\test_menu_state.cpython-313-pytest-9.0.2.pyc" />
+    <Content Include="tests\__pycache__\test_state_manager.cpython-313-pytest-9.0.2.pyc" />
+    <Content Include="tests\__pycache__\test_trick.cpython-313-pytest-9.0.2.pyc" />
+    <Content Include="tests\__pycache__\__init__.cpython-313.pyc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="game\constants.py" />
+    <Compile Include="game\models\california_jack.py" />
+    <Compile Include="game\models\card.py" />
+    <Compile Include="game\models\deck.py" />
+    <Compile Include="game\models\trick.py" />
+    <Compile Include="game\models\__init__.py" />
+    <Compile Include="game\states\base_state.py" />
+    <Compile Include="game\states\game_state.py" />
+    <Compile Include="game\states\help_state.py" />
+    <Compile Include="game\states\menu_state.py" />
+    <Compile Include="game\states\placeholder_state.py" />
+    <Compile Include="game\states\__init__.py" />
+    <Compile Include="game\state_manager.py" />
+    <Compile Include="game\ui\button.py" />
+    <Compile Include="game\ui\card_renderer.py" />
+    <Compile Include="game\ui\__init__.py" />
+    <Compile Include="game\__init__.py" />
+    <Compile Include="main.py" />
+    <Compile Include="PythonApplication2\game\i18n\language_manager.py" />
+    <Compile Include="PythonApplication2\game\states\settings_state.py" />
+    <Compile Include="PythonApplication2\tests\test_language_manager.py" />
+    <Compile Include="tests\test_card.py" />
+    <Compile Include="tests\test_constants.py" />
+    <Compile Include="tests\test_deck.py" />
+    <Compile Include="tests\test_game_state_model.py" />
+    <Compile Include="tests\test_menu_state.py" />
+    <Compile Include="tests\test_state_manager.py" />
+    <Compile Include="tests\test_trick.py" />
+    <Compile Include="tests\__init__.py" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in

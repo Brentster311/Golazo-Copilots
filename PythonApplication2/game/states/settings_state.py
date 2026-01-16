@@ -4,7 +4,7 @@ import pygame
 from typing import Optional
 
 from game.states.base_state import BaseState
-from game.ui.button import Button
+from game.ui.button import Button, get_unicode_font
 from game.constants import WINDOW_WIDTH, WINDOW_HEIGHT, COLOR_BACKGROUND, COLOR_WHITE, STATE_MENU
 from game.i18n.language_manager import LanguageManager
 
@@ -14,28 +14,26 @@ class SettingsState(BaseState):
     
     def __init__(self):
         self.lang = LanguageManager()
-        self._create_buttons()
         self._create_fonts()
+        self._create_buttons()
     
     def _create_fonts(self):
         """Create fonts that support multiple languages."""
-        try:
-            self.title_font = pygame.font.SysFont('segoeuisymbol', 48)
-            self.label_font = pygame.font.SysFont('segoeuisymbol', 32)
-        except Exception:
-            self.title_font = pygame.font.Font(None, 48)
-            self.label_font = pygame.font.Font(None, 32)
+        self.title_font = get_unicode_font(48)
+        self.label_font = get_unicode_font(32)
     
     def _create_buttons(self):
         """Create UI buttons."""
         btn_width, btn_height = 120, 50
         center_x = WINDOW_WIDTH // 2
+        spacing = 130
         
-        # Language buttons (side by side)
+        # Language buttons (single row, 4 languages)
         self.lang_buttons = {
-            'en': Button(center_x - 180, 320, btn_width, btn_height, 'English'),
-            'zh': Button(center_x - 50, 320, btn_width, btn_height, '??'),
-            'ru': Button(center_x + 80, 320, btn_width, btn_height, '???????'),
+            'en': Button(center_x - int(1.5 * spacing), 320, btn_width, btn_height, self.lang.get_language_name('en')),
+            'zh': Button(center_x - int(0.5 * spacing), 320, btn_width, btn_height, self.lang.get_language_name('zh')),
+            'ru': Button(center_x + int(0.5 * spacing), 320, btn_width, btn_height, self.lang.get_language_name('ru')),
+            'vi': Button(center_x - int(0.5 * spacing), 390, btn_width, btn_height, self.lang.get_language_name('vi')),
         }
         
         # Back button

@@ -1,0 +1,82 @@
+﻿# Role Decision Document: Project Owner Assistant
+
+**Work Item**: CALJACK-001 - California Jack Card Game with GUI  
+**Role**: Project Owner Assistant  
+**Date**: 2025-01-XX
+
+---
+
+## Decisions Made
+
+### 1. Work Item ID
+- Assigned `CALJACK-001` as a descriptive identifier for this card game implementation
+
+### 2. Scope Definition
+- **Included**: 2-player local (hot-seat) gameplay, pygame GUI, score tracking, help screen with rules and attribution
+- **Excluded**: AI opponent (deferred to next iteration), sound effects, save/load, network play
+
+### 3. Rules Interpretation
+- Used exact rules as provided by Project Owner (sourced from Bicycle Cards)
+- No ambiguities identified in the rules
+
+### 4. GUI Framework
+- Selected **Pygame** per Project Owner's explicit request
+- Rationale: Game-focused library, good for card games, cross-platform
+
+### 5. Acceptance Criteria Structure
+- Organized into logical groups: Setup, Gameplay, Scoring, UI, Help
+- Each criterion is testable and maps to a specific feature
+
+---
+
+## Alternatives Considered
+
+### GUI Framework
+| Option | Pros | Cons | Decision |
+|--------|------|------|----------|
+| Tkinter | Built-in, simple | Not ideal for games, limited graphics | Rejected |
+| PyQt | Professional look, rich widgets | Heavy dependency, licensing | Rejected |
+| **Pygame** | Game-focused, sprite support, active community | Requires install | **Selected** |
+
+### Multiplayer Model
+| Option | Pros | Cons | Decision |
+|--------|------|------|----------|
+| **Hot-seat** | Simple, no networking | Players see each other's moves | **Selected** |
+| Split-screen | Both hands visible | Complex UI, spoils strategy | Rejected |
+| Hidden hands | More realistic | Requires screen hiding mechanism | Deferred |
+
+---
+
+## Tradeoffs Accepted
+
+1. **Hot-seat visibility**: In hot-seat mode, players can potentially see each other's cards during turn transitions. Accepted for simplicity; can add "pass device" screen in future.
+
+2. **No card images**: Will use programmatically drawn cards rather than image assets. Reduces dependencies but may be less visually polished.
+
+3. **Fixed window vs. responsive**: Leaning toward fixed/reasonable window size for simplicity in pygame.
+
+---
+
+## Known Limitations or Risks
+
+1. **Turn transition**: No mechanism to hide hands between turns - players must trust each other or look away
+2. **Pygame learning curve**: If team is unfamiliar with pygame, may need ramp-up time
+3. **Card rendering**: Programmatic card drawing may be time-consuming to get right
+
+---
+
+## Open Questions (Resolved)
+
+| Question | Resolution |
+|----------|------------|
+| Number of players? | 2 (per Project Owner) |
+| GUI framework? | Pygame (per Project Owner) |
+| AI opponent? | Deferred to next iteration (per Project Owner) |
+| Sound effects? | No (per Project Owner) |
+| Save/load? | No (per Project Owner) |
+
+---
+
+## Next Role
+
+Ready for **Program Manager** to create the Design Review document.

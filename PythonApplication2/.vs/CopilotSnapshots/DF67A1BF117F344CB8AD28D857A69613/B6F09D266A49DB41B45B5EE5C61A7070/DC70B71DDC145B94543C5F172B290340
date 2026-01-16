@@ -1,0 +1,96 @@
+﻿"""State manager for handling game state transitions."""
+
+import logging
+from typing import Dict, Optional
+
+import pygame
+
+from game.states.base_state import BaseState
+from game.constants import STATE_MENU, STATE_GAME, STATE_HELP
+
+# Set up logging for state transitions
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+
+class StateManager:
+    """Manages game states and transitions between them."""
+
+    def __init__(self):
+        """Initialize state manager with empty state registry."""
+        self._states: Dict[str, BaseState] = {}
+        self._current_state_name: Optional[str] = None
+
+    def register_state(self, name: str, state: BaseState) -> None:
+        """
+        Register a state with the manager.
+
+        Args:
+            name: Unique name for the state
+            state: State instance
+        """
+        self._states[name] = state
+        logger.debug(f"Registered state: {name}")
+
+    def change_state(self, name: str) -> None:
+        """
+        Change to a different state.
+
+        Args:
+            name: Name of state to change to
+
+        Raises:
+            KeyError: If state name is not registered
+        """
+        if name not in self._states:
+            logger.error(f"Attempted to change to unknown state: {name}")
+            raise KeyError(f"State '{name}' not registered")
+
+        logger.debug(f"State transition: {self._current_state_name} -> {name}")
+        self._current_state_name = name
+
+    @property
+    def current_state(self) -> Optional[BaseState]:
+        """Get the current active state."""
+        if self._current_state_name is None:
+            return None
+        return self._states.get(self._current_state_name)
+
+    @property
+    def current_state_name(self) -> Optional[str]:
+        """Get the name of the current state."""
+        return self._current_state_name
+
+    def handle_event(self, event: pygame.event.Event) -> None:
+        """
+        Pass event to current state and handle transitions.
+
+        Args:
+            event: Pygame event to handle
+        """
+        if self.current_state is None:
+            return
+
+        new_state = self.current_state.handle_event(event)
+        if new_state is not None:
+            self.change_state(new_state)
+
+    def update(self, dt: float) -> None:
+        """
+        Update current state.
+
+        Args:
+            dt: Delta time since last update
+        """
+        if self.current_state is not None:
+            self.current_state.update(dt)
+
+    def draw(self, screen: pygame.Surface) -> None:
+        """
+        Draw current state.
+
+        Args:
+            screen: Pygame surface to draw on
+        """
+        if self.current_state is not None:
+            self.current_state.draw(screen)
