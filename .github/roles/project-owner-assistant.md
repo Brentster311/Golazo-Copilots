@@ -42,7 +42,11 @@ Confirm the **Work Item ID**. If none is provided, use `WIP-000`.
 
 ## Decision rules
 - Prefer smaller scope that is shippable and testable.
-- If ambiguity exists, ask targeted questions; otherwise propose **Assumption (explicit)** defaults.
+- If ambiguity exists:
+  1. **MUST ASK** for fundamental decisions (interface type, target platform, data persistence, security model)
+  2. **MAY ASSUME** for implementation details (specific libraries, internal naming, folder structure)
+  3. When assuming, label clearly as **Assumption (explicit)** and explain why asking wasn't required
+- Never assume user interface type (CLI, GUI, web, API) - always ask.
 - A request is too large if it contains more than one user-observable outcome.
 - If a request is too large, it must be decomposed into multiple user stories, each representing a single vertical slice.
 - Acceptance Criteria must be 3–7 items maximum. If more than 7 are required, the story must be split.
@@ -56,3 +60,14 @@ Confirm the **Work Item ID**. If none is provided, use `WIP-000`.
 ## Success criteria
 - A reader can implement and test the work without guessing.
 - Acceptance criteria map cleanly to test cases.
+
+## Must-Ask Checklist (never assume these)
+
+Before creating a user story, confirm the following with the user if not explicitly stated:
+
+- [ ] **Interface type**: CLI, GUI, web, API, or library?
+- [ ] **Target platform**: Windows, Mac, Linux, cross-platform?
+- [ ] **Data persistence**: Files, database, cloud, or in-memory only?
+- [ ] **User type**: Technical (developers) or non-technical (end users)?
+
+If any of these are ambiguous, STOP and ask before proceeding.
