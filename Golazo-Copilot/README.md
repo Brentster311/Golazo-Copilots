@@ -14,12 +14,12 @@ Think of it as **Kanban meets AI pair programming**: every feature goes through 
 
 | Benefit | Description |
 |---------|-------------|
-| ?? **No Cowboy Coding** | AI can't skip to implementation — it must complete design and test planning first |
-| ?? **Audit Trail** | Every decision is documented; you can trace *why* any code exists |
-| ?? **TDD by Default** | Test cases are written before code (Definition of Ready requires them) |
-| ?? **Consistent Process** | Same workflow for every feature, every time |
-| ?? **Scope Control** | Clear "out of scope" definitions prevent feature creep |
-| ?? **Role Separation** | Different "hats" catch different issues (Reviewer vs Architect vs Tester) |
+| **No Cowboy Coding** | AI can't skip to implementation — it must complete design and test planning first |
+| **Audit Trail** | Every decision is documented; you can trace *why* any code exists |
+| **TDD by Default** | Test cases are written before code (Definition of Ready requires them) |
+| **Consistent Process** | Same workflow for every feature, every time |
+| **Scope Control** | Clear "out of scope" definitions prevent feature creep |
+| **Role Separation** | Different "hats" catch different issues (Reviewer vs Architect vs Tester) |
 
 ## Quick Start
 
