@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{F8A1C1A1-0001-4A20-BB88-000000000001}</ProjectGuid>
+    <ProjectHome>.</ProjectHome>
+    <StartupFile>src\kustomapper\main.py</StartupFile>
+    <SearchPath>src</SearchPath>
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <Name>KustoMapper</Name>
+    <RootNamespace>KustoMapper</RootNamespace>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
+  <ItemGroup>
+    <Compile Include="src\kustomapper\__init__.py" />
+    <Compile Include="src\kustomapper\__main__.py" />
+    <Compile Include="src\kustomapper\main.py" />
+    <Compile Include="src\kustomapper\adapters\__init__.py" />
+    <Compile Include="src\kustomapper\adapters\base.py" />
+    <Compile Include="src\kustomapper\adapters\kusto_adapter.py" />
+    <Compile Include="src\kustomapper\cache\__init__.py" />
+    <Compile Include="src\kustomapper\cache\schema_cache.py" />
+    <Compile Include="src\kustomapper\gui\__init__.py" />
+    <Compile Include="src\kustomapper\gui\main_window.py" />
+    <Compile Include="src\kustomapper\models\__init__.py" />
+    <Compile Include="src\kustomapper\models\schema.py" />
+    <Compile Include="tests\__init__.py" />
+    <Compile Include="tests\test_kusto_adapter.py" />
+    <Compile Include="tests\test_models.py" />
+    <Compile Include="tests\test_schema_cache.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="README.md" />
+    <Content Include="requirements.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="src\" />
+    <Folder Include="src\kustomapper\" />
+    <Folder Include="src\kustomapper\adapters\" />
+    <Folder Include="src\kustomapper\cache\" />
+    <Folder Include="src\kustomapper\gui\" />
+    <Folder Include="src\kustomapper\models\" />
+    <Folder Include="tests\" />
+    <Folder Include="WorkItems\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
+</Project>
