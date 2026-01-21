@@ -256,6 +256,3 @@ PowerShell's default file output uses UTF-16 LE encoding with BOM, which Python 
 - `SyntaxError: source code string cannot contain null bytes`
 - Files appear to have content but Python can't import them
 - Tests fail on import but source files look correct
-
-### Reference
-This rule was added after MCDEMO-001 retrospective. See `KustoMapper/WorkItems/MCDEMO-001/RoleDecisionNotes/MCDEMM-001-retrospective.md` for full analysis.
