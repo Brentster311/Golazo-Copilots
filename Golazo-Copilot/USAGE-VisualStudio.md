@@ -23,8 +23,8 @@ This guide explains how to set up and use GolazoCP with GitHub Copilot in Visual
    ```
 
 2. **Verify the files are in place**:
-   - `.github/copilot-instructions.md` should exist at your solution root
-   - `.github/roles/` should contain 10 markdown files
+- `.github/copilot-instructions.md` must exist at the **git repository root** (same level as `.git/` folder)
+- `.github/roles/` should contain 10 markdown files
 
 ## Using GolazoCP
 
@@ -37,10 +37,10 @@ This guide explains how to set up and use GolazoCP with GitHub Copilot in Visual
    I want to add user authentication to my application
    ```
 
-3. Copilot will automatically:
-   - Detect the Golazo instructions
-   - Start with the **Project Owner Assistant** role
-   - Ask clarifying questions before writing any code
+3. Copilot will read the instructions and should:
+- Follow the Golazo workflow
+- Start with the **Project Owner Assistant** role
+- Ask clarifying questions before writing any code
 
 ### Following the Workflow
 
