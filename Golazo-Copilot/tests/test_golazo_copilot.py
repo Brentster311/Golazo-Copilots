@@ -5,7 +5,9 @@ Run with: pytest tests/test_golazo_copilot.py -v
 """
 
 import sys
+import shutil
 import tempfile
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -19,6 +21,7 @@ from Golazo_Copilot import (
     ensure_directory,
     copy_file,
     install_golazo,
+    create_package,
     main,
 )
 
@@ -150,34 +153,50 @@ class TestInstallGolazo:
             assert len(role_files) >= 10
 
 
+
+
+
+
+
+import os
+
 class TestMain:
     """Tests for main function."""
     
     def test_exit_code_0_on_success(self, monkeypatch):
         """TC-010: CLI returns 0 on successful installation."""
-        with tempfile.TemporaryDirectory() as tmp:
-            tmp_path = Path(tmp)
+        original_cwd = os.getcwd()
+        tmp_path = None
+        try:
+            tmp_path = Path(tempfile.mkdtemp())
             (tmp_path / ".git").mkdir()
-            original_cwd = Path.cwd()
-            try:
-                monkeypatch.chdir(tmp_path)
-                result = main()
-                assert result == 0
-            finally:
-                monkeypatch.chdir(original_cwd)
+            monkeypatch.chdir(tmp_path)
+            monkeypatch.setattr(sys, 'argv', ['Golazo_Copilot.py'])
+            result = main()
+            assert result == 0
+        finally:
+            os.chdir(original_cwd)
+            if tmp_path:
+                shutil.rmtree(tmp_path, ignore_errors=True)
     
     def test_exit_code_1_when_not_in_repo(self, monkeypatch):
         """TC-011: CLI returns 1 when not in git repo."""
-        with tempfile.TemporaryDirectory() as tmp:
-            tmp_path = Path(tmp)
+        original_cwd = os.getcwd()
+        tmp_path = None
+        try:
+            tmp_path = Path(tempfile.mkdtemp())
             # No .git directory
-            original_cwd = Path.cwd()
-            try:
-                monkeypatch.chdir(tmp_path)
-                result = main()
-                assert result == 1
-            finally:
-                monkeypatch.chdir(original_cwd)
+            monkeypatch.chdir(tmp_path)
+            monkeypatch.setattr(sys, 'argv', ['Golazo_Copilot.py'])
+            result = main()
+            assert result == 1
+        finally:
+            os.chdir(original_cwd)
+            if tmp_path:
+                shutil.rmtree(tmp_path, ignore_errors=True)
+
+
+
 
 
 class TestReadme:
@@ -217,3 +236,183 @@ class TestReadme:
         # Check for retrospective example
         assert "retrospective" in content and "example" in content, \
             "README should include retrospective example"
+
+
+class TestCreatePackage:
+    """Tests for create_package function (GCP-005)."""
+    
+    def test_creates_zip_file(self):
+        """TC-GCP005-001: Package creates valid zip file."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            output_zip = tmp_path / "GolazoCP-dist.zip"
+            
+            result = create_package(output_zip)
+            
+            assert result is True
+            assert output_zip.exists()
+            assert zipfile.is_zipfile(output_zip)
+    
+    def test_contains_copilot_instructions(self):
+        """TC-GCP005-002: Package contains .github/copilot-instructions.md."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            output_zip = tmp_path / "GolazoCP-dist.zip"
+            
+            create_package(output_zip)
+            
+            with zipfile.ZipFile(output_zip, 'r') as zf:
+                names = zf.namelist()
+                assert ".github/copilot-instructions.md" in names
+    
+    def test_contains_all_role_files(self):
+        """TC-GCP005-003: Package contains all role files."""
+        expected_roles = [
+            "architect.md", "builder.md", "developer.md", "documentor.md",
+            "program-manager.md", "project-owner-assistant.md", "refactor-expert.md",
+            "retrospective.md", "reviewer.md", "tester.md"
+        ]
+        
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            output_zip = tmp_path / "GolazoCP-dist.zip"
+            
+            create_package(output_zip)
+            
+            with zipfile.ZipFile(output_zip, 'r') as zf:
+                names = zf.namelist()
+                for role in expected_roles:
+                    expected_path = f".github/roles/{role}"
+                    assert expected_path in names, f"Missing role file: {role}"
+    
+    def test_contains_readme(self):
+        """TC-GCP005-004: Package contains README.md."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            output_zip = tmp_path / "GolazoCP-dist.zip"
+            
+            create_package(output_zip)
+            
+            with zipfile.ZipFile(output_zip, 'r') as zf:
+                names = zf.namelist()
+                assert "README.md" in names
+    
+    def test_contains_usage_visual_studio(self):
+        """TC-GCP005-005: Package contains USAGE-VisualStudio.md."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            output_zip = tmp_path / "GolazoCP-dist.zip"
+            
+            create_package(output_zip)
+            
+            with zipfile.ZipFile(output_zip, 'r') as zf:
+                names = zf.namelist()
+                assert "USAGE-VisualStudio.md" in names
+    
+    def test_contains_usage_vscode(self):
+        """TC-GCP005-006: Package contains USAGE-VSCode.md."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            output_zip = tmp_path / "GolazoCP-dist.zip"
+            
+            create_package(output_zip)
+            
+            with zipfile.ZipFile(output_zip, 'r') as zf:
+                names = zf.namelist()
+                assert "USAGE-VSCode.md" in names
+    
+    def test_overwrites_existing_zip(self):
+        """TC-GCP005-010: Package overwrites existing zip."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            output_zip = tmp_path / "GolazoCP-dist.zip"
+            
+            # Create an existing zip with dummy content
+            with zipfile.ZipFile(output_zip, 'w') as zf:
+                zf.writestr("dummy.txt", "old content")
+            
+            old_size = output_zip.stat().st_size
+            
+            # Create new package
+            result = create_package(output_zip)
+            
+            assert result is True
+            new_size = output_zip.stat().st_size
+            assert new_size != old_size  # Size changed, file was replaced
+            
+            # Verify new content
+            with zipfile.ZipFile(output_zip, 'r') as zf:
+                names = zf.namelist()
+                assert "dummy.txt" not in names
+                assert "README.md" in names
+    
+    def test_zip_uses_forward_slashes(self):
+        """TC-GCP005-016: Zip paths use forward slashes."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            output_zip = tmp_path / "GolazoCP-dist.zip"
+            
+            create_package(output_zip)
+            
+            with zipfile.ZipFile(output_zip, 'r') as zf:
+                for name in zf.namelist():
+                    assert "\\" not in name, f"Path contains backslash: {name}"
+
+
+class TestPackageCLI:
+    """Integration tests for --package CLI flag (GCP-005)."""
+    
+    def test_package_flag_creates_zip(self, monkeypatch):
+        """TC-GCP005-011: CLI --package flag creates zip."""
+        original_cwd = os.getcwd()
+        tmp_path = None
+        try:
+            tmp_path = Path(tempfile.mkdtemp())
+            monkeypatch.chdir(tmp_path)
+            monkeypatch.setattr(sys, 'argv', ['Golazo_Copilot.py', '--package'])
+            
+            result = main()
+            
+            assert result == 0
+            assert (tmp_path / "GolazoCP-dist.zip").exists()
+        finally:
+            os.chdir(original_cwd)
+            if tmp_path:
+                shutil.rmtree(tmp_path, ignore_errors=True)
+    
+    def test_package_outputs_path(self, monkeypatch, capsys):
+        """TC-GCP005-013: CLI --package outputs zip path on success."""
+        original_cwd = os.getcwd()
+        tmp_path = None
+        try:
+            tmp_path = Path(tempfile.mkdtemp())
+            monkeypatch.chdir(tmp_path)
+            monkeypatch.setattr(sys, 'argv', ['Golazo_Copilot.py', '--package'])
+            
+            main()
+            
+            captured = capsys.readouterr()
+            assert "GolazoCP-dist.zip" in captured.out
+        finally:
+            os.chdir(original_cwd)
+            if tmp_path:
+                shutil.rmtree(tmp_path, ignore_errors=True)
+    
+    def test_no_flag_still_installs(self, monkeypatch):
+        """TC-GCP005-015: CLI with no flags maintains existing install behavior."""
+        original_cwd = os.getcwd()
+        tmp_path = None
+        try:
+            tmp_path = Path(tempfile.mkdtemp())
+            (tmp_path / ".git").mkdir()
+            monkeypatch.chdir(tmp_path)
+            monkeypatch.setattr(sys, 'argv', ['Golazo_Copilot.py'])
+            
+            result = main()
+            
+            assert result == 0
+            assert (tmp_path / ".github" / "copilot-instructions.md").exists()
+        finally:
+            os.chdir(original_cwd)
+            if tmp_path:
+                shutil.rmtree(tmp_path, ignore_errors=True)
