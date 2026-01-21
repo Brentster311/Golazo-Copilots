@@ -137,12 +137,12 @@ The **Retrospective** role is triggered when something goes wrong or friction is
 
 ### Example Scenario
 
-You notice that Reviewer and Architect feedback keeps getting lost because it's in two separate documents.
+You notice that Copilot wrote production code before writing the test code, violating TDD principles.
 
 ### Triggering a Retrospective
 
 Ask Copilot:
-> "I want to run a retrospective. The problem is that Reviewer and Architect feedback is hard to track because it's split across documents."
+> "I want to run a retrospective. The problem is: why did you write code before the test cases?"
 
 ### Retrospective Output
 
@@ -152,25 +152,27 @@ Copilot (as Retrospective role) might produce:
 # Retrospective: RETRO-001
 
 ## Problem Observed
-Reviewer and Architect feedback split across multiple documents, 
-making it hard to track what was addressed.
+Developer role wrote production code before test code, 
+violating TDD (Test-Driven Development) principles.
 
 ## Root Cause Analysis
-- Original design had separate review notes per role
-- No single source of truth for review status
+- Developer role instructions didn't explicitly require tests FIRST
+- "Add/adjust tests" was listed but not sequenced before code
+- No forbidden action preventing code-before-tests
 
 ## Proposed Process Change
-Merge Reviewer and Architect feedback into single 
-`<id>-Review-Comments.md` with sections for each role.
+Update Developer role instructions to:
+1. Add "Write test code FIRST" to Responsibilities
+2. Add "May NOT write production code before test code" to Forbidden actions
 
 ## Impact Assessment
-- Reduces artifact count
-- Clearer tracking of addressed vs pending comments
-- Minor update to copilot-instructions.md required
+- Enforces TDD discipline
+- Tests become a gate, not an afterthought
+- Minor update to .github/roles/developer.md required
 
 ## Recommendation
-Update `.github/copilot-instructions.md` to specify combined 
-Review-Comments.md format.
+Update `.github/roles/developer.md` to explicitly require 
+test code before production code.
 ```
 
 The Retrospective output becomes input for a *new work item* to update the Golazo instructions themselves.
