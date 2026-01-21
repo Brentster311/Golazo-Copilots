@@ -70,7 +70,7 @@ def copy_file(source: Path, destination: Path) -> bool:
         True if successful, False otherwise
     """
     try:
-        shutil.copy2(source, destination)
+        shutil.copy(source, destination)  # Use copy() so timestamp reflects when copied
         return True
     except (OSError, shutil.Error) as e:
         print(f"Error copying {source.name}: {e}", file=sys.stderr)
