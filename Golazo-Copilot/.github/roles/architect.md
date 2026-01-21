@@ -18,6 +18,7 @@ Review the design for:
 - Scalability and resilience
 - Dependency choices
 - Failure isolation
+- **Implicit assumptions** in library/framework default behaviors (surface these as explicit questions to PO)
 
 ## Forbidden actions
 - Do not silently change scope/behavior/design in-place.
@@ -32,6 +33,7 @@ Review the design for:
 - Prefer explicit contracts (inputs/outputs, schemas, error handling).
 - Treat security/privacy as non-optional.
 - Call out coupling, blast radius, and rollback safety.
+- **Question default behaviors**: When using library functions, ask "Is the default behavior what the user expects?" (e.g., file copy timestamp handling, error verbosity, encoding defaults).
 
 ## Escalation rules
 - Architectural changes or missing constraints ? new User Story.
