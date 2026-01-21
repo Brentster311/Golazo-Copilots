@@ -24,7 +24,7 @@ This guide explains how to set up and use GolazoCP with GitHub Copilot in Visual
    ```
 
 2. **Verify the files are in place**:
-- `.github/copilot-instructions.md` must exist at the **git repository root** (same level as `.git/` folder)
+- `.github/copilot-instructions.md` must exist at the **workspace root** (the folder you opened in VS Code)
 - `.github/roles/` should contain 10 markdown files
 
 ## Using GolazoCP
@@ -102,7 +102,7 @@ This is a process violation. The instructions explicitly forbid this. Check that
 ### Instructions Not Being Picked Up
 
 VS Code looks for instructions at `.github/copilot-instructions.md`. Ensure:
-- The file is at the workspace root, not in a subfolder
+- The file is at the **workspace root** (the folder you opened), not in a subfolder
 - The filename is exactly `copilot-instructions.md` (case-sensitive on some systems)
 
 ## Tips for Best Results
