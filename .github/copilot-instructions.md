@@ -209,3 +209,53 @@ False completion claims are **process violations**.
 - Prefer existing repo patterns.
 - Avoid large rewrites.
 - Treat security, privacy, and observability as first-class requirements.
+
+---
+
+## Terminal file writing rules (Windows/PowerShell)
+
+**CRITICAL**: PowerShell has encoding behaviors that corrupt Python files. Follow these rules strictly.
+
+### Problem
+PowerShell's default file output uses UTF-16 LE encoding with BOM, which Python interprets as null bytes causing `SyntaxError: source code string cannot contain null bytes`.
+
+### Mandatory patterns
+
+1. **NEVER use PowerShell native file operations for Python files**:
+   - `echo "content" > file.py`
+   - `"content" | Out-File file.py`
+   - `Set-Content file.py -Value "content"`
+
+2. **ALWAYS use this pattern for writing files**:
+   ```powershell
+   cmd /c "python -c ""import base64; c=base64.b64decode('BASE64_CONTENT').decode('utf-8'); open(r'PATH', 'w', encoding='utf-8').write(c); print('OK')"""
+   ```
+
+3. **ALWAYS verify file encoding after writing**:
+   ```powershell
+   cmd /c "python -c ""print('NULL' if b'\x00' in open(r'PATH','rb').read() else 'CLEAN')"""
+   ```
+
+4. **If `create_file` tool reports success, verify on disk**:
+   ```powershell
+   cmd /c "dir PATH"
+   ```
+   The IDE buffer and filesystem may be out of sync.
+
+5. **Clear Python cache after fixing encoding issues**:
+   ```powershell
+   cmd /c "python -c ""import shutil,os; [shutil.rmtree(os.path.join(r,d)) for r,dirs,_ in os.walk(r'PROJECT_PATH') for d in dirs if d=='__pycache__']"""
+   ```
+
+### Why `cmd /c`?
+- Bypasses PowerShell's quote parsing entirely
+- Uses CMD's simpler escaping rules (double quotes = `""`)
+- Avoids UTF-16 BOM encoding issues
+
+### Symptoms of encoding problems
+- `SyntaxError: source code string cannot contain null bytes`
+- Files appear to have content but Python can't import them
+- Tests fail on import but source files look correct
+
+### Reference
+This rule was added after MCDEMO-001 retrospective. See `KustoMapper/WorkItems/MCDEMO-001/RoleDecisionNotes/MCDEMM-001-retrospective.md` for full analysis.
