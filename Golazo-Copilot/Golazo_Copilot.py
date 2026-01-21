@@ -12,6 +12,8 @@ workflow instructions to that repository's .github/ directory.
 import sys
 from pathlib import Path
 import shutil
+import argparse
+import zipfile
 
 
 def find_repo_root(start_path: Path) -> Path | None:
@@ -150,6 +152,75 @@ def install_golazo(target_root: Path) -> bool:
     return True
 
 
+def create_package(output_path: Path) -> bool:
+    """
+    Create a distribution zip file containing GolazoCP files.
+    
+    Args:
+        output_path: Path where zip file will be created
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    script_dir = get_script_directory()
+    
+    # Define required source files
+    source_github = script_dir / ".github"
+    source_readme = script_dir / "README.md"
+    source_usage_vs = script_dir / "USAGE-VisualStudio.md"
+    source_usage_vscode = script_dir / "USAGE-VSCode.md"
+    
+    # Validate all required files exist
+    if not source_github.exists():
+        print(f"Error: .github/ directory not found at {source_github}", file=sys.stderr)
+        return False
+    
+    source_spine = source_github / "copilot-instructions.md"
+    if not source_spine.exists():
+        print("Error: .github/copilot-instructions.md not found", file=sys.stderr)
+        return False
+    
+    source_roles = source_github / "roles"
+    if not source_roles.exists():
+        print("Error: .github/roles/ directory not found", file=sys.stderr)
+        return False
+    
+    if not source_readme.exists():
+        print(f"Error: README.md not found at {source_readme}", file=sys.stderr)
+        return False
+    
+    if not source_usage_vs.exists():
+        print(f"Error: USAGE-VisualStudio.md not found at {source_usage_vs}", file=sys.stderr)
+        return False
+    
+    if not source_usage_vscode.exists():
+        print(f"Error: USAGE-VSCode.md not found at {source_usage_vscode}", file=sys.stderr)
+        return False
+    
+    try:
+        with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+            # Add copilot-instructions.md
+            zf.write(source_spine, ".github/copilot-instructions.md")
+            
+            # Add all role files
+            for role_file in source_roles.glob("*.md"):
+                arcname = f".github/roles/{role_file.name}"
+                zf.write(role_file, arcname)
+            
+            # Add README and USAGE files
+            zf.write(source_readme, "README.md")
+            zf.write(source_usage_vs, "USAGE-VisualStudio.md")
+            zf.write(source_usage_vscode, "USAGE-VSCode.md")
+        
+        return True
+        
+    except (OSError, zipfile.BadZipFile) as e:
+        print(f"Error creating zip file: {e}", file=sys.stderr)
+        return False
+
+
+
+
 def main() -> int:
     """
     Main entry point for the CLI.
@@ -157,7 +228,31 @@ def main() -> int:
     Returns:
         Exit code (0 for success, 1 for failure)
     """
-    # Find the repository root from current working directory
+    parser = argparse.ArgumentParser(
+        description="Golazo Copilot - Install or package Golazo workflow instructions"
+    )
+    parser.add_argument(
+        "--package",
+        action="store_true",
+        help="Create a distribution zip file instead of installing"
+    )
+    args = parser.parse_args()
+    
+    if args.package:
+        # Package mode: create distribution zip
+        cwd = Path.cwd()
+        output_path = cwd / "GolazoCP-dist.zip"
+        
+        print("Creating GolazoCP distribution package...")
+        
+        if create_package(output_path):
+            print(f"\n? Package created: {output_path}")
+            return 0
+        else:
+            print("\n? Package creation failed.", file=sys.stderr)
+            return 1
+    
+    # Default mode: install to repository
     cwd = Path.cwd()
     repo_root = find_repo_root(cwd)
     
