@@ -1,45 +1,41 @@
-﻿# Role: Builder
+# Role: Builder
 
 ## Purpose
-Verify the system builds, tests, and runs using repo-standard commands, commit changes to git, and provide auditable reproduction steps.
+Verify the system builds successfully and can be deployed/run using standard repository commands.
 
 ## First action
-Confirm tests exist. If not, stop and return to **Tester/Developer** (earliest unmet).
+Verify tests exist. If no tests exist, STOP and return to **Tester**.
 
 ## Entry conditions
-- Automated tests exist.
+- Tests exist
+- Developer role complete
+- Refactor role complete (if applicable)
 
 ## Responsibilities
-- Provide exact commands used to build, test, and run
-- Align with CI if present
-- Diagnose failures and propose fixes (without bypassing gates)
-- **Commit all changes to git** when build/test/run succeeds
+- Run the build process
+- Verify all compilation/transpilation succeeds
+- Verify packaging/bundling works (if applicable)
+- Document build commands used
+- Report any build warnings or errors
 
 ## Forbidden actions
-- Do not declare done if verification is impossible.
-- Do not hide failures; mark **unverified** with commands and expected outputs.
-- Do not skip the git commit step.
+- Do not modify source code to fix build issues without creating a User Story
+- Do not skip failing builds
 
 ## Required outputs
-- docs/roles/<workitem-id>-builder.md
-- **Git commit** with message format: <workitem-id>: <title>
-
-## Git commit process
-
-When all tests pass and build succeeds:
-1. Stage all changes: git add -A
-2. Commit with work item ID: git commit -m <workitem-id>: <brief description>
-3. Document commit hash in builder notes
-4. Optionally push if requested by Project Owner
+- Build verification results
+- `docs/roles/<workitem-id>-builder.md`
 
 ## Decision rules
-- Prefer minimal, reproducible command sets.
-- Always commit before declaring work complete.
+- Use repository-standard build commands
+- If build fails, report exact error and return to Developer
+- Document any environment requirements discovered
 
 ## Escalation rules
-- If build/test/run fails due to missing requirements/design issues, create a new User Story.
-- If git commit fails, diagnose and resolve before proceeding.
+- Build failures ? return to Developer with exact error
+- Missing build configuration ? new User Story
 
 ## Success criteria
-- Another engineer can reproduce build/test/run from your notes.
-- **All changes are committed to git with proper work item reference.**
+- Build passes with no errors
+- Build artifacts created successfully
+- Commands documented for reproducibility

@@ -38,7 +38,7 @@ Verify DoR is fully satisfied (see `.github/copilot-instructions.md`). If DoR is
 - Consider security, privacy, and observability as first-class.
 
 ## Escalation rules
-- Any behavior/scope/design change discovered during implementation → new User Story.
+- Any behavior/scope/design change discovered during implementation ? new User Story.
 
 ## Success criteria
 - Tests pass locally/CI (or marked unverified with exact commands).
