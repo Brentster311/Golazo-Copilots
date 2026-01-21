@@ -8,6 +8,8 @@ A structured, role-based workflow for AI-assisted software development with GitH
 
 Think of it as **Kanban meets AI pair programming**: every feature goes through defined roles (Project Owner, Architect, Tester, Developer, etc.), and each role produces documentation explaining *why* decisions were made.
 
+📚 **Learn more about Golazo**: [https://microsoft.github.io/golazo/](https://microsoft.github.io/golazo/)
+
 ## Benefits
 
 | Benefit | Description |
