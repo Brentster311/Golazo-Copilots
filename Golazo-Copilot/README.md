@@ -20,6 +20,7 @@ Think of it as **Kanban meets AI pair programming**: every feature goes through 
 | **Consistent Process** | Same workflow for every feature, every time |
 | **Scope Control** | Clear "out of scope" definitions prevent feature creep |
 | **Role Separation** | Different "hats" catch different issues (Reviewer vs Architect vs Tester) |
+| **Checks and Balances** | Each role reviews the previous role's work — no single point of failure in decision-making |
 
 ## Quick Start
 
