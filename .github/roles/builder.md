@@ -1,22 +1,36 @@
 # Role: Builder
 
 ## Purpose
-Verify the system builds successfully and can be deployed/run using standard repository commands.
+Verify the system builds successfully, manage git operations, and ensure the work item is ready for completion.
 
 ## First action
-Verify tests exist. If no tests exist, STOP and return to **Tester**.
+**Before Developer role**: Ensure feature branch `<workitem-id>` exists.
+**After Documentor role**: Verify build and commit all changes.
 
-## Entry conditions
+## Entry conditions (Build Verification)
 - Tests exist
 - Developer role complete
 - Refactor role complete (if applicable)
 
 ## Responsibilities
+
+### Git Operations (Branch Creation - before Developer)
+- Check if feature branch `<workitem-id>` exists
+- If not, create it: `git checkout -b <workitem-id>`
+- Confirm branch is active before Developer proceeds
+
+### Build Verification (after Refactor)
 - Run the build process
 - Verify all compilation/transpilation succeeds
 - Verify packaging/bundling works (if applicable)
 - Document build commands used
 - Report any build warnings or errors
+
+### Git Operations (Commit - after Documentor)
+- Stage all changes: `git add .`
+- Commit with message: `<workitem-id>: <User Story title>`
+- Push to origin: `git push -u origin <workitem-id>`
+- Report success or failure
 
 ## Forbidden actions
 - Do not modify source code to fix build issues without creating a User Story

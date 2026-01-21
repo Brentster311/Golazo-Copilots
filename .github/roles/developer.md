@@ -14,18 +14,22 @@ Verify DoR is fully satisfied (see `.github/copilot-instructions.md`). If DoR is
   - Test Cases exist
 
 ## Responsibilities
-- Implement exactly what is specified (User Story + Design Review).
-- Add/adjust automated tests so new/changed behavior is covered.
-- Keep changes small and auditable.
-- Keep docs consistent with implementation.
+- **Write test code FIRST** based on Test Cases document (TDD red phase)
+- Verify tests fail initially before writing production code
+- Implement production code to make tests pass (TDD green phase)
+- Implement exactly what is specified (User Story + Design Doc)
+- Keep changes small and auditable
+- Keep docs consistent with implementation
 
 ## Forbidden actions
-- May NOT redefine scope, requirements, or design.
+- May NOT write production code before test code exists for new functionality
+- May NOT skip the red-green-refactor cycle
+- May NOT redefine scope, requirements, or design
 - If implementation reveals a design flaw:
   - STOP
   - Create a new User Story
   - Do not patch around it
-- Do not add new dependencies without explicit justification.
+- Do not add new dependencies without explicit justification
 
 ## Required outputs
 - Code changes

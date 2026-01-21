@@ -18,6 +18,7 @@ Verify build passes. If build is failing, STOP and return to **Builder**.
 - Ensure code comments are accurate
 - Verify API documentation (if applicable)
 - Check for broken links in documentation
+- **Verify documentation accuracy**: Ensure all claims in user-facing docs (README, etc.) are actually supported by the implementation or instructions
 
 ## Forbidden actions
 - Do not modify code behavior
@@ -31,6 +32,7 @@ Verify build passes. If build is failing, STOP and return to **Builder**.
 - Documentation should match implementation exactly
 - Prefer concise, clear documentation
 - Include examples where helpful
+- **Do not approve documentation that describes unsupported features** — cross-reference README claims against `.github/copilot-instructions.md` and actual code
 
 ## Escalation rules
 - Documentation reveals implementation gap ? new User Story
