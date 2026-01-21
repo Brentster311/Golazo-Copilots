@@ -32,8 +32,8 @@ This guide explains how to set up and use GolazoCP with GitHub Copilot in Visual
 ### Starting a New Work Item
 
 1. Open **GitHub Copilot Chat**:
-   - Click the Copilot icon in the sidebar, or
-   - Press `Ctrl+Shift+I` (Windows/Linux) or `Cmd+Shift+I` (Mac)
+- Click the chat icon in the Activity Bar (left sidebar), or
+- Press `Ctrl+Alt+I` (Windows/Linux) or `Cmd+Alt+I` (Mac)
 
 2. Ask Copilot to help with a feature:
    ```
@@ -60,6 +60,7 @@ Copilot will guide you through each role:
 | Refactor Expert | Improves code quality |
 | Builder | Verifies build |
 | Documentor | Updates documentation |
+| Retrospective | Evaluates process (triggered as needed) |
 
 ### Checking the Status
 
@@ -134,7 +135,7 @@ your-project/
 
 | Action | Shortcut |
 |--------|----------|
-| Open Copilot Chat | `Ctrl+Shift+I` / `Cmd+Shift+I` |
+| Open Copilot Chat | `Ctrl+Alt+I` / `Cmd+Alt+I` |
 | Inline Chat | `Ctrl+I` / `Cmd+I` |
 | Accept Suggestion | `Tab` |
 | Dismiss Suggestion | `Esc` |

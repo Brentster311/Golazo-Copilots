@@ -5,8 +5,7 @@ This guide explains how to set up and use GolazoCP with GitHub Copilot in Visual
 ## Prerequisites
 
 - Visual Studio 2022 (17.8 or later)
-- GitHub Copilot extension installed
-- GitHub Copilot Chat extension installed
+- GitHub Copilot extension installed (includes Copilot Chat)
 
 ## Installation
 
@@ -31,7 +30,7 @@ This guide explains how to set up and use GolazoCP with GitHub Copilot in Visual
 
 ### Starting a New Work Item
 
-1. Open **GitHub Copilot Chat** (View ? GitHub Copilot Chat, or `Ctrl+\, Ctrl+C`)
+1. Open **GitHub Copilot Chat** (View ? GitHub Copilot ? Open Copilot Chat)
 
 2. Ask Copilot to help with a feature:
    ```
@@ -58,6 +57,7 @@ Copilot will guide you through each role:
 | Refactor Expert | Improves code quality |
 | Builder | Verifies build |
 | Documentor | Updates documentation |
+| Retrospective | Evaluates process (triggered as needed) |
 
 ### Checking the Status
 
