@@ -27,12 +27,26 @@
   <ItemGroup>
     <Content Include="README.md" />
     <Content Include=".github\copilot-instructions.md" />
+    <Content Include="USAGE-VisualStudio.md" />
+    <Content Include="USAGE-VSCode.md" />
+    <Content Include="WorkItems\GCP-005\Design\GCP-005-Design-Doc.md" />
+    <Content Include="WorkItems\GCP-005\Design\GCP-005-Review-Comments.md" />
+    <Content Include="WorkItems\GCP-005\Design\GCP-005-Test-Cases.md" />
+    <Content Include="WorkItems\GCP-005\GCP-005-User-Story.md" />
+    <Content Include="WorkItems\GCP-005\RoleDecisionNotes\GCP-005-architect.md" />
+    <Content Include="WorkItems\GCP-005\RoleDecisionNotes\GCP-005-program-manager.md" />
+    <Content Include="WorkItems\GCP-005\RoleDecisionNotes\GCP-005-project-owner-assistant.md" />
+    <Content Include="WorkItems\GCP-005\RoleDecisionNotes\GCP-005-reviewer.md" />
+    <Content Include="WorkItems\GCP-005\RoleDecisionNotes\GCP-005-tester.md" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include=".github\" />
     <Folder Include=".github\roles\" />
     <Folder Include="tests\" />
     <Folder Include="WorkItems\" />
+    <Folder Include="WorkItems\GCP-005\" />
+    <Folder Include="WorkItems\GCP-005\Design\" />
+    <Folder Include="WorkItems\GCP-005\RoleDecisionNotes\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in

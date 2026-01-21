@@ -1,12 +1,12 @@
-﻿# Golazo Copilot
+﻿# Golazo Copilot (GolazoCP)
 
 A structured, role-based workflow for AI-assisted software development with GitHub Copilot.
 
-## What is Golazo?
+## What is GolazoCP?
 
-**Golazo** is a methodology that transforms how you work with AI coding assistants. Instead of letting AI write code immediately, Golazo enforces a disciplined workflow with **gates, roles, and auditable artifacts** — ensuring quality, traceability, and thoughtful design before any code is written.
+**GolazoCP** is a methodology that transforms how you work with AI coding assistants. Instead of letting AI write code immediately, GolazoCP enforces a disciplined workflow with **gates, roles, and auditable artifacts** — ensuring quality, traceability, and thoughtful design before any code is written.
 
-Think of it as **Kanban meets AI pair programming**: every feature goes through defined roles (Project Owner, Architect, Tester, Developer, etc.), and each role produces documentation explaining *why* decisions were made.
+GolazoCP, adapted from the Golazo agile practice, is sort of **Kanban meets AI pair programming**: every feature goes through defined roles (Project Owner, Architect, Tester, Developer, etc.), and each role produces documentation explaining *why* decisions were made.
 
 📚 **Learn more about Golazo**: [https://microsoft.github.io/golazo/](https://microsoft.github.io/golazo/)
 
@@ -14,7 +14,7 @@ Think of it as **Kanban meets AI pair programming**: every feature goes through 
 
 | Benefit | Description |
 |---------|-------------|
-| **No Cowboy Coding** | AI can't skip to implementation — it must complete design and test planning first |
+| **Structured Development** | AI follows a deliberate process — design and test planning are completed before implementation |
 | **Audit Trail** | Every decision is documented; you can trace *why* any code exists |
 | **TDD by Default** | Test cases are written before code (Definition of Ready requires them) |
 | **Consistent Process** | Same workflow for every feature, every time |
@@ -24,7 +24,7 @@ Think of it as **Kanban meets AI pair programming**: every feature goes through 
 
 ## Quick Start
 
-### Install Golazo in Your Repository
+### Option 1: Install via Script
 
 ```bash
 # Clone the Golazo Copilot repository
@@ -37,19 +37,34 @@ cd /path/to/your/project
 python /path/to/Golazo-Copilots/Golazo-Copilot/Golazo_Copilot.py
 ```
 
-This installs:
+### Option 2: Download Distribution Package
+
+```bash
+# Create a distributable zip file
+cd /path/to/Golazo-Copilots/Golazo-Copilot
+python Golazo_Copilot.py --package
+```
+
+This creates `GolazoCP-dist.zip` containing everything you need. Extract it to your project root.
+
+### What Gets Installed
+
 - `.github/copilot-instructions.md` — The "spine" that controls Copilot's behavior
 - `.github/roles/*.md` — Detailed instructions for each of the 10 roles
 
-### Start Using Golazo
+### Start Using GolazoCP
 
 1. Open your project in VS Code with GitHub Copilot
 2. Ask Copilot to help with a feature: *"I want to add user authentication"*
 3. Copilot will automatically follow the Golazo workflow, starting with the **Project Owner Assistant** role
 
+**IDE-specific guides:**
+- [Visual Studio Setup](USAGE-VisualStudio.md)
+- [VS Code Setup](USAGE-VSCode.md)
+
 ## The 10 Roles
 
-Golazo defines 10 sequential roles. Each role has specific responsibilities and produces artifacts:
+GolazoCP defines 10 sequential roles. Each role has specific responsibilities and produces artifacts:
 
 | # | Role | Purpose | Key Output |
 |---|------|---------|------------|
@@ -64,18 +79,6 @@ Golazo defines 10 sequential roles. Each role has specific responsibilities and 
 | 9 | **Documentor** | Update all documentation | Updated docs |
 | 10 | **Retrospective** | Evaluate process and propose improvements | Process changes |
 
-### Role Flow
-
-1. Project Owner Assistant
-2. Program Manager
-3. Reviewer
-4. Architect
-5. Tester
-6. Developer
-7. Refactor Expert
-8. Builder
-9. Documentor
-10. Retrospective *(triggered as needed, not every work item)*
 
 ## Artifact Structure
 
@@ -111,14 +114,14 @@ YourProject/
 
 ## Definition of Ready (DoR)
 
-Copilot **cannot write production code** until ALL of these exist:
+GolazoCP **cannot write production code** until ALL of these exist:
 
 - [ ] User Story document
 - [ ] Design Document with business case
 - [ ] Review Comments from Reviewer and Architect
-- [ ] Test Cases document
+- [ ] Test Cases documented and automated (TDD)
 
-This is enforced automatically — Copilot will refuse to write code and redirect you to create missing artifacts.
+This is enforced automatically — Golazo will refuse to write code and redirect you to create missing artifacts.
 
 ## Definition of Done (DoD)
 
