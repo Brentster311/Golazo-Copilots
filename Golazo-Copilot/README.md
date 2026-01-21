@@ -1,18 +1,18 @@
-# Golazo Copilot
+ï»¿# Golazo Copilot
 
 A structured, role-based workflow for AI-assisted software development with GitHub Copilot.
 
 ## What is Golazo?
 
-**Golazo** is a methodology that transforms how you work with AI coding assistants. Instead of letting AI write code immediately, Golazo enforces a disciplined workflow with **gates, roles, and auditable artifacts** — ensuring quality, traceability, and thoughtful design before any code is written.
+**Golazo** is a methodology that transforms how you work with AI coding assistants. Instead of letting AI write code immediately, Golazo enforces a disciplined workflow with **gates, roles, and auditable artifacts** â€” ensuring quality, traceability, and thoughtful design before any code is written.
 
-Think of it as **Scrum meets AI pair programming**: every feature goes through defined roles (Project Owner, Architect, Tester, Developer, etc.), and each role produces documentation explaining *why* decisions were made.
+Think of it as **Kanban meets AI pair programming**: every feature goes through defined roles (Project Owner, Architect, Tester, Developer, etc.), and each role produces documentation explaining *why* decisions were made.
 
 ## Benefits
 
 | Benefit | Description |
 |---------|-------------|
-| ?? **No Cowboy Coding** | AI can't skip to implementation — it must complete design and test planning first |
+| ?? **No Cowboy Coding** | AI can't skip to implementation â€” it must complete design and test planning first |
 | ?? **Audit Trail** | Every decision is documented; you can trace *why* any code exists |
 | ?? **TDD by Default** | Test cases are written before code (Definition of Ready requires them) |
 | ?? **Consistent Process** | Same workflow for every feature, every time |
@@ -35,8 +35,8 @@ python /path/to/Golazo-Copilots/Golazo-Copilot/Golazo_Copilot.py
 ```
 
 This installs:
-- `.github/copilot-instructions.md` — The "spine" that controls Copilot's behavior
-- `.github/roles/*.md` — Detailed instructions for each of the 10 roles
+- `.github/copilot-instructions.md` â€” The "spine" that controls Copilot's behavior
+- `.github/roles/*.md` â€” Detailed instructions for each of the 10 roles
 
 ### Start Using Golazo
 
@@ -96,10 +96,10 @@ YourProject/
 
 ### Why This Structure?
 
-- **Everything for a work item is together** — no hunting across folders
-- **Role notes explain decisions** — not just *what* was built, but *why*
-- **Git-friendly** — easy to see all changes for a feature in one PR
-- **Auditable** — compliance and review teams can trace any decision
+- **Everything for a work item is together** â€” no hunting across folders
+- **Role notes explain decisions** â€” not just *what* was built, but *why*
+- **Git-friendly** â€” easy to see all changes for a feature in one PR
+- **Auditable** â€” compliance and review teams can trace any decision
 
 ## Definition of Ready (DoR)
 
@@ -110,7 +110,7 @@ Copilot **cannot write production code** until ALL of these exist:
 - [ ] Review Comments from Reviewer and Architect
 - [ ] Test Cases document
 
-This is enforced automatically — Copilot will refuse to write code and redirect you to create missing artifacts.
+This is enforced automatically â€” Copilot will refuse to write code and redirect you to create missing artifacts.
 
 ## Definition of Done (DoD)
 
@@ -198,7 +198,7 @@ Create a minimal User Story with "hotfix" scope. The workflow still applies, but
 
 ## License
 
-MIT License — see LICENSE file for details.
+MIT License â€” see LICENSE file for details.
 
 ## Contributing
 
@@ -207,3 +207,4 @@ Contributions welcome! Please follow the Golazo workflow when contributing:
 1. Create a User Story for your proposed change
 2. Go through the full role sequence
 3. Submit PR with all artifacts
+
