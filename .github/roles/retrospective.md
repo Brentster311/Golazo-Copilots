@@ -1,38 +1,49 @@
 # Role: Retrospective
 
 ## Purpose
-Improve the Golazo process when the workflow breaks down or friction repeats.
+Evaluate the workflow execution and propose improvements to the Golazo process itself.
 
 ## First action
-Identify the trigger condition and gather evidence from artifacts/notes.
-
-## Triggered when
-- Golazo is violated
-- Reviewer feedback repeats across work items
-- CI/build failures recur
-- The user explicitly requests a retrospective
+This role is triggered when:
+- A workflow friction or failure occurred
+- The Project Owner requests a retrospective
+- The work item is complete and review is requested
 
 ## Entry conditions
-- A trigger condition has occurred.
+- Work item complete (or blocked/failed)
+- Request from Project Owner or triggered by process issue
 
 ## Responsibilities
-- Identify workflow breakdowns
-- Identify instruction ambiguity or gaps
-- Propose **specific changes** to:
-  - `.github/copilot-instructions.md` and/or
-  - `.github/roles/*.md`
-- Focus on preventing recurrence.
+- Analyze what went well
+- Identify friction points or failures
+- Propose specific, actionable improvements to the Golazo workflow
+- Document lessons learned
 
 ## Forbidden actions
-- Do not propose product feature changes as the primary output.
-- Do not modify production code as part of the retrospective.
+- Do not modify product code
+- Do not change scope of the work item
+- Proposed changes are to the **process**, not the product
 
 ## Required outputs
 - `docs/roles/<workitem-id>-retrospective.md`
-- Suggested diffs/patches to Golazo instruction files (as text)
+- Proposed changes to `.github/copilot-instructions.md` or role files (if any)
 
 ## Decision rules
-- Be specific: propose concrete wording/structure changes.
+- Focus on systemic improvements, not individual blame
+- Prefer small, incremental process changes
+- Changes must be testable/observable
+
+## Retrospective format
+- **What went well**: List successes
+- **What didn't go well**: List friction/failures
+- **Action items**: Specific proposed changes
+- **Metrics**: How to measure improvement
+
+## Escalation rules
+- Major process changes should be reviewed before adoption
+- Create a new work item for implementing process changes
 
 ## Success criteria
-- Proposed changes are actionable and reduce repeated failures.
+- Friction/failures are documented
+- Actionable improvements proposed
+- Team can decide whether to adopt changes

@@ -1,0 +1,73 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>f63443a9-08dd-45e8-af2e-bee1d5476a25</ProjectGuid>
+    <ProjectHome>.</ProjectHome>
+    <StartupFile>
+    </StartupFile>
+    <SearchPath>
+    </SearchPath>
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <Name>photo_organizer</Name>
+    <RootNamespace>photo_organizer</RootNamespace>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <ItemGroup>
+    <Folder Include=".github\" />
+    <Folder Include=".github\roles\" />
+    <Folder Include="docs\" />
+    <Folder Include="docs\design\" />
+    <Folder Include="docs\roles\" />
+    <Folder Include="docs\tests\" />
+    <Folder Include="docs\workitems\" />
+    <Folder Include="photo_organizer\" />
+    <Folder Include="photo_organizer\docs\" />
+    <Folder Include="photo_organizer\docs\roles\" />
+    <Folder Include="photo_organizer\docs\workitems\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include=".github\roles\project-owner-assistant.md" />
+    <Content Include="docs\design\WIP-001-design-doc.md" />
+    <Content Include="docs\design\WIP-001-review-notes.md" />
+    <Content Include="docs\roles\RETRO-001-retrospective.md" />
+    <Content Include="docs\roles\WIP-001-architect.md" />
+    <Content Include="docs\roles\WIP-001-developer.md" />
+    <Content Include="docs\roles\WIP-001-program-manager.md" />
+    <Content Include="docs\roles\WIP-001-project-owner-assistant.md" />
+    <Content Include="docs\roles\WIP-001-refactor.md" />
+    <Content Include="docs\roles\WIP-001-reviewer.md" />
+    <Content Include="docs\roles\WIP-001-tester.md" />
+    <Content Include="docs\roles\WIP-002-project-owner-assistant.md" />
+    <Content Include="docs\tests\WIP-001-test-cases.md" />
+    <Content Include="docs\workitems\WIP-001-user-story.md" />
+    <Content Include="docs\workitems\WIP-002-user-story.md" />
+    <Content Include="photo_organizer\docs\roles\WIP-001-builder.md" />
+    <Content Include="photo_organizer\docs\roles\WIP-001-documentor.md" />
+    <Content Include="photo_organizer\docs\roles\WIP-003-project-owner-assistant.md" />
+    <Content Include="photo_organizer\docs\workitems\WIP-003-user-story.md" />
+    <Content Include="photo_organizer\README.md" />
+    <Content Include="README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="photo_organizer.py" />
+    <Compile Include="test_photo_organizer.py" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
+  <!-- Uncomment the CoreCompile target to enable the Build command in
+       Visual Studio and specify your pre- and post-build commands in
+       the BeforeBuild and AfterBuild targets below. -->
+  <!--<Target Name="CoreCompile" />-->
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+</Project>

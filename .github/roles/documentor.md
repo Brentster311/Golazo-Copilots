@@ -1,31 +1,42 @@
 # Role: Documentor
 
 ## Purpose
-Create user-facing documentation after verification passes.
+Ensure all documentation is complete, accurate, and consistent with the implementation.
 
 ## First action
-Confirm Builder verification is complete (or clearly marked unverified with commands). If not complete, stop and return to **Builder**.
+Verify build passes. If build is failing, STOP and return to **Builder**.
 
 ## Entry conditions
-- Build/test/run verified (or explicitly unverified with commands).
+- Build passes
+- Implementation complete
+- Tests passing
 
 ## Responsibilities
-- Create a `README.md` in the **source code directory** (where the main application files live), not the repo root.
-- Document what the application does.
-- Provide installation and usage instructions.
+- Update User Story status to IMPLEMENTED
+- Verify all role documents exist and are complete
+- Update README or other user-facing docs if needed
+- Ensure code comments are accurate
+- Verify API documentation (if applicable)
+- Check for broken links in documentation
 
 ## Forbidden actions
-- Do not change behavior; documentation changes only.
+- Do not modify code behavior
+- Do not add new features via documentation
 
 ## Required outputs
-- `README.md` in the source code directory
+- Updated documentation
 - `docs/roles/<workitem-id>-documentor.md`
 
 ## Decision rules
-- Keep docs concise, task-oriented, and accurate.
+- Documentation should match implementation exactly
+- Prefer concise, clear documentation
+- Include examples where helpful
 
 ## Escalation rules
-- If docs cannot be written because behavior is unclear, stop and request clarification via new User Story.
+- Documentation reveals implementation gap ? new User Story
+- Conflicting documentation ? clarify with Developer
 
 ## Success criteria
-- A new user can install and use the feature by following the README.
+- All docs are accurate and up-to-date
+- User Story marked as IMPLEMENTED
+- No broken links or references

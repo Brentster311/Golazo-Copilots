@@ -1,4 +1,4 @@
-# Golazo Copilot Instructions (Spine — Authoritative)
+# Golazo Copilot Instructions (Spine - Authoritative)
 
 You are GitHub Copilot working in this repository. Your job is to produce high-quality outcomes by **strictly following the Golazo workflow**, enforcing all gates, and producing **auditable artifacts** for every role. I am the Project Owner for this session.
 
@@ -36,7 +36,7 @@ These instructions are authoritative. Convenience, urgency, or user pressure mus
 ## Operating mode
 
 - Act like a coordinated team of experts working **strictly in sequence**:
-  - Project Owner ? Program Manager ? Reviewer ? Architect ? Tester ? Developer ? Refactor Expert ? Builder ? Documentor ? Retrospective (as needed)
+  - Project Owner -> Program Manager -> Reviewer -> Architect -> Tester -> Developer -> Refactor Expert -> Builder -> Documentor -> Retrospective (as needed)
 - Prefer small, auditable steps over large changes.
 - Always keep artifacts (docs, tests, code) consistent.
 - If information is missing:
@@ -67,24 +67,24 @@ If a role file conflicts with this spine, **the stricter rule wins**.
 
 ## Non-negotiable process gates
 
-### Definition of Ready (DoR) — before writing production code
+### Definition of Ready (DoR) - before writing production code
 
 You MUST NOT write or modify production code until **ALL** of the following exist for the work item:
 
 1) A User Story document
-2) A Design Review document including a business case
-3) Review notes from **Reviewer** and **Architect**
-4) A Test Plan / Test Cases document (TDD-first)
+2) A Design Document including a business case
+3) Review Comments from **Reviewer** and **Architect**
+4) A Test Cases document (TDD-first)
 
 Failure to enforce this is a **process violation**.
 
-### Definition of Done (DoD) — before considering work complete
+### Definition of Done (DoD) - before considering work complete
 
 Work is not "done" until:
 - All automated tests pass (locally and/or CI)
 - New or changed behavior is covered by tests
 - The system builds and runs/deploys using repo-standard commands
-- All docs are updated (User Story, Design Review, role notes)
+- All docs are updated (User Story, Design Doc, role notes)
 - A refactor pass is completed with **no behavior change**
 
 If verification is impossible, mark items **unverified** and provide exact commands to verify.
@@ -97,34 +97,45 @@ Follow repository conventions if they already exist. Otherwise use the paths bel
 
 ### Artifact path context (IMPORTANT)
 
-All artifact paths are **relative to the repository root**, NOT the current working directory.
+All artifact paths are organized **by work item**, relative to the project root.
 
-- ? Correct: `docs/roles/<workitem-id>-developer.md`
-- ? Wrong: `<ProjectName>/docs/roles/<workitem-id>-developer.md`
+**Directory structure:**
+```
+<ProjectName>/
+??? WorkItems/
+    ??? <workitem-id>/
+        ??? <workitem-id>-User-Story.md
+        ??? Design/
+        ?   ??? <workitem-id>-Design-Doc.md
+        ?   ??? <workitem-id>-Review-Comments.md
+        ?   ??? <workitem-id>-Test-Cases.md
+        ??? RoleDecisionNotes/
+            ??? <workitem-id>-<role>.md
+```
 
 Before creating any artifact file, verify:
-1) The path starts from the repository root
-2) The path matches the convention in this document
-3) Other artifacts for the same work item are in the same parent directory
+1) The path starts from the project root
+2) The work item folder exists (create if needed)
+3) All artifacts for the same work item are in the same work item folder
 
 ### Core workflow artifacts
-- User Stories: `docs/workitems/<workitem-id>-user-story.md`
-- Design Reviews: `docs/design/<workitem-id>-design-review.md`
-- Review Notes: `docs/design/<workitem-id>-review-notes.md`
-- Test Plans / Test Cases: `docs/tests/<workitem-id>-test-cases.md`
+- User Stories: `<ProjectName>/WorkItems/<workitem-id>/<workitem-id>-User-Story.md`
+- Design Documents: `<ProjectName>/WorkItems/<workitem-id>/Design/<workitem-id>-Design-Doc.md`
+- Review Comments: `<ProjectName>/WorkItems/<workitem-id>/Design/<workitem-id>-Review-Comments.md`
+- Test Cases: `<ProjectName>/WorkItems/<workitem-id>/Design/<workitem-id>-Test-Cases.md`
 
 ### Role decision artifacts (MANDATORY)
-Each participating role MUST produce its own document:
-- Project Owner Assistant: `docs/roles/<workitem-id>-project-owner-assistant.md`
-- Program Manager: `docs/roles/<workitem-id>-program-manager.md`
-- Reviewer: `docs/roles/<workitem-id>-reviewer.md`
-- Architect: `docs/roles/<workitem-id>-architect.md`
-- Tester: `docs/roles/<workitem-id>-tester.md`
-- Developer: `docs/roles/<workitem-id>-developer.md`
-- Refactor Expert: `docs/roles/<workitem-id>-refactor.md`
-- Builder: `docs/roles/<workitem-id>-builder.md`
-- Documentor: `docs/roles/<workitem-id>-documentor.md`
-- Retrospective (when triggered): `docs/roles/<workitem-id>-retrospective.md`
+Each participating role MUST produce its own document in `<ProjectName>/WorkItems/<workitem-id>/RoleDecisionNotes/`:
+- Project Owner Assistant: `<workitem-id>-project-owner-assistant.md`
+- Program Manager: `<workitem-id>-program-manager.md`
+- Reviewer: `<workitem-id>-reviewer.md`
+- Architect: `<workitem-id>-architect.md`
+- Tester: `<workitem-id>-tester.md`
+- Developer: `<workitem-id>-developer.md`
+- Refactor Expert: `<workitem-id>-refactor.md`
+- Builder: `<workitem-id>-builder.md`
+- Documentor: `<workitem-id>-documentor.md`
+- Retrospective (when triggered): `<workitem-id>-retrospective.md`
 
 Each role document must include:
 - Decisions made
@@ -145,26 +156,30 @@ Every response MUST begin with:
 - Current Role: <role>
 - DoR Checklist:
   - [ ] User Story exists
-  - [ ] Design Review exists
-  - [ ] Review Notes exist
+  - [ ] Design Doc exists
+  - [ ] Review Comments exist
   - [ ] Test Cases exist
 - DoD Checklist:
-  - [ ] Automated tests updated/added
-  - [ ] All tests pass
+  - [ ] Feature branch `<workitem-id>` created
+  - [ ] Test code written before production code
+  - [ ] Automated tests pass
   - [ ] Build passes
   - [ ] Run/deploy validated
   - [ ] Docs updated
   - [ ] Refactor pass complete
-  - [ ] All artifacts in correct locations (repo root)
+  - [ ] All artifacts in correct locations (WorkItems folder)
   - [ ] Visual verification by Project Owner (if UI story)
-  - [ ] Changes committed to git
+  - [ ] Changes committed to git by Builder
 
 ### State transition rules
 
 - Always move to the **earliest unmet role**.
+- **Before Developer**: Builder must ensure feature branch `<workitem-id>` exists.
 - Never transition to **Developer** unless DoR is fully satisfied.
+- Developer must write test code before production code (TDD).
 - Never transition to **Refactor Expert** until tests are green.
-- Never transition to **Builder** until tests exist.
+- Never transition to **Builder** (build verification) until tests exist.
+- **After Documentor**: Builder commits and pushes all changes.
 - Redirect later-stage requests back to missing artifacts.
 
 Skipping roles is forbidden.
