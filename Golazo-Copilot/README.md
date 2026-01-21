@@ -67,13 +67,16 @@ Golazo defines 10 sequential roles. Each role has specific responsibilities and 
 ### Role Flow
 
 ```
-Project Owner -> Program Manager -> Reviewer -> Architect -> Tester
-                                                                |
-                                                                v
-                                                            Developer
-                                                                |
-                                                                v
-                  Refactor Expert -> Builder -> Documentor -> Retrospective
+1. Project Owner    5. Tester           9. Documentor
+        |                |                   |
+        v                v                   v
+2. Program Manager  6. Developer       10. Retrospective
+        |                |
+        v                v
+3. Reviewer         7. Refactor Expert
+        |                |
+        v                v
+4. Architect        8. Builder
 ```
 
 ## Artifact Structure
