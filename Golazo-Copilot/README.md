@@ -83,23 +83,23 @@ All work items are organized in a `WorkItems/` folder:
 
 ```
 YourProject/
-??? WorkItems/
-    ??? TICKET-001/
-        ??? TICKET-001-User-Story.md
-        ??? Design/
-        ?   ??? TICKET-001-Design-Doc.md
-        ?   ??? TICKET-001-Review-Comments.md
-        ?   ??? TICKET-001-Test-Cases.md
-        ??? RoleDecisionNotes/
-            ??? TICKET-001-project-owner-assistant.md
-            ??? TICKET-001-program-manager.md
-            ??? TICKET-001-reviewer.md
-            ??? TICKET-001-architect.md
-            ??? TICKET-001-tester.md
-            ??? TICKET-001-developer.md
-            ??? TICKET-001-refactor.md
-            ??? TICKET-001-builder.md
-            ??? TICKET-001-documentor.md
+  WorkItems/
+    TICKET-001/
+      TICKET-001-User-Story.md
+      Design/
+        TICKET-001-Design-Doc.md
+        TICKET-001-Review-Comments.md
+        TICKET-001-Test-Cases.md
+      RoleDecisionNotes/
+        TICKET-001-project-owner-assistant.md
+        TICKET-001-program-manager.md
+        TICKET-001-reviewer.md
+        TICKET-001-architect.md
+        TICKET-001-tester.md
+        TICKET-001-developer.md
+        TICKET-001-refactor.md
+        TICKET-001-builder.md
+        TICKET-001-documentor.md
 ```
 
 ### Why This Structure?
