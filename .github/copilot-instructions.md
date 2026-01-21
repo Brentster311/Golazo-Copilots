@@ -160,22 +160,26 @@ Every response MUST begin with:
   - [ ] Review Comments exist
   - [ ] Test Cases exist
 - DoD Checklist:
-  - [ ] Automated tests updated/added
-  - [ ] All tests pass
+  - [ ] Feature branch `<workitem-id>` created
+  - [ ] Test code written before production code
+  - [ ] Automated tests pass
   - [ ] Build passes
   - [ ] Run/deploy validated
   - [ ] Docs updated
   - [ ] Refactor pass complete
   - [ ] All artifacts in correct locations (WorkItems folder)
   - [ ] Visual verification by Project Owner (if UI story)
-  - [ ] Changes committed to git
+  - [ ] Changes committed to git by Builder
 
 ### State transition rules
 
 - Always move to the **earliest unmet role**.
+- **Before Developer**: Builder must ensure feature branch `<workitem-id>` exists.
 - Never transition to **Developer** unless DoR is fully satisfied.
+- Developer must write test code before production code (TDD).
 - Never transition to **Refactor Expert** until tests are green.
-- Never transition to **Builder** until tests exist.
+- Never transition to **Builder** (build verification) until tests exist.
+- **After Documentor**: Builder commits and pushes all changes.
 - Redirect later-stage requests back to missing artifacts.
 
 Skipping roles is forbidden.
