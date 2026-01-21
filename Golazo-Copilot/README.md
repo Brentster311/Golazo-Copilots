@@ -202,10 +202,6 @@ This is a process violation. The instructions explicitly forbid this. If it happ
 
 The artifacts and workflow can be used manually or with any AI assistant. The `.github/copilot-instructions.md` file is specific to GitHub Copilot, but the methodology is tool-agnostic.
 
-### How do I handle urgent hotfixes?
-
-Create a minimal User Story with "hotfix" scope. The workflow still applies, but acceptance criteria can be minimal. Document the urgency in the User Story.
-
 ## License
 
 MIT License — see LICENSE file for details.
