@@ -1,0 +1,3410 @@
+[
+  {
+    "timestamp": "2026-01-14T19:12:52.800733",
+    "ai_enabled": true,
+    "winner": "O",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 2,
+        "col": 0
+      }
+    ],
+    "total_moves": 6
+  },
+  {
+    "timestamp": "2026-01-14T19:12:52.802999",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 0
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:12:52.804432",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:12:52.805613",
+    "ai_enabled": false,
+    "winner": "Draw",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 2,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 9
+  },
+  {
+    "timestamp": "2026-01-14T19:12:52.806784",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:12:52.808042",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:12:52.809299",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 2,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:12:52.810714",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:12:52.812053",
+    "ai_enabled": false,
+    "winner": "O",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 2
+      }
+    ],
+    "total_moves": 6
+  },
+  {
+    "timestamp": "2026-01-14T19:12:52.813761",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 0
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:12:52.815150",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 1
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:12:52.816909",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:13:46.410094",
+    "ai_enabled": true,
+    "winner": "O",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 2,
+        "col": 0
+      }
+    ],
+    "total_moves": 6
+  },
+  {
+    "timestamp": "2026-01-14T19:13:46.424053",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 0
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:13:46.425586",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:13:46.427012",
+    "ai_enabled": false,
+    "winner": "Draw",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 2,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 9
+  },
+  {
+    "timestamp": "2026-01-14T19:13:46.428635",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:13:46.430243",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:13:46.431857",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 2,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:13:46.433709",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:13:46.435736",
+    "ai_enabled": false,
+    "winner": "O",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 2
+      }
+    ],
+    "total_moves": 6
+  },
+  {
+    "timestamp": "2026-01-14T19:13:46.437657",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 0
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:13:46.439365",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 1
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:13:46.441182",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:30:30.625409",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 0
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:30:30.630092",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:30:30.633870",
+    "ai_enabled": false,
+    "winner": "Draw",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 2,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 9
+  },
+  {
+    "timestamp": "2026-01-14T19:30:30.637492",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:30:30.642009",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:30:30.645363",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 2,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:30:30.650792",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:30:30.655083",
+    "ai_enabled": false,
+    "winner": "O",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 2
+      }
+    ],
+    "total_moves": 6
+  },
+  {
+    "timestamp": "2026-01-14T19:30:30.661780",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 0
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:30:30.665090",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 1
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:30:30.668969",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:30:30.681384",
+    "ai_enabled": true,
+    "winner": "O",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 2,
+        "col": 0
+      }
+    ],
+    "total_moves": 6
+  },
+  {
+    "timestamp": "2026-01-14T19:31:36.186969",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 0
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:31:36.191020",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:31:36.194364",
+    "ai_enabled": false,
+    "winner": "Draw",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 2,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 9
+  },
+  {
+    "timestamp": "2026-01-14T19:31:36.197610",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:31:36.200975",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:31:36.204314",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 2,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:31:36.208171",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:31:36.211592",
+    "ai_enabled": false,
+    "winner": "O",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 2
+      }
+    ],
+    "total_moves": 6
+  },
+  {
+    "timestamp": "2026-01-14T19:31:36.216765",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 0
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:31:36.220290",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 1
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:31:36.223866",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T19:31:36.233381",
+    "ai_enabled": true,
+    "winner": "O",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 2,
+        "col": 0
+      }
+    ],
+    "total_moves": 6
+  },
+  {
+    "timestamp": "2026-01-14T20:07:37.914441",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 0
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:07:37.919301",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:07:37.923175",
+    "ai_enabled": false,
+    "winner": "Draw",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 2,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 9
+  },
+  {
+    "timestamp": "2026-01-14T20:07:37.927019",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:07:37.930877",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:07:37.934574",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 2,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:07:37.938990",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:07:37.942865",
+    "ai_enabled": false,
+    "winner": "O",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 2
+      }
+    ],
+    "total_moves": 6
+  },
+  {
+    "timestamp": "2026-01-14T20:07:37.948538",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 0
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:07:37.952370",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 1
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:07:37.956216",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:07:37.966252",
+    "ai_enabled": true,
+    "winner": "O",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 2,
+        "col": 0
+      }
+    ],
+    "total_moves": 6
+  },
+  {
+    "timestamp": "2026-01-14T20:07:59.848432",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 0
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:07:59.853236",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:07:59.857193",
+    "ai_enabled": false,
+    "winner": "Draw",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 2,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 9
+  },
+  {
+    "timestamp": "2026-01-14T20:07:59.861506",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:07:59.865928",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:07:59.870134",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 2,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:07:59.875031",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:07:59.879510",
+    "ai_enabled": false,
+    "winner": "O",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 2
+      }
+    ],
+    "total_moves": 6
+  },
+  {
+    "timestamp": "2026-01-14T20:07:59.885629",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 0
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:07:59.889935",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 1
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:07:59.894373",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:07:59.904663",
+    "ai_enabled": true,
+    "winner": "O",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 2,
+        "col": 0
+      }
+    ],
+    "total_moves": 6
+  },
+  {
+    "timestamp": "2026-01-14T20:08:19.142985",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 0
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:08:19.148852",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:08:19.153604",
+    "ai_enabled": false,
+    "winner": "Draw",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 2,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 9
+  },
+  {
+    "timestamp": "2026-01-14T20:08:19.158485",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:08:19.163671",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:08:19.168360",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 2,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:08:19.173757",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:08:19.178693",
+    "ai_enabled": false,
+    "winner": "O",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 2
+      }
+    ],
+    "total_moves": 6
+  },
+  {
+    "timestamp": "2026-01-14T20:08:19.185596",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 0
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:08:19.190388",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 1
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:08:19.195310",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:08:19.206626",
+    "ai_enabled": true,
+    "winner": "O",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 2,
+        "col": 0
+      }
+    ],
+    "total_moves": 6
+  },
+  {
+    "timestamp": "2026-01-14T20:09:40.197894",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 0
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:09:40.204568",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:09:40.210535",
+    "ai_enabled": false,
+    "winner": "Draw",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 2,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 9
+  },
+  {
+    "timestamp": "2026-01-14T20:09:40.216354",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:09:40.221660",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:09:40.227185",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 2,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:09:40.232946",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:09:40.238048",
+    "ai_enabled": false,
+    "winner": "O",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 2
+      }
+    ],
+    "total_moves": 6
+  },
+  {
+    "timestamp": "2026-01-14T20:09:40.245854",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 0
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:09:40.252409",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 1
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:09:40.258038",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-14T20:09:40.269654",
+    "ai_enabled": true,
+    "winner": "O",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 2,
+        "col": 0
+      }
+    ],
+    "total_moves": 6
+  }
+]

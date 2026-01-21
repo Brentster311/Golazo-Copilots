@@ -26,11 +26,10 @@
     <Folder Include="docs\roles\" />
     <Folder Include="docs\tests\" />
     <Folder Include="docs\workitems\" />
+    <Folder Include="docs\workitems\Cut\" />
     <Folder Include="docs\workitems\Implemented\" />
     <Folder Include="docs\workitems\NotImplemented\" />
     <Folder Include="TicTacToe\" />
-    <Folder Include="TicTacToe\TicTacToe\" />
-    <Folder Include="TicTacToe\__pycache__\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="docs\design\WIP-001-design-review.md" />
@@ -81,6 +80,8 @@
     <Content Include="docs\tests\WIP-002-test-cases.md" />
     <Content Include="docs\tests\WIP-007-test-cases.md" />
     <Content Include="docs\tests\WIP-008-test-cases.md" />
+    <Content Include="docs\workitems\Cut\WIP-003-user-story.md" />
+    <Content Include="docs\workitems\Cut\WIP-004-user-story.md" />
     <Content Include="docs\workitems\Implemented\RETRO-001-retrospective.md" />
     <Content Include="docs\workitems\Implemented\RETRO-002-retrospective.md" />
     <Content Include="docs\workitems\Implemented\RETRO-003-retrospective.md" />
@@ -92,13 +93,8 @@
     <Content Include="docs\workitems\Implemented\WIP-005-user-story.md" />
     <Content Include="docs\workitems\Implemented\WIP-006-user-story.md" />
     <Content Include="docs\workitems\Implemented\WIP-007-user-story.md" />
-    <Content Include="docs\workitems\NotImplemented\WIP-003-user-story.md" />
-    <Content Include="docs\workitems\NotImplemented\WIP-004-user-story.md" />
-    <Content Include="docs\workitems\WIP-008-user-story.md" />
     <Content Include="TicTacToe\game_log.json" />
-    <Content Include="TicTacToe\__pycache__\PythonApplication2.cpython-313.pyc" />
-    <Content Include="TicTacToe\__pycache__\test_tictactoe.cpython-313.pyc" />
-    <Content Include="TicTacToe\__pycache__\tictactoe.cpython-313.pyc" />
+    <Content Include="TicTacToe\README.md" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="TicTacToe\test_tictactoe.py" />

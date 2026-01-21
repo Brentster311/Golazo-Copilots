@@ -34,7 +34,7 @@ Review the design for:
 - Call out coupling, blast radius, and rollback safety.
 
 ## Escalation rules
-- Architectural changes or missing constraints → new User Story.
+- Architectural changes or missing constraints ? new User Story.
 
 ## Success criteria
 - Design has clear boundaries, contracts, and failure handling.
