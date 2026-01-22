@@ -11,6 +11,7 @@
     <OutputPath>.</OutputPath>
     <Name>KustoMapper</Name>
     <RootNamespace>KustoMapper</RootNamespace>
+    <InterpreterId>MSBuild|envkm|$(MSBuildProjectFullPath)</InterpreterId>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
   <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
@@ -35,6 +36,17 @@
   <ItemGroup>
     <Content Include="README.md" />
     <Content Include="requirements.txt" />
+    <Content Include="WorkItems\MCDEMO-001\Design\MCDEMO-001-Design-Doc.md" />
+    <Content Include="WorkItems\MCDEMO-001\Design\MCDEMO-001-Review-Comments.md" />
+    <Content Include="WorkItems\MCDEMO-001\Design\MCDEMO-001-Test-Cases.md" />
+    <Content Include="WorkItems\MCDEMO-001\MCDEMO-001-User-Story.md" />
+    <Content Include="WorkItems\MCDEMO-001\RoleDecisionNotes\MCDEMO-001-builder.md" />
+    <Content Include="WorkItems\MCDEMO-001\RoleDecisionNotes\MCDEMO-001-developer.md" />
+    <Content Include="WorkItems\MCDEMO-001\RoleDecisionNotes\MCDEMO-001-documentor.md" />
+    <Content Include="WorkItems\MCDEMO-001\RoleDecisionNotes\MCDEMO-001-program-manager.md" />
+    <Content Include="WorkItems\MCDEMO-001\RoleDecisionNotes\MCDEMO-001-refactor.md" />
+    <Content Include="WorkItems\MCDEMO-001\RoleDecisionNotes\MCDEMO-001-reviewer.md" />
+    <Content Include="WorkItems\MCDEMO-001\RoleDecisionNotes\MCDEMO-001-tester.md" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="src\" />
@@ -45,6 +57,29 @@
     <Folder Include="src\kustomapper\models\" />
     <Folder Include="tests\" />
     <Folder Include="WorkItems\" />
+    <Folder Include="WorkItems\MCDEMO-000\" />
+    <Folder Include="WorkItems\MCDEMO-000\Design\" />
+    <Folder Include="WorkItems\MCDEMO-000\RoleDecisionNotes\" />
+    <Folder Include="WorkItems\MCDEMO-001\" />
+    <Folder Include="WorkItems\MCDEMO-001\Design\" />
+    <Folder Include="WorkItems\MCDEMO-001\RoleDecisionNotes\" />
+    <Folder Include="WorkItems\MCDEMO-002\" />
+    <Folder Include="WorkItems\MCDEMO-002\Design\" />
+    <Folder Include="WorkItems\MCDEMO-002\RoleDecisionNotes\" />
+    <Folder Include="WorkItems\MCDEMO-003\" />
+    <Folder Include="WorkItems\MCDEMO-003\Design\" />
+    <Folder Include="WorkItems\MCDEMO-003\RoleDecisionNotes\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Interpreter Include="envkm\">
+      <Id>envkm</Id>
+      <Version>3.13</Version>
+      <Description>envkm (Python 3.13)</Description>
+      <InterpreterPath>Scripts\python.exe</InterpreterPath>
+      <WindowsInterpreterPath>Scripts\pythonw.exe</WindowsInterpreterPath>
+      <PathEnvironmentVariable>PYTHONPATH</PathEnvironmentVariable>
+      <Architecture>X64</Architecture>
+    </Interpreter>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
 </Project>
