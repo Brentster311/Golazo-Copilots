@@ -5,6 +5,8 @@ import threading
 from kustomapper.adapters.kusto_adapter import KustoAdapter
 from kustomapper.cache.schema_cache import SchemaCache
 from kustomapper.models.schema import TableInfo
+from kustomapper.gui.graph_view import GraphView
+from kustomapper.analysis.relationship_detector import RelationshipDetector
 
 class MainWindow:
     def __init__(self):
@@ -48,6 +50,8 @@ class MainWindow:
         self.refresh_btn.pack(side="left", padx=2)
         self.disconnect_btn = ttk.Button(btn_frame, text="Disconnect", command=self._on_disconnect, state="disabled")
         self.disconnect_btn.pack(side="left", padx=2)
+        self.graph_btn = ttk.Button(btn_frame, text="Show Graph", command=self._on_show_graph, state="disabled")
+        self.graph_btn.pack(side="left", padx=2)
     
     def _setup_content_area(self, parent):
         content_frame = ttk.Frame(parent)
@@ -118,6 +122,7 @@ class MainWindow:
         self.connect_btn.config(state="disabled")
         self.refresh_btn.config(state="normal")
         self.disconnect_btn.config(state="normal")
+        self.graph_btn.config(state="normal")
         self.cluster_entry.config(state="disabled")
         self.database_entry.config(state="disabled")
     
@@ -178,8 +183,33 @@ class MainWindow:
         self.connect_btn.config(state="normal")
         self.refresh_btn.config(state="disabled")
         self.disconnect_btn.config(state="disabled")
+        self.graph_btn.config(state="disabled")
         self.cluster_entry.config(state="normal")
         self.database_entry.config(state="normal")
         self.status_var.set("Disconnected.")
+    
+    def _on_show_graph(self):
+        """Open a new window showing the relationship graph."""
+        if not self.tables:
+            messagebox.showinfo("No Data", "No tables loaded. Connect to a database first.")
+            return
+        
+        self.status_var.set("Detecting relationships...")
+        self.root.update()
+        
+        # Detect relationships
+        detector = RelationshipDetector(self.tables)
+        relationships = detector.detect_all()
+        
+        # Create graph window
+        graph_window = tk.Toplevel(self.root)
+        graph_window.title(f"Relationship Graph - {len(self.tables)} tables, {len(relationships)} relationships")
+        graph_window.geometry("800x600")
+        
+        # Create GraphView
+        graph_view = GraphView(graph_window)
+        graph_view.set_data(self.tables, relationships)
+        
+        self.status_var.set(f"Graph opened: {len(self.tables)} tables, {len(relationships)} relationships detected.")
     
     def run(self): self.root.mainloop()
