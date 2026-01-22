@@ -34,8 +34,12 @@
     <Content Include="WorkItems\GCP-005\Design\GCP-005-Test-Cases.md" />
     <Content Include="WorkItems\GCP-005\GCP-005-User-Story.md" />
     <Content Include="WorkItems\GCP-005\RoleDecisionNotes\GCP-005-architect.md" />
+    <Content Include="WorkItems\GCP-005\RoleDecisionNotes\GCP-005-builder.md" />
+    <Content Include="WorkItems\GCP-005\RoleDecisionNotes\GCP-005-developer.md" />
+    <Content Include="WorkItems\GCP-005\RoleDecisionNotes\GCP-005-documentor.md" />
     <Content Include="WorkItems\GCP-005\RoleDecisionNotes\GCP-005-program-manager.md" />
     <Content Include="WorkItems\GCP-005\RoleDecisionNotes\GCP-005-project-owner-assistant.md" />
+    <Content Include="WorkItems\GCP-005\RoleDecisionNotes\GCP-005-refactor.md" />
     <Content Include="WorkItems\GCP-005\RoleDecisionNotes\GCP-005-reviewer.md" />
     <Content Include="WorkItems\GCP-005\RoleDecisionNotes\GCP-005-tester.md" />
   </ItemGroup>
