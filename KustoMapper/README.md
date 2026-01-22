@@ -4,8 +4,8 @@ A Windows GUI tool for discovering and visualizing table relationships in Azure 
 
 ## Features
 
-- **MCDEMM-001**: Connect to Kusto clusters and discover tables with their schemas
-- **MCDEMO-002**: Detect relationships between tables (coming soon)
+- **MCDEMO-001**: Connect to Kusto clusters and discover tables with their schemas
+- **MCDEMO-002**: Detect relationships between tables based on column naming patterns
 - **MCDEMO-003**: Visualize relationships as a graph (coming soon)
 
 ## Installation
