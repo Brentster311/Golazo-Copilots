@@ -188,28 +188,54 @@ class MainWindow:
         self.database_entry.config(state="normal")
         self.status_var.set("Disconnected.")
     
+    
     def _on_show_graph(self):
         """Open a new window showing the relationship graph."""
         if not self.tables:
             messagebox.showinfo("No Data", "No tables loaded. Connect to a database first.")
             return
         
+        self.status_var.set("Loading schemas for relationship detection...")
+        self.root.update()
+        
+        # Load schemas for all tables (needed for relationship detection)
+        tables_with_schemas = []
+        for table in self.tables:
+            if table.columns:
+                # Already has columns
+                tables_with_schemas.append(table)
+            else:
+                # Try to load from cache or adapter
+                try:
+                    cached = self.cache.load_schema(table.name) if self.cache else None
+                    if cached:
+                        table.columns = cached
+                    elif self.adapter:
+                        columns = self.adapter.get_table_schema(table.name)
+                        table.columns = columns
+                        if self.cache:
+                            self.cache.save_schema(table.name, columns)
+                    tables_with_schemas.append(table)
+                except Exception as e:
+                    # Skip tables that fail to load
+                    pass
+        
         self.status_var.set("Detecting relationships...")
         self.root.update()
         
         # Detect relationships
-        detector = RelationshipDetector(self.tables)
+        detector = RelationshipDetector(tables_with_schemas)
         relationships = detector.detect_all()
         
         # Create graph window
         graph_window = tk.Toplevel(self.root)
-        graph_window.title(f"Relationship Graph - {len(self.tables)} tables, {len(relationships)} relationships")
+        graph_window.title(f"Relationship Graph - {len(tables_with_schemas)} tables, {len(relationships)} relationships")
         graph_window.geometry("800x600")
         
         # Create GraphView
         graph_view = GraphView(graph_window)
-        graph_view.set_data(self.tables, relationships)
+        graph_view.set_data(tables_with_schemas, relationships)
         
-        self.status_var.set(f"Graph opened: {len(self.tables)} tables, {len(relationships)} relationships detected.")
+        self.status_var.set(f"Graph opened: {len(tables_with_schemas)} tables, {len(relationships)} relationships detected.")
     
     def run(self): self.root.mainloop()

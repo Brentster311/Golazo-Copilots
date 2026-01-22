@@ -416,3 +416,230 @@ class TestPackageCLI:
             os.chdir(original_cwd)
             if tmp_path:
                 shutil.rmtree(tmp_path, ignore_errors=True)
+
+
+# =============================================================================
+# GCP-006: Versioning Tests
+# =============================================================================
+
+class TestVersioning:
+    """Tests for GCP-006: Version metadata in Golazo files."""
+    
+    VERSION_PATTERN = r'<!-- Golazo Version: (\d+\.\d+\.\d+) -->'
+    
+    def test_version_file_exists(self):
+        """TC-005: VERSION file exists at repo root."""
+        script_dir = get_script_directory()
+        version_file = script_dir / "VERSION"
+        
+        assert version_file.exists(), "VERSION file not found at repository root"
+    
+    def test_version_file_valid_semver(self):
+        """TC-006: VERSION file contains valid semver."""
+        import re
+        script_dir = get_script_directory()
+        version_file = script_dir / "VERSION"
+        
+        if not version_file.exists():
+            pytest.skip("VERSION file not yet created")
+        
+        content = version_file.read_text().strip()
+        semver_pattern = r'^\d+\.\d+\.\d+$'
+        
+        assert re.match(semver_pattern, content), \
+            f"VERSION file contains invalid version: '{content}'"
+    
+    def test_changelog_exists(self):
+        """TC-007: CHANGELOG.md exists at repo root."""
+        script_dir = get_script_directory()
+        changelog = script_dir / "CHANGELOG.md"
+        
+        assert changelog.exists(), "CHANGELOG.md not found at repository root"
+    
+    def test_changelog_contains_current_version(self):
+        """TC-008: CHANGELOG.md contains entry for current version."""
+        script_dir = get_script_directory()
+        version_file = script_dir / "VERSION"
+        changelog = script_dir / "CHANGELOG.md"
+        
+        if not version_file.exists() or not changelog.exists():
+            pytest.skip("VERSION or CHANGELOG not yet created")
+        
+        current_version = version_file.read_text().strip()
+        changelog_content = changelog.read_text()
+        
+        # Look for version heading like ## [1.0.0]
+        assert f"[{current_version}]" in changelog_content, \
+            f"CHANGELOG.md missing entry for version {current_version}"
+    
+    def test_spine_has_version_comment(self):
+        """TC-001: Spine file contains version comment on line 1."""
+        import re
+        script_dir = get_script_directory()
+        spine = script_dir / ".github" / "copilot-instructions.md"
+        
+        assert spine.exists(), "Spine file not found"
+        
+        first_line = spine.read_text().split('\n')[0]
+        
+        assert re.match(self.VERSION_PATTERN, first_line), \
+            f"Spine file missing version comment on line 1. Found: '{first_line}'"
+    
+    def test_spine_version_is_valid_semver(self):
+        """TC-002: Spine version is valid semver."""
+        import re
+        script_dir = get_script_directory()
+        spine = script_dir / ".github" / "copilot-instructions.md"
+        
+        if not spine.exists():
+            pytest.skip("Spine file not found")
+        
+        first_line = spine.read_text().split('\n')[0]
+        match = re.match(self.VERSION_PATTERN, first_line)
+        
+        if not match:
+            pytest.skip("Spine doesn't have version comment yet")
+        
+        version = match.group(1)
+        semver_pattern = r'^\d+\.\d+\.\d+$'
+        
+        assert re.match(semver_pattern, version), \
+            f"Spine version '{version}' is not valid semver"
+    
+    def test_all_role_files_have_version_comment(self):
+        """TC-003: All role files contain version comment."""
+        import re
+        script_dir = get_script_directory()
+        roles_dir = script_dir / ".github" / "roles"
+        
+        expected_roles = [
+            "project-owner-assistant.md",
+            "program-manager.md",
+            "reviewer.md",
+            "architect.md",
+            "tester.md",
+            "developer.md",
+            "refactor-expert.md",
+            "builder.md",
+            "documentor.md",
+            "retrospective.md",
+        ]
+        
+        missing = []
+        for role_file in expected_roles:
+            path = roles_dir / role_file
+            if not path.exists():
+                missing.append(f"{role_file} (file not found)")
+                continue
+            
+            first_line = path.read_text().split('\n')[0]
+            if not re.match(self.VERSION_PATTERN, first_line):
+                missing.append(f"{role_file} (missing version comment)")
+        
+        assert not missing, f"Role files missing version comment: {missing}"
+    
+    def test_all_versions_match(self):
+        """TC-004: All role file versions match spine version."""
+        import re
+        script_dir = get_script_directory()
+        spine = script_dir / ".github" / "copilot-instructions.md"
+        roles_dir = script_dir / ".github" / "roles"
+        
+        if not spine.exists():
+            pytest.skip("Spine file not found")
+        
+        spine_first_line = spine.read_text().split('\n')[0]
+        spine_match = re.match(self.VERSION_PATTERN, spine_first_line)
+        
+        if not spine_match:
+            pytest.skip("Spine doesn't have version comment yet")
+        
+        spine_version = spine_match.group(1)
+        
+        mismatches = []
+        for role_file in roles_dir.glob("*.md"):
+            first_line = role_file.read_text().split('\n')[0]
+            match = re.match(self.VERSION_PATTERN, first_line)
+            if match:
+                file_version = match.group(1)
+                if file_version != spine_version:
+                    mismatches.append(f"{role_file.name}: {file_version}")
+        
+        assert not mismatches, \
+            f"Version mismatch: spine={spine_version}, mismatches: {mismatches}"
+    
+    def test_version_file_matches_spine(self):
+        """Verify VERSION file matches spine version comment."""
+        import re
+        script_dir = get_script_directory()
+        version_file = script_dir / "VERSION"
+        spine = script_dir / ".github" / "copilot-instructions.md"
+        
+        if not version_file.exists() or not spine.exists():
+            pytest.skip("VERSION or spine not found")
+        
+        file_version = version_file.read_text().strip()
+        
+        spine_first_line = spine.read_text().split('\n')[0]
+        spine_match = re.match(self.VERSION_PATTERN, spine_first_line)
+        
+        if not spine_match:
+            pytest.skip("Spine doesn't have version comment yet")
+        
+        spine_version = spine_match.group(1)
+        
+        assert file_version == spine_version, \
+            f"VERSION file ({file_version}) doesn't match spine ({spine_version})"
+
+
+class TestPackageVersioning:
+    """Tests for GCP-006: VERSION and CHANGELOG in package."""
+    
+    def test_package_includes_version_file(self):
+        """TC-009: Package includes VERSION file."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            output_zip = tmp_path / "GolazoCP-dist.zip"
+            
+            create_package(output_zip)
+            
+            with zipfile.ZipFile(output_zip, 'r') as zf:
+                names = zf.namelist()
+                assert "VERSION" in names, \
+                    "GolazoCP-dist.zip does not contain VERSION file"
+    
+    def test_package_includes_changelog(self):
+        """TC-010: Package includes CHANGELOG.md."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            output_zip = tmp_path / "GolazoCP-dist.zip"
+            
+            create_package(output_zip)
+            
+            with zipfile.ZipFile(output_zip, 'r') as zf:
+                names = zf.namelist()
+                assert "CHANGELOG.md" in names, \
+                    "GolazoCP-dist.zip does not contain CHANGELOG.md"
+
+
+class TestVersionEdgeCases:
+    """Edge case tests for versioning (GCP-006)."""
+    
+    def test_version_file_trailing_newline(self):
+        """TC-011: VERSION file handles trailing newline correctly."""
+        script_dir = get_script_directory()
+        version_file = script_dir / "VERSION"
+        
+        if not version_file.exists():
+            pytest.skip("VERSION file not yet created")
+        
+        # Read raw bytes to check for newline
+        raw_content = version_file.read_bytes()
+        content = version_file.read_text()
+        
+        # Strip should give clean version regardless of trailing newline
+        version = content.strip()
+        
+        import re
+        assert re.match(r'^\d+\.\d+\.\d+$', version), \
+            f"VERSION parsing failed: got '{version}'"
