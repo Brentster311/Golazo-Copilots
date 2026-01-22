@@ -372,5 +372,91 @@
       }
     ],
     "total_moves": 9
+  },
+  {
+    "timestamp": "2026-01-21T12:14:23.499472",
+    "ai_enabled": false,
+    "winner": "X",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 2,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 2
+      }
+    ],
+    "total_moves": 5
+  },
+  {
+    "timestamp": "2026-01-21T12:14:40.123114",
+    "ai_enabled": true,
+    "winner": "Draw",
+    "moves": [
+      {
+        "player": "X",
+        "row": 0,
+        "col": 0
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 0,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 0,
+        "col": 1
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 1
+      },
+      {
+        "player": "O",
+        "row": 1,
+        "col": 0
+      },
+      {
+        "player": "X",
+        "row": 1,
+        "col": 2
+      },
+      {
+        "player": "O",
+        "row": 2,
+        "col": 2
+      },
+      {
+        "player": "X",
+        "row": 2,
+        "col": 0
+      }
+    ],
+    "total_moves": 9
   }
 ]

@@ -1,0 +1,13 @@
+# KustoMapper dependencies
+
+# Azure authentication
+azure-identity>=1.23.0
+
+# Data handling
+pandas>=1.3.0
+
+# Testing
+pytest>=7.0.0
+
+# ACCIA Data Collection package (from Azure Artifacts)
+# Install with: pip install --extra-index-url https://pkgs.dev.azure.com/msazure/One/_packaging/azinsights_accia_pkgs/pypi/simple/ accia-datacollection>=1.2.8
