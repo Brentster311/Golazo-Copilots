@@ -1,5 +1,12 @@
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import List
+
+
+class RelationshipType(Enum):
+    EXACT_MATCH = "exact_match"
+    ID_SUFFIX = "id_suffix"
+
 
 @dataclass
 class ColumnInfo:
@@ -27,3 +34,31 @@ class TableInfo:
     def from_dict(cls, d):
         cols = [ColumnInfo.from_dict(c) for c in d.get("columns", [])]
         return cls(name=d["name"], row_count=d.get("row_count", 0), columns=cols)
+
+
+@dataclass
+class RelationshipInfo:
+    source_table: str
+    source_column: str
+    target_table: str
+    target_column: str
+    relationship_type: RelationshipType = RelationshipType.EXACT_MATCH
+    
+    def to_dict(self):
+        return {
+            "source_table": self.source_table,
+            "source_column": self.source_column,
+            "target_table": self.target_table,
+            "target_column": self.target_column,
+            "relationship_type": self.relationship_type.value
+        }
+    
+    @classmethod
+    def from_dict(cls, d):
+        return cls(
+            source_table=d["source_table"],
+            source_column=d["source_column"],
+            target_table=d["target_table"],
+            target_column=d["target_column"],
+            relationship_type=RelationshipType(d.get("relationship_type", "exact_match"))
+        )
