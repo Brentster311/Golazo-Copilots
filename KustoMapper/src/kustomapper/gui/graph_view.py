@@ -9,7 +9,7 @@ from kustomapper.models.schema import TableInfo, RelationshipInfo
 class GraphView:
     """A canvas-based graph visualization for table relationships."""
     
-    NODE_RADIUS = 30
+    NODE_RADIUS = 50  # Increased from 30 to fit longer names
     NODE_COLOR = "#4488CC"
     NODE_SELECTED_COLOR = "#FF6644"
     EDGE_COLOR = "#888888"
@@ -61,9 +61,9 @@ class GraphView:
         if n == 0:
             return positions
         
-        cx = 300
-        cy = 200
-        radius = min(150, 50 * n)
+        cx = 400  # Center X (increased for larger window)
+        cy = 300  # Center Y
+        radius = max(200, 80 * n)  # Larger radius for spacing
         
         for i, table in enumerate(tables):
             angle = 2 * math.pi * i / n - math.pi / 2
@@ -72,6 +72,12 @@ class GraphView:
             positions[table.name] = (x, y)
         
         return positions
+    
+    def _truncate_name(self, name: str, max_len: int = 12) -> str:
+        """Truncate name to fit in node."""
+        if len(name) <= max_len:
+            return name
+        return name[:max_len-2] + ".."
     
     def _render(self):
         """Render the graph on the canvas."""
@@ -96,7 +102,8 @@ class GraphView:
             x = self._tx(node["x"])
             y = self._ty(node["y"])
             self.canvas.create_oval(x-r, y-r, x+r, y+r, fill=color, outline="#333", width=2)
-            self.canvas.create_text(x, y, text=name, fill="white", font=("Arial", 9))
+            display_name = self._truncate_name(name)
+            self.canvas.create_text(x, y, text=display_name, fill="white", font=("Arial", 8, "bold"))
     
     def _tx(self, x):
         """Transform x coordinate with scale and offset."""

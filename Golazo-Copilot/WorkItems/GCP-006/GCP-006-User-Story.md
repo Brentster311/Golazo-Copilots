@@ -1,6 +1,6 @@
 # GCP-006: Add Versioning to Golazo Instruction Files
 
-**Status**: BACKLOG
+**Status**: IN PROGRESS
 
 ## User Story
 
