@@ -1,3 +1,4 @@
+<!-- Golazo Version: 1.0.0 -->
 # Golazo Copilot Instructions (Spine - Authoritative)
 
 You are GitHub Copilot working in this repository. Your job is to produce high-quality outcomes by **strictly following the Golazo workflow**, enforcing all gates, and producing **auditable artifacts** for every role. I am the Project Owner for this session.
@@ -256,3 +257,111 @@ PowerShell's default file output uses UTF-16 LE encoding with BOM, which Python 
 - `SyntaxError: source code string cannot contain null bytes`
 - Files appear to have content but Python can't import them
 - Tests fail on import but source files look correct
+
+---
+
+## Golazo Update Check (GCP-007)
+
+Golazo Copilot can detect when a newer version of instructions is available and offer to upgrade.
+
+### When to Check
+- Check for updates when starting a new Golazo session **if** more than 24 hours have passed since the last check
+- The timestamp of the last check is stored in `.github/.golazo-update-check`
+- User can also request a check at any time by saying "check for Golazo updates"
+
+### How to Check for Updates
+
+1. **Read local version** from line 1 of this file (format: `<!-- Golazo Version: X.Y.Z -->`)
+
+2. **Fetch remote version** using terminal command:
+   ```powershell
+   Invoke-WebRequest -Uri "https://raw.githubusercontent.com/Brentster311/Golazo-Copilots/main/Golazo-Copilot/VERSION" -UseBasicParsing -TimeoutSec 5 | Select-Object -ExpandProperty Content
+   ```
+
+3. **Compare versions** (semantic versioning):
+   - Parse both as MAJOR.MINOR.PATCH
+   - If remote > local, update is available
+   - If remote <= local, already up to date
+
+4. **Update the timestamp file** after checking:
+   ```powershell
+   Get-Date -Format "o" | Set-Content ".github/.golazo-update-check" -NoNewline
+   ```
+
+### If Update Available
+
+Display to user:
+```
+?? **Golazo Update Available**
+- Installed: v{local_version}
+- Available: v{remote_version}
+
+**What's new in v{remote_version}:**
+{relevant changelog entries}
+
+Would you like to upgrade? (yes/no)
+```
+
+Fetch changelog from: `https://raw.githubusercontent.com/Brentster311/Golazo-Copilots/main/Golazo-Copilot/CHANGELOG.md`
+
+Show only entries between current and target version.
+
+### Upgrade Process (if user confirms)
+
+1. **Create backup** of existing files:
+   ```powershell
+   $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+   $backupDir = ".github/backup/$timestamp"
+   New-Item -ItemType Directory -Path $backupDir -Force
+   Copy-Item ".github/copilot-instructions.md" "$backupDir/"
+   Copy-Item ".github/roles/*.md" "$backupDir/" -Force
+   ```
+
+2. **Download all files** from GitHub (all-or-nothing approach):
+   ```powershell
+   $baseUrl = "https://raw.githubusercontent.com/Brentster311/Golazo-Copilots/main/Golazo-Copilot"
+   
+   # Download spine
+   Invoke-WebRequest -Uri "$baseUrl/.github/copilot-instructions.md" -OutFile ".github/copilot-instructions.md"
+   
+   # Download each role file
+   $roles = @("project-owner-assistant", "program-manager", "reviewer", "architect", "tester", "developer", "refactor-expert", "builder", "documentor", "retrospective")
+   foreach ($role in $roles) {
+       Invoke-WebRequest -Uri "$baseUrl/.github/roles/$role.md" -OutFile ".github/roles/$role.md"
+   }
+   ```
+
+3. **Verify downloads** - if any download fails, restore from backup:
+   ```powershell
+   # If download failed, restore backup
+   Copy-Item "$backupDir/*" ".github/" -Force
+   Copy-Item "$backupDir/*.md" ".github/roles/" -Force -ErrorAction SilentlyContinue
+   ```
+
+4. **Report result**:
+   - Success: `? Golazo upgraded to v{new_version}. Backup saved to {backup_path}`
+   - Failure: `? Upgrade failed: {reason}. Original files preserved.`
+
+### If Already Up to Date
+
+Display: `? Golazo is up to date (v{local_version})`
+
+### If Network Error
+
+Display: `?? Could not check for updates (network error). Continuing normally.`
+
+Do NOT block the user's workflow. Continue with normal Golazo operation.
+
+### Files Downloaded During Upgrade
+
+1. `.github/copilot-instructions.md`
+2. `.github/roles/project-owner-assistant.md`
+3. `.github/roles/program-manager.md`
+4. `.github/roles/reviewer.md`
+5. `.github/roles/architect.md`
+6. `.github/roles/tester.md`
+7. `.github/roles/developer.md`
+8. `.github/roles/refactor-expert.md`
+9. `.github/roles/builder.md`
+10. `.github/roles/documentor.md`
+11. `.github/roles/retrospective.md`

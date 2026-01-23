@@ -169,6 +169,8 @@ def create_package(output_path: Path) -> bool:
     source_readme = script_dir / "README.md"
     source_usage_vs = script_dir / "USAGE-VisualStudio.md"
     source_usage_vscode = script_dir / "USAGE-VSCode.md"
+    source_version = script_dir / "VERSION"
+    source_changelog = script_dir / "CHANGELOG.md"
     
     # Validate all required files exist
     if not source_github.exists():
@@ -197,6 +199,14 @@ def create_package(output_path: Path) -> bool:
         print(f"Error: USAGE-VSCode.md not found at {source_usage_vscode}", file=sys.stderr)
         return False
     
+    if not source_version.exists():
+        print(f"Error: VERSION not found at {source_version}", file=sys.stderr)
+        return False
+    
+    if not source_changelog.exists():
+        print(f"Error: CHANGELOG.md not found at {source_changelog}", file=sys.stderr)
+        return False
+    
     try:
         with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED) as zf:
             # Add copilot-instructions.md
@@ -211,6 +221,10 @@ def create_package(output_path: Path) -> bool:
             zf.write(source_readme, "README.md")
             zf.write(source_usage_vs, "USAGE-VisualStudio.md")
             zf.write(source_usage_vscode, "USAGE-VSCode.md")
+            
+            # Add VERSION and CHANGELOG (GCP-006)
+            zf.write(source_version, "VERSION")
+            zf.write(source_changelog, "CHANGELOG.md")
         
         return True
         
