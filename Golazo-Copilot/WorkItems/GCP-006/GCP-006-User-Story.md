@@ -1,6 +1,6 @@
 # GCP-006: Add Versioning to Golazo Instruction Files
 
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 ## User Story
 
@@ -20,12 +20,12 @@
 - **Assumption (explicit)**: Version metadata will be in a structured format that can be parsed programmatically
 
 ## Acceptance Criteria (bulleted, testable)
-- [ ] `.github/copilot-instructions.md` contains a version header in format `<!-- Golazo Version: X.Y.Z -->`
-- [ ] Each role file in `.github/roles/` contains a matching version comment
-- [ ] A `VERSION` file exists at repository root containing only the version string (e.g., `1.0.0`)
-- [ ] A `CHANGELOG.md` file exists at repository root documenting changes per version
-- [ ] `Golazo_Copilot.py --package` includes `VERSION` and `CHANGELOG.md` in the distribution zip
-- [ ] Version format follows semantic versioning (MAJOR.MINOR.PATCH)
+- [x] `.github/copilot-instructions.md` contains a version header in format `<!-- Golazo Version: X.Y.Z -->`
+- [x] Each role file in `.github/roles/` contains a matching version comment
+- [x] A `VERSION` file exists at repository root containing only the version string (e.g., `1.0.0`)
+- [x] A `CHANGELOG.md` file exists at repository root documenting changes per version
+- [x] `Golazo_Copilot.py --package` includes `VERSION` and `CHANGELOG.md` in the distribution zip
+- [x] Version format follows semantic versioning (MAJOR.MINOR.PATCH)
 
 ## Non-functional Requirements
 - Version metadata must not interfere with Copilot's parsing of instructions
