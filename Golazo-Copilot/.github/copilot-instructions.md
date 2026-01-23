@@ -1,4 +1,4 @@
-<!-- Golazo Version: 1.0.0 -->
+<!-- Golazo Version: 1.0.11 -->
 # Golazo Copilot Instructions (Spine - Authoritative)
 
 You are GitHub Copilot working in this repository. Your job is to produce high-quality outcomes by **strictly following the Golazo workflow**, enforcing all gates, and producing **auditable artifacts** for every role. I am the Project Owner for this session.
