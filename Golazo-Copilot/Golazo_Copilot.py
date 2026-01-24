@@ -187,6 +187,11 @@ def create_package(output_path: Path) -> bool:
         print("Error: .github/roles/ directory not found", file=sys.stderr)
         return False
     
+    source_guides = source_github / "guides"
+    if not source_guides.exists():
+        print("Error: .github/guides/ directory not found", file=sys.stderr)
+        return False
+    
     if not source_readme.exists():
         print(f"Error: README.md not found at {source_readme}", file=sys.stderr)
         return False
@@ -216,6 +221,11 @@ def create_package(output_path: Path) -> bool:
             for role_file in source_roles.glob("*.md"):
                 arcname = f".github/roles/{role_file.name}"
                 zf.write(role_file, arcname)
+            
+            # Add all guide files (GCP-008)
+            for guide_file in source_guides.glob("*.md"):
+                arcname = f".github/guides/{guide_file.name}"
+                zf.write(guide_file, arcname)
             
             # Add README and USAGE files
             zf.write(source_readme, "README.md")
