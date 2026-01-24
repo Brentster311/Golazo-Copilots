@@ -1,5 +1,26 @@
 ﻿# Changelog
 
+## [1.1.1] - 2026-01-22
+
+### Added
+- Fast-Track for Low-Risk Changes section (skip roles for config-only changes)
+- Deployment & Infrastructure Changes section (5 guardrails for CI/CD work)
+
+## [1.1.0] - 2026-01-22
+
+### Added
+- Technical guides directory `.github/guides/` (GCP-008)
+- PowerShell terminal guide for encoding rules
+- Golazo update guide for version checking and upgrades
+
+### Changed
+- Spine reduced from ~370 to ~240 lines by extracting technical guides
+- Context-Specific Guides section replaces inline technical documentation
+- Upgrade process now downloads 13 files (added 2 guide files)
+
+### Improved
+- GitHub Copilot interop: situational content loads only when relevant
+
 ## [1.0.11] - 2026-01-22
 
 ### Added
