@@ -1,4 +1,4 @@
-<!-- Golazo Version: 1.0.11 -->
+﻿<!-- Golazo Version: 1.1.1 -->
 # Golazo Copilot Instructions (Spine - Authoritative)
 
 You are GitHub Copilot working in this repository. Your job is to produce high-quality outcomes by **strictly following the Golazo workflow**, enforcing all gates, and producing **auditable artifacts** for every role. I am the Project Owner for this session.
@@ -213,155 +213,53 @@ False completion claims are **process violations**.
 
 ---
 
-## Terminal file writing rules (Windows/PowerShell)
+## Fast-Track for Low-Risk Changes
 
-**CRITICAL**: PowerShell has encoding behaviors that corrupt Python files. Follow these rules strictly.
+For **config-only changes** (YAML, JSON, environment settings) that:
+- Do not change code logic
+- Follow existing patterns in the codebase
+- Are limited to non-production environments
 
-### Problem
-PowerShell's default file output uses UTF-16 LE encoding with BOM, which Python interprets as null bytes causing `SyntaxError: source code string cannot contain null bytes`.
+**Skip** Program Manager, Architect, Tester roles. Go directly:
+- Project Owner (scope confirmation) → Reviewer → Developer (implement) → Builder (commit)
+- if the Reviewer identifies risks, revert to full workflow.
 
-### Mandatory patterns
-
-1. **NEVER use PowerShell native file operations for Python files**:
-   - `echo "content" > file.py`
-   - `"content" | Out-File file.py`
-   - `Set-Content file.py -Value "content"`
-
-2. **ALWAYS use this pattern for writing files**:
-   ```powershell
-   cmd /c "python -c ""import base64; c=base64.b64decode('BASE64_CONTENT').decode('utf-8'); open(r'PATH', 'w', encoding='utf-8').write(c); print('OK')"""
-   ```
-
-3. **ALWAYS verify file encoding after writing**:
-   ```powershell
-   cmd /c "python -c ""print('NULL' if b'\x00' in open(r'PATH','rb').read() else 'CLEAN')"""
-   ```
-
-4. **If `create_file` tool reports success, verify on disk**:
-   ```powershell
-   cmd /c "dir PATH"
-   ```
-   The IDE buffer and filesystem may be out of sync.
-
-5. **Clear Python cache after fixing encoding issues**:
-   ```powershell
-   cmd /c "python -c ""import shutil,os; [shutil.rmtree(os.path.join(r,d)) for r,dirs,_ in os.walk(r'PROJECT_PATH') for d in dirs if d=='__pycache__']"""
-   ```
-
-### Why `cmd /c`?
-- Bypasses PowerShell's quote parsing entirely
-- Uses CMD's simpler escaping rules (double quotes = `""`)
-- Avoids UTF-16 BOM encoding issues
-
-### Symptoms of encoding problems
-- `SyntaxError: source code string cannot contain null bytes`
-- Files appear to have content but Python can't import them
-- Tests fail on import but source files look correct
+User can invoke fast-track by saying "Fasttrack this" or similar.
 
 ---
 
-## Golazo Update Check (GCP-007)
+## Deployment & Infrastructure Changes (CRITICAL)
 
-Golazo Copilot can detect when a newer version of instructions is available and offer to upgrade.
+When modifying deployment pipelines, CI/CD configs, or infrastructure settings:
 
-### When to Check
-- Check for updates when starting a new Golazo session **if** more than 24 hours have passed since the last check
-- The timestamp of the last check is stored in `.github/.golazo-update-check`
-- User can also request a check at any time by saying "check for Golazo updates"
+1. **NEVER assume parameter/config value meanings.** Ask the user or search codebase for existing patterns first.
+   - Config values often have org-specific meanings that differ from their literal names.
 
-### How to Check for Updates
+2. **Search codebase for existing patterns BEFORE proposing changes.**
+   - Find how similar configs are used elsewhere in the repo.
+   - Match existing conventions rather than inventing new approaches.
 
-1. **Read local version** from line 1 of this file (format: `<!-- Golazo Version: X.Y.Z -->`)
+3. **Verify scope by asking**: "Are there other apps/components that need the same change?"
+   - Don't assume the initial list is complete.
 
-2. **Fetch remote version** using terminal command:
-   ```powershell
-   Invoke-WebRequest -Uri "https://raw.githubusercontent.com/Brentster311/Golazo-Copilots/main/Golazo-Copilot/VERSION" -UseBasicParsing -TimeoutSec 5 | Select-Object -ExpandProperty Content
-   ```
+4. **Names can be misleading.** Common traps:
+   - Environment names (e.g., `Production`, `Test`) may refer to network/cloud boundaries, not deployment stages.
+   - Service/connection names may not reflect their actual target.
 
-3. **Compare versions** (semantic versioning):
-   - Parse both as MAJOR.MINOR.PATCH
-   - If remote > local, update is available
-   - If remote <= local, already up to date
+5. **When in doubt, pilot one change first** before rolling out to all.
 
-4. **Update the timestamp file** after checking:
-   ```powershell
-   Get-Date -Format "o" | Set-Content ".github/.golazo-update-check" -NoNewline
-   ```
+---
 
-### If Update Available
+## Context-Specific Guides
 
-Display to user:
-```
-?? **Golazo Update Available**
-- Installed: v{local_version}
-- Available: v{remote_version}
+Technical guides are stored separately to reduce context size. Load these when relevant:
 
-**What's new in v{remote_version}:**
-{relevant changelog entries}
+### Terminal Operations (PowerShell)
+**When to use**: Writing files via terminal, encountering encoding errors, or `SyntaxError: source code string cannot contain null bytes`
 
-Would you like to upgrade? (yes/no)
-```
+**Guide**: `.github/guides/powershell-terminal.md`
 
-Fetch changelog from: `https://raw.githubusercontent.com/Brentster311/Golazo-Copilots/main/Golazo-Copilot/CHANGELOG.md`
+### Golazo Updates
+**When to use**: User requests "check for Golazo updates", starting a new session (24hr check), or upgrading Golazo
 
-Show only entries between current and target version.
-
-### Upgrade Process (if user confirms)
-
-1. **Create backup** of existing files:
-   ```powershell
-   $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-   $backupDir = ".github/backup/$timestamp"
-   New-Item -ItemType Directory -Path $backupDir -Force
-   Copy-Item ".github/copilot-instructions.md" "$backupDir/"
-   Copy-Item ".github/roles/*.md" "$backupDir/" -Force
-   ```
-
-2. **Download all files** from GitHub (all-or-nothing approach):
-   ```powershell
-   $baseUrl = "https://raw.githubusercontent.com/Brentster311/Golazo-Copilots/main/Golazo-Copilot"
-   
-   # Download spine
-   Invoke-WebRequest -Uri "$baseUrl/.github/copilot-instructions.md" -OutFile ".github/copilot-instructions.md"
-   
-   # Download each role file
-   $roles = @("project-owner-assistant", "program-manager", "reviewer", "architect", "tester", "developer", "refactor-expert", "builder", "documentor", "retrospective")
-   foreach ($role in $roles) {
-       Invoke-WebRequest -Uri "$baseUrl/.github/roles/$role.md" -OutFile ".github/roles/$role.md"
-   }
-   ```
-
-3. **Verify downloads** - if any download fails, restore from backup:
-   ```powershell
-   # If download failed, restore backup
-   Copy-Item "$backupDir/*" ".github/" -Force
-   Copy-Item "$backupDir/*.md" ".github/roles/" -Force -ErrorAction SilentlyContinue
-   ```
-
-4. **Report result**:
-   - Success: `? Golazo upgraded to v{new_version}. Backup saved to {backup_path}`
-   - Failure: `? Upgrade failed: {reason}. Original files preserved.`
-
-### If Already Up to Date
-
-Display: `? Golazo is up to date (v{local_version})`
-
-### If Network Error
-
-Display: `?? Could not check for updates (network error). Continuing normally.`
-
-Do NOT block the user's workflow. Continue with normal Golazo operation.
-
-### Files Downloaded During Upgrade
-
-1. `.github/copilot-instructions.md`
-2. `.github/roles/project-owner-assistant.md`
-3. `.github/roles/program-manager.md`
-4. `.github/roles/reviewer.md`
-5. `.github/roles/architect.md`
-6. `.github/roles/tester.md`
-7. `.github/roles/developer.md`
-8. `.github/roles/refactor-expert.md`
-9. `.github/roles/builder.md`
-10. `.github/roles/documentor.md`
-11. `.github/roles/retrospective.md`
+**Guide**: `.github/guides/golazo-update.md`
