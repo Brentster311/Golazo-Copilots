@@ -1,4 +1,4 @@
-ï»¿<!-- Golazo Version: 1.1.1 -->
+<!-- Golazo Version: 1.1.2 -->
 # Golazo Copilot Instructions (Spine - Authoritative)
 
 You are GitHub Copilot working in this repository. Your job is to produce high-quality outcomes by **strictly following the Golazo workflow**, enforcing all gates, and producing **auditable artifacts** for every role. I am the Project Owner for this session.
@@ -66,6 +66,59 @@ If a role file conflicts with this spine, **the stricter rule wins**.
 
 ---
 
+## Project Root Definition (IMPORTANT)
+
+**Project Root** is where Golazo artifacts (`WorkItems/`, tests, etc.) are created. All artifact paths in this document are **relative to Project Root**.
+
+### How to Determine Project Root
+
+| IDE | Project Root Location |
+|-----|----------------------|
+| **Visual Studio** | Directory containing the active project file (`.csproj`, `.pyproj`, `.fsproj`, `.vbproj`, `.vcxproj`) |
+| **VS Code** | Directory containing a project manifest file (see list below) |
+
+**VS Code Project Manifests** (check in order):
+- `package.json` (Node.js/JavaScript)
+- `pyproject.toml` or `setup.py` (Python)
+- `Cargo.toml` (Rust)
+- `go.mod` (Go)
+- `pom.xml` or `build.gradle` (Java)
+- `*.csproj` or `*.sln` (C#/.NET)
+- `Makefile` (C/C++/general)
+
+**VS Code Fallback**: If no manifest is found, ask the Project Owner:
+> "I couldn't find a project manifest file. Is the workspace folder `[current path]` the correct Project Root for Golazo artifacts?"
+
+Wait for confirmation before creating any artifacts.
+
+### Project Root vs Repo Root
+
+| Term | Definition | Typically Contains |
+|------|------------|-------------------|
+| **Repo Root** | Git repository root directory | `.git/`, `.github/copilot-instructions.md` |
+| **Project Root** | User's project directory | Project file (`.csproj`, etc.), `WorkItems/`, source code |
+
+These may be the **same directory** (single-project repo) or **different** (multi-project repo, monorepo).
+
+### Path Examples
+
+```
+? Correct: WorkItems/GCP-009/GCP-009-User-Story.md
+? Wrong:   ProjectName/WorkItems/GCP-009/GCP-009-User-Story.md
+? Wrong:   <ProjectRoot>/WorkItems/GCP-009/GCP-009-User-Story.md
+? Wrong:   C:\Users\...\WorkItems\GCP-009\GCP-009-User-Story.md
+```
+
+### Before Creating Files
+
+1. Identify Project Root using the rules above
+2. Verify your working directory matches Project Root
+3. If unsure, ask: "Is `[current directory]` the correct Project Root?"
+
+**If you created files in the wrong location**: Stop, acknowledge the error, and offer to help move the files to the correct Project Root.
+
+---
+
 ## Non-negotiable process gates
 
 ### Definition of Ready (DoR) - before writing production code
@@ -98,20 +151,21 @@ Follow repository conventions if they already exist. Otherwise use the paths bel
 
 ### Artifact path context (IMPORTANT)
 
+
 All artifact paths are organized **by work item**, relative to the project root.
 
 **Directory structure:**
 ```
-<ProjectName>/
-??? WorkItems/
-    ??? <workitem-id>/
-        ??? <workitem-id>-User-Story.md
-        ??? Design/
-        ?   ??? <workitem-id>-Design-Doc.md
-        ?   ??? <workitem-id>-Review-Comments.md
-        ?   ??? <workitem-id>-Test-Cases.md
-        ??? RoleDecisionNotes/
-            ??? <workitem-id>-<role>.md
+<ProjectRoot>/
++-- WorkItems/
+    +-- <workitem-id>/
+        +-- <workitem-id>-User-Story.md
+        +-- Design/
+        ¦   +-- <workitem-id>-Design-Doc.md
+        ¦   +-- <workitem-id>-Review-Comments.md
+        ¦   +-- <workitem-id>-Test-Cases.md
+        +-- RoleDecisionNotes/
+            +-- <workitem-id>-<role>.md
 ```
 
 Before creating any artifact file, verify:
@@ -120,13 +174,13 @@ Before creating any artifact file, verify:
 3) All artifacts for the same work item are in the same work item folder
 
 ### Core workflow artifacts
-- User Stories: `<ProjectName>/WorkItems/<workitem-id>/<workitem-id>-User-Story.md`
-- Design Documents: `<ProjectName>/WorkItems/<workitem-id>/Design/<workitem-id>-Design-Doc.md`
-- Review Comments: `<ProjectName>/WorkItems/<workitem-id>/Design/<workitem-id>-Review-Comments.md`
-- Test Cases: `<ProjectName>/WorkItems/<workitem-id>/Design/<workitem-id>-Test-Cases.md`
+- User Stories: `WorkItems/<workitem-id>/<workitem-id>-User-Story.md`
+- Design Documents: `WorkItems/<workitem-id>/Design/<workitem-id>-Design-Doc.md`
+- Review Comments: `WorkItems/<workitem-id>/Design/<workitem-id>-Review-Comments.md`
+- Test Cases: `WorkItems/<workitem-id>/Design/<workitem-id>-Test-Cases.md`
 
 ### Role decision artifacts (MANDATORY)
-Each participating role MUST produce its own document in `<ProjectName>/WorkItems/<workitem-id>/RoleDecisionNotes/`:
+Each participating role MUST produce its own document in `WorkItems/<workitem-id>/RoleDecisionNotes/`:
 - Project Owner Assistant: `<workitem-id>-project-owner-assistant.md`
 - Program Manager: `<workitem-id>-program-manager.md`
 - Reviewer: `<workitem-id>-reviewer.md`
@@ -137,6 +191,8 @@ Each participating role MUST produce its own document in `<ProjectName>/WorkItem
 - Builder: `<workitem-id>-builder.md`
 - Documentor: `<workitem-id>-documentor.md`
 - Retrospective (when triggered): `<workitem-id>-retrospective.md`
+
+
 
 Each role document must include:
 - Decisions made
@@ -221,7 +277,7 @@ For **config-only changes** (YAML, JSON, environment settings) that:
 - Are limited to non-production environments
 
 **Skip** Program Manager, Architect, Tester roles. Go directly:
-- Project Owner (scope confirmation) â†’ Reviewer â†’ Developer (implement) â†’ Builder (commit)
+- Project Owner (scope confirmation) ? Reviewer ? Developer (implement) ? Builder (commit)
 - if the Reviewer identifies risks, revert to full workflow.
 
 User can invoke fast-track by saying "Fasttrack this" or similar.
