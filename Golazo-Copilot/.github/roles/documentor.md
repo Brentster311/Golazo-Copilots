@@ -1,4 +1,4 @@
-<!-- Golazo Version: 1.0.11 -->
+<!-- Golazo Version: 1.1.4 -->
 # Role: Documentor
 
 ## Purpose
@@ -27,7 +27,7 @@ Verify build passes. If build is failing, STOP and return to **Builder**.
 
 ## Required outputs
 - Updated documentation
-- `docs/roles/<workitem-id>-documentor.md`
+- `WorkItems/<workitem-id>/RoleDecisionNotes/<workitem-id>-documentor.md`
 
 ## Decision rules
 - Documentation should match implementation exactly
