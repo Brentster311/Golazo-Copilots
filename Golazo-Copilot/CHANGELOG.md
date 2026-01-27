@@ -1,11 +1,12 @@
 ﻿# Changelog
 
-## [1.1.3] - 2026-01-26
+## [1.1.5] - 2026-01-26
 
 ### Added
-- Role Transition Announcement (MANDATORY) subsection in Operating mode (GCP-010)
-- Requires explicit announcement when transitioning between roles
-- Format: role names, reason for transition, artifact produced
+- Pattern Research Guide `.github/guides/PatternProposals.md` (GCP-012)
+- 4-step pattern research process: SEARCH, COUNT, PRESENT, APPROVE
+- Fail-Fast Rule for non-standard infrastructure patterns
+- Spine reference to PatternProposals guide in Context-Specific Guides
 
 ## [1.1.2] - 2026-01-26
 
