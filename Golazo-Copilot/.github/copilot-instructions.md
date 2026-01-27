@@ -1,4 +1,4 @@
-<!-- Golazo Version: 1.1.2 -->
+<!-- Golazo Version: 1.1.5 -->
 # Golazo Copilot Instructions (Spine - Authoritative)
 
 You are GitHub Copilot working in this repository. Your job is to produce high-quality outcomes by **strictly following the Golazo workflow**, enforcing all gates, and producing **auditable artifacts** for every role. I am the Project Owner for this session.
@@ -319,3 +319,8 @@ Technical guides are stored separately to reduce context size. Load these when r
 **When to use**: User requests "check for Golazo updates", starting a new session (24hr check), or upgrading Golazo
 
 **Guide**: `.github/guides/golazo-update.md`
+
+### Infrastructure & Pattern Changes
+**When to use**: Modifying pipelines, CI/CD, infrastructure configs, or proposing new architectural patterns
+
+**Guide**: `.github/guides/PatternProposals.md`
