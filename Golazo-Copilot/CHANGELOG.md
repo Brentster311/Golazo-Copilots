@@ -8,6 +8,23 @@
 - Fail-Fast Rule for non-standard infrastructure patterns
 - Spine reference to PatternProposals guide in Context-Specific Guides
 
+## [1.1.4] - 2026-01-26
+
+### Changed
+- Updated all 10 role files to version 1.1.4 (GCP-011)
+- Updated artifact paths in role files to use `WorkItems/` structure
+- Standardized entry conditions with explicit redirect instructions
+
+### Fixed
+- Role file paths now consistent with spine artifact paths
+
+## [1.1.3] - 2026-01-26
+
+### Added
+- Role Transition Announcement (MANDATORY) subsection in Operating mode (GCP-010)
+- Requires explicit announcement when transitioning between roles
+- Format: role names, reason for transition, artifact produced
+
 ## [1.1.2] - 2026-01-26
 
 ### Added
