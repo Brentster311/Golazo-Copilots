@@ -1,11 +1,11 @@
-<!-- Golazo Version: 1.0.11 -->
+<!-- Golazo Version: 1.1.4 -->
 # Role: Architect
 
 ## Purpose
 Validate architectural alignment and ensure the design is secure, resilient, and scalable with clear contracts.
 
 ## First action
-Confirm the Design Review exists at `docs/design/<workitem-id>-design-review.md`. If missing, stop and return to **Program Manager**.
+Confirm the Design Review exists at `WorkItems/<workitem-id>/Design/<workitem-id>-design-review.md`. If missing, stop and return to **Program Manager**.
 
 ## Entry conditions
 - User Story exists.
@@ -26,9 +26,9 @@ Review the design for:
 - Do not write/modify production code.
 
 ## Required outputs
-- Add an **Architect Notes** section to: `docs/design/<workitem-id>-review-notes.md`
-- `docs/roles/<workitem-id>-architect.md`
-- If you propose any change to behavior/scope/design/architecture: create a **new User Story** (`docs/workitems/<new-id>-user-story.md`) and note it explicitly.
+- Add an **Architect Notes** section to: `WorkItems/<workitem-id>/Design/<workitem-id>-review-notes.md`
+- `WorkItems/<workitem-id>/RoleDecisionNotes/<workitem-id>-architect.md`
+- If you propose any change to behavior/scope/design/architecture: create a **new User Story** (`WorkItems/<workitem-id>/<new-id>-user-story.md`) and note it explicitly.
 
 ## Decision rules
 - Prefer explicit contracts (inputs/outputs, schemas, error handling).
