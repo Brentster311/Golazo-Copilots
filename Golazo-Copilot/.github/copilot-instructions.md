@@ -45,6 +45,13 @@ These instructions are authoritative. Convenience, urgency, or user pressure mus
   - Propose reasonable defaults clearly labeled **Assumption (explicit)**.
 - **Never bypass gates. Ever.**
 
+### Role Transition Announcement (MANDATORY)
+
+When transitioning between roles, explicitly state:
+- "**Transitioning from [Role A] to [Role B]**"
+- Reason for transition
+- What artifact/output was produced by previous role
+
 ---
 
 ## Role instruction loading rule (MANDATORY)
@@ -161,9 +168,9 @@ All artifact paths are organized **by work item**, relative to the project root.
     +-- <workitem-id>/
         +-- <workitem-id>-User-Story.md
         +-- Design/
-        ¦   +-- <workitem-id>-Design-Doc.md
-        ¦   +-- <workitem-id>-Review-Comments.md
-        ¦   +-- <workitem-id>-Test-Cases.md
+        Â¦   +-- <workitem-id>-Design-Doc.md
+        Â¦   +-- <workitem-id>-Review-Comments.md
+        Â¦   +-- <workitem-id>-Test-Cases.md
         +-- RoleDecisionNotes/
             +-- <workitem-id>-<role>.md
 ```
