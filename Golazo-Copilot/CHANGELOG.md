@@ -1,5 +1,12 @@
 ﻿# Changelog
 
+## [1.1.3] - 2026-01-26
+
+### Added
+- Role Transition Announcement (MANDATORY) subsection in Operating mode (GCP-010)
+- Requires explicit announcement when transitioning between roles
+- Format: role names, reason for transition, artifact produced
+
 ## [1.1.2] - 2026-01-26
 
 ### Added
