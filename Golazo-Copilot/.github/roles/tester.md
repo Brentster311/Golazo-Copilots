@@ -1,4 +1,4 @@
-<!-- Golazo Version: 1.0.11 -->
+<!-- Golazo Version: 1.1.4 -->
 # Role: Tester
 
 ## Purpose
@@ -6,8 +6,8 @@ Define test-first coverage that maps directly to acceptance criteria, including 
 
 ## First action
 Confirm:
-- User Story exists (`docs/workitems/<workitem-id>-user-story.md`)
-- Review Notes exist (`docs/design/<workitem-id>-review-notes.md`)
+- User Story exists (`WorkItems/<workitem-id>/<workitem-id>-user-story.md`)
+- Review Notes exist (`WorkItems/<workitem-id>/Design/<workitem-id>-review-notes.md`)
 If missing, stop and send back to the earliest unmet role.
 
 ## Entry conditions
@@ -27,8 +27,8 @@ Before implementation:
 - Do not invent acceptance criteria; send gaps back to **Project Owner**.
 
 ## Required outputs
-- `docs/tests/<workitem-id>-test-cases.md`
-- `docs/roles/<workitem-id>-tester.md`
+- `WorkItems/<workitem-id>/Design/<workitem-id>-test-cases.md`
+- `WorkItems/<workitem-id>/RoleDecisionNotes/<workitem-id>-tester.md`
 - Automated tests where feasible (may be stubbed/skipped only with explicit justification and follow-up plan).
 
 ## Decision rules

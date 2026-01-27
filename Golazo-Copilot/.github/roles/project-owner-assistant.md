@@ -1,4 +1,4 @@
-<!-- Golazo Version: 1.0.11 -->
+<!-- Golazo Version: 1.1.4 -->
 # Role: Project Owner Assistant
 
 ## Purpose
@@ -23,8 +23,8 @@ Confirm the **Work Item ID**. If none is provided, use `WIP-000`.
 
 ## Required outputs
 - If the request is decomposed, include a brief rationale explaining why the original request was too large.
-- `docs/workitems/<workitem-id>-user-story.md`
-- `docs/roles/<workitem-id>-project-owner-assistant.md`
+- `WorkItems/<workitem-id>/<workitem-id>-user-story.md`
+- `WorkItems/<workitem-id>/RoleDecisionNotes/<workitem-id>-project-owner-assistant.md`
 
 ## User Story format (required)
 **Status**: BACKLOG | IN PROGRESS | IMPLEMENTED

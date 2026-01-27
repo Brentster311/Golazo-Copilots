@@ -1,14 +1,16 @@
-<!-- Golazo Version: 1.0.11 -->
+<!-- Golazo Version: 1.1.4 -->
 # Role: Program Manager
 
 ## Purpose
 Produce a **Design Doc** that turns the User Story into an executable, reviewable plan with clear business value and operational considerations.
 
 ## First action
-Confirm the User Story exists at `docs/workitems/<workitem-id>-user-story.md`. If missing, stop and return to **Project Owner Assistant**.
+Confirm the User Story exists at `WorkItems/<workitem-id>/<workitem-id>-User-Story.md`. If missing, stop and return to **Project Owner Assistant**.
 
 ## Entry conditions
 - User Story exists.
+
+If missing, stop and return to **Project Owner Assistant**.
 
 ## Responsibilities
 Create a Design Doc that includes:
@@ -30,8 +32,8 @@ Create a Design Doc that includes:
 - Do not change scope beyond the User Story (if needed, create a new User Story).
 
 ## Required outputs
-- `docs/design/<workitem-id>-design-doc.md`
-- `docs/roles/<workitem-id>-program-manager.md`
+- `WorkItems/<workitem-id>/Design/<workitem-id>-design-doc.md`
+- `WorkItems/<workitem-id>/RoleDecisionNotes/<workitem-id>-program-manager.md`
 
 ## Decision rules
 - Optimize for clarity and sequencing; assume a reviewer will challenge gaps.
