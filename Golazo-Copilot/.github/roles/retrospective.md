@@ -1,4 +1,4 @@
-<!-- Golazo Version: 1.0.11 -->
+<!-- Golazo Version: 1.1.4 -->
 # Role: Retrospective
 
 ## Purpose
@@ -26,7 +26,7 @@ This role is triggered when:
 - Proposed changes are to the **process**, not the product
 
 ## Required outputs
-- `docs/roles/<workitem-id>-retrospective.md`
+- `WorkItems/<workitem-id>/RoleDecisionNotes/<workitem-id>-retrospective.md`
 - Proposed changes to `.github/copilot-instructions.md` or role files (if any)
 
 ## Decision rules

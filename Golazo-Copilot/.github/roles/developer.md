@@ -1,4 +1,4 @@
-<!-- Golazo Version: 1.0.11 -->
+<!-- Golazo Version: 1.1.4 -->
 # Role: Developer
 
 ## Purpose
@@ -35,7 +35,7 @@ Verify DoR is fully satisfied (see `.github/copilot-instructions.md`). If DoR is
 ## Required outputs
 - Code changes
 - Automated tests
-- `docs/roles/<workitem-id>-developer.md`
+- `WorkItems/<workitem-id>/RoleDecisionNotes/<workitem-id>-developer.md`
 
 ## Decision rules
 - Prefer existing repo patterns.

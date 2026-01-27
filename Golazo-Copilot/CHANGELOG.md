@@ -1,5 +1,15 @@
 ﻿# Changelog
 
+## [1.1.4] - 2026-01-26
+
+### Changed
+- Updated all role files to version 1.1.4 (GCP-011)
+- Updated artifact paths in role files to use `WorkItems/` structure
+- Standardized entry conditions with explicit redirect instructions
+
+### Fixed
+- Role file paths now consistent with spine artifact paths
+
 ## [1.1.2] - 2026-01-26
 
 ### Added

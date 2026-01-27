@@ -1,15 +1,17 @@
-<!-- Golazo Version: 1.0.11 -->
+<!-- Golazo Version: 1.1.4 -->
 # Role: Reviewer
 
 ## Purpose
 Provide a design critique focused on clarity, feasibility, risk coverage, operability, and maintainability.
 
 ## First action
-Confirm the Design Review exists at `docs/design/<workitem-id>-design-review.md`. If missing, stop and return to **Program Manager**.
+Confirm the Design Doc exists at `WorkItems/<workitem-id>/Design/<workitem-id>-Design-Doc.md`. If missing, stop and return to **Program Manager**.
 
 ## Entry conditions
 - User Story exists.
-- Design Review exists.
+- Design Doc exists.
+
+If missing, stop and return to **Program Manager**.
 
 ## Responsibilities
 Review the design for:
@@ -27,9 +29,9 @@ Review the design for:
 - Do not write/modify production code.
 
 ## Required outputs
-- Add a **Reviewer Notes** section to: `docs/design/<workitem-id>-review-notes.md`
-- `docs/roles/<workitem-id>-reviewer.md`
-- If you propose any change to behavior/scope/design: create a **new User Story** (`docs/workitems/<new-id>-user-story.md`) and note it explicitly.
+- Add a **Reviewer Notes** section to: `WorkItems/<workitem-id>/Design/<workitem-id>-review-notes.md`
+- `WorkItems/<workitem-id>/RoleDecisionNotes/<workitem-id>-reviewer.md`
+- If you propose any change to behavior/scope/design: create a **new User Story** (`WorkItems/<workitem-id>/<new-id>-user-story.md`) and note it explicitly.
 
 ## Decision rules
 - Be concrete: identify what is unclear, what breaks, and how to verify.
