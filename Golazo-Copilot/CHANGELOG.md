@@ -1,5 +1,20 @@
 ﻿# Changelog
 
+## [1.1.2] - 2026-01-26
+
+### Added
+- Project Root Definition section with IDE-specific rules (GCP-009)
+- Clear distinction between Repo Root and Project Root
+- VS Code fallback with Project Owner confirmation
+
+### Changed
+- Removed all `<ProjectName>` tokens from artifact paths
+- Artifact paths now explicitly relative to Project Root
+- Directory structure diagram uses `<ProjectRoot>` instead of `<ProjectName>`
+
+### Fixed
+- Copilot file creation location confusion in multi-project repos
+
 ## [1.1.1] - 2026-01-22
 
 ### Added
