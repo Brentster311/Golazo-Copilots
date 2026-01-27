@@ -2,6 +2,8 @@
 
 A structured, role-based workflow for AI-assisted software development with GitHub Copilot.
 
+**Current Version**: 1.1.5
+
 ## What is GolazoCP?
 
 **GolazoCP** is a methodology that transforms how you work with AI coding assistants. Instead of letting AI write code immediately, GolazoCP enforces a disciplined workflow with **gates, roles, and auditable artifacts** — ensuring quality, traceability, and thoughtful design before any code is written.
@@ -21,50 +23,49 @@ GolazoCP, adapted from the Golazo agile practice, is sort of **Kanban meets AI p
 | **Scope Control** | Clear "out of scope" definitions prevent feature creep |
 | **Role Separation** | Different "hats" catch different issues (Reviewer vs Architect vs Tester) |
 | **Checks and Balances** | Each role reviews the previous role's work — no single point of failure in decision-making |
+| **Role Transition Visibility** | Copilot announces when transitioning between roles, showing what was produced |
+| **Pattern Consistency** | Infrastructure changes require research of existing patterns before proposing new ones |
 
 ## Quick Start
 
-### Option 1: Install via Script
+### Installation
 
-```bash
-# Clone the Golazo Copilot repository
-git clone https://github.com/Brentster311/Golazo-Copilots.git
+Download `GolazoCP-dist.zip` and extract it to your project root, or follow the detailed installation guides:
 
-# Navigate to your target project
-cd /path/to/your/project
-
-# Run the installer
-python /path/to/Golazo-Copilots/Golazo-Copilot/Golazo_Copilot.py
-```
-
-### Option 2: Download Distribution Package
-
-```bash
-# Create a distributable zip file
-cd /path/to/Golazo-Copilots/Golazo-Copilot
-python Golazo_Copilot.py --package
-```
-
-This creates `GolazoCP-dist.zip` containing everything you need. Extract it to your project root.
+- **[Visual Studio Setup](USAGE-VisualStudio.md)** — Full instructions for VS users
+- **[VS Code Setup](USAGE-VSCode.md)** — Full instructions for VS Code users
 
 ### What Gets Installed
 
-- `.github/copilot-instructions.md` — The "spine" that controls Copilot's behavior
-- `.github/roles/*.md` — Detailed instructions for each of the 10 roles
+```
+.github/
+├── copilot-instructions.md     # The "spine" controlling Copilot behavior
+├── roles/                      # 10 role instruction files
+│   ├── project-owner-assistant.md
+│   ├── program-manager.md
+│   ├── reviewer.md
+│   ├── architect.md
+│   ├── tester.md
+│   ├── developer.md
+│   ├── refactor-expert.md
+│   ├── builder.md
+│   ├── documentor.md
+│   └── retrospective.md
+└── guides/                     # Context-specific technical guides
+    ├── powershell-terminal.md  # Terminal encoding rules
+    ├── golazo-update.md        # Version checking and upgrades
+    └── PatternProposals.md     # Infrastructure pattern research
+```
 
 ### Start Using GolazoCP
 
-1. Open your project in VS Code with GitHub Copilot
+1. Open your project in VS Code or Visual Studio with GitHub Copilot
 2. Ask Copilot to help with a feature: *"I want to add user authentication"*
 3. Copilot will automatically follow the Golazo workflow, starting with the **Project Owner Assistant** role
 
-**IDE-specific guides:**
-- [Visual Studio Setup](USAGE-VisualStudio.md)
-- [VS Code Setup](USAGE-VSCode.md)
-
 ## The 10 Roles
 
-GolazoCP defines 10 sequential roles. Each role has specific responsibilities and produces artifacts:
+GolazoCP defines 10 sequential roles. Each role has specific responsibilities, **entrance criteria** (required artifacts before starting), and produces artifacts. When transitioning between roles, Copilot announces the transition with the reason and what was produced.
 
 | # | Role | Purpose | Key Output |
 |---|------|---------|------------|
@@ -78,6 +79,15 @@ GolazoCP defines 10 sequential roles. Each role has specific responsibilities an
 | 8 | **Builder** | Verify build and deployment | Build verification |
 | 9 | **Documentor** | Update all documentation | Updated docs |
 | 10 | **Retrospective** | Evaluate process and propose improvements | Process changes |
+
+### Role Transitions
+
+When Copilot transitions between roles, it announces:
+- **"Transitioning from [Role A] to [Role B]"**
+- Reason for the transition
+- What artifact/output was produced by the previous role
+
+This makes the workflow visible and auditable.
 
 
 ## Artifact Structure
@@ -191,6 +201,18 @@ The workflow is controlled by `.github/copilot-instructions.md`. You can customi
 
 **Warning**: Changes to the spine affect all future work items. Use the Retrospective process to propose changes.
 
+## Context-Specific Guides
+
+GolazoCP includes technical guides that are loaded when relevant:
+
+| Guide | When Loaded |
+|-------|-------------|
+| **PowerShell Terminal** | Writing files via terminal, encoding errors |
+| **Golazo Updates** | Checking for newer versions, upgrading |
+| **Pattern Proposals** | Infrastructure, pipeline, or config changes |
+
+The **Pattern Proposals** guide ensures Copilot researches existing patterns before proposing new infrastructure or configuration approaches. It follows a 4-step process: SEARCH → COUNT → PRESENT → APPROVE.
+
 ## FAQ
 
 ### Can I skip roles?
@@ -205,15 +227,20 @@ This is a process violation. The instructions explicitly forbid this. If it happ
 
 The artifacts and workflow can be used manually or with any AI assistant. The `.github/copilot-instructions.md` file is specific to GitHub Copilot, but the methodology is tool-agnostic.
 
+### How do I check for updates?
+
+Ask Copilot: *"Check for Golazo updates"* — it will compare your local version against the latest and offer to upgrade if a newer version is available.
+
+### What is "Project Root"?
+
+**Project Root** is where Golazo creates artifacts (the `WorkItems/` folder). In Visual Studio, it's the directory containing your project file (`.csproj`, `.pyproj`, etc.). In VS Code, it's the directory containing a project manifest (`package.json`, `pyproject.toml`, etc.).
+
 ## License
 
 MIT License — see LICENSE file for details.
 
-## Contributing
+## Version History
 
-Contributions welcome! Please follow the Golazo workflow when contributing:
+See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 
-1. Create a User Story for your proposed change
-2. Go through the full role sequence
-3. Submit PR with all artifacts
 
