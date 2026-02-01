@@ -7,14 +7,15 @@ Provides consent-based skip detection and deviation logging for Golazo V2.
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
-from .machine import GolazoStateMachine
-from .state import save_state
+if TYPE_CHECKING:
+    from .machine import GolazoStateMachine
+    from .config import GolazoConfig
 
 
-# Quality gate roles that require extra warning
-QUALITY_GATE_ROLES = ["tester", "architect"]
+# Default quality gate roles (used if no config)
+DEFAULT_QUALITY_GATE_ROLES = ["tester", "architect"]
 
 # Explicit skip patterns - user clearly wants to skip
 EXPLICIT_SKIP_PATTERNS = [
@@ -33,6 +34,9 @@ AMBIGUOUS_PATTERNS = [
     r"don'?t\s+need\s+all\s+that",
 ]
 
+# Legacy alias for backward compatibility
+QUALITY_GATE_ROLES = DEFAULT_QUALITY_GATE_ROLES
+
 
 @dataclass
 class RequestAnalysis:
@@ -50,7 +54,7 @@ class ConsentEnforcer:
     and logs all deviations to the state file.
     """
     
-    def __init__(self, machine: GolazoStateMachine):
+    def __init__(self, machine: "GolazoStateMachine"):
         """
         Initialize consent enforcer with state machine reference.
         
@@ -58,6 +62,7 @@ class ConsentEnforcer:
             machine: GolazoStateMachine instance
         """
         self._machine = machine
+        self._config = machine._config  # Share config with machine
     
     def analyze_request(self, user_message: str) -> RequestAnalysis:
         """
@@ -129,7 +134,7 @@ class ConsentEnforcer:
         Returns:
             Warning string if role is a quality gate, None otherwise
         """
-        if role in QUALITY_GATE_ROLES:
+        if self.is_quality_gate(role):
             return (
                 f"?? Warning: '{role}' is a quality gate role. "
                 f"Skipping this role will be logged in the audit trail. "
@@ -147,7 +152,7 @@ class ConsentEnforcer:
         Returns:
             True if role is a quality gate
         """
-        return role in QUALITY_GATE_ROLES
+        return role in self._config.quality_gates
     
     def record_deviation(
         self,
