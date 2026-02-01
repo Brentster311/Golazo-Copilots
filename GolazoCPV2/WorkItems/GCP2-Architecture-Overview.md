@@ -487,9 +487,9 @@ User: "Skip DoR, I'm just exploring"
 | GCP2-002 | Workflow Definition | ? Planning done | None |
 | GCP2-003 | State Persistence | ? **DONE** | None |
 | GCP2-001a | Core State Machine | ? **DONE** | GCP2-003 |
-| GCP2-001b | Consent Enforcement | ?? Next | GCP2-001a |
-| GCP2-008 | Configuration System | ?? Backlog | GCP2-001a |
-| GCP2-001c | CLI Commands | ?? Backlog | GCP2-001b |
+| GCP2-001b | Consent Enforcement | ? **DONE** | GCP2-001a |
+| GCP2-008 | Configuration System | ? **DONE** | GCP2-001a |
+| GCP2-001c | CLI Commands | ?? Next | GCP2-001b, GCP2-008 |
 | GCP2-001d | MCP Server | ?? Backlog | GCP2-001c |
 | GCP2-005a | Shared Status Bar | ?? Backlog | GCP2-001d |
 | GCP2-005b | VS Code Extension | ?? Backlog | GCP2-005a |
