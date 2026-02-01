@@ -135,20 +135,25 @@ class GolazoStateMachine:
         
         return (True, f"Transition allowed: {current} -> {target_role}")
     
-    def transition(self, target_role: str) -> tuple[bool, str]:
+    def transition(self, target_role: str, force: bool = False) -> tuple[bool, str]:
         """
         Perform transition to target role if valid.
         
         Args:
             target_role: Role to transition to
+            force: If True, skip validation gates (requires consent)
             
         Returns:
             (success, message) tuple
         """
-        allowed, reason = self.can_transition(target_role)
+        # Validate role name even when forcing
+        if target_role not in VALID_ROLES:
+            return (False, f"Unknown role: {target_role}")
         
-        if not allowed:
-            return (False, reason)
+        if not force:
+            allowed, reason = self.can_transition(target_role)
+            if not allowed:
+                return (False, reason)
         
         now = datetime.now(timezone.utc).isoformat()
         
