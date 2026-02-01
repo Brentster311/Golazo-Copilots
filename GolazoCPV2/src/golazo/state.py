@@ -91,6 +91,9 @@ def create_state(
     work_item_id: str,
     profile: str = "complete",
     base_path: Optional[Path] = None,
+    dor_items: Optional[list] = None,
+    dod_items: Optional[list] = None,
+    initial_role: str = "project-owner",
 ) -> State:
     """
     Create a new state for a work item, or return existing state if present.
@@ -99,6 +102,9 @@ def create_state(
         work_item_id: The work item identifier
         profile: Workflow profile (complete, express, spike)
         base_path: Base path for WorkItems directory
+        dor_items: Custom DoR items (uses defaults if None)
+        dod_items: Custom DoD items (uses defaults if None)
+        initial_role: Starting role (defaults to project-owner)
     
     Returns:
         State object (existing or newly created)
@@ -112,18 +118,29 @@ def create_state(
     
     now = datetime.now(timezone.utc).isoformat()
     
+    # Build DoR/DoD from custom items or defaults
+    if dor_items is not None:
+        dor = {item: False for item in dor_items}
+    else:
+        dor = _default_dor()
+    
+    if dod_items is not None:
+        dod = {item: False for item in dod_items}
+    else:
+        dod = _default_dod()
+    
     state = State(
         schemaVersion=SCHEMA_VERSION,
         workItemId=work_item_id,
         profile=profile,
         currentPhase="design",
-        currentRole="project-owner",
+        currentRole=initial_role,
         createdAt=now,
         updatedAt=now,
-        dor=_default_dor(),
-        dod=_default_dod(),
+        dor=dor,
+        dod=dod,
         roleHistory=[{
-            "role": "project-owner",
+            "role": initial_role,
             "enteredAt": now,
             "exitedAt": None,
         }],

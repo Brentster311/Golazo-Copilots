@@ -9,6 +9,9 @@ description = "Golazo Copilot V2 - Programmatic workflow enforcement agent"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
+dependencies = [
+    "pyyaml>=6.0",
+]
 
 [project.optional-dependencies]
 dev = [
