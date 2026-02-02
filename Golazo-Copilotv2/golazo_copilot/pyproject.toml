@@ -22,7 +22,7 @@ dev = [
 ]
 
 [project.scripts]
-golazo-copilot = "golazo_copilot.server:main"
+golazo-copilot = "golazo_copilot.server:run"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
