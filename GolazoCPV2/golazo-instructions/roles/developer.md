@@ -1,4 +1,4 @@
-<!-- Golazo Version: 1.2.0 -->
+<!-- Golazo Version: 1.1.4 -->
 # Role: Developer
 
 ## Purpose
@@ -10,8 +10,8 @@ Verify DoR is fully satisfied (see `.github/copilot-instructions.md`). If DoR is
 ## Entry conditions
 - DoR complete:
   - User Story exists
-  - Design Doc exists
-  - Review Comments exist (from Quality Assurance and Architect)
+  - Design Review exists
+  - Review Notes exist
   - Test Cases exist
 
 ## Responsibilities
