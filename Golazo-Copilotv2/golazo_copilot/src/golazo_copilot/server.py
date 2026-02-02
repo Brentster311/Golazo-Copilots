@@ -8,6 +8,7 @@ from mcp.types import TextContent, Tool
 from .tools.gcp_init import gcp_init
 from .tools.gcp_transition import gcp_transition
 from .tools.gcp_mark import gcp_mark_dor, gcp_mark_dod
+from .tools.gcp_status import gcp_status
 
 # Create server instance
 server = Server("golazo-copilot")
@@ -117,9 +118,23 @@ async def list_tools() -> list[Tool]:
                     }
                 },
                 "required": ["work_item_id"]
-            }
-        ),
-    ]
+                        }
+                    ),
+                    Tool(
+                        name="gcp_status",
+                        description="Get comprehensive workflow status for a work item",
+                        inputSchema={
+                            "type": "object",
+                            "properties": {
+                                "work_item_id": {
+                                    "type": "string",
+                                    "description": "Work item identifier"
+                                }
+                            },
+                            "required": ["work_item_id"]
+                        }
+                    ),
+                ]
 
 
 @server.call_tool()
@@ -204,18 +219,52 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             )
         
             if result["success"]:
-                warning = f"\n?? {result['warning']}" if result.get("warning") else ""
-                status = "? Complete" if result["complete"] else f"? Missing: {', '.join(result['missing'])}"
-                content = f"""? DoD updated!{warning}
+                            warning = f"\n?? {result['warning']}" if result.get("warning") else ""
+                            status = "? Complete" if result["complete"] else f"? Missing: {', '.join(result['missing'])}"
+                            content = f"""? DoD updated!{warning}
 
-    **DoD Status:** {status}
-    """
-            else:
-                content = f"? Failed to update DoD: {result['error']}"
+                **DoD Status:** {status}
+                """
+                        else:
+                            content = f"? Failed to update DoD: {result['error']}"
         
-            return [TextContent(type="text", text=content)]
+                        return [TextContent(type="text", text=content)]
     
-        return [TextContent(type="text", text=f"Unknown tool: {name}")]
+                    elif name == "gcp_status":
+                        result = await gcp_status(
+                            work_item_id=arguments["work_item_id"]
+                        )
+        
+                        if result.get("active", False):
+                            dor_count = sum(1 for v in result["dor"]["items"].values() if v)
+                            dor_total = len(result["dor"]["items"])
+                            dod_count = sum(1 for v in result["dod"]["items"].values() if v)
+                            dod_total = len(result["dod"]["items"])
+                
+                            dor_status = "? Complete" if result["dor"]["complete"] else f"? {dor_count}/{dor_total}"
+                            dod_status = "? Complete" if result["dod"]["complete"] else f"? {dod_count}/{dod_total}"
+                
+                            next_steps = "\n".join(f"- {step}" for step in result["next_steps"])
+                
+                            content = f"""**Golazo Status**
+            - Work Item: {result['work_item_id']}
+            - Current Role: **{result['current_role']}**
+            - Phase: {result['current_phase']}
+            - DoR: {dor_status}
+            - DoD: {dod_status}
+
+            **Next Steps:**
+            {next_steps}
+
+            ---
+            {result['role_instructions']}
+            """
+                        else:
+                            content = f"?? {result.get('message', 'No active work item')}"
+        
+                        return [TextContent(type="text", text=content)]
+    
+                    return [TextContent(type="text", text=f"Unknown tool: {name}")]
 
 
 async def main():
