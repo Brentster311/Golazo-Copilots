@@ -46,7 +46,14 @@ def save_state(
         with os.fdopen(fd, 'w', encoding='utf-8') as f:
             f.write(state_json)
         # Rename temp to final (atomic on same filesystem)
-        os.replace(temp_path, state_path)
+        # On Windows, we may need to delete existing file first
+        try:
+            os.replace(temp_path, state_path)
+        except PermissionError:
+            # Windows workaround: delete target then rename
+            if state_path.exists():
+                os.unlink(state_path)
+            os.rename(temp_path, state_path)
     except Exception:
         # Clean up temp file if rename failed
         if os.path.exists(temp_path):
