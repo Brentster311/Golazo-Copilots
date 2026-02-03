@@ -33,7 +33,7 @@ class TestSuccessfulTransition:
     @pytest.mark.asyncio
     async def test_transition_project_owner_to_program_manager(self):
         """Should transition from project-owner-assistant to program-manager."""
-        await gcp_create_workitem(work_item_id="trans-test", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_init(work_item_id="trans-test", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_transition(
             work_item_id="trans-test",
@@ -50,7 +50,7 @@ class TestSuccessfulTransition:
     @pytest.mark.asyncio
     async def test_transition_updates_role_history(self):
         """Should close previous role and add new entry."""
-        await gcp_create_workitem(work_item_id="history-test", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_init(work_item_id="history-test", work_items_dir=TEST_WORKITEMS_DIR)
         
         await gcp_transition(
             work_item_id="history-test",
@@ -72,7 +72,7 @@ class TestSuccessfulTransition:
     @pytest.mark.asyncio
     async def test_transition_updates_timestamp(self):
         """Should update updatedAt timestamp."""
-        await gcp_create_workitem(work_item_id="timestamp-test", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_init(work_item_id="timestamp-test", work_items_dir=TEST_WORKITEMS_DIR)
         state_before = load_state("timestamp-test", TEST_WORKITEMS_DIR)
         
         await asyncio.sleep(0.01)
@@ -89,7 +89,7 @@ class TestSuccessfulTransition:
     @pytest.mark.asyncio
     async def test_transition_returns_role_instructions(self):
         """Should return role instructions on success."""
-        await gcp_create_workitem(work_item_id="instructions-test", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_init(work_item_id="instructions-test", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_transition(
             work_item_id="instructions-test",
@@ -107,7 +107,7 @@ class TestTransitionValidation:
     @pytest.mark.asyncio
     async def test_valid_transition_program_manager_to_qa(self):
         """Should allow program-manager to quality-assurance."""
-        await gcp_create_workitem(work_item_id="valid-1", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_init(work_item_id="valid-1", work_items_dir=TEST_WORKITEMS_DIR)
         await gcp_transition(work_item_id="valid-1", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_transition(
@@ -121,7 +121,7 @@ class TestTransitionValidation:
     @pytest.mark.asyncio
     async def test_invalid_transition_project_owner_to_developer(self):
         """Should reject skipping roles."""
-        await gcp_create_workitem(work_item_id="invalid-1", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_init(work_item_id="invalid-1", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_transition(
             work_item_id="invalid-1",
@@ -135,7 +135,7 @@ class TestTransitionValidation:
     @pytest.mark.asyncio
     async def test_unknown_role_rejected(self):
         """Should reject unknown role names."""
-        await gcp_create_workitem(work_item_id="unknown-role", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_init(work_item_id="unknown-role", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_transition(
             work_item_id="unknown-role",
@@ -149,7 +149,7 @@ class TestTransitionValidation:
     @pytest.mark.asyncio
     async def test_empty_role_rejected(self):
         """Should reject empty role name."""
-        await gcp_create_workitem(work_item_id="empty-role", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_init(work_item_id="empty-role", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_transition(
             work_item_id="empty-role",
@@ -166,7 +166,7 @@ class TestDoRGate:
     @pytest.mark.asyncio
     async def test_dor_gate_blocks_incomplete(self):
         """Should block developer transition if DoR incomplete."""
-        await gcp_create_workitem(work_item_id="dor-gate-1", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_init(work_item_id="dor-gate-1", work_items_dir=TEST_WORKITEMS_DIR)
         await gcp_transition(work_item_id="dor-gate-1", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
         await gcp_transition(work_item_id="dor-gate-1", role="quality-assurance", work_items_dir=TEST_WORKITEMS_DIR)
         await gcp_transition(work_item_id="dor-gate-1", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
@@ -184,7 +184,7 @@ class TestDoRGate:
     @pytest.mark.asyncio
     async def test_dor_gate_lists_missing_items(self):
         """Should list which DoR items are missing."""
-        await gcp_create_workitem(work_item_id="dor-gate-2", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_init(work_item_id="dor-gate-2", work_items_dir=TEST_WORKITEMS_DIR)
         await gcp_transition(work_item_id="dor-gate-2", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
         await gcp_transition(work_item_id="dor-gate-2", role="quality-assurance", work_items_dir=TEST_WORKITEMS_DIR)
         await gcp_transition(work_item_id="dor-gate-2", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
@@ -200,7 +200,7 @@ class TestDoRGate:
     @pytest.mark.asyncio
     async def test_dor_gate_passes_when_complete(self):
         """Should allow developer transition when DoR complete."""
-        await gcp_create_workitem(work_item_id="dor-gate-3", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_init(work_item_id="dor-gate-3", work_items_dir=TEST_WORKITEMS_DIR)
         await gcp_transition(work_item_id="dor-gate-3", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
         await gcp_transition(work_item_id="dor-gate-3", role="quality-assurance", work_items_dir=TEST_WORKITEMS_DIR)
         await gcp_transition(work_item_id="dor-gate-3", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
@@ -225,7 +225,7 @@ class TestPhaseTransitions:
     @pytest.mark.asyncio
     async def test_stays_in_definition_phase(self):
         """Should stay in definition phase through architect."""
-        await gcp_create_workitem(work_item_id="phase-1", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_init(work_item_id="phase-1", work_items_dir=TEST_WORKITEMS_DIR)
         
         for role in ["program-manager", "quality-assurance", "architect"]:
             await gcp_transition(work_item_id="phase-1", role=role, work_items_dir=TEST_WORKITEMS_DIR)
@@ -235,7 +235,7 @@ class TestPhaseTransitions:
     @pytest.mark.asyncio
     async def test_enters_development_phase(self):
         """Should enter development phase at developer."""
-        await gcp_create_workitem(work_item_id="phase-2", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_init(work_item_id="phase-2", work_items_dir=TEST_WORKITEMS_DIR)
         await gcp_transition(work_item_id="phase-2", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
         await gcp_transition(work_item_id="phase-2", role="quality-assurance", work_items_dir=TEST_WORKITEMS_DIR)
         await gcp_transition(work_item_id="phase-2", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
@@ -256,7 +256,7 @@ class TestBackwardTransitions:
     @pytest.mark.asyncio
     async def test_backward_transition_allowed(self):
         """Should allow backward transition."""
-        await gcp_create_workitem(work_item_id="backward-1", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_init(work_item_id="backward-1", work_items_dir=TEST_WORKITEMS_DIR)
         await gcp_transition(work_item_id="backward-1", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_transition(
@@ -271,7 +271,7 @@ class TestBackwardTransitions:
     @pytest.mark.asyncio
     async def test_backward_preserves_progress(self):
         """Should NOT reset DoR items on backward transition."""
-        await gcp_create_workitem(work_item_id="backward-2", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_init(work_item_id="backward-2", work_items_dir=TEST_WORKITEMS_DIR)
         await gcp_transition(work_item_id="backward-2", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
         
         state = load_state("backward-2", TEST_WORKITEMS_DIR)
@@ -282,6 +282,8 @@ class TestBackwardTransitions:
         
         state = load_state("backward-2", TEST_WORKITEMS_DIR)
         assert state.dor["userStory"] is True
+
+
 
 
 class TestErrorCases:
@@ -312,3 +314,111 @@ class TestErrorCases:
         
         # Same role should succeed or give reasonable response
         assert "current_role" in result or result["success"] is False
+
+
+class TestBackwardTransitions:
+    """GCP-0012: Tests for backward role transitions."""
+
+    @pytest.mark.asyncio
+                async def test_backward_from_retrospective_to_developer(self):
+                    """AC1: Should allow backward transition from retrospective to developer."""
+                    await gcp_create_workitem(work_item_id="back-1", work_items_dir=TEST_WORKITEMS_DIR)
+        
+                    # Progress through roles to retrospective
+                    await gcp_transition(work_item_id="back-1", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
+                    await gcp_transition(work_item_id="back-1", role="quality-assurance", work_items_dir=TEST_WORKITEMS_DIR)
+                    await gcp_transition(work_item_id="back-1", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
+        
+                    # Mark DoR complete
+                    state = load_state("back-1", TEST_WORKITEMS_DIR)
+                    state.dor = {k: True for k in state.dor}
+                    save_state("back-1", state, TEST_WORKITEMS_DIR)
+        
+                    await gcp_transition(work_item_id="back-1", role="developer", work_items_dir=TEST_WORKITEMS_DIR)
+                    await gcp_transition(work_item_id="back-1", role="refactor-expert", work_items_dir=TEST_WORKITEMS_DIR)
+                    await gcp_transition(work_item_id="back-1", role="builder", work_items_dir=TEST_WORKITEMS_DIR)
+                    await gcp_transition(work_item_id="back-1", role="documentor", work_items_dir=TEST_WORKITEMS_DIR)
+                    await gcp_transition(work_item_id="back-1", role="retrospective", work_items_dir=TEST_WORKITEMS_DIR)
+        
+                    # Now go backward to developer
+                    result = await gcp_transition(
+                        work_item_id="back-1",
+                        role="developer",
+                        work_items_dir=TEST_WORKITEMS_DIR
+                    )
+        
+                    assert result["success"] is True
+                    assert result["current_role"] == "developer"
+        
+                    # Verify progress preserved
+                    state = load_state("back-1", TEST_WORKITEMS_DIR)
+                    assert all(state.dor.values())  # DoR should still be complete
+
+                @pytest.mark.asyncio
+                async def test_forward_skip_still_fails(self):
+                    """AC2: Forward transitions should still not allow skipping roles."""
+                    await gcp_create_workitem(work_item_id="back-2", work_items_dir=TEST_WORKITEMS_DIR)
+                    await gcp_transition(work_item_id="back-2", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
+        
+                    # Try to skip quality-assurance
+                    result = await gcp_transition(
+                        work_item_id="back-2",
+                        role="architect",
+                        work_items_dir=TEST_WORKITEMS_DIR
+                    )
+        
+                    assert result["success"] is False
+                    assert "cannot transition" in result["error"].lower() or "invalid" in result["error"].lower()
+
+                @pytest.mark.asyncio
+                async def test_jump_multiple_roles_backward(self):
+                    """AC3: Should allow jumping multiple roles backward."""
+                    await gcp_create_workitem(work_item_id="back-3", work_items_dir=TEST_WORKITEMS_DIR)
+        
+                    # Progress to builder
+                    await gcp_transition(work_item_id="back-3", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
+                    await gcp_transition(work_item_id="back-3", role="quality-assurance", work_items_dir=TEST_WORKITEMS_DIR)
+                    await gcp_transition(work_item_id="back-3", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
+        
+                    state = load_state("back-3", TEST_WORKITEMS_DIR)
+                    state.dor = {k: True for k in state.dor}
+                    save_state("back-3", state, TEST_WORKITEMS_DIR)
+        
+                    await gcp_transition(work_item_id="back-3", role="developer", work_items_dir=TEST_WORKITEMS_DIR)
+                    await gcp_transition(work_item_id="back-3", role="refactor-expert", work_items_dir=TEST_WORKITEMS_DIR)
+                    await gcp_transition(work_item_id="back-3", role="builder", work_items_dir=TEST_WORKITEMS_DIR)
+        
+                    # Jump back 5 roles to program-manager
+                    result = await gcp_transition(
+                        work_item_id="back-3",
+                        role="program-manager",
+                        work_items_dir=TEST_WORKITEMS_DIR
+                    )
+        
+                    assert result["success"] is True
+                    assert result["current_role"] == "program-manager"
+
+                @pytest.mark.asyncio
+                async def test_role_history_tracks_backward_transition(self):
+                    """AC4: Role history should track backward transitions."""
+                    await gcp_create_workitem(work_item_id="back-4", work_items_dir=TEST_WORKITEMS_DIR)
+                    await gcp_transition(work_item_id="back-4", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
+                    await gcp_transition(work_item_id="back-4", role="quality-assurance", work_items_dir=TEST_WORKITEMS_DIR)
+                    await gcp_transition(work_item_id="back-4", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
+        
+                    state = load_state("back-4", TEST_WORKITEMS_DIR)
+                    state.dor = {k: True for k in state.dor}
+                    save_state("back-4", state, TEST_WORKITEMS_DIR)
+        
+                    await gcp_transition(work_item_id="back-4", role="developer", work_items_dir=TEST_WORKITEMS_DIR)
+        
+                    # Go backward
+                    await gcp_transition(work_item_id="back-4", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
+        
+                    state = load_state("back-4", TEST_WORKITEMS_DIR)
+        
+                    # Should have entries for: project-owner-assistant, program-manager, QA, architect, developer, architect (again)
+                    assert len(state.role_history) == 6
+                    assert state.role_history[-1].role == "architect"
+                    assert state.role_history[-2].role == "developer"
+                    assert state.role_history[-2].exited_at is not None  # Developer entry should be closed
