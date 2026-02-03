@@ -119,75 +119,75 @@ async def list_tools() -> list[Tool]:
                     }
                 },
                 "required": ["work_item_id"]
-                        }
-                    ),
-                    Tool(
-                        name="gcp_status",
-                        description="Get comprehensive workflow status for a work item",
-                        inputSchema={
-                            "type": "object",
-                            "properties": {
-                                "work_item_id": {
-                                    "type": "string",
-                                    "description": "Work item identifier"
-                                }
-                            },
-                            "required": ["work_item_id"]
-                        }
-                    ),
-                    Tool(
-                        name="gcp_bootstrap",
-                        description="Bootstrap Golazo Copilot in a workspace - creates copilot instructions and directories",
-                        inputSchema={
-                            "type": "object",
-                            "properties": {
-                                "force": {
-                                    "type": "boolean",
-                                    "default": False,
-                                    "description": "Overwrite existing files if they exist"
-                                },
-                                "include_roles": {
-                                    "type": "boolean",
-                                    "default": False,
-                                    "description": "Also copy default role files to .github/roles/"
-                                },
-                                "workspace_path": {
-                                    "type": "string",
-                                    "description": "Workspace root path (auto-detected if not provided)"
-                                }
-                            },
-                            "required": []
-                        }
-                                            ),
-                                        ]
+            }
+        ),
+        Tool(
+            name="gcp_status",
+            description="Get comprehensive workflow status for a work item",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "work_item_id": {
+                        "type": "string",
+                        "description": "Work item identifier"
+                    }
+                },
+                "required": ["work_item_id"]
+            }
+        ),
+        Tool(
+            name="gcp_bootstrap",
+            description="Bootstrap Golazo Copilot in a workspace - creates copilot instructions and directories",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "force": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Overwrite existing files if they exist"
+                    },
+                    "include_roles": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Also copy default role files to .github/roles/"
+                    },
+                    "workspace_path": {
+                        "type": "string",
+                        "description": "Workspace root path (auto-detected if not provided)"
+                    }
+                },
+                "required": []
+            }
+        ),
+    ]
 
 
-                        @server.call_tool()
-                        async def call_tool(name: str, arguments: dict) -> list[TextContent]:
-                            """Handle tool calls."""
-                            if name == "gcp_create_workitem":
-                                result = await gcp_create_workitem(
-                                    work_item_id=arguments["work_item_id"],
-                                    profile=arguments.get("profile", "complete")
-                                )
+@server.call_tool()
+async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+    """Handle tool calls."""
+    if name == "gcp_create_workitem":
+        result = await gcp_create_workitem(
+            work_item_id=arguments["work_item_id"],
+            profile=arguments.get("profile", "complete")
+        )
         
-                                if result["success"]:
-                                    content = f"""? Work item '{result['work_item_id']}' created!
+        if result["success"]:
+            content = f"""? Work item '{result['work_item_id']}' created!
 
-                        **Current Role:** {result['current_role']}
+**Current Role:** {result['current_role']}
 
-                        ---
-                        {result['role_instructions']}
-                        """
-                                else:
-                                    content = f"? Failed to create work item: {result['error']}"
+---
+{result['role_instructions']}
+"""
+        else:
+            content = f"? Failed to create work item: {result['error']}"
         
-                                return [TextContent(type="text", text=content)]
+        return [TextContent(type="text", text=content)]
     
-                            elif name == "gcp_transition":
-                                result = await gcp_transition(
-                                    work_item_id=arguments["work_item_id"],
-                                    role=arguments["role"],
+    elif name == "gcp_transition":
+        result = await gcp_transition(
+            work_item_id=arguments["work_item_id"],
+            role=arguments["role"],
             force=arguments.get("force", False)
         )
         
