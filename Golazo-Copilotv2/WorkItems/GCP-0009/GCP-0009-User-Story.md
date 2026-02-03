@@ -1,6 +1,12 @@
 # GCP-0009: Create Role Decision Notes Tool
 
-## User Story
+## Status: ?? SKIPPED
+
+**Reason:** Role decision notes are already being created by Copilot following the role instructions. A dedicated MCP tool is not needed.
+
+---
+
+## Original User Story
 
 **As a** developer using Golazo Copilot,  
 **I want to** automatically create role decision notes files,  
