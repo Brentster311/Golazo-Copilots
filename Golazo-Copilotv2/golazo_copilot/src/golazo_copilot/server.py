@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Golazo Copilot MCP Server - Entry point for GitHub Copilot integration."""
 
 import asyncio
@@ -14,6 +15,14 @@ from .tools.gcp_consent import gcp_consent
 
 # Create server instance
 server = Server("golazo-copilot")
+
+# Status icons (using ASCII to avoid encoding issues)
+ICON_OK = "[OK]"
+ICON_FAIL = "[FAIL]"
+ICON_WARN = "[WARN]"
+ICON_PENDING = "[...]"
+ICON_CHECK = "[x]"
+ICON_EMPTY = "[ ]"
 
 
 @server.list_tools()
@@ -156,47 +165,47 @@ async def list_tools() -> list[Tool]:
                         "type": "string",
                         "description": "Workspace root path (auto-detected if not provided)"
                     }
-                                    },
-                                    "required": []
-                                }
-                            ),
-                            Tool(
-                                name="gcp_consent",
-                                description="Record consent for bypassing workflow gates (required before force=True)",
-                                inputSchema={
-                                    "type": "object",
-                                    "properties": {
-                                        "work_item_id": {
-                                            "type": "string",
-                                            "description": "Work item identifier"
-                                        },
-                                        "action": {
-                                            "type": "string",
-                                            "enum": ["skip_dor", "skip_dod", "skip_role", "revert_progress", "custom"],
-                                            "description": "Type of deviation being consented to"
-                                        },
-                                        "reason": {
-                                            "type": "string",
-                                            "description": "Justification for the deviation (min 10 characters)"
-                                        }
-                                    },
-                                    "required": ["work_item_id", "action", "reason"]
-                                }
-                            ),
-                        ]
+                },
+                "required": []
+            }
+        ),
+        Tool(
+            name="gcp_consent",
+            description="Record consent for bypassing workflow gates (required before force=True)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "work_item_id": {
+                        "type": "string",
+                        "description": "Work item identifier"
+                    },
+                    "action": {
+                        "type": "string",
+                        "enum": ["skip_dor", "skip_dod", "skip_role", "revert_progress", "custom"],
+                        "description": "Type of deviation being consented to"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "Justification for the deviation (min 10 characters)"
+                    }
+                },
+                "required": ["work_item_id", "action", "reason"]
+            }
+        ),
+    ]
 
 
-                    @server.call_tool()
-                    async def call_tool(name: str, arguments: dict) -> list[TextContent]:
-                        """Handle tool calls."""
-                        if name == "gcp_create_workitem":
-                            result = await gcp_create_workitem(
+@server.call_tool()
+async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+    """Handle tool calls."""
+    if name == "gcp_create_workitem":
+        result = await gcp_create_workitem(
             work_item_id=arguments["work_item_id"],
             profile=arguments.get("profile", "complete")
         )
         
         if result["success"]:
-            content = f"""? Work item '{result['work_item_id']}' created!
+            content = f"""{ICON_OK} Work item '{result['work_item_id']}' created!
 
 **Current Role:** {result['current_role']}
 
@@ -204,7 +213,7 @@ async def list_tools() -> list[Tool]:
 {result['role_instructions']}
 """
         else:
-            content = f"? Failed to create work item: {result['error']}"
+            content = f"{ICON_FAIL} Failed to create work item: {result['error']}"
         
         return [TextContent(type="text", text=content)]
     
@@ -216,8 +225,8 @@ async def list_tools() -> list[Tool]:
         )
         
         if result["success"]:
-            warning = f"\n?? {result['warning']}" if result.get("warning") else ""
-            content = f"""? Transitioned to '{result['current_role']}'!{warning}
+            warning = f"\n{ICON_WARN} {result['warning']}" if result.get("warning") else ""
+            content = f"""{ICON_OK} Transitioned to '{result['current_role']}'!{warning}
 
 **Current Phase:** {result['current_phase']}
 
@@ -228,7 +237,7 @@ async def list_tools() -> list[Tool]:
             missing = ""
             if result.get("missing"):
                 missing = f"\n\n**Missing DoR items:** {', '.join(result['missing'])}"
-            content = f"? Transition failed: {result['error']}{missing}"
+            content = f"{ICON_FAIL} Transition failed: {result['error']}{missing}"
         
         return [TextContent(type="text", text=content)]
     
@@ -241,21 +250,21 @@ async def list_tools() -> list[Tool]:
         )
         
         if result["success"]:
-            warning = f"\n?? {result['warning']}" if result.get("warning") else ""
-            status = "? Complete" if result["complete"] else f"? Missing: {', '.join(result['missing'])}"
-            content = f"""? DoR updated!{warning}
+            warning = f"\n{ICON_WARN} {result['warning']}" if result.get("warning") else ""
+            status = f"{ICON_OK} Complete" if result["complete"] else f"{ICON_PENDING} Missing: {', '.join(result['missing'])}"
+            content = f"""{ICON_OK} DoR updated!{warning}
 
 **DoR Status:** {status}
 
 | Item | Status |
 |------|--------|
-| userStory | {'?' if result['items']['userStory'] else '?'} |
-| designDoc | {'?' if result['items']['designDoc'] else '?'} |
-| reviewComments | {'?' if result['items']['reviewComments'] else '?'} |
-| testCases | {'?' if result['items']['testCases'] else '?'} |
+| userStory | {ICON_CHECK if result['items']['userStory'] else ICON_EMPTY} |
+| designDoc | {ICON_CHECK if result['items']['designDoc'] else ICON_EMPTY} |
+| reviewComments | {ICON_CHECK if result['items']['reviewComments'] else ICON_EMPTY} |
+| testCases | {ICON_CHECK if result['items']['testCases'] else ICON_EMPTY} |
 """
         else:
-            content = f"? Failed to update DoR: {result['error']}"
+            content = f"{ICON_FAIL} Failed to update DoR: {result['error']}"
         
         return [TextContent(type="text", text=content)]
     
@@ -267,15 +276,15 @@ async def list_tools() -> list[Tool]:
             complete=arguments.get("complete", True)
         )
         
-        if result["success"]:
-            warning = f"\n?? {result['warning']}" if result.get("warning") else ""
-            status = "? Complete" if result["complete"] else f"? Missing: {', '.join(result['missing'])}"
-            content = f"""? DoD updated!{warning}
+        if result["success":
+            warning = f"\n{ICON_WARN} {result['warning']}" if result.get("warning") else ""
+            status = f"{ICON_OK} Complete" if result["complete"] else f"{ICON_PENDING} Missing: {', '.join(result['missing'])}"
+            content = f"""{ICON_OK} DoD updated!{warning}
 
 **DoD Status:** {status}
 """
         else:
-            content = f"? Failed to update DoD: {result['error']}"
+            content = f"{ICON_FAIL} Failed to update DoD: {result['error']}"
         
         return [TextContent(type="text", text=content)]
     
@@ -290,8 +299,8 @@ async def list_tools() -> list[Tool]:
             dod_count = sum(1 for v in result["dod"]["items"].values() if v)
             dod_total = len(result["dod"]["items"])
             
-            dor_status = "? Complete" if result["dor"]["complete"] else f"? {dor_count}/{dor_total}"
-            dod_status = "? Complete" if result["dod"]["complete"] else f"? {dod_count}/{dod_total}"
+            dor_status = f"{ICON_OK} Complete" if result["dor"]["complete"] else f"{ICON_PENDING} {dor_count}/{dor_total}"
+            dod_status = f"{ICON_OK} Complete" if result["dod"]["complete"] else f"{ICON_PENDING} {dod_count}/{dod_total}"
             
             next_steps = "\n".join(f"- {step}" for step in result["next_steps"])
             
@@ -309,7 +318,7 @@ async def list_tools() -> list[Tool]:
 {result['role_instructions']}
 """
         else:
-            content = f"?? {result.get('message', 'No active work item')}"
+            content = f"{ICON_WARN} {result.get('message', 'No active work item')}"
         
         return [TextContent(type="text", text=content)]
     
@@ -321,9 +330,9 @@ async def list_tools() -> list[Tool]:
         )
         
         if result["success"]:
-            created = "\n".join(f"  ? {f}" for f in result["files_created"]) or "  (none)"
-            skipped = "\n".join(f"  ? {f}" for f in result["files_skipped"]) or "  (none)"
-            content = f"""? Golazo Copilot bootstrapped!
+            created = "\n".join(f"  {ICON_CHECK} {f}" for f in result["files_created"]) or "  (none)"
+            skipped = "\n".join(f"  {ICON_EMPTY} {f}" for f in result["files_skipped"]) or "  (none)"
+            content = f"""{ICON_OK} Golazo Copilot bootstrapped!
 
 **Files Created:**
 {created}
@@ -334,7 +343,7 @@ async def list_tools() -> list[Tool]:
 {result['message']}
 """
         else:
-            content = f"? Bootstrap failed: {result['error']}"
+            content = f"{ICON_FAIL} Bootstrap failed: {result['error']}"
         
         return [TextContent(type="text", text=content)]
     
@@ -346,7 +355,7 @@ async def list_tools() -> list[Tool]:
         )
         
         if result["success"]:
-            content = f"""? Consent recorded!
+            content = f"""{ICON_OK} Consent recorded!
 
 **Deviation ID:** {result['deviation_id']}
 **Action:** {result['action']}
@@ -354,7 +363,7 @@ async def list_tools() -> list[Tool]:
 {result['message']}
 """
         else:
-            content = f"? Consent failed: {result['error']}"
+            content = f"{ICON_FAIL} Consent failed: {result['error']}"
         
         return [TextContent(type="text", text=content)]
     
@@ -374,3 +383,4 @@ def run():
 
 if __name__ == "__main__":
     run()
+
