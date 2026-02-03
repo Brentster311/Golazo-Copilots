@@ -9,6 +9,7 @@ from .tools.gcp_init import gcp_init
 from .tools.gcp_transition import gcp_transition
 from .tools.gcp_mark import gcp_mark_dor, gcp_mark_dod
 from .tools.gcp_status import gcp_status
+from .tools.gcp_bootstrap import gcp_bootstrap
 
 # Create server instance
 server = Server("golazo-copilot")
@@ -132,6 +133,30 @@ async def list_tools() -> list[Tool]:
                                 }
                             },
                             "required": ["work_item_id"]
+                        }
+                    ),
+                    Tool(
+                        name="gcp_bootstrap",
+                        description="Bootstrap Golazo Copilot in a workspace - creates copilot instructions and directories",
+                        inputSchema={
+                            "type": "object",
+                            "properties": {
+                                "force": {
+                                    "type": "boolean",
+                                    "default": False,
+                                    "description": "Overwrite existing files if they exist"
+                                },
+                                "include_roles": {
+                                    "type": "boolean",
+                                    "default": False,
+                                    "description": "Also copy default role files to .github/roles/"
+                                },
+                                "workspace_path": {
+                                    "type": "string",
+                                    "description": "Workspace root path (auto-detected if not provided)"
+                                }
+                            },
+                            "required": []
                         }
                     ),
                 ]
@@ -261,6 +286,31 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 """
         else:
             content = f"?? {result.get('message', 'No active work item')}"
+        
+        return [TextContent(type="text", text=content)]
+    
+    elif name == "gcp_bootstrap":
+        result = await gcp_bootstrap(
+            workspace_path=arguments.get("workspace_path"),
+            force=arguments.get("force", False),
+            include_roles=arguments.get("include_roles", False)
+        )
+        
+        if result["success"]:
+            created = "\n".join(f"  ? {f}" for f in result["files_created"]) or "  (none)"
+            skipped = "\n".join(f"  ? {f}" for f in result["files_skipped"]) or "  (none)"
+            content = f"""? Golazo Copilot bootstrapped!
+
+**Files Created:**
+{created}
+
+**Files Skipped (already exist):**
+{skipped}
+
+{result['message']}
+"""
+        else:
+            content = f"? Bootstrap failed: {result['error']}"
         
         return [TextContent(type="text", text=content)]
     
