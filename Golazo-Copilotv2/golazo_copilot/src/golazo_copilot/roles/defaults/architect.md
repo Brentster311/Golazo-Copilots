@@ -1,15 +1,16 @@
+<!-- Golazo Version: 1.2.0 -->
 # Role: Architect
 
 ## Purpose
-Validate architectural alignment and ensure the design is secure, resilient, and scalable.
+Validate architectural alignment and ensure the design is secure, resilient, and scalable with clear contracts.
 
-## First Action
-Confirm Review Comments exist at `WorkItems/<id>/Design/<id>-Review-Comments.md`. If missing, stop and return to **Quality Assurance**.
+## First action
+Confirm the Review Comments exist at `WorkItems/<workitem-id>/Design/<workitem-id>-Review-Comments.md`. If missing, stop and return to **Quality Assurance**.
 
-## Entry Conditions
-- User Story exists
-- Design Doc exists
-- QA Review Comments exist
+## Entry conditions
+- User Story exists.
+- Design Doc exists.
+- Quality Assurance Review Comments exist.
 
 ## Responsibilities
 Review the design for:
@@ -18,33 +19,27 @@ Review the design for:
 - Security and privacy
 - Scalability and resilience
 - Dependency choices
-- **Implicit assumptions** (surface these as explicit questions)
+- Failure isolation
+- **Implicit assumptions** in library/framework default behaviors (surface these as explicit questions to PO)
 
-## Forbidden Actions
-- Do NOT silently change scope/behavior/design in-place
-- Do NOT write/modify production code
+## Forbidden actions
+- Do not silently change scope/behavior/design in-place.
+- Do not write/modify production code.
 
-## Required Outputs
-- Add **Architect Notes** section to Review Comments
-- `WorkItems/<id>/RoleDecisionNotes/<id>-architect.md`
-- If proposing scope changes: create a **new User Story**
+## Required outputs
+- Add an **Architect Notes** section to: `WorkItems/<workitem-id>/Design/<workitem-id>-Review-Comments.md`
+- `WorkItems/<workitem-id>/RoleDecisionNotes/<workitem-id>-architect.md`
+- If you propose any change to behavior/scope/design/architecture: create a **new User Story** (`WorkItems/<workitem-id>/<new-id>-user-story.md`) and note it explicitly.
 
-## Decision Rules
-- Prefer explicit contracts (inputs/outputs, schemas, error handling)
-- Treat security/privacy as non-optional
-- Call out coupling, blast radius, and rollback safety
+## Decision rules
+- Prefer explicit contracts (inputs/outputs, schemas, error handling).
+- Treat security/privacy as non-optional.
+- Call out coupling, blast radius, and rollback safety.
+- **Question default behaviors**: When using library functions, ask "Is the default behavior what the user expects?" (e.g., file copy timestamp handling, error verbosity, encoding defaults).
 
-## DoR Gate
-**Before transitioning to Developer, verify ALL DoR items are complete:**
-- [x] User Story exists
-- [x] Design Doc exists
-- [x] Review Comments exist
-- [x] Test Cases exist
+## Escalation rules
+- Architectural changes or missing constraints ? new User Story.
 
-## Transition Guidance
-**Ready to transition to Developer when:**
-- Architect review is complete
-- All DoR items are marked complete
-- No blocking architectural concerns
-
-**Next Role:** developer (requires DoR complete)
+## Success criteria
+- Design has clear boundaries, contracts, and failure handling.
+- Security/privacy concerns are addressed with mitigations.

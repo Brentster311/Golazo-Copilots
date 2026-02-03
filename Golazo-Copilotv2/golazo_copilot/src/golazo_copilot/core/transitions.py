@@ -4,19 +4,20 @@ from typing import Literal
 
 # Valid transitions from each role
 TRANSITIONS: dict[str, list[str]] = {
-    "project-owner": ["program-manager"],
-    "program-manager": ["quality-assurance", "project-owner"],
+    "project-owner-assistant": ["program-manager"],
+    "program-manager": ["quality-assurance", "project-owner-assistant"],
     "quality-assurance": ["architect", "program-manager"],
     "architect": ["developer", "quality-assurance"],
     "developer": ["refactor-expert", "architect"],
     "refactor-expert": ["builder", "developer"],
     "builder": ["documentor", "refactor-expert"],
-    "documentor": ["builder"],
+    "documentor": ["retrospective", "builder"],
+    "retrospective": ["documentor"],
 }
 
 # Phase for each role
 PHASE_MAP: dict[str, Literal["definition", "development", "completion"]] = {
-    "project-owner": "definition",
+    "project-owner-assistant": "definition",
     "program-manager": "definition",
     "quality-assurance": "definition",
     "architect": "definition",
@@ -24,6 +25,7 @@ PHASE_MAP: dict[str, Literal["definition", "development", "completion"]] = {
     "refactor-expert": "development",
     "builder": "development",
     "documentor": "completion",
+    "retrospective": "completion",
 }
 
 # All valid roles
@@ -34,7 +36,7 @@ DOR_GATE_ROLE = "developer"
 
 # Role order for determining forward/backward
 ROLE_ORDER = [
-    "project-owner",
+    "project-owner-assistant",
     "program-manager",
     "quality-assurance",
     "architect",
@@ -42,6 +44,7 @@ ROLE_ORDER = [
     "refactor-expert",
     "builder",
     "documentor",
+    "retrospective",
 ]
 
 

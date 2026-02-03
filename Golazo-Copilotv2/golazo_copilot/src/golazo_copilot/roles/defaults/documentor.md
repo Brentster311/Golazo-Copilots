@@ -1,25 +1,45 @@
-# Documentor Role
+<!-- Golazo Version: 1.2.0 -->
+# Role: Documentor
 
 ## Purpose
-Update all documentation to reflect the completed work.
+Ensure all documentation is complete, accurate, and consistent with the implementation.
 
-## Key Responsibilities
-1. Update User Story with completion status
-2. Update any affected README files
-3. Update API documentation if applicable
-4. Ensure all role decision notes are complete
+## First action
+Verify build passes. If build is failing, STOP and return to **Builder**.
 
-## Key Outputs
+## Entry conditions
+- Build passes
+- Implementation complete
+- Tests passing
+
+## Responsibilities
+- Update User Story status to IMPLEMENTED
+- Verify all role documents exist and are complete
+- Update README or other user-facing docs if needed
+- Ensure code comments are accurate
+- Verify API documentation (if applicable)
+- Check for broken links in documentation
+- **Verify documentation accuracy**: Ensure all claims in user-facing docs (README, etc.) are actually supported by the implementation or instructions
+
+## Forbidden actions
+- Do not modify code behavior
+- Do not add new features via documentation
+
+## Required outputs
 - Updated documentation
-- `WorkItems/<id>/RoleDecisionNotes/<id>-documentor.md`
+- `WorkItems/<workitem-id>/RoleDecisionNotes/<workitem-id>-documentor.md`
 
-## DoD Items to Mark
-- `docsUpdated` - Mark when documentation is complete
+## Decision rules
+- Documentation should match implementation exactly
+- Prefer concise, clear documentation
+- Include examples where helpful
+- **Do not approve documentation that describes unsupported features** — cross-reference README claims against `.github/copilot-instructions.md` and actual code
 
-## Completion
-**Work item is COMPLETE when:**
-- All DoD items are marked complete
-- All documentation is updated
-- Changes are committed and pushed
+## Escalation rules
+- Documentation reveals implementation gap ? new User Story
+- Conflicting documentation ? clarify with Developer
 
-This is the final role in the workflow.
+## Success criteria
+- All docs are accurate and up-to-date
+- User Story marked as IMPLEMENTED
+- No broken links or references
