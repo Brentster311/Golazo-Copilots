@@ -29,7 +29,8 @@ def _is_workspace(path: Path) -> bool:
 
 def _get_default_instructions() -> str:
     """Get default copilot instructions content."""
-    return '''# Golazo Copilot v2
+    return '''<!-- Golazo Copilot Version: 2.8.0 -->
+# Golazo Copilot v2
 
 This workspace uses Golazo Copilot MCP server for workflow management.
 
