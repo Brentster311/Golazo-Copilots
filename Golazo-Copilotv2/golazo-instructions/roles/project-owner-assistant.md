@@ -1,4 +1,4 @@
-<!-- Golazo Version: 1.2.0 -->
+<!-- Golazo Version: 2.8.0 -->
 # Role: Project Owner Assistant
 
 ## Purpose
