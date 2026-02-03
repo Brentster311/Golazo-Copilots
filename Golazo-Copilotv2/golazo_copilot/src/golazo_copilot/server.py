@@ -269,24 +269,24 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         return [TextContent(type="text", text=content)]
     
     elif name == "gcp_mark_dod":
-        result = await gcp_mark_dod(
-            work_item_id=arguments["work_item_id"],
-            item=arguments.get("item"),
-            items=arguments.get("items"),
-            complete=arguments.get("complete", True)
-        )
+            result = await gcp_mark_dod(
+                work_item_id=arguments["work_item_id"],
+                item=arguments.get("item"),
+                items=arguments.get("items"),
+                complete=arguments.get("complete", True)
+            )
         
-        if result["success":
-            warning = f"\n{ICON_WARN} {result['warning']}" if result.get("warning") else ""
-            status = f"{ICON_OK} Complete" if result["complete"] else f"{ICON_PENDING} Missing: {', '.join(result['missing'])}"
-            content = f"""{ICON_OK} DoD updated!{warning}
+            if result["success"]:
+                warning = f"\n{ICON_WARN} {result['warning']}" if result.get("warning") else ""
+                status = f"{ICON_OK} Complete" if result["complete"] else f"{ICON_PENDING} Missing: {', '.join(result['missing'])}"
+                content = f"""{ICON_OK} DoD updated!{warning}
 
-**DoD Status:** {status}
-"""
-        else:
-            content = f"{ICON_FAIL} Failed to update DoD: {result['error']}"
+    **DoD Status:** {status}
+    """
+            else:
+                content = f"{ICON_FAIL} Failed to update DoD: {result['error']}"
         
-        return [TextContent(type="text", text=content)]
+            return [TextContent(type="text", text=content)]
     
     elif name == "gcp_status":
         result = await gcp_status(
