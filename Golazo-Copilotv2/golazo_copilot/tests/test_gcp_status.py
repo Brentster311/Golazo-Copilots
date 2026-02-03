@@ -8,10 +8,12 @@ import pytest
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from golazo_copilot.tools.gcp_init import gcp_init
+from golazo_copilot.tools.gcp_create_workitem import gcp_create_workitem
 from golazo_copilot.tools.gcp_transition import gcp_transition
 from golazo_copilot.tools.gcp_mark import gcp_mark_dor
 from golazo_copilot.tools.gcp_status import gcp_status
+
+
 
 
 TEST_WORKITEMS_DIR = Path(__file__).parent / "test-workitems"
@@ -33,7 +35,7 @@ class TestStatusBasic:
     @pytest.mark.asyncio
     async def test_returns_active_status(self):
         """Should return active=True for initialized work item."""
-        await gcp_init(work_item_id="status-1", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="status-1", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_status(
             work_item_id="status-1",
@@ -46,7 +48,7 @@ class TestStatusBasic:
     @pytest.mark.asyncio
     async def test_returns_current_role_and_phase(self):
         """Should return current role and phase."""
-        await gcp_init(work_item_id="status-2", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="status-2", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_status(
             work_item_id="status-2",
@@ -59,7 +61,7 @@ class TestStatusBasic:
     @pytest.mark.asyncio
     async def test_returns_role_instructions(self):
         """Should return role instructions."""
-        await gcp_init(work_item_id="status-3", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="status-3", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_status(
             work_item_id="status-3",
@@ -76,7 +78,7 @@ class TestStatusDoRDoD:
     @pytest.mark.asyncio
     async def test_dor_status_initially_incomplete(self):
         """Should show DoR incomplete initially."""
-        await gcp_init(work_item_id="dor-status-1", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="dor-status-1", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_status(
             work_item_id="dor-status-1",
@@ -89,7 +91,7 @@ class TestStatusDoRDoD:
     @pytest.mark.asyncio
     async def test_dor_status_after_marking(self):
         """Should reflect marked items."""
-        await gcp_init(work_item_id="dor-status-2", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="dor-status-2", work_items_dir=TEST_WORKITEMS_DIR)
         await gcp_mark_dor(
             work_item_id="dor-status-2",
             items={"userStory": True, "designDoc": True},
@@ -127,7 +129,7 @@ class TestStatusAfterTransition:
     @pytest.mark.asyncio
     async def test_status_reflects_transition(self):
         """Should reflect current role after transition."""
-        await gcp_init(work_item_id="trans-status", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="trans-status", work_items_dir=TEST_WORKITEMS_DIR)
         await gcp_transition(
             work_item_id="trans-status",
             role="program-manager",

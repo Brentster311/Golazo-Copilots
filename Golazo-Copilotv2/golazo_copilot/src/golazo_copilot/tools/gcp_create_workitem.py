@@ -1,4 +1,4 @@
-"""gcp_init tool - Initialize a new work item."""
+"""gcp_create_workitem tool - Create a new work item."""
 
 from pathlib import Path
 from typing import Literal
@@ -13,14 +13,14 @@ Profile = Literal["complete", "express", "spike"]
 DEFAULT_PROFILE: Profile = "complete"
 
 
-async def gcp_init(
+async def gcp_create_workitem(
     work_item_id: str,
     profile: str = DEFAULT_PROFILE,
     work_items_dir: Path = DEFAULT_WORKITEMS_DIR,
     project_root: Path | None = None,
 ) -> dict:
     """
-    Initialize a new work item with persistent state.
+    Create a new work item with persistent state.
     
     Args:
         work_item_id: Unique identifier for the work item
@@ -69,3 +69,7 @@ async def gcp_init(
         "current_role": state.current_role,
         "role_instructions": role_instructions,
     }
+
+
+# Alias for backward compatibility
+gcp_init = gcp_create_workitem

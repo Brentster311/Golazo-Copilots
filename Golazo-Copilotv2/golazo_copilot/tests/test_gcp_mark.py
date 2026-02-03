@@ -8,9 +8,12 @@ import pytest
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from golazo_copilot.tools.gcp_init import gcp_init
+from golazo_copilot.tools.gcp_create_workitem import gcp_create_workitem
 from golazo_copilot.tools.gcp_mark import gcp_mark_dor, gcp_mark_dod
 from golazo_copilot.core.persistence import load_state
+
+
+
 
 
 TEST_WORKITEMS_DIR = Path(__file__).parent / "test-workitems"
@@ -32,7 +35,7 @@ class TestMarkDorSingle:
     @pytest.mark.asyncio
     async def test_mark_user_story_complete(self):
         """Should mark userStory as complete."""
-        await gcp_init(work_item_id="mark-1", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="mark-1", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_mark_dor(
             work_item_id="mark-1",
@@ -50,7 +53,7 @@ class TestMarkDorSingle:
     @pytest.mark.asyncio
     async def test_mark_updates_timestamp(self):
         """Should update updatedAt."""
-        await gcp_init(work_item_id="mark-2", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="mark-2", work_items_dir=TEST_WORKITEMS_DIR)
         state_before = load_state("mark-2", TEST_WORKITEMS_DIR)
         
         await gcp_mark_dor(
@@ -69,7 +72,7 @@ class TestMarkDodSingle:
     @pytest.mark.asyncio
     async def test_mark_tests_pass_complete(self):
         """Should mark testsPass as complete."""
-        await gcp_init(work_item_id="dod-1", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="dod-1", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_mark_dod(
             work_item_id="dod-1",
@@ -88,7 +91,7 @@ class TestBulkUpdate:
     @pytest.mark.asyncio
     async def test_mark_multiple_dor_items(self):
         """Should mark multiple items at once."""
-        await gcp_init(work_item_id="bulk-1", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="bulk-1", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_mark_dor(
             work_item_id="bulk-1",
@@ -108,7 +111,7 @@ class TestItemValidation:
     @pytest.mark.asyncio
     async def test_invalid_dor_item_rejected(self):
         """Should reject unknown DoR item."""
-        await gcp_init(work_item_id="invalid-1", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="invalid-1", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_mark_dor(
             work_item_id="invalid-1",
@@ -122,7 +125,7 @@ class TestItemValidation:
     @pytest.mark.asyncio
     async def test_invalid_dod_item_rejected(self):
         """Should reject unknown DoD item."""
-        await gcp_init(work_item_id="invalid-2", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="invalid-2", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_mark_dod(
             work_item_id="invalid-2",
@@ -139,7 +142,7 @@ class TestUnmarking:
     @pytest.mark.asyncio
     async def test_unmark_item(self):
         """Should unmark an item with warning."""
-        await gcp_init(work_item_id="unmark-1", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="unmark-1", work_items_dir=TEST_WORKITEMS_DIR)
         
         # First mark it
         await gcp_mark_dor(
@@ -168,7 +171,7 @@ class TestGateStatus:
     @pytest.mark.asyncio
     async def test_complete_flag_false_when_missing(self):
         """Should show complete=False when items missing."""
-        await gcp_init(work_item_id="gate-1", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="gate-1", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_mark_dor(
             work_item_id="gate-1",
@@ -183,7 +186,7 @@ class TestGateStatus:
     @pytest.mark.asyncio
     async def test_complete_flag_true_when_all_done(self):
         """Should show complete=True when all items done."""
-        await gcp_init(work_item_id="gate-2", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="gate-2", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_mark_dor(
             work_item_id="gate-2",
