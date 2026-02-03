@@ -72,7 +72,7 @@ Alternatively, run **"Chat: Restart MCP Servers"** to restart all servers.
 In GitHub Copilot Chat, ask: "What MCP tools do you have?"
 
 You should see:
-- `gcp_init` - Initialize a new work item
+- `gcp_create_workitem` - Initialize a new work item
 - `gcp_status` - Check workflow status
 - `gcp_transition` - Move between roles
 - `gcp_mark_dor` - Mark DoR items complete
@@ -101,7 +101,7 @@ If it starts without errors, the server is working.
 
 | Tool | Description |
 |------|-------------|
-| `gcp_init` | Initialize a new work item with state tracking |
+| `gcp_create_workitem` | Initialize a new work item with state tracking |
 | `gcp_status` | Get comprehensive workflow status |
 | `gcp_transition` | Move between workflow roles with DoR gate |
 | `gcp_mark_dor` | Mark Definition of Ready items |
@@ -112,7 +112,7 @@ If it starts without errors, the server is working.
 1. **Start a work item:**
    ```
    "Start work item feature-123"
-   ? calls gcp_init(work_item_id="feature-123")
+   ? calls gcp_create_workitem(work_item_id="feature-123")
    ```
 
 2. **Check status:**

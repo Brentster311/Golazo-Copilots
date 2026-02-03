@@ -5,7 +5,7 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
-from .tools.gcp_init import gcp_init
+from .tools.gcp_create_workitem import gcp_create_workitem
 from .tools.gcp_transition import gcp_transition
 from .tools.gcp_mark import gcp_mark_dor, gcp_mark_dod
 from .tools.gcp_status import gcp_status
@@ -20,8 +20,8 @@ async def list_tools() -> list[Tool]:
     """List available tools."""
     return [
         Tool(
-            name="gcp_init",
-            description="Initialize a new Golazo Copilot work item with persistent state tracking",
+            name="gcp_create_workitem",
+            description="Create a new Golazo Copilot work item with persistent state tracking",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -158,36 +158,36 @@ async def list_tools() -> list[Tool]:
                             },
                             "required": []
                         }
-                    ),
-                ]
+                                            ),
+                                        ]
 
 
-@server.call_tool()
-async def call_tool(name: str, arguments: dict) -> list[TextContent]:
-    """Handle tool calls."""
-    if name == "gcp_init":
-        result = await gcp_init(
-            work_item_id=arguments["work_item_id"],
-            profile=arguments.get("profile", "complete")
-        )
+                        @server.call_tool()
+                        async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+                            """Handle tool calls."""
+                            if name == "gcp_create_workitem":
+                                result = await gcp_create_workitem(
+                                    work_item_id=arguments["work_item_id"],
+                                    profile=arguments.get("profile", "complete")
+                                )
         
-        if result["success"]:
-            content = f"""? Work item '{result['work_item_id']}' initialized!
+                                if result["success"]:
+                                    content = f"""? Work item '{result['work_item_id']}' created!
 
-**Current Role:** {result['current_role']}
+                        **Current Role:** {result['current_role']}
 
----
-{result['role_instructions']}
-"""
-        else:
-            content = f"? Failed to initialize: {result['error']}"
+                        ---
+                        {result['role_instructions']}
+                        """
+                                else:
+                                    content = f"? Failed to create work item: {result['error']}"
         
-        return [TextContent(type="text", text=content)]
+                                return [TextContent(type="text", text=content)]
     
-    elif name == "gcp_transition":
-        result = await gcp_transition(
-            work_item_id=arguments["work_item_id"],
-            role=arguments["role"],
+                            elif name == "gcp_transition":
+                                result = await gcp_transition(
+                                    work_item_id=arguments["work_item_id"],
+                                    role=arguments["role"],
             force=arguments.get("force", False)
         )
         

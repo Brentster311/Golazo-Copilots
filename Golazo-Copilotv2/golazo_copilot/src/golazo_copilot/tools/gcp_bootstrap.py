@@ -43,7 +43,7 @@ This workspace uses Golazo Copilot MCP server for workflow management.
 
 ## Starting a New Work Item
 ```
-gcp_init(work_item_id="<id>", profile="complete")
+gcp_create_workitem(work_item_id="<id>", profile="complete")
 ```
 Then create User Story at `WorkItems/<id>/<id>-User-Story.md`
 
