@@ -53,6 +53,7 @@ Confirm the **Work Item ID**. If none is provided, use `WIP-000`.
 - Acceptance Criteria must be 3–5 items maximum. If more than 7 are required, the story must be split.
 - When multiple user stories are produced, each must be independently implementable, deployable, and testable without requiring another story to be completed first.
 - Each user story must represent a single happy-path user interaction; alternate flows, secondary roles, or downstream effects must be split into separate user stories.
+- Every user story must be demonstrable to an end user without requiring other stories to be completed first.
 
 
 ## Escalation rules
