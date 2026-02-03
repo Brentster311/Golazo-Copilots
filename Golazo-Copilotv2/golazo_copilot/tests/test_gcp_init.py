@@ -89,11 +89,11 @@ class TestGcpInitSuccess:
 
     @pytest.mark.asyncio
     async def test_state_starts_with_project_owner_role(self):
-        """Should start with project-owner role."""
+        """Should start with project-owner-assistant role."""
         await gcp_init(work_item_id="role-test", work_items_dir=TEST_WORKITEMS_DIR)
 
         state = load_state("role-test", TEST_WORKITEMS_DIR)
-        assert state.current_role == "project-owner"
+        assert state.current_role == "project-owner-assistant"
 
     @pytest.mark.asyncio
     async def test_dor_items_all_false(self):
@@ -131,7 +131,7 @@ class TestGcpInitSuccess:
 
         state = load_state("history-test", TEST_WORKITEMS_DIR)
         assert len(state.role_history) == 1
-        assert state.role_history[0].role == "project-owner"
+        assert state.role_history[0].role == "project-owner-assistant"
         assert state.role_history[0].exited_at is None
 
     @pytest.mark.asyncio
@@ -161,7 +161,7 @@ class TestGcpInitRoleInstructions:
         result = await gcp_init(work_item_id="instructions-test", work_items_dir=TEST_WORKITEMS_DIR)
 
         assert result["success"] is True
-        assert result["current_role"] == "project-owner"
+        assert result["current_role"] == "project-owner-assistant"
         assert result["role_instructions"] is not None
         assert len(result["role_instructions"]) > 50
 

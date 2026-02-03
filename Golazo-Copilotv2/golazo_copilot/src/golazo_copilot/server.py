@@ -50,8 +50,8 @@ async def list_tools() -> list[Tool]:
                     },
                     "role": {
                         "type": "string",
-                        "enum": ["project-owner", "program-manager", "quality-assurance",
-                                 "architect", "developer", "refactor-expert", "builder", "documentor"],
+                        "enum": ["project-owner-assistant", "program-manager", "quality-assurance",
+                                 "architect", "developer", "refactor-expert", "builder", "documentor", "retrospective"],
                         "description": "Target role to transition to"
                     },
                     "force": {

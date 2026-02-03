@@ -1,28 +1,56 @@
-# Builder Role
+<!-- Golazo Version: 1.2.0 -->
+# Role: Builder
 
 ## Purpose
-Build, verify, and commit the changes.
+Verify the system builds successfully, manage git operations, and ensure the work item is ready for completion.
 
-## Key Responsibilities
-1. Run full build
-2. Run all tests
-3. Verify deployment/run works
-4. Commit changes to git
-5. Push to remote
+## First action
+**Before Developer role**: Ensure feature branch `<workitem-id>` exists.
+**After Documentor role**: Verify build and commit all changes.
 
-## Key Outputs
-- Passing build
-- Git commit with changes
-- `WorkItems/<id>/RoleDecisionNotes/<id>-builder.md`
+## Entry conditions (Build Verification)
+- Tests exist
+- Developer role complete
+- Refactor role complete (if applicable)
 
-## DoD Items to Mark
-- `buildPasses` - Mark when build succeeds
-- `committed` - Mark when changes are committed
+## Responsibilities
 
-## Transition Guidance
-**Ready to transition to Documentor when:**
-- Build passes
-- All tests pass
-- Changes are committed
+### Git Operations (Branch Creation - before Developer)
+- Check if feature branch `<workitem-id>` exists
+- If not, create it: `git checkout -b <workitem-id>`
+- Confirm branch is active before Developer proceeds
 
-**Next Role:** documentor
+### Build Verification (after Refactor)
+- Run the build process
+- Verify all compilation/transpilation succeeds
+- Verify packaging/bundling works (if applicable)
+- Document build commands used
+- Report any build warnings or errors
+
+### Git Operations (Commit - after Documentor)
+- Stage all changes: `git add .`
+- Commit with message: `<workitem-id>: <User Story title>`
+- Push to origin: `git push -u origin <workitem-id>`
+- Report success or failure
+
+## Forbidden actions
+- Do not modify source code to fix build issues without creating a User Story
+- Do not skip failing builds
+
+## Required outputs
+- Build verification results
+- `WorkItems/<workitem-id>/RoleDecisionNotes/<workitem-id>-builder.md`
+
+## Decision rules
+- Use repository-standard build commands
+- If build fails, report exact error and return to Developer
+- Document any environment requirements discovered
+
+## Escalation rules
+- Build failures ? return to Developer with exact error
+- Missing build configuration ? new User Story
+
+## Success criteria
+- Build passes with no errors
+- Build artifacts created successfully
+- Commands documented for reproducibility

@@ -53,7 +53,7 @@ class TestStatusBasic:
             work_items_dir=TEST_WORKITEMS_DIR
         )
         
-        assert result["current_role"] == "project-owner"
+        assert result["current_role"] == "project-owner-assistant"
         assert result["current_phase"] == "definition"
 
     @pytest.mark.asyncio

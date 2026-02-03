@@ -20,7 +20,7 @@ def create_initial_state(work_item_id: str, profile: Profile) -> WorkItemState:
         work_item_id=work_item_id,
         profile=profile,
         current_phase="definition",
-        current_role="project-owner",
+        current_role="project-owner-assistant",
         created_at=now,
         updated_at=now,
         dor={
@@ -40,7 +40,7 @@ def create_initial_state(work_item_id: str, profile: Profile) -> WorkItemState:
         },
         role_history=[
             RoleHistoryEntry(
-                role="project-owner",
+                role="project-owner-assistant",
                 entered_at=now,
                 exited_at=None,
             )
