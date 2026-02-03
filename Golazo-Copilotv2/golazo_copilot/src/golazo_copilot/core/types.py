@@ -14,10 +14,13 @@ class RoleHistoryEntry(BaseModel):
 
 class Deviation(BaseModel):
     """Record of a workflow deviation/skip with justification."""
+    id: str
     action: str
     reason: str
     role: str
     timestamp: datetime
+    consumed: bool = False
+    consumed_at: datetime | None = None
 
 
 class WorkItemState(BaseModel):

@@ -14,6 +14,7 @@ from ..core.transitions import (
     DOR_GATE_ROLE,
 )
 from ..roles.loader import load_role_instructions
+from .gcp_consent import has_valid_consent, consume_consent
 
 
 async def gcp_transition(
@@ -69,14 +70,26 @@ async def gcp_transition(
         return {"success": False, "error": error}
     
     # Check DoR gate if transitioning to developer
-    if role == DOR_GATE_ROLE and not force:
+    if role == DOR_GATE_ROLE:
         dor_complete, missing = check_dor_gate(state.dor)
         if not dor_complete:
-            return {
-                "success": False,
-                "error": "DoR must be complete before Development phase",
-                "missing": missing,
-            }
+            if force:
+                # Check for consent
+                if not has_valid_consent(state, "skip_dor"):
+                    return {
+                        "success": False,
+                        "error": "Cannot force transition without recorded consent. Call gcp_consent first.",
+                        "missing": missing,
+                    }
+                # Consume the consent
+                consume_consent(state, "skip_dor")
+            else:
+                return {
+                    "success": False,
+                    "error": "DoR must be complete before Development phase",
+                    "missing": missing,
+                }
+    
     
     # Check if backward transition
     backward = is_backward_transition(current_role, role)

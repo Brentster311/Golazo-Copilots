@@ -10,6 +10,7 @@ from .tools.gcp_transition import gcp_transition
 from .tools.gcp_mark import gcp_mark_dor, gcp_mark_dod
 from .tools.gcp_status import gcp_status
 from .tools.gcp_bootstrap import gcp_bootstrap
+from .tools.gcp_consent import gcp_consent
 
 # Create server instance
 server = Server("golazo-copilot")
@@ -155,18 +156,41 @@ async def list_tools() -> list[Tool]:
                         "type": "string",
                         "description": "Workspace root path (auto-detected if not provided)"
                     }
-                },
-                "required": []
-            }
-        ),
-    ]
+                                    },
+                                    "required": []
+                                }
+                            ),
+                            Tool(
+                                name="gcp_consent",
+                                description="Record consent for bypassing workflow gates (required before force=True)",
+                                inputSchema={
+                                    "type": "object",
+                                    "properties": {
+                                        "work_item_id": {
+                                            "type": "string",
+                                            "description": "Work item identifier"
+                                        },
+                                        "action": {
+                                            "type": "string",
+                                            "enum": ["skip_dor", "skip_dod", "skip_role", "revert_progress", "custom"],
+                                            "description": "Type of deviation being consented to"
+                                        },
+                                        "reason": {
+                                            "type": "string",
+                                            "description": "Justification for the deviation (min 10 characters)"
+                                        }
+                                    },
+                                    "required": ["work_item_id", "action", "reason"]
+                                }
+                            ),
+                        ]
 
 
-@server.call_tool()
-async def call_tool(name: str, arguments: dict) -> list[TextContent]:
-    """Handle tool calls."""
-    if name == "gcp_create_workitem":
-        result = await gcp_create_workitem(
+                    @server.call_tool()
+                    async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+                        """Handle tool calls."""
+                        if name == "gcp_create_workitem":
+                            result = await gcp_create_workitem(
             work_item_id=arguments["work_item_id"],
             profile=arguments.get("profile", "complete")
         )
@@ -311,6 +335,26 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 """
         else:
             content = f"? Bootstrap failed: {result['error']}"
+        
+        return [TextContent(type="text", text=content)]
+    
+    elif name == "gcp_consent":
+        result = await gcp_consent(
+            work_item_id=arguments["work_item_id"],
+            action=arguments["action"],
+            reason=arguments["reason"]
+        )
+        
+        if result["success"]:
+            content = f"""? Consent recorded!
+
+**Deviation ID:** {result['deviation_id']}
+**Action:** {result['action']}
+
+{result['message']}
+"""
+        else:
+            content = f"? Consent failed: {result['error']}"
         
         return [TextContent(type="text", text=content)]
     
