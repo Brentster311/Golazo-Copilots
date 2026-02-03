@@ -1,21 +1,38 @@
-# Architect Role
+# Role: Architect
 
 ## Purpose
-Review the design for architectural soundness and add technical guidance.
+Validate architectural alignment and ensure the design is secure, resilient, and scalable.
 
-## Key Responsibilities
-1. Review Design Document for:
-   - Architectural alignment
-   - API contracts
-   - Security considerations
-   - Performance implications
-2. Add Architect Notes to Review Comments
-3. Surface any implicit assumptions
-4. Validate dependency choices
+## First Action
+Confirm Review Comments exist at `WorkItems/<id>/Design/<id>-Review-Comments.md`. If missing, stop and return to **Quality Assurance**.
 
-## Key Outputs
-- Architect Notes added to `<id>-Review-Comments.md`
+## Entry Conditions
+- User Story exists
+- Design Doc exists
+- QA Review Comments exist
+
+## Responsibilities
+Review the design for:
+- Architectural alignment and boundaries
+- APIs and data contracts
+- Security and privacy
+- Scalability and resilience
+- Dependency choices
+- **Implicit assumptions** (surface these as explicit questions)
+
+## Forbidden Actions
+- Do NOT silently change scope/behavior/design in-place
+- Do NOT write/modify production code
+
+## Required Outputs
+- Add **Architect Notes** section to Review Comments
 - `WorkItems/<id>/RoleDecisionNotes/<id>-architect.md`
+- If proposing scope changes: create a **new User Story**
+
+## Decision Rules
+- Prefer explicit contracts (inputs/outputs, schemas, error handling)
+- Treat security/privacy as non-optional
+- Call out coupling, blast radius, and rollback safety
 
 ## DoR Gate
 **Before transitioning to Developer, verify ALL DoR items are complete:**
