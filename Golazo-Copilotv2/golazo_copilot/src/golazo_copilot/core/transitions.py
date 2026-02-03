@@ -68,6 +68,11 @@ def validate_transition(current_role: str, target_role: str) -> tuple[bool, str 
     """
     Validate that transition from current_role to target_role is allowed.
     
+    Rules:
+    - Same role is always allowed (no-op)
+    - Backward transitions are always allowed (any earlier role in sequence)
+    - Forward transitions must be to an explicitly allowed next role (no skipping)
+    
     Returns:
         Tuple of (is_valid, error_message).
     """
@@ -75,6 +80,12 @@ def validate_transition(current_role: str, target_role: str) -> tuple[bool, str 
     if current_role == target_role:
         return True, None
     
+    # Check if this is a backward transition
+    if is_backward_transition(current_role, target_role):
+        # All backward transitions are allowed
+        return True, None
+    
+    # Forward transition - must be in allowed list (no skipping)
     allowed = TRANSITIONS.get(current_role, [])
     if target_role in allowed:
         return True, None
