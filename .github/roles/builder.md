@@ -1,4 +1,4 @@
-<!-- Golazo Version: 1.0.0 -->
+<!-- Golazo Version: 1.2.0 -->
 # Role: Builder
 
 ## Purpose
@@ -39,7 +39,7 @@ Verify the system builds successfully, manage git operations, and ensure the wor
 
 ## Required outputs
 - Build verification results
-- `docs/roles/<workitem-id>-builder.md`
+- `WorkItems/<workitem-id>/RoleDecisionNotes/<workitem-id>-builder.md`
 
 ## Decision rules
 - Use repository-standard build commands

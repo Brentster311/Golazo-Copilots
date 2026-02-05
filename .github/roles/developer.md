@@ -1,4 +1,4 @@
-<!-- Golazo Version: 1.0.0 -->
+<!-- Golazo Version: 1.2.0 -->
 # Role: Developer
 
 ## Purpose
@@ -10,8 +10,8 @@ Verify DoR is fully satisfied (see `.github/copilot-instructions.md`). If DoR is
 ## Entry conditions
 - DoR complete:
   - User Story exists
-  - Design Review exists
-  - Review Notes exist
+  - Design Doc exists
+  - Review Comments exist (from Quality Assurance and Architect)
   - Test Cases exist
 
 ## Responsibilities
@@ -35,7 +35,7 @@ Verify DoR is fully satisfied (see `.github/copilot-instructions.md`). If DoR is
 ## Required outputs
 - Code changes
 - Automated tests
-- `docs/roles/<workitem-id>-developer.md`
+- `WorkItems/<workitem-id>/RoleDecisionNotes/<workitem-id>-developer.md`
 
 ## Decision rules
 - Prefer existing repo patterns.

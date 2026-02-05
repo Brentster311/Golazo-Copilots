@@ -1,0 +1,386 @@
+# -*- coding: utf-8 -*-
+"""Golazo Copilot MCP Server - Entry point for GitHub Copilot integration."""
+
+import asyncio
+from mcp.server import Server
+from mcp.server.stdio import stdio_server
+from mcp.types import TextContent, Tool
+
+from .tools.gcp_create_workitem import gcp_create_workitem
+from .tools.gcp_transition import gcp_transition
+from .tools.gcp_mark import gcp_mark_dor, gcp_mark_dod
+from .tools.gcp_status import gcp_status
+from .tools.gcp_bootstrap import gcp_bootstrap
+from .tools.gcp_consent import gcp_consent
+
+# Create server instance
+server = Server("golazo-copilot")
+
+# Status icons (using ASCII to avoid encoding issues)
+ICON_OK = "[OK]"
+ICON_FAIL = "[FAIL]"
+ICON_WARN = "[WARN]"
+ICON_PENDING = "[...]"
+ICON_CHECK = "[x]"
+ICON_EMPTY = "[ ]"
+
+
+@server.list_tools()
+async def list_tools() -> list[Tool]:
+    """List available tools."""
+    return [
+        Tool(
+            name="gcp_create_workitem",
+            description="Create a new Golazo Copilot work item with persistent state tracking",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "work_item_id": {
+                        "type": "string",
+                        "description": "Unique identifier for the work item (alphanumeric, hyphens, underscores)"
+                    },
+                    "profile": {
+                        "type": "string",
+                        "enum": ["complete", "express", "spike"],
+                        "default": "complete",
+                        "description": "Workflow profile determining which gates are enforced"
+                    }
+                },
+                "required": ["work_item_id"]
+            }
+        ),
+        Tool(
+            name="gcp_transition",
+            description="Transition to a new role in the Golazo Copilot workflow",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "work_item_id": {
+                        "type": "string",
+                        "description": "Work item identifier"
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": ["project-owner-assistant", "program-manager", "quality-assurance",
+                                 "architect", "developer", "refactor-expert", "builder", "documentor", "retrospective"],
+                        "description": "Target role to transition to"
+                    },
+                    "force": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Force transition even if gates not met (requires prior consent)"
+                    }
+                },
+                "required": ["work_item_id", "role"]
+            }
+        ),
+        Tool(
+            name="gcp_mark_dor",
+            description="Mark Definition of Ready items as complete or incomplete",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "work_item_id": {
+                        "type": "string",
+                        "description": "Work item identifier"
+                    },
+                    "item": {
+                        "type": "string",
+                        "enum": ["userStory", "designDoc", "reviewComments", "testCases"],
+                        "description": "Single DoR item to mark"
+                    },
+                    "items": {
+                        "type": "object",
+                        "description": "Multiple DoR items to mark (alternative to single item)"
+                    },
+                    "complete": {
+                        "type": "boolean",
+                        "default": True,
+                        "description": "Whether item is complete"
+                    }
+                },
+                "required": ["work_item_id"]
+            }
+        ),
+        Tool(
+            name="gcp_mark_dod",
+            description="Mark Definition of Done items as complete or incomplete",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "work_item_id": {
+                        "type": "string",
+                        "description": "Work item identifier"
+                    },
+                    "item": {
+                        "type": "string",
+                        "enum": ["branchCreated", "testsWrittenFirst", "testsPass",
+                                 "buildPasses", "docsUpdated", "refactorComplete", "committed"],
+                        "description": "Single DoD item to mark"
+                    },
+                    "items": {
+                        "type": "object",
+                        "description": "Multiple DoD items to mark"
+                    },
+                    "complete": {
+                        "type": "boolean",
+                        "default": True,
+                        "description": "Whether item is complete"
+                    }
+                },
+                "required": ["work_item_id"]
+            }
+        ),
+        Tool(
+            name="gcp_status",
+            description="Get comprehensive workflow status for a work item",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "work_item_id": {
+                        "type": "string",
+                        "description": "Work item identifier"
+                    }
+                },
+                "required": ["work_item_id"]
+            }
+        ),
+        Tool(
+            name="gcp_bootstrap",
+            description="Bootstrap Golazo Copilot in a workspace - creates copilot instructions and directories",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "force": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Overwrite existing files if they exist"
+                    },
+                    "include_roles": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Also copy default role files to .github/roles/"
+                    },
+                    "workspace_path": {
+                        "type": "string",
+                        "description": "Workspace root path (auto-detected if not provided)"
+                    }
+                },
+                "required": []
+            }
+        ),
+        Tool(
+            name="gcp_consent",
+            description="Record consent for bypassing workflow gates (required before force=True)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "work_item_id": {
+                        "type": "string",
+                        "description": "Work item identifier"
+                    },
+                    "action": {
+                        "type": "string",
+                        "enum": ["skip_dor", "skip_dod", "skip_role", "revert_progress", "custom"],
+                        "description": "Type of deviation being consented to"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "Justification for the deviation (min 10 characters)"
+                    }
+                },
+                "required": ["work_item_id", "action", "reason"]
+            }
+        ),
+    ]
+
+
+@server.call_tool()
+async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+    """Handle tool calls."""
+    if name == "gcp_create_workitem":
+        result = await gcp_create_workitem(
+            work_item_id=arguments["work_item_id"],
+            profile=arguments.get("profile", "complete")
+        )
+        
+        if result["success"]:
+            content = f"""{ICON_OK} Work item '{result['work_item_id']}' created!
+
+**Current Role:** {result['current_role']}
+
+---
+{result['role_instructions']}
+"""
+        else:
+            content = f"{ICON_FAIL} Failed to create work item: {result['error']}"
+        
+        return [TextContent(type="text", text=content)]
+    
+    elif name == "gcp_transition":
+        result = await gcp_transition(
+            work_item_id=arguments["work_item_id"],
+            role=arguments["role"],
+            force=arguments.get("force", False)
+        )
+        
+        if result["success"]:
+            warning = f"\n{ICON_WARN} {result['warning']}" if result.get("warning") else ""
+            content = f"""{ICON_OK} Transitioned to '{result['current_role']}'!{warning}
+
+**Current Phase:** {result['current_phase']}
+
+---
+{result['role_instructions']}
+"""
+        else:
+            missing = ""
+            if result.get("missing"):
+                missing = f"\n\n**Missing DoR items:** {', '.join(result['missing'])}"
+            content = f"{ICON_FAIL} Transition failed: {result['error']}{missing}"
+        
+        return [TextContent(type="text", text=content)]
+    
+    elif name == "gcp_mark_dor":
+        result = await gcp_mark_dor(
+            work_item_id=arguments["work_item_id"],
+            item=arguments.get("item"),
+            items=arguments.get("items"),
+            complete=arguments.get("complete", True)
+        )
+        
+        if result["success"]:
+            warning = f"\n{ICON_WARN} {result['warning']}" if result.get("warning") else ""
+            status = f"{ICON_OK} Complete" if result["complete"] else f"{ICON_PENDING} Missing: {', '.join(result['missing'])}"
+            content = f"""{ICON_OK} DoR updated!{warning}
+
+**DoR Status:** {status}
+
+| Item | Status |
+|------|--------|
+| userStory | {ICON_CHECK if result['items']['userStory'] else ICON_EMPTY} |
+| designDoc | {ICON_CHECK if result['items']['designDoc'] else ICON_EMPTY} |
+| reviewComments | {ICON_CHECK if result['items']['reviewComments'] else ICON_EMPTY} |
+| testCases | {ICON_CHECK if result['items']['testCases'] else ICON_EMPTY} |
+"""
+        else:
+            content = f"{ICON_FAIL} Failed to update DoR: {result['error']}"
+        
+        return [TextContent(type="text", text=content)]
+    
+    elif name == "gcp_mark_dod":
+            result = await gcp_mark_dod(
+                work_item_id=arguments["work_item_id"],
+                item=arguments.get("item"),
+                items=arguments.get("items"),
+                complete=arguments.get("complete", True)
+            )
+        
+            if result["success"]:
+                warning = f"\n{ICON_WARN} {result['warning']}" if result.get("warning") else ""
+                status = f"{ICON_OK} Complete" if result["complete"] else f"{ICON_PENDING} Missing: {', '.join(result['missing'])}"
+                content = f"""{ICON_OK} DoD updated!{warning}
+
+    **DoD Status:** {status}
+    """
+            else:
+                content = f"{ICON_FAIL} Failed to update DoD: {result['error']}"
+        
+            return [TextContent(type="text", text=content)]
+    
+    elif name == "gcp_status":
+        result = await gcp_status(
+            work_item_id=arguments["work_item_id"]
+        )
+        
+        if result.get("active", False):
+            dor_count = sum(1 for v in result["dor"]["items"].values() if v)
+            dor_total = len(result["dor"]["items"])
+            dod_count = sum(1 for v in result["dod"]["items"].values() if v)
+            dod_total = len(result["dod"]["items"])
+            
+            dor_status = f"{ICON_OK} Complete" if result["dor"]["complete"] else f"{ICON_PENDING} {dor_count}/{dor_total}"
+            dod_status = f"{ICON_OK} Complete" if result["dod"]["complete"] else f"{ICON_PENDING} {dod_count}/{dod_total}"
+            
+            next_steps = "\n".join(f"- {step}" for step in result["next_steps"])
+            
+            content = f"""**Golazo Status**
+- Work Item: {result['work_item_id']}
+- Current Role: **{result['current_role']}**
+- Phase: {result['current_phase']}
+- DoR: {dor_status}
+- DoD: {dod_status}
+
+**Next Steps:**
+{next_steps}
+
+---
+{result['role_instructions']}
+"""
+        else:
+            content = f"{ICON_WARN} {result.get('message', 'No active work item')}"
+        
+        return [TextContent(type="text", text=content)]
+    
+    elif name == "gcp_bootstrap":
+        result = await gcp_bootstrap(
+            workspace_path=arguments.get("workspace_path"),
+            force=arguments.get("force", False),
+            include_roles=arguments.get("include_roles", False)
+        )
+        
+        if result["success"]:
+            created = "\n".join(f"  {ICON_CHECK} {f}" for f in result["files_created"]) or "  (none)"
+            skipped = "\n".join(f"  {ICON_EMPTY} {f}" for f in result["files_skipped"]) or "  (none)"
+            content = f"""{ICON_OK} Golazo Copilot bootstrapped!
+
+**Files Created:**
+{created}
+
+**Files Skipped (already exist):**
+{skipped}
+
+{result['message']}
+"""
+        else:
+            content = f"{ICON_FAIL} Bootstrap failed: {result['error']}"
+        
+        return [TextContent(type="text", text=content)]
+    
+    elif name == "gcp_consent":
+        result = await gcp_consent(
+            work_item_id=arguments["work_item_id"],
+            action=arguments["action"],
+            reason=arguments["reason"]
+        )
+        
+        if result["success"]:
+            content = f"""{ICON_OK} Consent recorded!
+
+**Deviation ID:** {result['deviation_id']}
+**Action:** {result['action']}
+
+{result['message']}
+"""
+        else:
+            content = f"{ICON_FAIL} Consent failed: {result['error']}"
+        
+        return [TextContent(type="text", text=content)]
+    
+    return [TextContent(type="text", text=f"Unknown tool: {name}")]
+
+
+async def main():
+    """Run the MCP server."""
+    async with stdio_server() as (read_stream, write_stream):
+        await server.run(read_stream, write_stream, server.create_initialization_options())
+
+
+def run():
+    """Entry point for the server."""
+    asyncio.run(main())
+
+
+if __name__ == "__main__":
+    run()
+

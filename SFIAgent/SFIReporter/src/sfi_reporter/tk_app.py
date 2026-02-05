@@ -1,0 +1,2027 @@
+"""Tkinter desktop app for SFI Reporter."""
+import json
+import re
+import threading
+import tkinter as tk
+from tkinter import ttk, messagebox
+from typing import Optional
+import webbrowser
+
+from sfi_reporter.cache import (
+    read_cache,
+    write_cache,
+    is_cache_valid,
+    get_cache_age_minutes,
+    clear_cache,
+)
+from sfi_reporter.data import get_current_user_alias
+
+
+# Regex patterns for URL extraction
+# Allow single quotes in URLs (common in query params) but not at the very end
+# Also allow parentheses which are common in S360 lens URLs
+URL_PATTERN = re.compile(r'https?://[^\s<>"]+(?<![\'"])')
+HTML_ANCHOR_PATTERN = re.compile(r'<a[^>]+href=["\']([^"\']+)["\'][^>]*>([^<]*)</a>', re.IGNORECASE)
+
+
+# Column toggle constants
+REQUIRED_COLUMNS = ['title', 'dueDate', 'SlaType']
+
+COLUMN_DISPLAY_NAMES = {
+    'title': 'Title',
+    'dueDate': 'Due Date',
+    'SlaType': 'SLA Type',
+    'ActionOwnerName': 'Action Owner',
+    'ActionOwnerAlias': 'Action Owner Alias',
+    'EtaDate': 'ETA Date',
+    'EtaStatus': 'ETA Status',
+    'S360_ServiceTreeServiceName': 'Service Name',
+    'S360_AssignedToName': 'Assigned To',
+    'serviceTreeId': 'Service Tree ID',
+    'S360_ProgramIds': 'Program IDs',
+    'url': 'URL',
+    'id': 'Action Item ID',
+    '_kpi_id': 'KPI ID',
+    'createdDate': 'Created Date',
+    'closedDate': 'Closed Date',
+    'Details': 'Details',
+    'Remediation': 'Remediation',
+    'SubscriptionId': 'Subscription ID',
+    'SubscriptionName': 'Subscription Name',
+    'TenantName': 'Tenant Name',
+}
+
+# SLA status value mapping (used in treeview display)
+SLA_STATUS_MAP = {0: "In SLA", 1: "Approaching", 2: "Out of SLA"}
+
+# Map API column names to tree column identifiers
+COLUMN_ID_MAP = {
+    'title': 'title',
+    'serviceTreeId': 'service',
+    'SlaType': 'sla',
+    'dueDate': 'due_date',
+    'DueDate': 'due_date',
+    'EtaDate': 'eta_date',
+    'S360_AssignedTo': 'assigned_to',
+    'assignedTo': 'assigned_to',
+    'ActionOwnerName': 'action_owner',
+    'ActionOwnerAlias': 'action_owner',
+}
+
+# Column widths for treeview
+COLUMN_WIDTHS = {
+    'title': 250, 'service': 150, 'sla': 80, 'due_date': 90,
+    'eta_date': 90, 'assigned_to': 90, 'action_owner': 120
+}
+
+# Column anchors for treeview
+COLUMN_ANCHORS = {
+    'title': tk.W, 'service': tk.W, 'sla': tk.CENTER,
+    'due_date': tk.CENTER, 'eta_date': tk.CENTER,
+    'assigned_to': tk.W, 'action_owner': tk.W
+}
+
+
+def get_available_columns(items: list[dict]) -> list[str]:
+    """Get union of all column keys from items.
+    
+    Args:
+        items: List of item dictionaries.
+        
+    Returns:
+        Sorted list of unique column names, with required columns first.
+    """
+    if not items:
+        return list(REQUIRED_COLUMNS)
+    
+    all_keys = set()
+    for item in items:
+        all_keys.update(item.keys())
+    
+    # Sort with required columns first, then alphabetically
+    required = [k for k in REQUIRED_COLUMNS if k in all_keys]
+    others = sorted([k for k in all_keys if k not in REQUIRED_COLUMNS])
+    return required + others
+
+
+def filter_item_columns(item: dict, visible: list[str]) -> dict:
+    """Filter item to only visible columns.
+    
+    Args:
+        item: Item dictionary with all columns.
+        visible: List of visible column names.
+        
+    Returns:
+        New dictionary with only visible columns.
+    """
+    return {k: v for k, v in item.items() if k in visible}
+
+
+def select_all_columns(available: list[str]) -> list[str]:
+    """Return all available columns.
+    
+    Args:
+        available: List of available column names.
+        
+    Returns:
+        Copy of available list.
+    """
+    return list(available)
+
+
+def clear_all_columns(available: list[str]) -> list[str]:
+    """Return only required columns.
+    
+    Args:
+        available: List of available column names.
+        
+    Returns:
+        List containing only required columns that are in available.
+    """
+    return [c for c in REQUIRED_COLUMNS if c in available]
+
+
+def validate_visible_columns(visible: list[str]) -> list[str]:
+    """Ensure required columns are always present.
+    
+    Args:
+        visible: List of visible column names.
+        
+    Returns:
+        List with required columns guaranteed to be present.
+    """
+    result = list(visible)
+    for col in REQUIRED_COLUMNS:
+        if col not in result:
+            result.append(col)
+    return result
+
+
+def get_empty_columns(item: dict) -> set[str]:
+    """Identify columns that have empty values for a specific item.
+    
+    Empty values include: None, empty string, whitespace-only string,
+    empty list, or the string "None".
+    
+    Note: 0 (zero) and False are NOT considered empty as they are valid data.
+    
+    Args:
+        item: Dictionary of column name to value.
+        
+    Returns:
+        Set of column names that have empty values.
+    """
+    empty = set()
+    for col, value in item.items():
+        if value is None:
+            empty.add(col)
+        elif isinstance(value, str):
+            if value.strip() == '' or value == 'None':
+                empty.add(col)
+        elif isinstance(value, list) and len(value) == 0:
+            empty.add(col)
+    return empty
+
+
+def is_manager_view(landing_view: list) -> bool:
+    """Detect if the user is a manager based on their landing view.
+    
+    Managers have a TeamGroup in their landing view, while ICs have
+    individual Service entries.
+    
+    Args:
+        landing_view: List of SearchDataList items from get_default_landing_view()
+        
+    Returns:
+        True if user is a manager (has TeamGroup), False otherwise.
+    """
+    if not landing_view:
+        return False
+    return any(item.get('Group') == 'TeamGroup' for item in landing_view)
+
+
+def parse_owners_field(owners_json: str | None) -> list[str]:
+    """Parse the Owners field from S360 search results.
+    
+    The Owners field is a JSON-encoded string like '["John Doe","Jane Smith"]'.
+    
+    Args:
+        owners_json: JSON string of owner names, or None
+        
+    Returns:
+        List of owner names, empty list on parse failure.
+    """
+    if not owners_json or owners_json == 'null':
+        return []
+    
+    try:
+        parsed = json.loads(owners_json)
+        if isinstance(parsed, list):
+            return parsed
+        return []
+    except (json.JSONDecodeError, TypeError):
+        return []
+
+
+def get_org_mapping(owner_names: list[str], manager_alias: str, on_status: Optional[callable] = None) -> dict[str, str]:
+    """Get mapping from each owner to their direct-report-level ancestor.
+    
+    For each owner, queries S360 to get their manager chain and finds:
+    - If owner reports directly to manager_alias → maps to themselves
+    - If owner reports to someone who reports to manager_alias → maps to that direct
+    - If owner is not in manager's org → maps to "Unknown Owner"
+    
+    Args:
+        owner_names: List of unique owner names to look up
+        manager_alias: The manager's alias (e.g., "muralic")
+        on_status: Optional callback for status updates
+        
+    Returns:
+        Dict mapping owner_name -> direct_report_name (or self if they ARE a direct)
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from sfi_reporter.data import get_client
+    import threading
+    
+    if not owner_names:
+        return {}
+    
+    org_mapping: dict[str, str] = {}
+    lock = threading.Lock()
+    completed = [0]
+    total = len(owner_names)
+    
+    def lookup_owner(owner_name: str) -> tuple[str, str]:
+        """Look up an owner and find their direct-report-level manager.
+        
+        Algorithm:
+        1. Search S360 for the owner name to get their alias and Managers chain
+        2. For each exact name match, check if manager_alias is in their chain
+        3. Use the FIRST match that has manager_alias in their chain
+        4. If found → find the direct: the alias immediately AFTER manager_alias in the chain
+        5. If none found → this owner is NOT in the manager's org → return Unknown Owner
+        """
+        try:
+            client = get_client()
+            results = client.search(owner_name)
+            
+            # Find all exact name matches and check each for manager_alias in chain
+            # This handles the case where multiple people have the same name
+            for r in results:
+                if r.get('Group') != 'Org':
+                    continue
+                
+                # Check if this result EXACTLY matches the owner we're looking for
+                result_owners = r.get('Owners', '')
+                if result_owners.lower() != owner_name.lower():
+                    continue
+                
+                # Check if this owner IS the manager (their chain won't include themselves)
+                result_alias = r.get('Id', '')
+                if result_alias.lower() == manager_alias.lower():
+                    # The owner is the manager - map to themselves
+                    return owner_name, owner_name
+                
+                # Get this person's Managers chain
+                managers_json = r.get('Managers', '[]')
+                try:
+                    managers = json.loads(managers_json) if isinstance(managers_json, str) else managers_json
+                except (json.JSONDecodeError, TypeError):
+                    managers = []
+                
+                if not managers:
+                    continue
+                
+                # KEY CHECK: Is manager_alias in their chain?
+                managers_lower = [m.lower() for m in managers]
+                if manager_alias.lower() not in managers_lower:
+                    continue  # Not in manager's org - try next match
+                
+                # Found! This person IS in the manager's org.
+                # Find their direct-report-level ancestor.
+                manager_idx = managers_lower.index(manager_alias.lower())
+                
+                # Chain is ordered top-down: [CEO, ..., manager_alias, direct_alias, ..., this_person]
+                # If manager_alias is the LAST entry, this person reports directly to manager
+                if manager_idx == len(managers) - 1:
+                    # This person IS a direct report
+                    return owner_name, owner_name
+                
+                # Otherwise, the alias immediately after manager_alias is the direct
+                direct_alias = managers[manager_idx + 1]
+                
+                # Look up the direct's display name
+                direct_results = client.search(direct_alias)
+                for dr in direct_results:
+                    if dr.get('Group') == 'Org' and dr.get('Id', '').lower() == direct_alias.lower():
+                        direct_name = dr.get('Owners', direct_alias)
+                        return owner_name, direct_name
+                
+                # Fallback to alias if we can't find display name
+                return owner_name, direct_alias
+            
+            # No matching person found in manager's org
+            return owner_name, 'Unknown Owner'
+            
+        except Exception:
+            return owner_name, 'Unknown Owner'
+    
+    if on_status:
+        on_status(f"Looking up {total} service owners...")
+    
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = {executor.submit(lookup_owner, name): name for name in owner_names}
+        
+        for future in as_completed(futures):
+            owner_name, direct = future.result()
+            with lock:
+                org_mapping[owner_name] = direct
+                completed[0] += 1
+                if on_status and completed[0] % 5 == 0:
+                    on_status(f"Looking up owners: {completed[0]}/{total}")
+    
+    return org_mapping
+
+
+def extract_direct_reports(service_owners: dict[str, list[str]], manager_name: Optional[str] = None) -> set[str]:
+    """Extract direct report names from service_owners dict.
+    
+    Direct reports are identified ONLY by team entries like "Gowri Bhaskara's Team".
+    This is the definitive source - no heuristics or inference.
+    
+    Args:
+        service_owners: Dict mapping service_name to list of owner names
+        manager_name: Optional manager's name to include
+        
+    Returns:
+        Set of direct report names
+    """
+    directs = set()
+    
+    # Extract from "X's Team" patterns - these are the ONLY directs
+    for service_name in service_owners.keys():
+        if "'s Team" in service_name:
+            name = service_name.replace("'s Team", "")
+            directs.add(name)
+    
+    # Add manager if provided
+    if manager_name:
+        directs.add(manager_name)
+    
+    return directs
+
+
+def aggregate_by_owner(items: list[dict], service_owners: dict[str, list[str]], 
+                       org_mapping: Optional[dict[str, str]] = None,
+                       allowed_owners: Optional[set[str]] = None) -> dict:
+    """Aggregate action item stats by service owner.
+    
+    When org_mapping is provided, each owner is mapped to their direct-report-level
+    ancestor. This allows skip-level rollup (Ken Hsieh → Ze Li if Ken reports to Ze Li).
+    
+    When allowed_owners is specified without org_mapping, uses the old behavior:
+    - The first owner in the list that's in allowed_owners
+    - Or "Unknown Owner" if no allowed owner matches
+    
+    Args:
+        items: List of detailed action items
+        service_owners: Dict mapping service_id to list of owner names
+        org_mapping: Optional dict mapping owner_name -> direct_report_name
+        allowed_owners: Optional set of owner names to include (legacy, for manager view)
+        
+    Returns:
+        Dict mapping owner name to stats: {owner: {count, sla, invalid_eta}}
+    """
+    from sfi_reporter.data import is_invalid_eta
+    
+    owner_stats: dict[str, dict] = {}
+    
+    for item in items:
+        service_name = item.get('S360_ServiceTreeServiceName', '')
+        owners = service_owners.get(service_name, None)
+        
+        # Handle missing or empty owners
+        if owners is None:
+            owners = ['Unknown Owner']
+        elif len(owners) == 0:
+            owners = ['No Owner']
+        
+        # Determine the target owner for this item
+        if org_mapping is not None:
+            # Use org_mapping to find the direct-report-level owner
+            # Find the first owner that maps to a known direct (not Unknown Owner)
+            target_owner = None
+            for owner in owners:
+                mapped = org_mapping.get(owner)
+                if mapped and mapped != 'Unknown Owner':
+                    target_owner = mapped
+                    break
+            
+            if target_owner is None:
+                target_owners = ['Unknown Owner']
+            else:
+                target_owners = [target_owner]
+        elif allowed_owners is not None:
+            # Legacy behavior: Find the first owner that's in allowed_owners
+            matched_owner = None
+            for owner in owners:
+                if owner in allowed_owners:
+                    matched_owner = owner
+                    break
+            
+            # If no match, use "Unknown Owner"
+            if matched_owner is None:
+                target_owners = ['Unknown Owner']
+            else:
+                target_owners = [matched_owner]
+        else:
+            target_owners = owners
+        
+        # Calculate item stats
+        is_out_of_sla = item.get('SlaType') == 'OutOfSla'
+        has_invalid_eta = is_invalid_eta(item.get('EtaDate'))
+        
+        # Add to each owner (usually just one when filtering)
+        for owner in target_owners:
+            if owner not in owner_stats:
+                owner_stats[owner] = {'count': 0, 'sla': 0, 'invalid_eta': 0}
+            
+            owner_stats[owner]['count'] += 1
+            if is_out_of_sla:
+                owner_stats[owner]['sla'] += 1
+            if has_invalid_eta:
+                owner_stats[owner]['invalid_eta'] += 1
+    
+    return owner_stats
+
+
+def get_service_owners(service_names: list[str], on_status: Optional[callable] = None) -> dict[str, list[str]]:
+    """Fetch owners for each service using S360 search API in parallel.
+    
+    Args:
+        service_names: List of service names to look up
+        on_status: Optional callback for status updates
+        
+    Returns:
+        Dict mapping service_name to list of owner names
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from sfi_reporter.data import get_client
+    
+    if not service_names:
+        return {}
+    
+    service_owners: dict[str, list[str]] = {}
+    
+    def fetch_owner(service_name: str) -> tuple[str, list[str]]:
+        """Fetch owner for a single service."""
+        try:
+            client = get_client()
+            results = client.search(service_name)
+            # Find exact match for service
+            for result in results:
+                if result.get('Group') == 'Service' and result.get('Name') == service_name:
+                    owners_json = result.get('Owners')
+                    owners = parse_owners_field(owners_json)
+                    
+                    # Special case: if service is "X's Team" and has no owners, use "X"
+                    if not owners and "'s Team" in service_name:
+                        team_owner = service_name.replace("'s Team", "")
+                        owners = [team_owner]
+                    
+                    return service_name, owners
+            
+            # Service not found - check if it's a team pattern
+            if "'s Team" in service_name:
+                team_owner = service_name.replace("'s Team", "")
+                return service_name, [team_owner]
+            return service_name, []
+        except Exception:
+            # Even on error, handle team pattern
+            if "'s Team" in service_name:
+                team_owner = service_name.replace("'s Team", "")
+                return service_name, [team_owner]
+            return service_name, []
+    
+    if on_status:
+        on_status(f"Fetching owners for {len(service_names)} services...")
+    
+    # Use ThreadPoolExecutor for parallel fetching
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = {executor.submit(fetch_owner, name): name for name in service_names}
+        for future in as_completed(futures):
+            name, owners = future.result()
+            service_owners[name] = owners
+    
+    return service_owners
+
+
+def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optional[dict]:
+    """Fetch fresh data and write to cache with status updates.
+    
+    All stats are computed from detailed action items for consistency.
+    """
+    try:
+        from sfi_reporter.data import get_user_team_info, get_action_items_summary, get_detailed_action_items, is_invalid_eta, get_all_programs, get_client
+        from datetime import datetime
+        
+        if on_status:
+            on_status("Connecting to S360...")
+        
+        # Get landing view to detect if user is a manager
+        client = get_client()
+        landing_response = client.get_default_landing_view(user_alias)
+        landing_view = landing_response.get('SearchDataList', []) if landing_response else []
+        is_manager = is_manager_view(landing_view)
+        
+        # Get services and audience IDs (supports both service owners and team views)
+        services, audience_ids = get_user_team_info(user_alias)
+        
+        if on_status:
+            if services:
+                on_status(f"Retrieved {len(services)} services. Fetching programs...")
+            else:
+                on_status("Found team data. Fetching programs...")
+        
+        if not audience_ids:
+            if on_status:
+                on_status("No services or team found for this user")
+            return {
+                'services': [],
+                'detailed_items': [],
+                'service_stats': {},
+                'program_stats': {},
+                'kpi_stats': {},
+                'timestamp': datetime.now().isoformat(),
+            }
+        
+        # Fetch ALL programs from v2/Programs API for accurate name lookup
+        if on_status:
+            on_status("Fetching programs metadata...")
+        program_names = get_all_programs()
+        
+        # Get action items summary to find ALL KPIs
+        if on_status:
+            on_status("Fetching action items summary...")
+        action_items = get_action_items_summary(audience_ids) or {}
+        summary_list = action_items.get('ActionItemSummaryList', [])
+        kpi_ids = [item.get('Kpi', {}).get('KpiId') for item in summary_list if item.get('Kpi', {}).get('KpiId')]
+        
+        # Also merge in any programs from the ProgramsLookup in action items
+        # (in case some programs are specific to user's services)
+        programs_lookup = action_items.get('ProgramsLookup', {})
+        for pid, info in programs_lookup.items():
+            if pid not in program_names:
+                program_names[pid] = info.get('ProgramDisplayName', pid)
+        
+        # Build KPI name lookup from summary
+        kpi_names = {}
+        for item in summary_list:
+            kpi = item.get('Kpi', {})
+            kpi_id = kpi.get('KpiId')
+            if kpi_id:
+                kpi_names[kpi_id] = kpi.get('KpiName', 'Unknown')
+        
+        # Fetch ALL detailed action items (includes S360_ProgramIds per item)
+        detailed_items = get_detailed_action_items(audience_ids, kpi_ids, on_status, kpi_names)
+        
+        if on_status:
+            on_status(f"Processing {len(detailed_items)} action items...")
+        
+        # Build service/kpi/program stats from detailed items (now with S360_ProgramIds)
+        service_stats = {}  # {service_id: {'name': str, 'count': int, 'sla': int, 'invalid_eta': int}}
+        kpi_stats = {}      # {kpi_id: {'name': str, 'count': int, 'sla': int, 'invalid_eta': int}}
+        program_stats = {}  # {program_name: {'count': int, 'sla': int, 'invalid_eta': int}}
+        
+        for row in detailed_items:
+            # Extract fields
+            svc_id = row.get('S360_ServiceId', 'Unknown')
+            svc_name = row.get('S360_ServiceTreeServiceName', 'Unknown')
+            kpi_id = row.get('_kpi_id', 'Unknown')
+            sla_type = row.get('SlaType', '')
+            eta_date = row.get('EtaDate')
+            program_ids = row.get('S360_ProgramIds') or []
+            
+            is_out_of_sla = sla_type == 'OutOfSla'
+            is_invalid = is_invalid_eta(eta_date)
+            
+            # Update service stats
+            if svc_id not in service_stats:
+                service_stats[svc_id] = {'name': svc_name, 'count': 0, 'sla': 0, 'invalid_eta': 0}
+            service_stats[svc_id]['count'] += 1
+            if is_out_of_sla:
+                service_stats[svc_id]['sla'] += 1
+            if is_invalid:
+                service_stats[svc_id]['invalid_eta'] += 1
+            
+            # Update KPI stats
+            if kpi_id not in kpi_stats:
+                kpi_stats[kpi_id] = {'name': kpi_names.get(kpi_id, kpi_id), 'count': 0, 'sla': 0, 'invalid_eta': 0}
+            kpi_stats[kpi_id]['count'] += 1
+            if is_out_of_sla:
+                kpi_stats[kpi_id]['sla'] += 1
+            if is_invalid:
+                kpi_stats[kpi_id]['invalid_eta'] += 1
+            
+            # Update program stats (from S360_ProgramIds per row)
+            # Use only the first program to avoid double-counting
+            if program_ids:
+                pid = program_ids[0]  # Take first program only
+                program_name = program_names.get(pid)
+                if not program_name:
+                    # GUID not in lookup - show as "Other Program" instead of raw GUID
+                    program_name = 'Other Program'
+                if program_name not in program_stats:
+                    program_stats[program_name] = {'count': 0, 'sla': 0, 'invalid_eta': 0, 'id': pid}
+                program_stats[program_name]['count'] += 1
+                if is_out_of_sla:
+                    program_stats[program_name]['sla'] += 1
+                if is_invalid:
+                    program_stats[program_name]['invalid_eta'] += 1
+            else:
+                # Items without program assignment go to "Unassigned"
+                if 'Unassigned' not in program_stats:
+                    program_stats['Unassigned'] = {'count': 0, 'sla': 0, 'invalid_eta': 0, 'id': 'unassigned'}
+                program_stats['Unassigned']['count'] += 1
+                if is_out_of_sla:
+                    program_stats['Unassigned']['sla'] += 1
+                if is_invalid:
+                    program_stats['Unassigned']['invalid_eta'] += 1
+        
+        # If manager view, fetch service owners and aggregate stats by owner
+        owner_stats = {}
+        service_owners = {}
+        org_mapping = {}  # Maps each owner to their direct-report-level ancestor
+        if is_manager and service_stats:
+            # Get manager alias from TeamGroup name (e.g., "Azure Core Insights (MURALIC)" -> "muralic")
+            manager_alias = None
+            manager_name = None
+            for item in landing_view:
+                if item.get('Group') == 'TeamGroup':
+                    # Extract alias from team name - usually in format "Team Name (ALIAS)"
+                    team_name = item.get('Name', '')
+                    if '(' in team_name and ')' in team_name:
+                        manager_alias = team_name.split('(')[-1].replace(')', '').strip().lower()
+                    # Also try to get display name from Owners field
+                    owners_json = item.get('Owners')
+                    if owners_json:
+                        manager_names = parse_owners_field(owners_json)
+                        if manager_names:
+                            manager_name = manager_names[0]
+                    break
+            
+            # Get unique service names
+            service_names = [stats.get('name') for stats in service_stats.values() if stats.get('name')]
+            unique_names = list(set(service_names))
+            
+            if unique_names:
+                service_owners = get_service_owners(unique_names, on_status)
+                
+                # Get all unique owner names across all services
+                all_owners = set()
+                for owners in service_owners.values():
+                    all_owners.update(owners)
+                
+                # Get org mapping: for each owner, find their direct-report-level ancestor
+                if manager_alias and all_owners:
+                    org_mapping = get_org_mapping(list(all_owners), manager_alias, on_status)
+                
+                # Aggregate using org_mapping to roll up to directs
+                # Note: service_owners is keyed by service NAME which matches S360_ServiceTreeServiceName
+                owner_stats = aggregate_by_owner(detailed_items, service_owners, 
+                                                 org_mapping=org_mapping if org_mapping else None)
+        
+        if on_status:
+            on_status("Saving to cache...")
+        
+        data = {
+            'services': services,
+            'detailed_items': detailed_items,
+            'service_stats': service_stats,
+            'program_stats': program_stats,
+            'kpi_stats': kpi_stats,
+            'owner_stats': owner_stats,
+            'is_manager': is_manager,
+            'service_owners': service_owners,
+            'org_mapping': org_mapping,  # Maps owner -> direct-report-level ancestor
+            'programs_lookup': program_names,  # Save program name lookup for cache reload
+            'timestamp': datetime.now().isoformat(),
+        }
+        
+        write_cache(user_alias, data)
+        return data
+    except Exception as e:
+        if on_status:
+            on_status(f"Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+
+# Filter functions for drill-down modal
+def filter_items_by_service(items: list, service_id: str) -> list:
+    """Filter items by service ID (S360_ServiceId or serviceTreeId)."""
+    return [item for item in items if item.get('S360_ServiceId') == service_id or item.get('serviceTreeId') == service_id]
+
+
+def filter_items_by_program(items: list, program_id: str) -> list:
+    """Filter items by program ID (checks if program is in S360_ProgramIds list)."""
+    return [item for item in items if program_id in (item.get('S360_ProgramIds') or [])]
+
+
+def filter_items_by_id(items: list, item_id: str) -> list:
+    """Filter to get a single item by its ID."""
+    return [item for item in items if item.get('id') == item_id]
+
+
+# Helper functions for item details formatting
+def format_field_label(field_name: str) -> str:
+    """Convert field name to human-readable label.
+    
+    Examples:
+        serviceTreeId -> Service Tree Id
+        S360_AssignedTo -> S360 Assigned To
+        _kpi_id -> Kpi Id
+    """
+    import re
+    # Remove leading underscores
+    name = field_name.lstrip('_')
+    # Replace underscores with spaces
+    name = name.replace('_', ' ')
+    # Insert spaces before capital letters (camelCase)
+    name = re.sub(r'([a-z])([A-Z])', r'\1 \2', name)
+    # Title case
+    return name.title()
+
+
+def format_field_value(value) -> str:
+    """Format a field value for display.
+    
+    Handles: strings, lists, booleans, None, numbers.
+    """
+    if value is None:
+        return ''
+    if isinstance(value, bool):
+        return 'Yes' if value else 'No'
+    if isinstance(value, list):
+        if not value:
+            return ''
+        return ', '.join(str(v) for v in value)
+    if isinstance(value, dict):
+        if not value:
+            return ''
+        return json.dumps(value, indent=2)
+    return str(value)
+
+
+def extract_urls_from_text(text: str) -> list:
+    """Extract URLs from text, handling both plain URLs and HTML anchors.
+    
+    Returns list of (url, display_text, start_pos, end_pos) tuples.
+    """
+    if not text or not isinstance(text, str):
+        return []
+    
+    results = []
+    
+    # First, extract HTML anchors and remove them from the search text
+    for match in HTML_ANCHOR_PATTERN.finditer(text):
+        url = match.group(1)
+        display = match.group(2) or url
+        # Store with the actual matched positions in original text
+        results.append((url, display, match.start(), match.end()))
+    
+    # Also find plain URLs that aren't inside anchor tags
+    # Create a "cleaned" version to avoid finding URLs inside anchors
+    html_spans = [(m.start(), m.end()) for m in HTML_ANCHOR_PATTERN.finditer(text)]
+    
+    for match in URL_PATTERN.finditer(text):
+        start, end = match.start(), match.end()
+        # Skip if this URL is inside an HTML anchor
+        in_anchor = any(hs <= start < he for hs, he in html_spans)
+        if not in_anchor:
+            url = match.group(0)
+            results.append((url, url, start, end))
+    
+    return results
+
+
+def clean_html_from_title(title: str) -> str:
+    """Remove HTML anchor tags from title, keeping only the display text.
+    
+    '<a href="...">GDPR Scan Compliance</a>' -> 'GDPR Scan Compliance'
+    """
+    if not title or not isinstance(title, str):
+        return title or ''
+    return HTML_ANCHOR_PATTERN.sub(r'\2', title)
+
+
+def parse_resource_uris(value) -> list:
+    """Parse ResourceURIs field which may be a JSON string or list.
+    
+    Returns list of URLs.
+    """
+    if not value:
+        return []
+    
+    if isinstance(value, list):
+        return value
+    
+    if isinstance(value, str):
+        # May be JSON array string
+        try:
+            parsed = json.loads(value)
+            if isinstance(parsed, list):
+                return parsed
+        except (json.JSONDecodeError, ValueError):
+            pass
+        # Might be a single URL
+        if value.startswith('http'):
+            return [value]
+    
+    return []
+
+
+# Field grouping definitions - comprehensive list for S360 parity
+FIELD_GROUPS = {
+    'identity': ['title', 'id', '_kpi_id', 'url', 'EventId'],
+    'status': ['SlaType', 'classificationType', 'ActionItemType', 'myExceptionStatus', 'EtaStatus'],
+    'dates': ['dueDate', 'DueDate', 'EtaDate', 'OriginalPublishTime', 'S360_TwoWayEta'],
+    'ownership': ['assignedTo', 'S360_AssignedTo', 'S360_AssignedToName', 'S360_AssignedToLogic', 
+                  'ActionOwnerAlias', 'ActionOwnerName', 'IsActionOwnerActiveEmployee', 'Admins'],
+    'service_program': ['serviceTreeId', 'S360_ServiceId', 'S360_ServiceTreeServiceName', 'myExceptionServiceTreeId',
+                        'S360_ProgramIds', 'S360_WavesMetadata', 'S360_IsShadow', 'IsServiceInAGC',
+                        'XDivSecurityTeamId'],
+    'subscription': ['TenantName', 'SubscriptionId', 'SubscriptionName'],
+    'resources': ['Details', 'ResourceURIs'],
+}
+
+
+def group_item_fields(item: dict) -> dict:
+    """Group item fields into logical categories.
+    
+    Returns dict with keys: identity, status, dates, ownership, service_program, subscription, resources, other
+    Each value is a list of (field_name, formatted_value) tuples.
+    """
+    groups = {
+        'identity': [],
+        'status': [],
+        'dates': [],
+        'ownership': [],
+        'service_program': [],
+        'subscription': [],
+        'resources': [],
+        'other': [],
+    }
+    
+    # Track which fields we've placed
+    placed_fields = set()
+    
+    # Place fields into their groups
+    for group_name, field_list in FIELD_GROUPS.items():
+        for field in field_list:
+            if field in item:
+                value = item[field]
+                formatted = format_field_value(value)
+                # Skip empty values
+                if formatted:
+                    groups[group_name].append((field, formatted))
+                placed_fields.add(field)
+    
+    # Put remaining fields in 'other'
+    for field, value in item.items():
+        if field not in placed_fields:
+            formatted = format_field_value(value)
+            if formatted:
+                groups['other'].append((field, formatted))
+    
+    return groups
+
+
+class ColumnSelectorDialog(tk.Toplevel):
+    """Modal dialog for selecting which columns to display in DetailModal."""
+    
+    # Class variable to store column visibility across modal instances (session only)
+    _visible_columns: list[str] | None = None
+    
+    def __init__(self, parent, available_columns: list[str], on_apply: callable = None, 
+                 empty_columns: set[str] = None):
+        """Initialize the column selector dialog.
+        
+        Args:
+            parent: Parent window
+            available_columns: List of column names available for selection
+            on_apply: Callback function to call when user applies changes
+            empty_columns: Set of column names that have empty values (will show "(empty)" suffix)
+        """
+        super().__init__(parent)
+        self.title("Select Columns")
+        self.geometry("350x450")
+        self.transient(parent)
+        self.grab_set()
+        
+        # Center on parent
+        self.update_idletasks()
+        x = parent.winfo_x() + (parent.winfo_width() - 350) // 2
+        y = parent.winfo_y() + (parent.winfo_height() - 450) // 2
+        self.geometry(f"+{x}+{y}")
+        
+        self.available_columns = available_columns
+        self.on_apply = on_apply
+        self._empty_columns = empty_columns or set()
+        self._checkboxes: dict[str, tk.BooleanVar] = {}
+        
+        # Initialize visible columns from class variable or default to all
+        if ColumnSelectorDialog._visible_columns is None:
+            ColumnSelectorDialog._visible_columns = list(available_columns)
+        
+        self._create_widgets()
+        
+        # Bind Escape to close
+        self.bind('<Escape>', lambda e: self.destroy())
+        self.focus_set()
+    
+    def _create_widgets(self):
+        """Create the dialog content."""
+        main_frame = ttk.Frame(self, padding=10)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Header
+        ttk.Label(main_frame, text="Select columns to display:", 
+                  font=("Segoe UI", 10, "bold")).pack(anchor=tk.W, pady=(0, 10))
+        
+        # Button frame for Select All / Clear All
+        btn_frame = ttk.Frame(main_frame)
+        btn_frame.pack(fill=tk.X, pady=(0, 10))
+        ttk.Button(btn_frame, text="Select All", 
+                   command=self._select_all).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Button(btn_frame, text="Clear All", 
+                   command=self._clear_all).pack(side=tk.LEFT)
+        
+        # Container for canvas + scrollbar
+        list_container = ttk.Frame(main_frame)
+        list_container.pack(fill=tk.BOTH, expand=True)
+        
+        # Scrollable frame for checkboxes
+        self._canvas = tk.Canvas(list_container, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(list_container, orient=tk.VERTICAL, command=self._canvas.yview)
+        scrollable_frame = ttk.Frame(self._canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self._canvas.configure(scrollregion=self._canvas.bbox("all"))
+        )
+        
+        self._canvas.create_window((0, 0), window=scrollable_frame, anchor=tk.NW)
+        self._canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Pack scrollbar FIRST on right, then canvas fills the rest
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self._canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Bind mousewheel to this canvas only when mouse is over it
+        self._canvas.bind("<Enter>", lambda e: self._canvas.bind_all("<MouseWheel>", self._on_mousewheel))
+        self._canvas.bind("<Leave>", lambda e: self._canvas.unbind_all("<MouseWheel>"))
+        
+        # Create checkboxes for each column
+        for col in self.available_columns:
+            var = tk.BooleanVar(value=col in ColumnSelectorDialog._visible_columns)
+            self._checkboxes[col] = var
+            
+            # Get display name, add "(empty)" suffix if column is empty for this item
+            display_name = COLUMN_DISPLAY_NAMES.get(col, col)
+            if col in self._empty_columns:
+                display_name = f"{display_name} (empty)"
+            
+            # Create checkbox - disable for required columns
+            cb = ttk.Checkbutton(scrollable_frame, text=display_name, variable=var)
+            cb.pack(anchor=tk.W, pady=2)
+            
+            if col in REQUIRED_COLUMNS:
+                var.set(True)  # Always checked
+                cb.configure(state='disabled')
+        
+        # Apply/Cancel buttons
+        action_frame = ttk.Frame(main_frame)
+        action_frame.pack(fill=tk.X, pady=(10, 0))
+        ttk.Button(action_frame, text="Apply", 
+                   command=self._apply).pack(side=tk.RIGHT, padx=(5, 0))
+        ttk.Button(action_frame, text="Cancel", 
+                   command=self.destroy).pack(side=tk.RIGHT)
+    
+    def _on_mousewheel(self, event):
+        """Handle mousewheel scrolling."""
+        self._canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+    
+    def _select_all(self):
+        """Select all columns."""
+        for col, var in self._checkboxes.items():
+            var.set(True)
+    
+    def _clear_all(self):
+        """Clear all except required columns."""
+        for col, var in self._checkboxes.items():
+            if col in REQUIRED_COLUMNS:
+                var.set(True)
+            else:
+                var.set(False)
+    
+    def _apply(self):
+        """Apply the column selection and close."""
+        # Update class variable with current selection
+        ColumnSelectorDialog._visible_columns = [
+            col for col, var in self._checkboxes.items() if var.get()
+        ]
+        # Ensure required columns are always included
+        ColumnSelectorDialog._visible_columns = validate_visible_columns(
+            ColumnSelectorDialog._visible_columns
+        )
+        
+        # Call callback if provided
+        if self.on_apply:
+            self.on_apply()
+        
+        self.destroy()
+    
+    @classmethod
+    def get_visible_columns(cls) -> list[str] | None:
+        """Get the current visible columns selection."""
+        return cls._visible_columns
+    
+    @classmethod
+    def reset_visible_columns(cls):
+        """Reset visible columns to None (show all)."""
+        cls._visible_columns = None
+
+
+class DetailModal(tk.Toplevel):
+    """Modal dialog showing drill-down details for action items."""
+    
+    def __init__(self, parent, title: str, items: list, service_names: dict = None):
+        super().__init__(parent)
+        self.title(title)
+        self.geometry("900x500")
+        self.transient(parent)  # Associate with parent
+        self.grab_set()  # Make modal
+        
+        # Center on parent
+        self.update_idletasks()
+        x = parent.winfo_x() + (parent.winfo_width() - 900) // 2
+        y = parent.winfo_y() + (parent.winfo_height() - 500) // 2
+        self.geometry(f"+{x}+{y}")
+        
+        self.service_names = service_names or {}
+        self._item_map = {}  # Store item dict by treeview iid
+        self._create_widgets(items)
+        
+        # Bind Escape to close
+        self.bind('<Escape>', lambda e: self.destroy())
+        self.focus_set()
+    
+    def _create_widgets(self, items: list):
+        """Create the modal content."""
+        main_frame = ttk.Frame(self, padding=10)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        if not items:
+            ttk.Label(main_frame, text="No items found.", font=("Segoe UI", 12)).pack(pady=20)
+        else:
+            # Create sortable treeview for items (fixed columns)
+            columns = ("title", "service", "sla", "due_date", "eta_date", "assigned_to", "action_owner")
+            self.tree = SortableTreeview(main_frame, columns=columns, show="headings", height=15)
+            tree = self.tree
+            
+            tree.heading("title", text="Title")
+            tree.heading("service", text="Service")
+            tree.heading("sla", text="SLA Status")
+            tree.heading("due_date", text="Due Date")
+            tree.heading("eta_date", text="ETA Date")
+            tree.heading("assigned_to", text="Assigned To")
+            tree.heading("action_owner", text="Action Owner")
+            
+            tree.column("title", width=250, anchor=tk.W)
+            tree.column("service", width=150, anchor=tk.W)
+            tree.column("sla", width=80, anchor=tk.CENTER)
+            tree.column("due_date", width=90, anchor=tk.CENTER)
+            tree.column("eta_date", width=90, anchor=tk.CENTER)
+            tree.column("assigned_to", width=90, anchor=tk.W)
+            tree.column("action_owner", width=120, anchor=tk.W)
+            
+            # Scrollbars
+            y_scroll = ttk.Scrollbar(main_frame, orient=tk.VERTICAL, command=tree.yview)
+            x_scroll = ttk.Scrollbar(main_frame, orient=tk.HORIZONTAL, command=tree.xview)
+            tree.configure(yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
+            
+            # Pack with scrollbar on right
+            y_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+            x_scroll.pack(side=tk.BOTTOM, fill=tk.X)
+            tree.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+            
+            # Populate and store item references
+            sla_map = {0: "In SLA", 1: "Approaching", 2: "Out of SLA"}
+            for item in items:
+                svc_id = item.get('serviceTreeId', '')
+                svc_name = self.service_names.get(svc_id, svc_id[:20] + '...' if len(svc_id) > 20 else svc_id)
+                raw_title = item.get('title', '')
+                clean_title = clean_html_from_title(raw_title)
+                iid = tree.insert('', tk.END, values=(
+                    clean_title[:60],
+                    svc_name,
+                    sla_map.get(item.get('SlaType'), ''),
+                    (item.get('DueDate') or item.get('dueDate', ''))[:10],
+                    (item.get('EtaDate') or '')[:10],
+                    item.get('S360_AssignedTo') or item.get('assignedTo', ''),
+                    item.get('ActionOwnerName') or item.get('ActionOwnerAlias', ''),
+                ))
+                self._item_map[iid] = item
+            
+            # Apply default sorting: by due date ascending
+            self.tree.sort_by_columns([('due_date', False)])
+            
+            # Bind double-click to open item details
+            tree.bind('<Double-1>', self._on_item_double_click)
+        
+        # Close button
+        btn_frame = ttk.Frame(main_frame)
+        btn_frame.pack(fill=tk.X, pady=(10, 0))
+        ttk.Button(btn_frame, text="Close", command=self.destroy).pack(side=tk.RIGHT)
+        
+        # Item count
+        ttk.Label(btn_frame, text=f"{len(items)} item(s)").pack(side=tk.LEFT)
+    
+    def _on_item_double_click(self, event):
+        """Handle double-click on item row to show full details."""
+        selection = self.tree.selection()
+        if not selection:
+            return
+        
+        iid = selection[0]
+        item = self._item_map.get(iid)
+        if not item:
+            return
+        
+        # Open item details modal
+        ItemDetailsModal(self, item)
+
+
+class ItemDetailsModal(tk.Toplevel):
+    """Modal dialog showing full details for a single action item."""
+    
+    def __init__(self, parent, item: dict):
+        super().__init__(parent)
+        
+        # Get title, clean HTML and truncate if needed for window title
+        item_title = clean_html_from_title(item.get('title', 'Action Item Details'))
+        window_title = item_title[:60] + '...' if len(item_title) > 60 else item_title
+        self.title(window_title)
+        
+        self.geometry("800x650")
+        self.transient(parent)
+        self.grab_set()
+        
+        # Center on parent
+        self.update_idletasks()
+        x = parent.winfo_x() + (parent.winfo_width() - 800) // 2
+        y = parent.winfo_y() + (parent.winfo_height() - 650) // 2
+        self.geometry(f"+{x}+{y}")
+        
+        self._link_counter = 0  # For unique tag names
+        self._item = item  # Store for column refresh
+        self._create_widgets(item)
+        
+        # Bind Escape to close
+        self.bind('<Escape>', lambda e: self.destroy())
+        self.focus_set()
+    
+    def _open_column_selector(self):
+        """Open the column selector dialog with all item columns."""
+        # Get all columns from the item
+        available = sorted(self._item.keys())
+        # Compute which columns have empty values
+        empty_cols = get_empty_columns(self._item)
+        ColumnSelectorDialog(self, available, on_apply=self._on_columns_changed,
+                           empty_columns=empty_cols)
+    
+    def _on_columns_changed(self):
+        """Callback when column selection changes - rebuild display."""
+        # Clear and rebuild content
+        for widget in self._main_frame.winfo_children():
+            widget.destroy()
+        self._link_counter = 0
+        self._build_content(self._item)
+    
+    def _open_url(self, url: str):
+        """Open URL in system default browser."""
+        webbrowser.open(url)
+    
+    def _insert_text_with_links(self, text_widget: tk.Text, content: str, base_tag: str = 'value'):
+        """Insert text content, making URLs clickable.
+        
+        Parses content for URLs and HTML anchors, rendering them as clickable blue links.
+        """
+        if not content:
+            return
+        
+        # For special handling of ResourceURIs (JSON list of URLs)
+        urls = extract_urls_from_text(content)
+        
+        if not urls:
+            # No URLs, just insert plain text
+            text_widget.insert(tk.END, content, base_tag)
+            return
+        
+        # Sort by position to process in order
+        urls.sort(key=lambda x: x[2])
+        
+        last_end = 0
+        for url, display_text, start, end in urls:
+            # Insert text before this URL
+            if start > last_end:
+                text_widget.insert(tk.END, content[last_end:start], base_tag)
+            
+            # Create unique tag for this link
+            self._link_counter += 1
+            link_tag = f'link_{self._link_counter}'
+            
+            # Insert the link
+            text_widget.insert(tk.END, display_text, (link_tag, 'hyperlink'))
+            
+            # Configure tag for this specific link
+            text_widget.tag_bind(link_tag, '<Button-1>', lambda e, u=url: self._open_url(u))
+            text_widget.tag_bind(link_tag, '<Enter>', lambda e: text_widget.configure(cursor='hand2'))
+            text_widget.tag_bind(link_tag, '<Leave>', lambda e: text_widget.configure(cursor=''))
+            
+            last_end = end
+        
+        # Insert remaining text after last URL
+        if last_end < len(content):
+            text_widget.insert(tk.END, content[last_end:], base_tag)
+    
+    def _insert_single_link(self, text_widget: tk.Text, url: str):
+        """Insert a single URL as a clickable link.
+        
+        Used for fields where the entire value is a URL (like the 'url' field),
+        which may contain unencoded characters that would confuse URL extraction.
+        """
+        self._link_counter += 1
+        link_tag = f'link_{self._link_counter}'
+        
+        text_widget.insert(tk.END, url, (link_tag, 'hyperlink'))
+        
+        # Configure tag for this specific link
+        text_widget.tag_bind(link_tag, '<Button-1>', lambda e, u=url: self._open_url(u))
+        text_widget.tag_bind(link_tag, '<Enter>', lambda e: text_widget.configure(cursor='hand2'))
+        text_widget.tag_bind(link_tag, '<Leave>', lambda e: text_widget.configure(cursor=''))
+    
+    def _insert_resource_uris(self, text_widget: tk.Text, value):
+        """Insert ResourceURIs as a list of clickable links."""
+        uris = parse_resource_uris(value)
+        if not uris:
+            text_widget.insert(tk.END, str(value), 'value')
+            return
+        
+        text_widget.insert(tk.END, "\n", 'value')
+        for uri in uris:
+            self._link_counter += 1
+            link_tag = f'link_{self._link_counter}'
+            
+            text_widget.insert(tk.END, "  • ", 'value')
+            text_widget.insert(tk.END, uri, (link_tag, 'hyperlink'))
+            text_widget.insert(tk.END, "\n", 'value')
+            
+            # Configure tag for this specific link
+            text_widget.tag_bind(link_tag, '<Button-1>', lambda e, u=uri: self._open_url(u))
+            text_widget.tag_bind(link_tag, '<Enter>', lambda e: text_widget.configure(cursor='hand2'))
+            text_widget.tag_bind(link_tag, '<Leave>', lambda e: text_widget.configure(cursor=''))
+    
+    def _create_widgets(self, item: dict):
+        """Create the details view content."""
+        self._main_frame = ttk.Frame(self, padding=10)
+        self._main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        self._build_content(item)
+    
+    def _build_content(self, item: dict):
+        """Build the scrollable content area with item fields."""
+        # Get visible columns or use all
+        visible = ColumnSelectorDialog.get_visible_columns()
+        
+        # Filter item to only visible columns if set
+        if visible is not None:
+            display_item = {k: v for k, v in item.items() if k in visible}
+            # Ensure we always have required fields for display
+            for req in REQUIRED_COLUMNS:
+                if req in item and req not in display_item:
+                    display_item[req] = item[req]
+        else:
+            display_item = item
+        
+        # Scrollable text area
+        text_frame = ttk.Frame(self._main_frame)
+        text_frame.pack(fill=tk.BOTH, expand=True)
+        
+        text = tk.Text(text_frame, wrap=tk.WORD, font=("Consolas", 10), padx=10, pady=10)
+        scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL, command=text.yview)
+        text.configure(yscrollcommand=scrollbar.set)
+        
+        # Pack scrollbar first so it's on right
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Configure text tags for styling
+        text.tag_configure('header', font=("Segoe UI", 11, "bold"))
+        text.tag_configure('separator', foreground='gray')
+        text.tag_configure('label', font=("Segoe UI", 10, "bold"))
+        text.tag_configure('value', font=("Consolas", 10))
+        text.tag_configure('hyperlink', foreground='blue', underline=True, font=("Consolas", 10))
+        
+        # Group and display fields
+        groups = group_item_fields(display_item)
+        
+        group_titles = {
+            'identity': '📋 Identity',
+            'status': '🔴 Status',
+            'dates': '📅 Dates',
+            'ownership': '👤 Ownership',
+            'service_program': '🔧 Service & Program',
+            'subscription': '☁️ Subscription',
+            'resources': '🔗 Resources & Details',
+            'other': '📎 Other',
+        }
+        
+        group_order = ['identity', 'status', 'dates', 'ownership', 'service_program', 
+                       'subscription', 'resources', 'other']
+        
+        for group_name in group_order:
+            fields = groups.get(group_name, [])
+            if not fields:
+                continue
+            
+            # Group header
+            text.insert(tk.END, f"\n{group_titles.get(group_name, group_name)}\n", 'header')
+            text.insert(tk.END, "─" * 50 + "\n", 'separator')
+            
+            # Fields
+            for field_name, formatted_value in fields:
+                label = format_field_label(field_name)
+                text.insert(tk.END, f"{label}: ", 'label')
+                
+                # Special handling for certain fields
+                if field_name == 'ResourceURIs':
+                    # Get the raw value for proper parsing
+                    raw_value = item.get('ResourceURIs', formatted_value)
+                    self._insert_resource_uris(text, raw_value)
+                elif field_name == 'url':
+                    # The url field is the entire URL - make it clickable directly
+                    # (S360 URLs may have unencoded spaces in OData query params)
+                    self._insert_single_link(text, formatted_value)
+                    text.insert(tk.END, "\n", 'value')
+                elif field_name in ('title', 'Details') or 'http' in formatted_value.lower():
+                    # Check for URLs and make them clickable
+                    self._insert_text_with_links(text, formatted_value)
+                    text.insert(tk.END, "\n", 'value')
+                else:
+                    text.insert(tk.END, f"{formatted_value}\n", 'value')
+            
+            text.insert(tk.END, "\n")
+        
+        # Make text read-only
+        text.configure(state=tk.DISABLED)
+        
+        # Button frame with Columns and Close
+        btn_frame = ttk.Frame(self._main_frame)
+        btn_frame.pack(fill=tk.X, pady=(10, 0))
+        ttk.Button(btn_frame, text="Columns", command=self._open_column_selector).pack(side=tk.LEFT)
+        ttk.Button(btn_frame, text="Close", command=self.destroy).pack(side=tk.RIGHT)
+
+
+class SortableTreeview(ttk.Treeview):
+    """Treeview with sortable columns."""
+    
+    def __init__(self, parent, **kwargs):
+        super().__init__(parent, **kwargs)
+        self._sort_reverse = {}  # Track sort direction per column
+    
+    def heading(self, column, **kwargs):
+        """Override heading to add sort on click."""
+        if 'command' not in kwargs:
+            kwargs['command'] = lambda c=column: self._sort_by_column(c)
+        return super().heading(column, **kwargs)
+    
+    def sort_by_columns(self, columns: list[tuple[str, bool]]):
+        """Sort treeview by multiple columns.
+        
+        Args:
+            columns: List of (column_name, descending) tuples.
+                     Applied in order, so last column is primary sort.
+                     Example: [('name', False), ('count', True)] sorts by count desc, then name asc.
+        """
+        if not columns:
+            return
+        
+        # Get all items
+        all_items = list(self.get_children(''))
+        if not all_items:
+            return
+        
+        # Build sort key function for each column
+        def get_sort_key(item, col):
+            val = self.set(item, col) or ''
+            # Check if numeric
+            if val.replace(',', '').replace('.', '').replace('-', '').isdigit():
+                try:
+                    return (0, int(val.replace(',', '')))  # (type, value) tuple
+                except ValueError:
+                    return (1, val.lower())
+            return (1, val.lower())
+        
+        # Sort in reverse order of columns (so first column ends up as primary)
+        for col, descending in columns:
+            all_items.sort(key=lambda item: get_sort_key(item, col), reverse=descending)
+        
+        # Rearrange items
+        for index, item in enumerate(all_items):
+            self.move(item, '', index)
+    
+    def _sort_by_column(self, col):
+        """Sort treeview by column."""
+        # Get all items with their values
+        items = [(self.set(item, col), item) for item in self.get_children('')]
+        
+        # Determine sort direction
+        reverse = self._sort_reverse.get(col, False)
+        
+        # Determine if column is numeric (check first non-empty value)
+        is_numeric = False
+        for val, _ in items:
+            if val:
+                is_numeric = val.replace(',', '').replace('.', '').isdigit()
+                break
+        
+        # Sort based on type
+        if is_numeric:
+            def sort_key(x):
+                try:
+                    return int(x[0].replace(',', '')) if x[0] else 0
+                except ValueError:
+                    return 0
+            items.sort(key=sort_key, reverse=reverse)
+        else:
+            items.sort(key=lambda x: (x[0] or '').lower(), reverse=reverse)
+        
+        # Rearrange items
+        for index, (_, item) in enumerate(items):
+            self.move(item, '', index)
+        
+        # Toggle sort direction for next click
+        self._sort_reverse[col] = not reverse
+
+
+class SFIReporterApp:
+    """Main application class."""
+    
+    def __init__(self, root: tk.Tk):
+        self.root = root
+        self.root.title("SFI Reporter")
+        self.root.geometry("1200x750")
+        
+        self.current_data: dict = {}
+        self.detected_alias = get_current_user_alias() or ""
+        
+        # Mappings for drill-down (populated when data loads)
+        self._service_id_map: dict = {}  # row iid -> service ID
+        self._service_name_map: dict = {}  # service ID -> service name
+        self._program_id_map: dict = {}  # row iid -> program ID
+        self._kpi_id_map: dict = {}  # row iid -> KPI ID
+        
+        self._build_ui()
+        self._load_cached_data()
+    
+    def _build_ui(self):
+        """Build the UI components."""
+        # Main frame with padding
+        main_frame = ttk.Frame(self.root, padding="10")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Header
+        header_label = ttk.Label(main_frame, text="📊 SFI Reporter", font=("Segoe UI", 20, "bold"))
+        header_label.pack(anchor=tk.W)
+        
+        subtitle_label = ttk.Label(main_frame, text="View SFI/QEI action items for your services", foreground="gray")
+        subtitle_label.pack(anchor=tk.W, pady=(0, 10))
+        
+        ttk.Separator(main_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=5)
+        
+        # Controls frame
+        controls_frame = ttk.Frame(main_frame)
+        controls_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Label(controls_frame, text="User Alias:").pack(side=tk.LEFT)
+        
+        self.alias_var = tk.StringVar(value=self.detected_alias)
+        self.alias_entry = ttk.Entry(controls_frame, textvariable=self.alias_var, width=30)
+        self.alias_entry.pack(side=tk.LEFT, padx=(5, 10))
+        
+        # Bind Enter key to load cache for the entered alias
+        self.alias_entry.bind('<Return>', lambda e: self._load_cached_data())
+        self.alias_entry.bind('<FocusOut>', lambda e: self._load_cached_data())
+        
+        self.refresh_btn = ttk.Button(controls_frame, text="🔄 Refresh Data", command=self._on_refresh)
+        self.refresh_btn.pack(side=tk.LEFT, padx=5)
+        
+        self.clear_btn = ttk.Button(controls_frame, text="🗑️ Clear Cache", command=self._on_clear_cache)
+        self.clear_btn.pack(side=tk.LEFT, padx=5)
+        
+        # Status frame
+        status_frame = ttk.Frame(main_frame)
+        status_frame.pack(fill=tk.X, pady=5)
+        
+        self.cache_age_var = tk.StringVar()
+        self.cache_age_label = ttk.Label(status_frame, textvariable=self.cache_age_var, foreground="green")
+        self.cache_age_label.pack(side=tk.LEFT)
+        
+        self.status_var = tk.StringVar()
+        self.status_label = ttk.Label(status_frame, textvariable=self.status_var)
+        self.status_label.pack(side=tk.LEFT, padx=(20, 0))
+        
+        ttk.Separator(main_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=5)
+        
+        # Top section: Services (left) and Program Summary (right)
+        top_section = ttk.Frame(main_frame)
+        top_section.pack(fill=tk.X, pady=5)
+        
+        # Services section (left side)
+        services_container = ttk.Frame(top_section)
+        services_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+        
+        ttk.Label(services_container, text="🔧 Services", font=("Segoe UI", 12, "bold")).pack(anchor=tk.W)
+        
+        services_frame = ttk.Frame(services_container)
+        services_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+        
+        # Use "tree headings" to show hierarchy (tree column + data columns)
+        self.services_tree = SortableTreeview(services_frame, columns=("name", "count", "sla", "invalid_eta"), show="tree headings", height=6)
+        self.services_tree.heading("#0", text="")  # Tree column (for expand/collapse)
+        self.services_tree.heading("name", text="Name")
+        self.services_tree.heading("count", text="Total")
+        self.services_tree.heading("sla", text="Out of SLA")
+        self.services_tree.heading("invalid_eta", text="Invalid ETA")
+        self.services_tree.column("#0", width=20, stretch=False)  # Narrow tree column
+        self.services_tree.column("name", width=180, anchor=tk.W)
+        self.services_tree.column("count", width=60, anchor=tk.CENTER)
+        self.services_tree.column("sla", width=80, anchor=tk.CENTER)
+        self.services_tree.column("invalid_eta", width=80, anchor=tk.CENTER)
+        
+        # Store owner ID mapping for drill-down
+        self._owner_id_map = {}
+        
+        services_scroll = ttk.Scrollbar(services_frame, orient=tk.VERTICAL, command=self.services_tree.yview)
+        self.services_tree.configure(yscrollcommand=services_scroll.set)
+        
+        self.services_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        services_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Bind double-click for drill-down
+        self.services_tree.bind('<Double-1>', self._on_service_double_click)
+        
+        # Program Summary section (right side)
+        program_container = ttk.Frame(top_section)
+        program_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        ttk.Label(program_container, text="📈 Program Summary", font=("Segoe UI", 12, "bold")).pack(anchor=tk.W)
+        
+        program_frame = ttk.Frame(program_container)
+        program_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+        
+        self.program_tree = SortableTreeview(program_frame, columns=("program", "count", "sla", "invalid_eta"), show="headings", height=6)
+        self.program_tree.heading("program", text="Program")
+        self.program_tree.heading("count", text="Total")
+        self.program_tree.heading("sla", text="Out of SLA")
+        self.program_tree.heading("invalid_eta", text="Invalid ETA")
+        self.program_tree.column("program", width=230, anchor=tk.W)
+        self.program_tree.column("count", width=60, anchor=tk.CENTER)
+        self.program_tree.column("sla", width=70, anchor=tk.CENTER)
+        self.program_tree.column("invalid_eta", width=70, anchor=tk.CENTER)
+        
+        program_scroll = ttk.Scrollbar(program_frame, orient=tk.VERTICAL, command=self.program_tree.yview)
+        self.program_tree.configure(yscrollcommand=program_scroll.set)
+        
+        self.program_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        program_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Bind double-click for drill-down
+        self.program_tree.bind('<Double-1>', self._on_program_double_click)
+        
+        ttk.Separator(main_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=5)
+        
+        # Action Items section
+        ttk.Label(main_frame, text="📋 Action Items", font=("Segoe UI", 12, "bold")).pack(anchor=tk.W, pady=(5, 0))
+        
+        action_frame = ttk.Frame(main_frame)
+        action_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+        
+        self.action_tree = SortableTreeview(
+            action_frame, 
+            columns=("name", "count", "sla", "invalid_eta"), 
+            show="headings"
+        )
+        self.action_tree.heading("name", text="Action Item (KPI)")
+        self.action_tree.heading("count", text="Total")
+        self.action_tree.heading("sla", text="Out of SLA")
+        self.action_tree.heading("invalid_eta", text="Invalid ETA")
+        self.action_tree.column("name", width=450, anchor=tk.W)
+        self.action_tree.column("count", width=80, anchor=tk.CENTER)
+        self.action_tree.column("sla", width=80, anchor=tk.CENTER)
+        self.action_tree.column("invalid_eta", width=80, anchor=tk.CENTER)
+        
+        action_scroll = ttk.Scrollbar(action_frame, orient=tk.VERTICAL, command=self.action_tree.yview)
+        self.action_tree.configure(yscrollcommand=action_scroll.set)
+        
+        self.action_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        action_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Bind double-click for drill-down
+        self.action_tree.bind('<Double-1>', self._on_action_double_click)
+    
+    def _load_cached_data(self, user_alias: str = None):
+        """Load cached data for a user.
+        
+        Args:
+            user_alias: User alias to load cache for. If None, uses current alias field value.
+        """
+        alias = user_alias or self.alias_var.get().strip()
+        if alias:
+            cached = read_cache(alias)
+            if cached and is_cache_valid(cached):
+                self._update_tables(cached)
+                age = get_cache_age_minutes(cached)
+                if age is not None:
+                    self.cache_age_var.set(f"Cache: {age} minutes old")
+                    color = "orange" if age > 30 else "green"
+                    self.cache_age_label.configure(foreground=color)
+                return True
+        return False
+    
+    def _on_alias_change(self, *args):
+        """Handle alias field change - load cached data for new alias."""
+        alias = self.alias_var.get().strip()
+        if alias:
+            self._load_cached_data(alias)
+    
+    def _update_tables(self, data: dict):
+        """Update tables with data."""
+        self.current_data = data
+        
+        # Clear existing rows and mappings
+        for item in self.services_tree.get_children():
+            self.services_tree.delete(item)
+        for item in self.action_tree.get_children():
+            self.action_tree.delete(item)
+        for item in self.program_tree.get_children():
+            self.program_tree.delete(item)
+        
+        self._service_id_map.clear()
+        self._service_name_map.clear()
+        self._program_id_map.clear()
+        self._kpi_id_map.clear()
+        self._owner_id_map.clear()
+        
+        # Get pre-computed stats if available
+        service_stats = data.get('service_stats', {})
+        program_stats = data.get('program_stats', {})
+        kpi_stats = data.get('kpi_stats', {})
+        owner_stats = data.get('owner_stats', {})
+        is_manager = data.get('is_manager', False)
+        service_owners = data.get('service_owners', {})
+        
+        # Update program summary table
+        for program_name, stats in sorted(program_stats.items(), key=lambda x: x[1].get('count', 0), reverse=True):
+            iid = self.program_tree.insert("", tk.END, values=(
+                program_name,
+                stats.get('count', 0),
+                stats.get('sla', 0),
+                stats.get('invalid_eta', 0),
+            ))
+            # Store program ID mapping
+            program_id = stats.get('id', program_name)  # Use name as fallback
+            self._program_id_map[iid] = program_id
+        
+        # Update services table - hierarchical view for managers, flat for ICs
+        services = data.get('services', [])
+        
+        if is_manager and owner_stats and service_stats:
+            # Manager view: Group services by owner (pivot table style)
+            # Build owner -> service mapping using same filtering as aggregate_by_owner
+            owner_services: dict[str, list[tuple[str, str, dict]]] = {}  # owner -> [(svc_id, svc_name, stats)]
+            
+            # Get org_mapping from cached data (maps owner -> direct-report-level ancestor)
+            org_mapping = data.get('org_mapping', {})
+            
+            for svc_id, stats in service_stats.items():
+                svc_name = stats.get('name', svc_id)
+                owners = service_owners.get(svc_name, None)
+                
+                if owners is None:
+                    target_owner = 'Unknown Owner'
+                elif len(owners) == 0:
+                    target_owner = 'No Owner'
+                elif org_mapping:
+                    # Use org_mapping to find the direct-report-level owner
+                    target_owner = None
+                    for owner in owners:
+                        mapped = org_mapping.get(owner)
+                        if mapped and mapped != 'Unknown Owner':
+                            target_owner = mapped
+                            break
+                    if target_owner is None:
+                        target_owner = 'Unknown Owner'
+                else:
+                    # No filtering - use first owner
+                    target_owner = owners[0]
+                
+                if target_owner not in owner_services:
+                    owner_services[target_owner] = []
+                owner_services[target_owner].append((svc_id, svc_name, stats))
+            
+            # Insert owners as parent rows, services as children
+            for owner_name, owner_stat in sorted(owner_stats.items(), key=lambda x: x[1].get('count', 0), reverse=True):
+                # Insert owner parent row
+                owner_iid = self.services_tree.insert("", tk.END, values=(
+                    f"👤 {owner_name}",
+                    owner_stat.get('count', 0),
+                    owner_stat.get('sla', 0),
+                    owner_stat.get('invalid_eta', 0),
+                ), open=True)
+                self._owner_id_map[owner_iid] = owner_name
+                
+                # Insert service children under this owner
+                svc_list = owner_services.get(owner_name, [])
+                for svc_id, svc_name, stats in sorted(svc_list, key=lambda x: x[2].get('count', 0), reverse=True):
+                    child_iid = self.services_tree.insert(owner_iid, tk.END, values=(
+                        svc_name,
+                        stats.get('count', 0),
+                        stats.get('sla', 0),
+                        stats.get('invalid_eta', 0),
+                    ))
+                    self._service_id_map[child_iid] = svc_id
+                    self._service_name_map[svc_id] = svc_name
+        elif services:
+            # IC view: User owns services - show them flat
+            for s in services:
+                svc_id = s.get('Id', '')
+                stats = service_stats.get(svc_id, {})
+                iid = self.services_tree.insert("", tk.END, values=(
+                    s.get('Name', 'Unknown'),
+                    stats.get('count', 0),
+                    stats.get('sla', 0),
+                    stats.get('invalid_eta', 0),
+                ))
+                self._service_id_map[iid] = svc_id
+                self._service_name_map[svc_id] = s.get('Name', 'Unknown')
+        elif service_stats:
+            # Fallback: Team view without owner info - show services flat
+            for svc_id, stats in sorted(service_stats.items(), key=lambda x: x[1].get('count', 0), reverse=True):
+                iid = self.services_tree.insert("", tk.END, values=(
+                    stats.get('name', svc_id),
+                    stats.get('count', 0),
+                    stats.get('sla', 0),
+                    stats.get('invalid_eta', 0),
+                ))
+                self._service_id_map[iid] = svc_id
+                self._service_name_map[svc_id] = stats.get('name', svc_id)
+        
+        # Update action items table (now from kpi_stats)
+        kpi_stats = data.get('kpi_stats', {})
+        
+        for kpi_id, stats in sorted(kpi_stats.items(), key=lambda x: x[1].get('count', 0), reverse=True):
+            iid = self.action_tree.insert("", tk.END, values=(
+                stats.get('name', kpi_id),
+                stats.get('count', 0),
+                stats.get('sla', 0),
+                stats.get('invalid_eta', 0),
+            ))
+            self._kpi_id_map[iid] = kpi_id
+        
+        # Apply default sorting to program and action tables
+        # Note: Services table uses hierarchical view when manager, don't re-sort
+        self.program_tree.sort_by_columns([('program', False), ('count', True), ('sla', True), ('invalid_eta', True)])
+        self.action_tree.sort_by_columns([('name', False), ('count', True), ('sla', True), ('invalid_eta', True)])
+        
+        # Update cache age
+        age = get_cache_age_minutes(data)
+        if age is not None:
+            self.cache_age_var.set(f"Cache: {age} minutes old")
+            color = "orange" if age > 30 else "green"
+            self.cache_age_label.configure(foreground=color)
+        else:
+            self.cache_age_var.set("")
+    
+    def _on_service_double_click(self, event):
+        """Handle double-click on service or owner row."""
+        selection = self.services_tree.selection()
+        if not selection:
+            return
+        
+        iid = selection[0]
+        
+        # Check if this is an owner row (parent) or service row (child)
+        owner_name = self._owner_id_map.get(iid)
+        if owner_name:
+            # Owner row - show all items for this owner's services
+            service_owners = self.current_data.get('service_owners', {})
+            
+            # Find services owned by this owner
+            if owner_name == 'Unknown Owner':
+                # Services not in service_owners lookup
+                known_services = set(service_owners.keys())
+                items = [
+                    item for item in self.current_data.get('detailed_items', [])
+                    if item.get('S360_ServiceTreeServiceName') not in known_services
+                ]
+            elif owner_name == 'No Owner':
+                # Services with empty owners list
+                empty_owner_services = {svc for svc, owners in service_owners.items() if not owners}
+                items = [
+                    item for item in self.current_data.get('detailed_items', [])
+                    if item.get('S360_ServiceTreeServiceName') in empty_owner_services
+                ]
+            else:
+                # Normal owner - filter by services they own
+                owner_services = {svc for svc, owners in service_owners.items() if owner_name in owners}
+                items = [
+                    item for item in self.current_data.get('detailed_items', [])
+                    if item.get('S360_ServiceTreeServiceName') in owner_services
+                ]
+            
+            DetailModal(
+                self.root,
+                f"Action Items for {owner_name}",
+                items,
+                self._service_name_map
+            )
+            return
+        
+        # Service row
+        service_id = self._service_id_map.get(iid)
+        if not service_id:
+            return
+        
+        service_name = self._service_name_map.get(service_id, service_id)
+        items = filter_items_by_service(
+            self.current_data.get('detailed_items', []),
+            service_id
+        )
+        
+        DetailModal(
+            self.root,
+            f"Action Items for {service_name}",
+            items,
+            self._service_name_map
+        )
+    
+    def _on_program_double_click(self, event):
+        """Handle double-click on program row."""
+        selection = self.program_tree.selection()
+        if not selection:
+            return
+        
+        iid = selection[0]
+        program_id = self._program_id_map.get(iid)
+        if not program_id:
+            return
+        
+        # Get program name from the row values
+        values = self.program_tree.item(iid, 'values')
+        program_name = values[0] if values else program_id
+        
+        # Handle "Unassigned" specially - items with no program
+        if program_id == 'unassigned':
+            items = [
+                item for item in self.current_data.get('detailed_items', [])
+                if not (item.get('S360_ProgramIds') or [])
+            ]
+        else:
+            items = filter_items_by_program(
+                self.current_data.get('detailed_items', []),
+                program_id
+            )
+        
+        DetailModal(
+            self.root,
+            f"Action Items for {program_name}",
+            items,
+            self._service_name_map
+        )
+    
+    def _on_action_double_click(self, event):
+        """Handle double-click on action item (KPI) row."""
+        selection = self.action_tree.selection()
+        if not selection:
+            return
+        
+        iid = selection[0]
+        kpi_id = self._kpi_id_map.get(iid)
+        if not kpi_id:
+            return
+        
+        # Get KPI name from the row values
+        values = self.action_tree.item(iid, 'values')
+        kpi_name = values[0] if values else kpi_id
+        
+        # Filter by KPI ID
+        items = [
+            item for item in self.current_data.get('detailed_items', [])
+            if item.get('_kpi_id') == kpi_id
+        ]
+        
+        DetailModal(
+            self.root,
+            f"Action Items: {kpi_name}",
+            items,
+            self._service_name_map
+        )
+    
+    def _update_status(self, message: str, color: str = "black"):
+        """Update status label (thread-safe)."""
+        self.root.after(0, lambda: self._do_update_status(message, color))
+    
+    def _do_update_status(self, message: str, color: str):
+        """Actually update status (must be called from main thread)."""
+        self.status_var.set(message)
+        self.status_label.configure(foreground=color)
+    
+    def _on_refresh(self):
+        """Handle refresh button click."""
+        alias = self.alias_var.get().strip()
+        if not alias:
+            messagebox.showwarning("Warning", "Please enter a user alias")
+            return
+        
+        # Disable buttons during refresh
+        self.refresh_btn.configure(state=tk.DISABLED)
+        self.clear_btn.configure(state=tk.DISABLED)
+        self._update_status("Starting...", "blue")
+        
+        def fetch_in_background():
+            def on_status(msg):
+                self._update_status(msg, "blue")
+            
+            data = do_refresh(alias, on_status=on_status)
+            
+            # Update UI on main thread
+            self.root.after(0, lambda: self._on_refresh_complete(data))
+        
+        threading.Thread(target=fetch_in_background, daemon=True).start()
+    
+    def _on_refresh_complete(self, data: Optional[dict]):
+        """Handle refresh completion (called on main thread)."""
+        self.refresh_btn.configure(state=tk.NORMAL)
+        self.clear_btn.configure(state=tk.NORMAL)
+        
+        if data:
+            self._update_tables(data)
+            services = data.get('services', [])
+            detailed_items = data.get('detailed_items', [])
+            kpi_stats = data.get('kpi_stats', {})
+            # Check if we have any data (services, detailed items, or KPI stats)
+            has_data = bool(services or detailed_items or kpi_stats)
+            if not has_data:
+                self._update_status("⚠️ No action items found for this user", "orange")
+            else:
+                self._update_status("✅ Data refreshed!", "green")
+        else:
+            self._update_status("❌ Error fetching data", "red")
+    
+    def _on_clear_cache(self):
+        """Handle clear cache button click."""
+        alias = self.alias_var.get().strip()
+        if alias and clear_cache(alias):
+            # Clear tables
+            for item in self.services_tree.get_children():
+                self.services_tree.delete(item)
+            for item in self.action_tree.get_children():
+                self.action_tree.delete(item)
+            for item in self.program_tree.get_children():
+                self.program_tree.delete(item)
+            
+            self.cache_age_var.set("")
+            self._update_status("Cache cleared", "blue")
+
+
+def main():
+    """Main entry point."""
+    root = tk.Tk()
+    
+    # Set theme
+    style = ttk.Style()
+    if "vista" in style.theme_names():
+        style.theme_use("vista")
+    elif "clam" in style.theme_names():
+        style.theme_use("clam")
+    
+    app = SFIReporterApp(root)
+    root.mainloop()
+
+
+if __name__ == "__main__":
+    main()

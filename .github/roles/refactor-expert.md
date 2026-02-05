@@ -1,4 +1,4 @@
-<!-- Golazo Version: 1.0.0 -->
+<!-- Golazo Version: 1.2.0 -->
 # Role: Refactor Expert
 
 ## Purpose
@@ -27,7 +27,7 @@ Verify all tests are passing. If tests are failing, STOP and return to **Develop
 
 ## Required outputs
 - Refactored code (if improvements identified)
-- `docs/roles/<workitem-id>-refactor.md`
+- `WorkItems/<workitem-id>/RoleDecisionNotes/<workitem-id>-refactor.md`
 
 ## Decision rules
 - If refactoring would change behavior, create a new User Story instead
