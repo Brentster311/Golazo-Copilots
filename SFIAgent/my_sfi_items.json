@@ -1,0 +1,748 @@
+{
+  "user": "gowrin",
+  "services": [
+    {
+      "id": "53d9aa82-f334-4cf9-9130-7bf444059d27",
+      "name": "Azure VM Availability Analytics"
+    },
+    {
+      "id": "21c6924a-4d74-4eed-b2f4-30c70eef35d8",
+      "name": "AzCore Data"
+    },
+    {
+      "id": "d104dbf2-dc11-46a6-b649-39ba5eadaa87",
+      "name": "Azure Core Insights"
+    }
+  ],
+  "programs": [
+    "65a010a5-1e3d-4777-bb89-f149470a507d"
+  ],
+  "summary_by_domain": {
+    "Common Infrastructure": 1,
+    "Global and Trusted": 3,
+    "Security": 13,
+    "Reliability": 3
+  },
+  "totals": {
+    "out_of_sla": 26,
+    "approaching_sla": 23,
+    "in_sla": 39
+  },
+  "security_items": [
+    {
+      "Domain": {
+        "DomainId": "48631ee9-7815-de68-9dd8-b25c81aebfb9",
+        "DomainName": "Security"
+      },
+      "Kpi": {
+        "KpiId": "11df79b1-bc5d-4d9e-a984-d91c573c45c5",
+        "KpiName": "[USGov] 1.05 Azure Tenant Security"
+      },
+      "ActionItemData": {
+        "KpiPriority": null,
+        "CurrentValue": 11,
+        "OutOfSLACount": 9,
+        "OutOfSLALockedShadowActionsCount": 0,
+        "ApproachingSLACount": 2,
+        "ApproachingSLALockedShadowActionsCount": 0,
+        "InSLACount": 0,
+        "InSLAShadowActionsCount": 0,
+        "State": 2,
+        "OutOfSLAMinDaysToDueDate": 0,
+        "ApproachingSLAMinDaysToDueDate": 0,
+        "InSLAMinDaysToDueDate": 0
+      },
+      "ProgramData": [],
+      "Forums": null,
+      "IsLaunchCriteria": false,
+      "Cost": "HalfDay"
+    },
+    {
+      "Domain": {
+        "DomainId": "48631ee9-7815-de68-9dd8-b25c81aebfb9",
+        "DomainName": "Security"
+      },
+      "Kpi": {
+        "KpiId": "a2b3a75b-4ce8-42cc-87fc-249b3d107cf2",
+        "KpiName": "Kusto Security Hardening"
+      },
+      "ActionItemData": {
+        "KpiPriority": null,
+        "CurrentValue": 2,
+        "OutOfSLACount": 2,
+        "OutOfSLALockedShadowActionsCount": 0,
+        "ApproachingSLACount": 0,
+        "ApproachingSLALockedShadowActionsCount": 0,
+        "InSLACount": 0,
+        "InSLAShadowActionsCount": 0,
+        "State": 2,
+        "OutOfSLAMinDaysToDueDate": 0,
+        "ApproachingSLAMinDaysToDueDate": 0,
+        "InSLAMinDaysToDueDate": 0
+      },
+      "ProgramData": [],
+      "Forums": null,
+      "IsLaunchCriteria": false,
+      "Cost": "OneDay"
+    },
+    {
+      "Domain": {
+        "DomainId": "48631ee9-7815-de68-9dd8-b25c81aebfb9",
+        "DomainName": "Security"
+      },
+      "Kpi": {
+        "KpiId": "fef0b920-0076-43c9-a793-06a1187c0353",
+        "KpiName": "[SFI-ID4.2.3] Cosmos DB - Safe Secrets Standard"
+      },
+      "ActionItemData": {
+        "KpiPriority": null,
+        "CurrentValue": 2,
+        "OutOfSLACount": 2,
+        "OutOfSLALockedShadowActionsCount": 0,
+        "ApproachingSLACount": 0,
+        "ApproachingSLALockedShadowActionsCount": 0,
+        "InSLACount": 0,
+        "InSLAShadowActionsCount": 0,
+        "State": 2,
+        "OutOfSLAMinDaysToDueDate": 0,
+        "ApproachingSLAMinDaysToDueDate": 0,
+        "InSLAMinDaysToDueDate": 0
+      },
+      "ProgramData": [
+        {
+          "ProgramId": [
+            "65a010a5-1e3d-4777-bb89-f149470a507d"
+          ],
+          "WaveIds": [
+            "24a0a75a-e945-4018-8589-58b8b18c624f"
+          ],
+          "ActionItemData": {
+            "KpiPriority": null,
+            "CurrentValue": 2,
+            "OutOfSLACount": 2,
+            "OutOfSLALockedShadowActionsCount": 0,
+            "ApproachingSLACount": 0,
+            "ApproachingSLALockedShadowActionsCount": 0,
+            "InSLACount": 0,
+            "InSLAShadowActionsCount": 0,
+            "State": 2,
+            "OutOfSLAMinDaysToDueDate": 0,
+            "ApproachingSLAMinDaysToDueDate": 0,
+            "InSLAMinDaysToDueDate": 0
+          }
+        },
+        {
+          "ProgramId": [
+            "all"
+          ],
+          "WaveIds": [
+            "24a0a75a-e945-4018-8589-58b8b18c624f"
+          ],
+          "ActionItemData": {
+            "KpiPriority": null,
+            "CurrentValue": 2,
+            "OutOfSLACount": 2,
+            "OutOfSLALockedShadowActionsCount": 0,
+            "ApproachingSLACount": 0,
+            "ApproachingSLALockedShadowActionsCount": 0,
+            "InSLACount": 0,
+            "InSLAShadowActionsCount": 0,
+            "State": 2,
+            "OutOfSLAMinDaysToDueDate": 0,
+            "ApproachingSLAMinDaysToDueDate": 0,
+            "InSLAMinDaysToDueDate": 0
+          }
+        }
+      ],
+      "Forums": [
+        "ADFunSecure",
+        "Azure Security Review",
+        "C+E Security Fundamentals",
+        "IDNA Fundamentals"
+      ],
+      "IsLaunchCriteria": false,
+      "Cost": "HalfWeek"
+    },
+    {
+      "Domain": {
+        "DomainId": "48631ee9-7815-de68-9dd8-b25c81aebfb9",
+        "DomainName": "Security"
+      },
+      "Kpi": {
+        "KpiId": "01eaaa7e-a6ac-4775-91d0-3199244479bd",
+        "KpiName": "Event Grid - Safe Secrets Standard"
+      },
+      "ActionItemData": {
+        "KpiPriority": null,
+        "CurrentValue": 1,
+        "OutOfSLACount": 1,
+        "OutOfSLALockedShadowActionsCount": 0,
+        "ApproachingSLACount": 0,
+        "ApproachingSLALockedShadowActionsCount": 0,
+        "InSLACount": 0,
+        "InSLAShadowActionsCount": 0,
+        "State": 2,
+        "OutOfSLAMinDaysToDueDate": 0,
+        "ApproachingSLAMinDaysToDueDate": 0,
+        "InSLAMinDaysToDueDate": 0
+      },
+      "ProgramData": [],
+      "Forums": [
+        "ADFunSecure",
+        "Azure Security Review",
+        "C+E Security Fundamentals",
+        "IDNA Fundamentals"
+      ],
+      "IsLaunchCriteria": false,
+      "Cost": "HalfDay"
+    },
+    {
+      "Domain": {
+        "DomainId": "48631ee9-7815-de68-9dd8-b25c81aebfb9",
+        "DomainName": "Security"
+      },
+      "Kpi": {
+        "KpiId": "c6876c6f-2376-49a6-bcbd-f15af106d1af",
+        "KpiName": "[SFI-ID4.2.1] Storage Accounts - Safe Secrets Standard"
+      },
+      "ActionItemData": {
+        "KpiPriority": null,
+        "CurrentValue": 1,
+        "OutOfSLACount": 1,
+        "OutOfSLALockedShadowActionsCount": 0,
+        "ApproachingSLACount": 0,
+        "ApproachingSLALockedShadowActionsCount": 0,
+        "InSLACount": 0,
+        "InSLAShadowActionsCount": 0,
+        "State": 2,
+        "OutOfSLAMinDaysToDueDate": 0,
+        "ApproachingSLAMinDaysToDueDate": 0,
+        "InSLAMinDaysToDueDate": 0
+      },
+      "ProgramData": [
+        {
+          "ProgramId": [
+            "65a010a5-1e3d-4777-bb89-f149470a507d"
+          ],
+          "WaveIds": [
+            "24a0a75a-e945-4018-8589-58b8b18c624f"
+          ],
+          "ActionItemData": {
+            "KpiPriority": null,
+            "CurrentValue": 1,
+            "OutOfSLACount": 1,
+            "OutOfSLALockedShadowActionsCount": 0,
+            "ApproachingSLACount": 0,
+            "ApproachingSLALockedShadowActionsCount": 0,
+            "InSLACount": 0,
+            "InSLAShadowActionsCount": 0,
+            "State": 2,
+            "OutOfSLAMinDaysToDueDate": 0,
+            "ApproachingSLAMinDaysToDueDate": 0,
+            "InSLAMinDaysToDueDate": 0
+          }
+        },
+        {
+          "ProgramId": [
+            "all"
+          ],
+          "WaveIds": [
+            "24a0a75a-e945-4018-8589-58b8b18c624f"
+          ],
+          "ActionItemData": {
+            "KpiPriority": null,
+            "CurrentValue": 1,
+            "OutOfSLACount": 1,
+            "OutOfSLALockedShadowActionsCount": 0,
+            "ApproachingSLACount": 0,
+            "ApproachingSLALockedShadowActionsCount": 0,
+            "InSLACount": 0,
+            "InSLAShadowActionsCount": 0,
+            "State": 2,
+            "OutOfSLAMinDaysToDueDate": 0,
+            "ApproachingSLAMinDaysToDueDate": 0,
+            "InSLAMinDaysToDueDate": 0
+          }
+        }
+      ],
+      "Forums": [
+        "C+E Security Fundamentals",
+        "IDNA Fundamentals",
+        "Azure Security Review",
+        "ADFunSecure"
+      ],
+      "IsLaunchCriteria": false,
+      "Cost": "HalfWeek"
+    },
+    {
+      "Domain": {
+        "DomainId": "48631ee9-7815-de68-9dd8-b25c81aebfb9",
+        "DomainName": "Security"
+      },
+      "Kpi": {
+        "KpiId": "66408858-bc7a-e959-4abf-77c18136e66f",
+        "KpiName": "[SFI-TI5.1.1] Always JIT"
+      },
+      "ActionItemData": {
+        "KpiPriority": null,
+        "CurrentValue": 2,
+        "OutOfSLACount": 0,
+        "OutOfSLALockedShadowActionsCount": 0,
+        "ApproachingSLACount": 1,
+        "ApproachingSLALockedShadowActionsCount": 0,
+        "InSLACount": 1,
+        "InSLAShadowActionsCount": 0,
+        "State": 1,
+        "OutOfSLAMinDaysToDueDate": 0,
+        "ApproachingSLAMinDaysToDueDate": 0,
+        "InSLAMinDaysToDueDate": 0
+      },
+      "ProgramData": [],
+      "Forums": [
+        "ADFunCompliance",
+        "ADFunSecure",
+        "JEDI",
+        "C+E Security Fundamentals",
+        "IDNA Fundamentals",
+        "EDG Security",
+        "Azure Security Review"
+      ],
+      "IsLaunchCriteria": false,
+      "Cost": "HalfWeek"
+    },
+    {
+      "Domain": {
+        "DomainId": "48631ee9-7815-de68-9dd8-b25c81aebfb9",
+        "DomainName": "Security"
+      },
+      "Kpi": {
+        "KpiId": "cb71c09d-0f7b-4056-8988-234502090876",
+        "KpiName": "[SFI-ID4.3.1] Cognitive Services - Safe Secrets Standard"
+      },
+      "ActionItemData": {
+        "KpiPriority": null,
+        "CurrentValue": 13,
+        "OutOfSLACount": 0,
+        "OutOfSLALockedShadowActionsCount": 0,
+        "ApproachingSLACount": 13,
+        "ApproachingSLALockedShadowActionsCount": 0,
+        "InSLACount": 0,
+        "InSLAShadowActionsCount": 0,
+        "State": 1,
+        "OutOfSLAMinDaysToDueDate": 0,
+        "ApproachingSLAMinDaysToDueDate": 0,
+        "InSLAMinDaysToDueDate": 0
+      },
+      "ProgramData": [],
+      "Forums": [
+        "C+E Security Fundamentals",
+        "IDNA Fundamentals",
+        "Azure Security Review",
+        "ADFunSecure"
+      ],
+      "IsLaunchCriteria": false,
+      "Cost": "OneDay"
+    },
+    {
+      "Domain": {
+        "DomainId": "48631ee9-7815-de68-9dd8-b25c81aebfb9",
+        "DomainName": "Security"
+      },
+      "Kpi": {
+        "KpiId": "5c85fca2-d174-492c-80df-4cdaa5f74b4d",
+        "KpiName": "[SFI-NS2.6.1] Mark all subnets to disable default outbound connectivity"
+      },
+      "ActionItemData": {
+        "KpiPriority": null,
+        "CurrentValue": 12,
+        "OutOfSLACount": 0,
+        "OutOfSLALockedShadowActionsCount": 0,
+        "ApproachingSLACount": 0,
+        "ApproachingSLALockedShadowActionsCount": 0,
+        "InSLACount": 12,
+        "InSLAShadowActionsCount": 0,
+        "State": 0,
+        "OutOfSLAMinDaysToDueDate": 0,
+        "ApproachingSLAMinDaysToDueDate": 0,
+        "InSLAMinDaysToDueDate": 0
+      },
+      "ProgramData": [],
+      "Forums": null,
+      "IsLaunchCriteria": false,
+      "Cost": "OneDay"
+    },
+    {
+      "Domain": {
+        "DomainId": "48631ee9-7815-de68-9dd8-b25c81aebfb9",
+        "DomainName": "Security"
+      },
+      "Kpi": {
+        "KpiId": "527fb616-07aa-8198-6419-50d04ef1c2f3",
+        "KpiName": "[SFI-AR1.2.7] Vulnerability Management"
+      },
+      "ActionItemData": {
+        "KpiPriority": null,
+        "CurrentValue": 1,
+        "OutOfSLACount": 0,
+        "OutOfSLALockedShadowActionsCount": 0,
+        "ApproachingSLACount": 1,
+        "ApproachingSLALockedShadowActionsCount": 0,
+        "InSLACount": 0,
+        "InSLAShadowActionsCount": 0,
+        "State": 1,
+        "OutOfSLAMinDaysToDueDate": 0,
+        "ApproachingSLAMinDaysToDueDate": 0,
+        "InSLAMinDaysToDueDate": 0
+      },
+      "ProgramData": [
+        {
+          "ProgramId": [
+            "65a010a5-1e3d-4777-bb89-f149470a507d"
+          ],
+          "WaveIds": [
+            "2f90da33-a582-4e0c-89d6-38055aad4c51"
+          ],
+          "ActionItemData": {
+            "KpiPriority": null,
+            "CurrentValue": 1,
+            "OutOfSLACount": 0,
+            "OutOfSLALockedShadowActionsCount": 0,
+            "ApproachingSLACount": 1,
+            "ApproachingSLALockedShadowActionsCount": 0,
+            "InSLACount": 0,
+            "InSLAShadowActionsCount": 0,
+            "State": 1,
+            "OutOfSLAMinDaysToDueDate": 0,
+            "ApproachingSLAMinDaysToDueDate": 0,
+            "InSLAMinDaysToDueDate": 0
+          }
+        },
+        {
+          "ProgramId": [
+            "all"
+          ],
+          "WaveIds": [
+            "2f90da33-a582-4e0c-89d6-38055aad4c51",
+            "7ede5cae-ea58-4e86-955d-281043337c05"
+          ],
+          "ActionItemData": {
+            "KpiPriority": null,
+            "CurrentValue": 1,
+            "OutOfSLACount": 0,
+            "OutOfSLALockedShadowActionsCount": 0,
+            "ApproachingSLACount": 1,
+            "ApproachingSLALockedShadowActionsCount": 0,
+            "InSLACount": 0,
+            "InSLAShadowActionsCount": 0,
+            "State": 1,
+            "OutOfSLAMinDaysToDueDate": 0,
+            "ApproachingSLAMinDaysToDueDate": 0,
+            "InSLAMinDaysToDueDate": 0
+          }
+        }
+      ],
+      "Forums": [
+        "ADFunCompliance",
+        "ADFunSecure",
+        "C+E Security Fundamentals"
+      ],
+      "IsLaunchCriteria": false,
+      "Cost": "HalfWeek"
+    },
+    {
+      "Domain": {
+        "DomainId": "48631ee9-7815-de68-9dd8-b25c81aebfb9",
+        "DomainName": "Security"
+      },
+      "Kpi": {
+        "KpiId": "cdcfadfa-e467-48f0-bfbd-916c63b73e55",
+        "KpiName": "[SFI-ID2.1.7] Migrate to MISE/SNI"
+      },
+      "ActionItemData": {
+        "KpiPriority": null,
+        "CurrentValue": 2,
+        "OutOfSLACount": 0,
+        "OutOfSLALockedShadowActionsCount": 0,
+        "ApproachingSLACount": 0,
+        "ApproachingSLALockedShadowActionsCount": 0,
+        "InSLACount": 2,
+        "InSLAShadowActionsCount": 0,
+        "State": 0,
+        "OutOfSLAMinDaysToDueDate": 0,
+        "ApproachingSLAMinDaysToDueDate": 0,
+        "InSLAMinDaysToDueDate": 0
+      },
+      "ProgramData": [
+        {
+          "ProgramId": [
+            "65a010a5-1e3d-4777-bb89-f149470a507d"
+          ],
+          "WaveIds": [
+            "0a400b02-e474-421e-b9d9-8d3bd026a5f3"
+          ],
+          "ActionItemData": {
+            "KpiPriority": null,
+            "CurrentValue": 2,
+            "OutOfSLACount": 0,
+            "OutOfSLALockedShadowActionsCount": 0,
+            "ApproachingSLACount": 0,
+            "ApproachingSLALockedShadowActionsCount": 0,
+            "InSLACount": 2,
+            "InSLAShadowActionsCount": 0,
+            "State": 0,
+            "OutOfSLAMinDaysToDueDate": 0,
+            "ApproachingSLAMinDaysToDueDate": 0,
+            "InSLAMinDaysToDueDate": 0
+          }
+        },
+        {
+          "ProgramId": [
+            "all"
+          ],
+          "WaveIds": [
+            "0a400b02-e474-421e-b9d9-8d3bd026a5f3"
+          ],
+          "ActionItemData": {
+            "KpiPriority": null,
+            "CurrentValue": 2,
+            "OutOfSLACount": 0,
+            "OutOfSLALockedShadowActionsCount": 0,
+            "ApproachingSLACount": 0,
+            "ApproachingSLALockedShadowActionsCount": 0,
+            "InSLACount": 2,
+            "InSLAShadowActionsCount": 0,
+            "State": 0,
+            "OutOfSLAMinDaysToDueDate": 0,
+            "ApproachingSLAMinDaysToDueDate": 0,
+            "InSLAMinDaysToDueDate": 0
+          }
+        }
+      ],
+      "Forums": null,
+      "IsLaunchCriteria": false,
+      "Cost": "Unknown"
+    },
+    {
+      "Domain": {
+        "DomainId": "48631ee9-7815-de68-9dd8-b25c81aebfb9",
+        "DomainName": "Security"
+      },
+      "Kpi": {
+        "KpiId": "e3123e2a-615c-42ea-96a8-27e9732fdecd",
+        "KpiName": "[SFI-NS2.2.1] Secure PaaS Resources"
+      },
+      "ActionItemData": {
+        "KpiPriority": null,
+        "CurrentValue": 1,
+        "OutOfSLACount": 0,
+        "OutOfSLALockedShadowActionsCount": 0,
+        "ApproachingSLACount": 0,
+        "ApproachingSLALockedShadowActionsCount": 0,
+        "InSLACount": 1,
+        "InSLAShadowActionsCount": 0,
+        "State": 0,
+        "OutOfSLAMinDaysToDueDate": 0,
+        "ApproachingSLAMinDaysToDueDate": 0,
+        "InSLAMinDaysToDueDate": 0
+      },
+      "ProgramData": [
+        {
+          "ProgramId": [
+            "65a010a5-1e3d-4777-bb89-f149470a507d"
+          ],
+          "WaveIds": [
+            "2a363cb6-e31d-48ec-a30f-3ad5770950bf"
+          ],
+          "ActionItemData": {
+            "KpiPriority": null,
+            "CurrentValue": 1,
+            "OutOfSLACount": 0,
+            "OutOfSLALockedShadowActionsCount": 0,
+            "ApproachingSLACount": 0,
+            "ApproachingSLALockedShadowActionsCount": 0,
+            "InSLACount": 1,
+            "InSLAShadowActionsCount": 0,
+            "State": 0,
+            "OutOfSLAMinDaysToDueDate": 0,
+            "ApproachingSLAMinDaysToDueDate": 0,
+            "InSLAMinDaysToDueDate": 0
+          }
+        },
+        {
+          "ProgramId": [
+            "all"
+          ],
+          "WaveIds": [
+            "2a363cb6-e31d-48ec-a30f-3ad5770950bf"
+          ],
+          "ActionItemData": {
+            "KpiPriority": null,
+            "CurrentValue": 1,
+            "OutOfSLACount": 0,
+            "OutOfSLALockedShadowActionsCount": 0,
+            "ApproachingSLACount": 0,
+            "ApproachingSLALockedShadowActionsCount": 0,
+            "InSLACount": 1,
+            "InSLAShadowActionsCount": 0,
+            "State": 0,
+            "OutOfSLAMinDaysToDueDate": 0,
+            "ApproachingSLAMinDaysToDueDate": 0,
+            "InSLAMinDaysToDueDate": 0
+          }
+        }
+      ],
+      "Forums": [
+        "C+E Security Fundamentals"
+      ],
+      "IsLaunchCriteria": false,
+      "Cost": "HalfDay"
+    },
+    {
+      "Domain": {
+        "DomainId": "48631ee9-7815-de68-9dd8-b25c81aebfb9",
+        "DomainName": "Security"
+      },
+      "Kpi": {
+        "KpiId": "1055ac30-4cbe-41a3-a3be-64309d395ac7",
+        "KpiName": "[SFI-TI3.1.1] Soft Delete unused apps"
+      },
+      "ActionItemData": {
+        "KpiPriority": null,
+        "CurrentValue": 2,
+        "OutOfSLACount": 0,
+        "OutOfSLALockedShadowActionsCount": 0,
+        "ApproachingSLACount": 0,
+        "ApproachingSLALockedShadowActionsCount": 0,
+        "InSLACount": 2,
+        "InSLAShadowActionsCount": 0,
+        "State": 0,
+        "OutOfSLAMinDaysToDueDate": 0,
+        "ApproachingSLAMinDaysToDueDate": 0,
+        "InSLAMinDaysToDueDate": 0
+      },
+      "ProgramData": [
+        {
+          "ProgramId": [
+            "65a010a5-1e3d-4777-bb89-f149470a507d"
+          ],
+          "WaveIds": [
+            "19ead072-3bf1-4901-8cba-d837732cddb0"
+          ],
+          "ActionItemData": {
+            "KpiPriority": null,
+            "CurrentValue": 2,
+            "OutOfSLACount": 0,
+            "OutOfSLALockedShadowActionsCount": 0,
+            "ApproachingSLACount": 0,
+            "ApproachingSLALockedShadowActionsCount": 0,
+            "InSLACount": 2,
+            "InSLAShadowActionsCount": 0,
+            "State": 0,
+            "OutOfSLAMinDaysToDueDate": 0,
+            "ApproachingSLAMinDaysToDueDate": 0,
+            "InSLAMinDaysToDueDate": 0
+          }
+        },
+        {
+          "ProgramId": [
+            "all"
+          ],
+          "WaveIds": [
+            "19ead072-3bf1-4901-8cba-d837732cddb0"
+          ],
+          "ActionItemData": {
+            "KpiPriority": null,
+            "CurrentValue": 2,
+            "OutOfSLACount": 0,
+            "OutOfSLALockedShadowActionsCount": 0,
+            "ApproachingSLACount": 0,
+            "ApproachingSLALockedShadowActionsCount": 0,
+            "InSLACount": 2,
+            "InSLAShadowActionsCount": 0,
+            "State": 0,
+            "OutOfSLAMinDaysToDueDate": 0,
+            "ApproachingSLAMinDaysToDueDate": 0,
+            "InSLAMinDaysToDueDate": 0
+          }
+        }
+      ],
+      "Forums": null,
+      "IsLaunchCriteria": false,
+      "Cost": "HalfWeek"
+    },
+    {
+      "Domain": {
+        "DomainId": "48631ee9-7815-de68-9dd8-b25c81aebfb9",
+        "DomainName": "Security"
+      },
+      "Kpi": {
+        "KpiId": "3456f1c0-d907-45c5-b063-5c00867fd697",
+        "KpiName": "[SFI-TI3.1.9] Enterprise App Governance Remediation"
+      },
+      "ActionItemData": {
+        "KpiPriority": null,
+        "CurrentValue": 18,
+        "OutOfSLACount": 0,
+        "OutOfSLALockedShadowActionsCount": 0,
+        "ApproachingSLACount": 0,
+        "ApproachingSLALockedShadowActionsCount": 0,
+        "InSLACount": 18,
+        "InSLAShadowActionsCount": 0,
+        "State": 0,
+        "OutOfSLAMinDaysToDueDate": 0,
+        "ApproachingSLAMinDaysToDueDate": 0,
+        "InSLAMinDaysToDueDate": 0
+      },
+      "ProgramData": [
+        {
+          "ProgramId": [
+            "65a010a5-1e3d-4777-bb89-f149470a507d"
+          ],
+          "WaveIds": [
+            "cf96acac-a7c9-42f4-a2ee-538fe03535da"
+          ],
+          "ActionItemData": {
+            "KpiPriority": null,
+            "CurrentValue": 18,
+            "OutOfSLACount": 0,
+            "OutOfSLALockedShadowActionsCount": 0,
+            "ApproachingSLACount": 0,
+            "ApproachingSLALockedShadowActionsCount": 0,
+            "InSLACount": 18,
+            "InSLAShadowActionsCount": 0,
+            "State": 0,
+            "OutOfSLAMinDaysToDueDate": 0,
+            "ApproachingSLAMinDaysToDueDate": 0,
+            "InSLAMinDaysToDueDate": 0
+          }
+        },
+        {
+          "ProgramId": [
+            "all"
+          ],
+          "WaveIds": [
+            "cf96acac-a7c9-42f4-a2ee-538fe03535da"
+          ],
+          "ActionItemData": {
+            "KpiPriority": null,
+            "CurrentValue": 18,
+            "OutOfSLACount": 0,
+            "OutOfSLALockedShadowActionsCount": 0,
+            "ApproachingSLACount": 0,
+            "ApproachingSLALockedShadowActionsCount": 0,
+            "InSLACount": 18,
+            "InSLAShadowActionsCount": 0,
+            "State": 0,
+            "OutOfSLAMinDaysToDueDate": 0,
+            "ApproachingSLAMinDaysToDueDate": 0,
+            "InSLAMinDaysToDueDate": 0
+          }
+        }
+      ],
+      "Forums": null,
+      "IsLaunchCriteria": false,
+      "Cost": "OneDay"
+    }
+  ],
+  "eta_items": []
+}
