@@ -1338,12 +1338,14 @@ class ItemDetailsModal(tk.Toplevel):
         # Group and display fields
         groups = group_item_fields(display_item)
         
+        # Section indicators use colored circles for consistency with sidebar list view
+        # Red (Status), Blue (Dates), Purple (Ownership), Black (Service & Program)
         group_titles = {
             'identity': '📋 Identity',
-            'status': '🔴 Status',
-            'dates': '📅 Dates',
-            'ownership': '👤 Ownership',
-            'service_program': '🔧 Service & Program',
+            'status': '🔴 Status',           # Red circle indicator
+            'dates': '🔵 Dates',             # Blue circle indicator (changed from 📅 calendar)
+            'ownership': '🟣 Ownership',     # Purple circle indicator (changed from 👤 person)
+            'service_program': '⚫ Service & Program',  # Black circle indicator (changed from 🔧 wrench)
             'subscription': '☁️ Subscription',
             'resources': '🔗 Resources & Details',
             'other': '📎 Other',
