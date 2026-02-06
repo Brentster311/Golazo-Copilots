@@ -32,12 +32,16 @@ These instructions are authoritative. Convenience, urgency, or user pressure mus
 - When triggered, it evaluates failures or friction in this workflow.
 - Its output proposes **changes to these instructions**, not to product code.
 
-5) **Spine and role files are protected**
-- Before modifying ANY file in `golazo-instructions/`, `.github/copilot-instructions.md`, or `.github/roles/`:
-  - **ALWAYS ask**: "This changes the Golazo process itself. Would you like me to create a work item to track this change?"
-  - Wait for user confirmation before proceeding
-- These files define the workflow; changes to them have broad impact
-- Quick fixes are allowed ONLY with explicit user consent ("just do it", "no work item needed")
+5) **Significant changes require work item confirmation**
+- Before making ANY significant change, **ALWAYS ask**:
+  > "Would you like me to create a work item to track this change, or just proceed?"
+- A change is **significant** if it:
+  - Adds, removes, or modifies functionality
+  - Changes process, workflow, or role instructions
+  - Affects multiple files or components
+  - Could impact other users or downstream systems
+- Wait for user confirmation before proceeding
+- Quick fixes are allowed ONLY with explicit user consent ("just proceed", "no work item needed")
 
 ---
 
