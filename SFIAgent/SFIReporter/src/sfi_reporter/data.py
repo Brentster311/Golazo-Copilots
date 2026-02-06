@@ -128,8 +128,15 @@ def merge_columns_with_essentials(columns: list[str]) -> list[str]:
     return result
 
 
+_client_instance: Any = None
+
+
 def get_client() -> Any:
-    """Get an S360Client instance.
+    """Get a shared S360Client instance (singleton).
+    
+    The client is thread-safe for read operations and reuses
+    a single AzureCliCredential so tokens are cached rather
+    than re-acquired on every API call.
     
     Returns:
         S360Client instance.
@@ -137,9 +144,12 @@ def get_client() -> Any:
     Raises:
         ImportError: If accia-s360 is not installed.
     """
+    global _client_instance
     if S360Client is None:
         raise ImportError("accia-s360 package is not installed")
-    return S360Client()
+    if _client_instance is None:
+        _client_instance = S360Client()
+    return _client_instance
 
 
 def get_current_user_alias() -> Optional[str]:
@@ -360,7 +370,7 @@ REQUESTED_COLUMNS = [
 ]
 
 
-def get_detailed_action_items(service_ids: list[str], kpi_ids: list[str], on_status: Optional[callable] = None, kpi_names: Optional[dict] = None) -> list[dict]:
+def get_detailed_action_items(service_ids: list[str], kpi_ids: list[str], on_status: Optional[callable] = None, kpi_names: Optional[dict] = None) -> tuple[list[dict], list[dict]]:
     """Get detailed action items grid data for calculating Invalid ETA and program stats.
     
     Uses per-KPI column discovery with caching:
@@ -374,22 +384,23 @@ def get_detailed_action_items(service_ids: list[str], kpi_ids: list[str], on_sta
         kpi_names: Optional dict mapping KPI ID to KPI name for status messages.
         
     Returns:
-        List of detailed action item rows with discovered columns.
+        Tuple of (rows, failed_kpis) where rows is a list of action item dicts
+        and failed_kpis is a list of {"kpi_id", "kpi_name", "error"} dicts.
     """
     if not service_ids or not kpi_ids:
-        return []
+        return [], []
     
     kpi_names = kpi_names or {}
     total = len(kpi_ids)
     
     # Thread-safe progress tracking
     completed_count = [0]  # Using list for mutable in closure
+    failed_kpis: list[dict] = []  # Track KPIs that fail during fetch
     status_lock = Lock()
     
     def fetch_kpi_grid(kpi_id: str) -> list[dict]:
         """Fetch grid data for a single KPI with column cache."""
         try:
-            # Each thread needs its own client instance
             client = get_client()
             
             # Check cache for this KPI's columns
@@ -450,10 +461,15 @@ def get_detailed_action_items(service_ids: list[str], kpi_ids: list[str], on_sta
             return rows
         except Exception as e:
             logger.error("Error fetching grid for KPI %s: %s", kpi_id, e)
-            # Still update progress on error
-            if on_status:
-                with status_lock:
-                    completed_count[0] += 1
+            # Record the failure
+            with status_lock:
+                failed_kpis.append({
+                    "kpi_id": kpi_id,
+                    "kpi_name": kpi_names.get(kpi_id, kpi_id),
+                    "error": str(e),
+                })
+                completed_count[0] += 1
+                if on_status:
                     on_status(f"Fetching KPIs: {completed_count[0]}/{total} complete")
             return []
     
@@ -473,10 +489,14 @@ def get_detailed_action_items(service_ids: list[str], kpi_ids: list[str], on_sta
                 rows = future.result()
                 all_rows.extend(rows)
         
-        return all_rows
+        if failed_kpis:
+            names = [f.get('kpi_name', f.get('kpi_id')) for f in failed_kpis]
+            logger.warning("%d KPI(s) failed: %s", len(failed_kpis), names)
+        
+        return all_rows, failed_kpis
     except Exception as e:
         logger.error("Error in get_detailed_action_items: %s", e, exc_info=True)
-        return []
+        return [], failed_kpis
 
 
 def is_invalid_eta(eta_date: Optional[str]) -> bool:
