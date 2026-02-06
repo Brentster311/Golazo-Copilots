@@ -1,6 +1,6 @@
 # GCP-0014: Project Owner Consent Required for Gate Bypass
 
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 ---
 

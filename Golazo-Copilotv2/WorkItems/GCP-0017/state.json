@@ -5,7 +5,7 @@
   "current_phase": "development",
   "current_role": "developer",
   "created_at": "2026-02-06T22:54:52.081149Z",
-  "updated_at": "2026-02-06T23:06:33.901877Z",
+  "updated_at": "2026-02-06T23:06:52.518512Z",
   "dor": {
     "userStory": true,
     "designDoc": false,
@@ -19,7 +19,7 @@
     "buildPasses": true,
     "docsUpdated": true,
     "refactorComplete": true,
-    "committed": false
+    "committed": true
   },
   "role_history": [
     {

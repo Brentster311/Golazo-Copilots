@@ -245,3 +245,23 @@ class TestConsentSingleUse:
         )
         assert result2["success"] is False
         assert "consent" in result2["error"].lower()
+
+
+class TestConsentMessageFormat:
+    """GCP-0014: Consent message should indicate Project Owner."""
+
+    @pytest.mark.asyncio
+    async def test_consent_message_mentions_project_owner(self):
+        """Should include 'Project Owner' in success message."""
+        await gcp_create_workitem(work_item_id="po-msg-1", work_items_dir=TEST_WORKITEMS_DIR)
+        
+        result = await gcp_consent(
+            work_item_id="po-msg-1",
+            action="skip_dor",
+            reason="PO approved bypass for spike exploration",
+            work_items_dir=TEST_WORKITEMS_DIR
+        )
+        
+        assert result["success"] is True
+        assert "project owner" in result["message"].lower()
+

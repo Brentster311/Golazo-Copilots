@@ -142,3 +142,68 @@ class TestStatusAfterTransition:
         )
         
         assert result["current_role"] == "program-manager"
+
+
+class TestStatusDeviations:
+    """GCP-0014: Status should show deviations."""
+
+    @pytest.mark.asyncio
+    async def test_status_includes_deviations_list(self):
+        """Should include deviations in status."""
+        from golazo_copilot.tools.gcp_consent import gcp_consent
+        
+        await gcp_create_workitem(work_item_id="dev-status-1", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_consent(
+            work_item_id="dev-status-1",
+            action="skip_dor",
+            reason="PO approved spike exploration",
+            work_items_dir=TEST_WORKITEMS_DIR
+        )
+        
+        result = await gcp_status(
+            work_item_id="dev-status-1",
+            work_items_dir=TEST_WORKITEMS_DIR
+        )
+        
+        assert "deviations" in result
+        assert len(result["deviations"]) == 1
+        assert result["deviations"][0]["action"] == "skip_dor"
+        assert result["deviations"][0]["reason"] == "PO approved spike exploration"
+
+    @pytest.mark.asyncio
+    async def test_status_empty_deviations_list(self):
+        """Should return empty list when no deviations."""
+        await gcp_create_workitem(work_item_id="dev-status-2", work_items_dir=TEST_WORKITEMS_DIR)
+        
+        result = await gcp_status(
+            work_item_id="dev-status-2",
+            work_items_dir=TEST_WORKITEMS_DIR
+        )
+        
+        assert "deviations" in result
+        assert result["deviations"] == []
+
+    @pytest.mark.asyncio
+    async def test_status_deviation_has_required_fields(self):
+        """Should include id, action, reason, timestamp, consumed."""
+        from golazo_copilot.tools.gcp_consent import gcp_consent
+        
+        await gcp_create_workitem(work_item_id="dev-status-3", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_consent(
+            work_item_id="dev-status-3",
+            action="skip_role",
+            reason="Work already implemented - syncing state",
+            work_items_dir=TEST_WORKITEMS_DIR
+        )
+        
+        result = await gcp_status(
+            work_item_id="dev-status-3",
+            work_items_dir=TEST_WORKITEMS_DIR
+        )
+        
+        deviation = result["deviations"][0]
+        assert "id" in deviation
+        assert "action" in deviation
+        assert "reason" in deviation
+        assert "timestamp" in deviation
+        assert "consumed" in deviation

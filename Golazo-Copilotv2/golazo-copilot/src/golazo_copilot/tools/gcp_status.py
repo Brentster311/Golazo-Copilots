@@ -49,6 +49,18 @@ async def gcp_status(
     # Generate next steps
     next_steps = _generate_next_steps(state, dor_complete, dod_complete, dor_missing)
     
+    # Build deviations list
+    deviations = [
+        {
+            "id": d.id,
+            "action": d.action,
+            "reason": d.reason,
+            "timestamp": d.timestamp.isoformat(),
+            "consumed": d.consumed,
+        }
+        for d in state.deviations
+    ]
+    
     return {
         "active": True,
         "version": __version__,
@@ -66,6 +78,7 @@ async def gcp_status(
             "items": dict(state.dod),
             "missing": dod_missing,
         },
+        "deviations": deviations,
         "role_instructions": role_instructions,
         "next_steps": next_steps,
     }
