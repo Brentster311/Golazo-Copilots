@@ -1,6 +1,6 @@
 # SFI-008: Full S360 Data Parity with Clickable Hyperlinks
 
-**Status**: IN PROGRESS
+**Status**: IMPLEMENTED
 
 ## User Story
 
