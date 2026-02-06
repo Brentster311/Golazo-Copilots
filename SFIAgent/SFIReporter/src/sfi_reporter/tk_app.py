@@ -1,5 +1,6 @@
 """Tkinter desktop app for SFI Reporter."""
 import json
+import logging
 import re
 import threading
 import tkinter as tk
@@ -15,6 +16,9 @@ from sfi_reporter.cache import (
     clear_cache,
 )
 from sfi_reporter.data import get_current_user_alias
+from sfi_reporter.logging_config import setup_logging, get_log_path, patch_subprocess_windows
+
+logger = logging.getLogger(__name__)
 
 
 # Regex patterns for URL extraction
@@ -711,10 +715,9 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
         write_cache(user_alias, data)
         return data
     except Exception as e:
+        logger.exception("Error fetching data for user")
         if on_status:
             on_status(f"Error: {e}")
-        import traceback
-        traceback.print_exc()
         return None
 
 
@@ -2012,6 +2015,10 @@ class SFIReporterApp:
 
 def main():
     """Main entry point."""
+    setup_logging()
+    patch_subprocess_windows()
+    logger.info("SFI Reporter starting — log file: %s", get_log_path())
+
     root = tk.Tk()
     
     # Set theme
