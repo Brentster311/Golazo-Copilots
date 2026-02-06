@@ -587,7 +587,11 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
                 kpi_names[kpi_id] = kpi.get('KpiName', 'Unknown')
         
         # Fetch ALL detailed action items (includes S360_ProgramIds per item)
-        detailed_items = get_detailed_action_items(audience_ids, kpi_ids, on_status, kpi_names)
+        detailed_items, failed_kpis = get_detailed_action_items(audience_ids, kpi_ids, on_status, kpi_names)
+        
+        if failed_kpis and on_status:
+            names = [f['kpi_name'] for f in failed_kpis]
+            on_status(f"⚠️ {len(failed_kpis)} KPI(s) failed: {', '.join(names)}")
         
         if on_status:
             on_status(f"Processing {len(detailed_items)} action items...")
@@ -709,6 +713,9 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
             'service_owners': service_owners,
             'org_mapping': org_mapping,  # Maps owner -> direct-report-level ancestor
             'programs_lookup': program_names,  # Save program name lookup for cache reload
+            'failed_kpis': failed_kpis,  # KPIs that failed during fetch
+            'audience_ids': audience_ids,  # Needed for retry
+            'kpi_names': kpi_names,  # Needed for retry
             'timestamp': datetime.now().isoformat(),
         }
         
@@ -1537,6 +1544,14 @@ class SFIReporterApp:
         self.clear_btn = ttk.Button(controls_frame, text="🗑️ Clear Cache", command=self._on_clear_cache)
         self.clear_btn.pack(side=tk.LEFT, padx=5)
         
+        self.retry_btn = ttk.Button(controls_frame, text="🔁 Retry Failed KPIs", command=self._on_retry_failed)
+        # Hidden until there are failures
+        
+        # State for retry
+        self._failed_kpis: list[dict] = []
+        self._audience_ids: list[str] = []
+        self._kpi_names: dict = {}
+        
         # Status frame
         status_frame = ttk.Frame(main_frame)
         status_frame.pack(fill=tk.X, pady=5)
@@ -1985,17 +2000,133 @@ class SFIReporterApp:
         
         if data:
             self._update_tables(data)
-            services = data.get('services', [])
-            detailed_items = data.get('detailed_items', [])
-            kpi_stats = data.get('kpi_stats', {})
-            # Check if we have any data (services, detailed items, or KPI stats)
-            has_data = bool(services or detailed_items or kpi_stats)
-            if not has_data:
-                self._update_status("⚠️ No action items found for this user", "orange")
+            
+            # Track failed KPIs for retry
+            failed = data.get('failed_kpis', [])
+            self._failed_kpis = failed
+            self._audience_ids = data.get('audience_ids', [])
+            self._kpi_names = data.get('kpi_names', {})
+            
+            if failed:
+                self.retry_btn.pack(side=tk.LEFT, padx=5)
+                names = [f['kpi_name'] for f in failed]
+                self._update_status(
+                    f"⚠️ {len(failed)} KPI(s) failed: {', '.join(names)}", "orange"
+                )
             else:
-                self._update_status("✅ Data refreshed!", "green")
+                self.retry_btn.pack_forget()
+                services = data.get('services', [])
+                detailed_items = data.get('detailed_items', [])
+                kpi_stats = data.get('kpi_stats', {})
+                has_data = bool(services or detailed_items or kpi_stats)
+                if not has_data:
+                    self._update_status("⚠️ No action items found for this user", "orange")
+                else:
+                    self._update_status("✅ Data refreshed!", "green")
         else:
+            self.retry_btn.pack_forget()
             self._update_status("❌ Error fetching data", "red")
+    
+    def _on_retry_failed(self):
+        """Retry only the KPIs that failed on the last refresh."""
+        if not self._failed_kpis or not self._audience_ids:
+            return
+        
+        failed_ids = [f['kpi_id'] for f in self._failed_kpis]
+        logger.info("Retrying %d failed KPIs: %s", len(failed_ids),
+                    [f['kpi_name'] for f in self._failed_kpis])
+        
+        self.refresh_btn.configure(state=tk.DISABLED)
+        self.clear_btn.configure(state=tk.DISABLED)
+        self.retry_btn.configure(state=tk.DISABLED)
+        self._update_status(f"Retrying {len(failed_ids)} failed KPI(s)...", "blue")
+        
+        audience_ids = self._audience_ids
+        kpi_names = self._kpi_names
+        alias = self.alias_var.get().strip()
+        
+        def retry_in_background():
+            from sfi_reporter.data import get_detailed_action_items, is_invalid_eta
+            from datetime import datetime
+            
+            def on_status(msg):
+                self._update_status(msg, "blue")
+            
+            new_rows, still_failed = get_detailed_action_items(
+                audience_ids, failed_ids, on_status, kpi_names
+            )
+            
+            # Merge new rows into the existing cached data
+            self.root.after(0, lambda: self._on_retry_complete(new_rows, still_failed, alias))
+        
+        threading.Thread(target=retry_in_background, daemon=True).start()
+    
+    def _on_retry_complete(self, new_rows: list, still_failed: list, alias: str):
+        """Handle retry completion — merge new rows into cached data and re-render."""
+        from sfi_reporter.data import is_invalid_eta
+        from datetime import datetime
+        
+        self.refresh_btn.configure(state=tk.NORMAL)
+        self.clear_btn.configure(state=tk.NORMAL)
+        self.retry_btn.configure(state=tk.NORMAL)
+        
+        if not new_rows and still_failed:
+            # Everything still failed
+            self._failed_kpis = still_failed
+            names = [f['kpi_name'] for f in still_failed]
+            self._update_status(
+                f"❌ Retry failed — {len(still_failed)} KPI(s) still failing: {', '.join(names)}",
+                "red"
+            )
+            return
+        
+        # Read current cache and merge in the new rows
+        cached = read_cache(alias)
+        if not cached:
+            self._update_status("❌ Cache missing — do a full refresh", "red")
+            return
+        
+        existing_items = cached.get('detailed_items', [])
+        existing_items.extend(new_rows)
+        cached['detailed_items'] = existing_items
+        
+        # Recompute stats for newly added KPIs
+        kpi_stats = cached.get('kpi_stats', {})
+        kpi_names = cached.get('kpi_names', self._kpi_names)
+        for row in new_rows:
+            kpi_id = row.get('_kpi_id', 'Unknown')
+            sla_type = row.get('SlaType', '')
+            eta_date = row.get('EtaDate')
+            if kpi_id not in kpi_stats:
+                kpi_stats[kpi_id] = {'name': kpi_names.get(kpi_id, kpi_id), 'count': 0, 'sla': 0, 'invalid_eta': 0}
+            kpi_stats[kpi_id]['count'] += 1
+            if sla_type == 'OutOfSla':
+                kpi_stats[kpi_id]['sla'] += 1
+            if is_invalid_eta(eta_date):
+                kpi_stats[kpi_id]['invalid_eta'] += 1
+        
+        cached['kpi_stats'] = kpi_stats
+        cached['failed_kpis'] = still_failed
+        cached['timestamp'] = datetime.now().isoformat()
+        
+        write_cache(alias, cached)
+        self._update_tables(cached)
+        
+        self._failed_kpis = still_failed
+        self._audience_ids = cached.get('audience_ids', self._audience_ids)
+        
+        if still_failed:
+            self.retry_btn.pack(side=tk.LEFT, padx=5)
+            names = [f['kpi_name'] for f in still_failed]
+            self._update_status(
+                f"✅ Recovered {len(new_rows)} items — ⚠️ {len(still_failed)} KPI(s) still failing: {', '.join(names)}",
+                "orange"
+            )
+        else:
+            self.retry_btn.pack_forget()
+            self._update_status(
+                f"✅ Retry successful — recovered {len(new_rows)} items!", "green"
+            )
     
     def _on_clear_cache(self):
         """Handle clear cache button click."""
