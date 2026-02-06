@@ -1547,6 +1547,9 @@ class SFIReporterApp:
         self.retry_btn = ttk.Button(controls_frame, text="🔁 Retry Failed KPIs", command=self._on_retry_failed)
         # Hidden until there are failures
         
+        self.query_btn = ttk.Button(controls_frame, text="🔍 Query", command=self._on_query, state="disabled")
+        self.query_btn.pack(side=tk.LEFT, padx=5)
+        
         # State for retry
         self._failed_kpis: list[dict] = []
         self._audience_ids: list[str] = []
@@ -1691,6 +1694,10 @@ class SFIReporterApp:
     def _update_tables(self, data: dict):
         """Update tables with data."""
         self.current_data = data
+        
+        # Enable query button now that data is loaded
+        if data.get('action_items'):
+            self.query_btn.configure(state="normal")
         
         # Clear existing rows and mappings
         for item in self.services_tree.get_children():
@@ -2142,6 +2149,24 @@ class SFIReporterApp:
             
             self.cache_age_var.set("")
             self._update_status("Cache cleared", "blue")
+
+    def _on_query(self):
+        """Open the query builder window."""
+        from sfi_reporter.query_builder import QueryBuilder
+
+        action_items = self.current_data.get('action_items', [])
+        program_names = self.current_data.get('program_names', {})
+        service_names = {
+            s.get('Id', ''): s.get('Name', '')
+            for s in self.current_data.get('services', [])
+        }
+
+        QueryBuilder(
+            self.root,
+            action_items=action_items,
+            program_names=program_names,
+            service_names=service_names,
+        )
 
 
 def main():
