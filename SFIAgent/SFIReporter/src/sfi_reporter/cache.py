@@ -3,10 +3,13 @@
 Provides JSON file-based caching with 1-hour expiration.
 """
 import json
+import logging
 import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 
 CACHE_EXPIRATION_HOURS = 1
@@ -145,8 +148,8 @@ def clear_cache(user_alias: str, cache_dir: Optional[Path] = None) -> bool:
         if column_cache_path.exists():
             column_cache_path.unlink()
             cleared = True
-            print("[DEBUG] Cleared column metadata cache")
+            logger.info("Cleared column metadata cache")
     except (ImportError, OSError) as e:
-        print(f"[DEBUG] Could not clear column cache: {e}")
+        logger.warning("Could not clear column cache: %s", e)
     
     return cleared
