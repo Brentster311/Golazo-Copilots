@@ -1,5 +1,7 @@
 # GCP-0010: Bootstrap Command for Copilot Instructions
 
+**Status**: IMPLEMENTED
+
 ## User Story
 
 **As a** developer setting up Golazo Copilot in a new repository,  

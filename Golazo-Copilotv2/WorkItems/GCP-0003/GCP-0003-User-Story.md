@@ -1,5 +1,7 @@
 # GCP-0003: DoR/DoD Checklist Management
 
+**Status**: IMPLEMENTED
+
 ## User Story
 
 **As a** developer using Golazo Copilot,  

@@ -1,6 +1,6 @@
 # GCP-0013: Add Version Interface to Server
 
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 ---
 
@@ -10,6 +10,10 @@
 - **As a**: Developer using Golazo Copilot
 - **I want**: To query the installed version of golazo-copilot via MCP
 - **So that**: I can verify which version is running and troubleshoot version-related issues
+
+## Implementation Note
+
+Version is exposed via the **server name** (`golazo-copilot v2.8.0`) rather than a separate tool. This is visible when users ask Copilot "What MCP tools do you have?" - the server name includes the version.
 
 ---
 
