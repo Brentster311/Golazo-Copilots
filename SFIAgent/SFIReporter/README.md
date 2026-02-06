@@ -33,6 +33,7 @@ streamlit run src/sfi_reporter/app.py
 - Shows all SFI/QEI action items for your services
 - Local caching for fast load times
 - Color-coded cache age indicator
+- **Detail modal color indicators**: Section headers use colored circle emojis (🔴 Status, 🔵 Dates, 🟣 Ownership, ⚫ Service & Program)
 - **Column toggle**: Customize visible columns in drill-down views via "Columns" button
 - **Empty column indicators**: Column picker shows "(empty)" suffix for columns with no data
 - **KPI failure notification**: Orange warning when individual KPI fetches fail, with failed KPI names listed
