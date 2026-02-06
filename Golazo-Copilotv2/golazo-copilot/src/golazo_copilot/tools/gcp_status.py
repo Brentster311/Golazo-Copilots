@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from .. import __version__
 from ..core.persistence import load_state, work_item_exists, DEFAULT_WORKITEMS_DIR
 from ..core.checklists import get_missing_items, is_checklist_complete
 from ..roles.loader import load_role_instructions
@@ -28,6 +29,7 @@ async def gcp_status(
         return {
             "active": False,
             "message": f"No active work item '{work_item_id}'. Use gcp_init to start.",
+            "version": __version__,
         }
     
     # Load state
@@ -49,6 +51,7 @@ async def gcp_status(
     
     return {
         "active": True,
+        "version": __version__,
         "work_item_id": state.work_item_id,
         "profile": state.profile,
         "current_phase": state.current_phase,
