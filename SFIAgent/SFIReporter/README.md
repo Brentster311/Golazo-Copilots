@@ -35,6 +35,9 @@ streamlit run src/sfi_reporter/app.py
 - Color-coded cache age indicator
 - **Column toggle**: Customize visible columns in drill-down views via "Columns" button
 - **Empty column indicators**: Column picker shows "(empty)" suffix for columns with no data
+- **KPI failure notification**: Orange warning when individual KPI fetches fail, with failed KPI names listed
+- **Retry failed KPIs**: One-click retry for just the failed KPIs — recovered items merge into existing data
+- **Diagnostic logging**: Rotating log file at `%TEMP%\sfireporter\sfi_reporter.log` (DEBUG+)
 
 ## Requirements
 
