@@ -305,7 +305,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             
             next_steps = "\n".join(f"- {step}" for step in result["next_steps"])
             
-            content = f"""**Golazo Status**
+            content = f"""**Golazo Status** (v{result['version']})
 - Work Item: {result['work_item_id']}
 - Current Role: **{result['current_role']}**
 - Phase: {result['current_phase']}
@@ -319,7 +319,8 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 {result['role_instructions']}
 """
         else:
-            content = f"{ICON_WARN} {result.get('message', 'No active work item')}"
+            version_info = f" (v{result.get('version', 'unknown')})" if 'version' in result else ""
+            content = f"{ICON_WARN}{version_info} {result.get('message', 'No active work item')}"
         
         return [TextContent(type="text", text=content)]
     
