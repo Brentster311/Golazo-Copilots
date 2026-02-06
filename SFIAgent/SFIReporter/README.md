@@ -37,6 +37,7 @@ streamlit run src/sfi_reporter/app.py
 - **Empty column indicators**: Column picker shows "(empty)" suffix for columns with no data
 - **KPI failure notification**: Orange warning when individual KPI fetches fail, with failed KPI names listed
 - **Retry failed KPIs**: One-click retry for just the failed KPIs — recovered items merge into existing data
+- **Query Builder**: Ad-hoc clause-based query builder (🔍 Query button) — filter by any field with And/Or logic, date expressions like `@Today - 7`, auto-excludes USSec Shadow items, results grouped by program with drill-down. Query clauses persist across sessions.
 - **Diagnostic logging**: Rotating log file at `%TEMP%\sfireporter\sfi_reporter.log` (DEBUG+)
 
 ## Requirements
