@@ -1,6 +1,6 @@
 # SFI-007: Action Item Full Details View
 
-**Status**: IN PROGRESS
+**Status**: IMPLEMENTED
 
 ## User Story
 

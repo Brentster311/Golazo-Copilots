@@ -1,6 +1,6 @@
 # SFI-002: Package s360_client as accia-s360 for Azure Artifacts
 
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 ## User Story
 

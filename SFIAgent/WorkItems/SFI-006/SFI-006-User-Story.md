@@ -1,6 +1,6 @@
 # SFI-006: Double-Click Drill-Down Details
 
-**Status**: IN PROGRESS
+**Status**: IMPLEMENTED
 
 ## User Story
 
