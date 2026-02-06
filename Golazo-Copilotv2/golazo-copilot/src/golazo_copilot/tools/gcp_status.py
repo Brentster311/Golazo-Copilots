@@ -6,6 +6,7 @@ from .. import __version__
 from ..core.persistence import load_state, work_item_exists, DEFAULT_WORKITEMS_DIR
 from ..core.checklists import get_missing_items, is_checklist_complete
 from ..roles.loader import load_role_instructions
+from .gcp_transition import get_role_notes_path
 
 
 async def gcp_status(
@@ -61,6 +62,17 @@ async def gcp_status(
         for d in state.deviations
     ]
     
+    # Check for missing role notes (completed roles only)
+    missing_notes = []
+    seen_roles = set()
+    for entry in state.role_history:
+        if entry.exited_at is not None:  # Role has been exited (completed)
+            if entry.role not in seen_roles:
+                notes_path = get_role_notes_path(work_item_id, entry.role, work_items_dir)
+                if not notes_path.exists():
+                    missing_notes.append(entry.role)
+                seen_roles.add(entry.role)
+    
     return {
         "active": True,
         "version": __version__,
@@ -79,6 +91,7 @@ async def gcp_status(
             "missing": dod_missing,
         },
         "deviations": deviations,
+        "missing_notes": missing_notes,
         "role_instructions": role_instructions,
         "next_steps": next_steps,
     }

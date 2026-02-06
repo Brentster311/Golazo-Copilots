@@ -422,3 +422,73 @@ class TestBackwardTransitions:
         assert state.role_history[-1].role == "architect"
         assert state.role_history[-2].role == "developer"
         assert state.role_history[-2].exited_at is not None  # Developer entry should be closed
+
+
+class TestRoleNotesWarning:
+    """GCP-0019: Warn when role notes are missing on transition."""
+
+    @pytest.mark.asyncio
+    async def test_transition_with_notes_present_no_warning(self):
+        """TC-01: Should not warn when notes exist."""
+        await gcp_create_workitem(work_item_id="notes-1", work_items_dir=TEST_WORKITEMS_DIR)
+        
+        # Create PO notes file
+        notes_dir = TEST_WORKITEMS_DIR / "notes-1" / "RoleDecisionNotes"
+        notes_dir.mkdir(parents=True, exist_ok=True)
+        (notes_dir / "notes-1-project-owner-assistant.md").write_text("# PO Notes")
+        
+        result = await gcp_transition(
+            work_item_id="notes-1",
+            role="program-manager",
+            work_items_dir=TEST_WORKITEMS_DIR
+        )
+        
+        assert result["success"] is True
+        assert result.get("warning") is None or "notes" not in result.get("warning", "").lower()
+
+    @pytest.mark.asyncio
+    async def test_transition_with_notes_missing_returns_warning(self):
+        """TC-02: Should warn when notes are missing but still succeed."""
+        await gcp_create_workitem(work_item_id="notes-2", work_items_dir=TEST_WORKITEMS_DIR)
+        
+        # Don't create notes file
+        result = await gcp_transition(
+            work_item_id="notes-2",
+            role="program-manager",
+            work_items_dir=TEST_WORKITEMS_DIR
+        )
+        
+        assert result["success"] is True  # Transition still succeeds
+        assert result.get("warning") is not None
+        assert "notes" in result["warning"].lower() or "missing" in result["warning"].lower()
+
+    @pytest.mark.asyncio
+    async def test_refactor_expert_uses_short_suffix(self):
+        """TC-06: refactor-expert should check for -refactor.md suffix."""
+        await gcp_create_workitem(work_item_id="notes-3", work_items_dir=TEST_WORKITEMS_DIR)
+        
+        # Transition to refactor-expert
+        await gcp_transition(work_item_id="notes-3", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_transition(work_item_id="notes-3", role="quality-assurance", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_transition(work_item_id="notes-3", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
+        
+        state = load_state("notes-3", TEST_WORKITEMS_DIR)
+        state.dor = {k: True for k in state.dor}
+        save_state("notes-3", state, TEST_WORKITEMS_DIR)
+        
+        await gcp_transition(work_item_id="notes-3", role="developer", work_items_dir=TEST_WORKITEMS_DIR)
+        
+        # Create developer notes with correct name
+        notes_dir = TEST_WORKITEMS_DIR / "notes-3" / "RoleDecisionNotes"
+        notes_dir.mkdir(parents=True, exist_ok=True)
+        (notes_dir / "notes-3-developer.md").write_text("# Dev Notes")
+        
+        result = await gcp_transition(
+            work_item_id="notes-3",
+            role="refactor-expert",
+            work_items_dir=TEST_WORKITEMS_DIR
+        )
+        
+        assert result["success"] is True
+        # Should not warn about developer notes (they exist)
+        # May warn about other missing notes

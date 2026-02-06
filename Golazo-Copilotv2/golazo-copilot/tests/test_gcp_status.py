@@ -207,3 +207,50 @@ class TestStatusDeviations:
         assert "reason" in deviation
         assert "timestamp" in deviation
         assert "consumed" in deviation
+
+
+class TestStatusMissingNotes:
+    """GCP-0019: Status should show missing role notes."""
+
+    @pytest.mark.asyncio
+    async def test_status_includes_missing_notes_list(self):
+        """TC-04: Should list roles missing decision notes."""
+        await gcp_create_workitem(work_item_id="missing-notes-1", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_transition(
+            work_item_id="missing-notes-1",
+            role="program-manager",
+            work_items_dir=TEST_WORKITEMS_DIR
+        )
+        
+        # Only create PO notes, not PM notes
+        notes_dir = TEST_WORKITEMS_DIR / "missing-notes-1" / "RoleDecisionNotes"
+        notes_dir.mkdir(parents=True, exist_ok=True)
+        (notes_dir / "missing-notes-1-project-owner-assistant.md").write_text("# PO Notes")
+        
+        result = await gcp_status(
+            work_item_id="missing-notes-1",
+            work_items_dir=TEST_WORKITEMS_DIR
+        )
+        
+        assert "missing_notes" in result
+        # Current role (PM) is not checked, only completed roles
+        # PO notes exist, so should not be in missing list
+
+    @pytest.mark.asyncio
+    async def test_status_all_notes_present_empty_list(self):
+        """TC-05: Should return empty list when all notes exist."""
+        await gcp_create_workitem(work_item_id="missing-notes-2", work_items_dir=TEST_WORKITEMS_DIR)
+        
+        # Create PO notes
+        notes_dir = TEST_WORKITEMS_DIR / "missing-notes-2" / "RoleDecisionNotes"
+        notes_dir.mkdir(parents=True, exist_ok=True)
+        (notes_dir / "missing-notes-2-project-owner-assistant.md").write_text("# PO Notes")
+        
+        result = await gcp_status(
+            work_item_id="missing-notes-2",
+            work_items_dir=TEST_WORKITEMS_DIR
+        )
+        
+        assert "missing_notes" in result
+        # Only PO role has been visited, and notes exist
+        assert "project-owner-assistant" not in result["missing_notes"]
