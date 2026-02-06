@@ -2,6 +2,12 @@
 
 A Model Context Protocol (MCP) server that brings **programmatic workflow enforcement** to GitHub Copilot. Golazo Copilot transforms the Golazo development methodology from markdown-based guidance into a system with:
 
+## What is Golazo?
+
+Golazo is a structured development methodology that ensures high-quality software delivery through role-based workflows, gates, and auditable artifacts. For a complete explanation of the Golazo methodology, see the [Golazo README](https://github.com/microsoft/golazo/blob/main/README.md).
+
+## Features
+
 - **Persistent state tracking** – Workflow progress is saved to `state.json` files, surviving session restarts
 - **Automated role transitions** – Enforce the correct sequence: Project Owner → Program Manager → QA → Architect → Developer → Refactor Expert → Builder → Documentor → Retrospective
 - **Definition of Ready (DoR) gates** – Block development work until user story, design doc, review comments, and test cases are complete
