@@ -1,5 +1,7 @@
 # GCP-0006: Multi-Session Support
 
+**Status**: IMPLEMENTED
+
 ## User Story
 
 **As a** developer working on multiple features,  

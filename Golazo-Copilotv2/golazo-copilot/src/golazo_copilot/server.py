@@ -6,6 +6,7 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
+from . import __version__
 from .tools.gcp_create_workitem import gcp_create_workitem
 from .tools.gcp_transition import gcp_transition
 from .tools.gcp_mark import gcp_mark_dor, gcp_mark_dod
@@ -13,8 +14,8 @@ from .tools.gcp_status import gcp_status
 from .tools.gcp_bootstrap import gcp_bootstrap
 from .tools.gcp_consent import gcp_consent
 
-# Create server instance
-server = Server("golazo-copilot")
+# Create server instance with version in name
+server = Server(f"golazo-copilot v{__version__}")
 
 # Status icons (using ASCII to avoid encoding issues)
 ICON_OK = "[OK]"

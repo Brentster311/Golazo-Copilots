@@ -1,5 +1,7 @@
 # GCP-0001: Initialize Work Item
 
+**Status**: IMPLEMENTED
+
 ## User Story
 
 **As a** developer using GitHub Copilot with Golazo Copilot installed,  
