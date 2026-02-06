@@ -18,8 +18,9 @@ pip install -e ".[dev]"
 ## Usage
 
 ```bash
-# Run the desktop app (Flet)
-python -m sfi_reporter.flet_app
+# Run the desktop app (Tkinter)
+sfi-reporter
+# or: python -m sfi_reporter.tk_app
 
 # Or run the web app (Streamlit) - requires [web] extra
 streamlit run src/sfi_reporter/app.py
