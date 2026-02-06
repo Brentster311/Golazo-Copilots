@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0",
+  "work_item_id": "GCP-0017",
+  "profile": "complete",
+  "current_phase": "development",
+  "current_role": "developer",
+  "created_at": "2026-02-06T22:54:52.081149Z",
+  "updated_at": "2026-02-06T23:06:33.901877Z",
+  "dor": {
+    "userStory": true,
+    "designDoc": false,
+    "reviewComments": false,
+    "testCases": false
+  },
+  "dod": {
+    "branchCreated": true,
+    "testsWrittenFirst": true,
+    "testsPass": true,
+    "buildPasses": true,
+    "docsUpdated": true,
+    "refactorComplete": true,
+    "committed": false
+  },
+  "role_history": [
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-02-06T22:54:52.081149Z",
+      "exited_at": "2026-02-06T23:04:17.952347Z"
+    },
+    {
+      "role": "program-manager",
+      "entered_at": "2026-02-06T23:04:17.952347Z",
+      "exited_at": "2026-02-06T23:04:23.324179Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-02-06T23:04:23.324179Z",
+      "exited_at": "2026-02-06T23:04:25.991162Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-02-06T23:04:25.991162Z",
+      "exited_at": "2026-02-06T23:04:28.687552Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-02-06T23:04:28.687552Z",
+      "exited_at": null
+    }
+  ],
+  "deviations": [
+    {
+      "id": "dev-001",
+      "action": "skip_dor",
+      "reason": "Documentation-only refactoring - moving existing content between files, no new functionality",
+      "role": "project-owner-assistant",
+      "timestamp": "2026-02-06T23:04:09.323131Z",
+      "consumed": true,
+      "consumed_at": "2026-02-06T23:04:28.687526Z"
+    },
+    {
+      "id": "dev-002",
+      "action": "skip_role",
+      "reason": "Documentation-only refactoring - skipping PM/QA/Architect for file content reorganization",
+      "role": "project-owner-assistant",
+      "timestamp": "2026-02-06T23:04:15.320553Z",
+      "consumed": false,
+      "consumed_at": null
+    }
+  ]
+}
