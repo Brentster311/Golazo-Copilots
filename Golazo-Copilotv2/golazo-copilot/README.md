@@ -15,6 +15,7 @@ Golazo is a structured development methodology that ensures high-quality softwar
 - **Multi-session support** – Switch between work items while preserving context
 - **Workflow profiles** – Choose `complete`, `express`, or `spike` modes based on task complexity
 - **Deviation recording** – Audit trail when gates are bypassed with justification
+- **Role notes enforcement** – Warns when role decision notes are missing on transition
 
 ### Feature Details
 
@@ -84,6 +85,14 @@ When you need to bypass a gate (e.g., skip DoR to explore a spike), the system:
 2. Records the action, reason, timestamp, and current role
 3. Stores deviations in the work item's `state.json`
 4. Enables retrospective review of process deviations
+
+#### Role Notes Enforcement
+The Golazo workflow requires every role to produce a decision notes document. The system enforces this by:
+1. **Warning on transition** – When you transition away from a role, `gcp_transition` checks if decision notes exist for that role. If missing, a warning is returned (transition still succeeds).
+2. **Status visibility** – `gcp_status` includes a `missing_notes` list showing which completed roles lack decision notes.
+3. **Expected file naming** – Notes should be at `WorkItems/<id>/RoleDecisionNotes/<id>-<role>.md`
+
+This ensures an audit trail of decisions made at each workflow stage.
 
 ## Prerequisites
 
@@ -217,8 +226,8 @@ If it starts without errors (no output, waiting for input), the server is workin
 | Tool | Description |
 |------|-------------|
 | `gcp_create_workitem` | Initialize a new work item with persistent state tracking |
-| `gcp_status` | Get comprehensive workflow status for a work item |
-| `gcp_transition` | Move between workflow roles (enforces DoR gate) |
+| `gcp_status` | Get comprehensive workflow status, including missing role notes |
+| `gcp_transition` | Move between workflow roles (enforces DoR gate, warns on missing notes) |
 | `gcp_mark_dor` | Mark Definition of Ready items as complete |
 | `gcp_mark_dod` | Mark Definition of Done items as complete |
 | `gcp_consent` | Record consent for bypassing workflow gates |
