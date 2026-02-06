@@ -2,10 +2,10 @@
   "schema_version": "1.0",
   "work_item_id": "GCP-0016",
   "profile": "express",
-  "current_phase": "completion",
-  "current_role": "retrospective",
+  "current_phase": "definition",
+  "current_role": "architect",
   "created_at": "2026-02-06T18:25:24.933086Z",
-  "updated_at": "2026-02-06T19:08:37.588435Z",
+  "updated_at": "2026-02-06T19:12:59.736506Z",
   "dor": {
     "userStory": true,
     "designDoc": true,
@@ -65,6 +65,11 @@
     {
       "role": "retrospective",
       "entered_at": "2026-02-06T19:08:37.588435Z",
+      "exited_at": "2026-02-06T19:12:59.736506Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-02-06T19:12:59.736506Z",
       "exited_at": null
     }
   ],
