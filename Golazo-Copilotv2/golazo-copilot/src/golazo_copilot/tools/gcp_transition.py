@@ -17,6 +17,32 @@ from ..roles.loader import load_role_instructions
 from .gcp_consent import has_valid_consent, consume_consent
 
 
+# Role suffix mapping for notes files
+ROLE_SUFFIX_MAP = {
+    "project-owner-assistant": "project-owner-assistant",
+    "program-manager": "program-manager",
+    "quality-assurance": "quality-assurance",
+    "architect": "architect",
+    "developer": "developer",
+    "refactor-expert": "refactor",  # Shortened
+    "builder": "builder",
+    "documentor": "documentor",
+    "retrospective": "retrospective",
+}
+
+
+def get_role_notes_path(work_item_id: str, role: str, work_items_dir: Path) -> Path:
+    """Get the expected path for a role's decision notes file."""
+    suffix = ROLE_SUFFIX_MAP.get(role, role)
+    return work_items_dir / work_item_id / "RoleDecisionNotes" / f"{work_item_id}-{suffix}.md"
+
+
+def check_role_notes_exist(work_item_id: str, role: str, work_items_dir: Path) -> bool:
+    """Check if role decision notes file exists."""
+    notes_path = get_role_notes_path(work_item_id, role, work_items_dir)
+    return notes_path.exists()
+
+
 async def gcp_transition(
     work_item_id: str,
     role: str,
@@ -96,6 +122,14 @@ async def gcp_transition(
     warning = None
     if backward:
         warning = "Moving backward to rework. Previous progress preserved."
+    
+    # Check if outgoing role has decision notes (warn if missing)
+    if not check_role_notes_exist(work_item_id, current_role, work_items_dir):
+        notes_warning = f"Missing role notes for '{current_role}'"
+        if warning:
+            warning = f"{warning} {notes_warning}"
+        else:
+            warning = notes_warning
     
     # Update state
     now = datetime.now(timezone.utc)
