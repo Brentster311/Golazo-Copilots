@@ -2,6 +2,18 @@
 
 This workspace uses Golazo Copilot MCP server for workflow management.
 
+## FORBIDDEN ACTIONS (NEVER DO THESE)
+
+1. **NEVER edit `state.json` directly** - All state changes MUST go through `gcp_*` MCP tools. Editing state.json is a workflow violation that corrupts the work item.
+
+2. **NEVER bypass gates** - If `gcp_mark_dor` or `gcp_transition` fails, FIX THE ISSUE (e.g., provide required evidence). Do not work around it.
+
+3. **NEVER skip to Developer role** - You must complete all prior roles and DoR items first.
+
+4. **NEVER write production code without DoR complete** - If DoR is incomplete, you are in the wrong phase.
+
+---
+
 ## REQUIRED: Before EVERY Response
 1. Call `gcp_status(work_item_id="<current-id>")` to get current state
 2. Display the Golazo Status header

@@ -2,24 +2,68 @@
   "schema_version": "1.0",
   "work_item_id": "LLM-0004",
   "profile": "complete",
-  "current_phase": "definition",
-  "current_role": "program-manager",
+  "current_phase": "development",
+  "current_role": "developer",
   "created_at": "2026-02-07T23:19:32.204021Z",
-  "updated_at": "2026-02-07T23:22:00.142916Z",
+  "updated_at": "2026-02-07T23:33:09.870152Z",
   "dor": {
-    "userStory": true,
-    "designDoc": true,
-    "reviewComments": false,
-    "testCases": false
+    "userStory": {
+      "complete": true,
+      "evidence": null,
+      "validated_at": null
+    },
+    "designDoc": {
+      "complete": true,
+      "evidence": null,
+      "validated_at": null
+    },
+    "reviewComments": {
+      "complete": true,
+      "evidence": null,
+      "validated_at": null
+    },
+    "testCases": {
+      "complete": true,
+      "evidence": "WorkItems/LLM-0004/Design/LLM-0004-Test-Cases.md",
+      "validated_at": null
+    }
   },
   "dod": {
-    "branchCreated": false,
-    "testsWrittenFirst": false,
-    "testsPass": false,
-    "buildPasses": false,
-    "docsUpdated": false,
-    "refactorComplete": false,
-    "committed": false
+    "branchCreated": {
+      "complete": false,
+      "evidence": null,
+      "validated_at": null
+    },
+    "testsWrittenFirst": {
+      "complete": false,
+      "evidence": null,
+      "validated_at": null
+    },
+    "testsPass": {
+      "complete": false,
+      "evidence": null,
+      "validated_at": null
+    },
+    "buildPasses": {
+      "complete": false,
+      "evidence": null,
+      "validated_at": null
+    },
+    "docsUpdated": {
+      "complete": false,
+      "evidence": null,
+      "validated_at": null
+    },
+    "refactorComplete": {
+      "complete": false,
+      "evidence": null,
+      "validated_at": null
+    },
+    "committed": {
+      "complete": false,
+      "evidence": null,
+      "validated_at": null
+    }
   },
   "role_history": [
     {
@@ -30,6 +74,21 @@
     {
       "role": "program-manager",
       "entered_at": "2026-02-07T23:20:50.478189Z",
+      "exited_at": "2026-02-07T23:31:36.278255Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-02-07T23:31:36.278255Z",
+      "exited_at": "2026-02-07T23:32:39.467786Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-02-07T23:32:39.467786Z",
+      "exited_at": "2026-02-07T23:33:09.870152Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-02-07T23:33:09.870152Z",
       "exited_at": null
     }
   ],

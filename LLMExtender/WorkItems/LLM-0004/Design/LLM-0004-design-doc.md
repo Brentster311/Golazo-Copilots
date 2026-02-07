@@ -22,17 +22,22 @@ The `model` field will double as the Azure deployment name. This is semantically
 
 **Why not a separate `deployment` field?** The `model` field already serves as the "which model to talk to" selector. Adding a separate `deployment` field would mean two fields that both answer the same question for different providers. Reusing `model` keeps the config simple and the user's mental model consistent: "I set `model` to the thing I want to talk to."
 
-### 2. New Provider — `AzureOpenAIProvider`
+### 2. Extract `BaseOpenAIProvider` + New `AzureOpenAIProvider`
 
-A new class in `llm_extender/providers/azure_openai.py` that inherits from `LLMProvider` directly (not from `OpenAIProvider`).
+Extract shared behavior from `OpenAIProvider` into an abstract `BaseOpenAIProvider` in `llm_extender/providers/base_openai.py`. Both `OpenAIProvider` and `AzureOpenAIProvider` inherit from it.
 
-**Why not subclass `OpenAIProvider`?**
-- The URL construction is fundamentally different
-- Azure OpenAI doesn't require `model` in the request payload (it's implicit from the deployment)
-- Subclassing would mean overriding most methods, violating LSP
-- Composition via shared helpers would be premature — the classes are small
+**Shared in `BaseOpenAIProvider` (inherits `LLMProvider`):**
+- `__init__` — headers, timeout, sync client, lazy async client setup
+- `_check_response()` — HTTP error handling
+- `_extract_content()` — parse `choices[0].message.content`
+- `complete()` / `acomplete()` — orchestration: post → check → extract
+- `close()` / `aclose()` — client cleanup
 
-**Key differences from `OpenAIProvider`:**
+**Abstract (each subclass implements):**
+- `_get_url() -> str` — URL construction
+- `_build_payload(prompt) -> dict` — request body
+
+**Key differences between subclasses:**
 
 | Aspect | OpenAIProvider | AzureOpenAIProvider |
 |--------|---------------|-------------------|
@@ -42,7 +47,7 @@ A new class in `llm_extender/providers/azure_openai.py` that inherits from `LLMP
 | `api_version` required | No | Yes |
 | Auth header | `Authorization: Bearer {api_key}` | `Authorization: Bearer {token}` (same format) |
 
-**Shared behavior** (response parsing, error handling) will be duplicated rather than extracted. These are ~10 lines each and extracting a shared base would be premature abstraction for two providers.
+This keeps the subclasses thin (~15 lines each: `__init__`, `_get_url`, `_build_payload`) while the ~60 lines of HTTP plumbing, error handling, and response parsing live in one place.
 
 ### 3. Provider Registration
 
@@ -93,10 +98,13 @@ The `CallbackAuth.resolve()` returns the token string → `LLMClient` puts it in
 | File | Change |
 |------|--------|
 | `llm_extender/config.py` | Add `api_version: str \| None = None` field |
-| `llm_extender/providers/azure_openai.py` | New file — `AzureOpenAIProvider` class |
+| `llm_extender/providers/base_openai.py` | New file — `BaseOpenAIProvider` abstract class (extracted from `OpenAIProvider`) |
+| `llm_extender/providers/openai.py` | Slim down to subclass `BaseOpenAIProvider` (`__init__`, `_get_url`, `_build_payload`) |
+| `llm_extender/providers/azure_openai.py` | New file — `AzureOpenAIProvider` subclass of `BaseOpenAIProvider` |
 | `llm_extender/client.py` | Import + register `AzureOpenAIProvider` |
 | `llm_extender/__init__.py` | Export `AzureOpenAIProvider` |
-| `tests/test_azure_openai_provider.py` | New file — unit tests |
+| `tests/test_azure_openai_provider.py` | New file — unit tests for `AzureOpenAIProvider` |
+| `tests/test_openai_provider.py` | Verify existing tests still pass after refactor |
 
 ## Risks & Mitigations
 
