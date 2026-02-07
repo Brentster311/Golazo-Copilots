@@ -40,6 +40,18 @@ streamlit run src/sfi_reporter/app.py
 - **Retry failed KPIs**: One-click retry for just the failed KPIs — recovered items merge into existing data
 - **Filter**: Curated filter builder (\ud83d\udd0d Filter button) \u2014 filter by Service Name, Assigned To, Program, Action Owner, Due Date, ETA Date (+ Service Owner for managers). Apply filters the entire app; clauses persist across sessions.
 - **In-app Azure login**: Automatically uses `az login` session if available; otherwise opens a browser window for Microsoft login \u2014 no external scripts needed- **Update ETAs**: Bulk or manual update of invalid ETAs/statuses from the main screen (📋 Update ETAs button); individual ETA editing from the detail view (📅 Update ETA button)- **Diagnostic logging**: Rotating log file at `%TEMP%\sfireporter\sfi_reporter.log` (DEBUG+)
+- **🤖 Analyze with LLM**: Right-click any KPI row → "Analyze with LLM" sends action item data to Azure OpenAI for a structured analysis (Mission, Steps to Done, Resources Needing Repair, Risk of Delay). Results are saved to `%LOCALAPPDATA%\sfireporter\analyses\` for later review.
+
+## LLM Analysis Setup
+
+To use the "Analyze with LLM" feature, set these environment variables:
+
+```
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+AZURE_OPENAI_API_KEY=your-api-key
+AZURE_OPENAI_DEPLOYMENT=gpt-4o        (optional, defaults to gpt-4o)
+AZURE_OPENAI_API_VERSION=2024-10-21   (optional)
+```
 
 ## Requirements
 

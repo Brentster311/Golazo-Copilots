@@ -1,369 +1,217 @@
-# SFI-020 Design Document: Right-Click KPI Row → Analyze with LLM
+# SFI-020 Design Document
 
-**Work Item**: SFI-020  
-**Author**: Program Manager  
-**Date**: 2026-02-06  
-**Status**: DRAFT
+## Right-Click KPI Row → Analyze with LLM (Core)
 
----
-
-## 1. Overview
-
-Add a right-click context menu to KPI/Action Item treeviews in SFIReporter that sends action item data to Azure OpenAI for structured analysis. The LLM response is displayed in a modal and saved to disk as JSON under `%LOCALAPPDATA%`.
-
-### User Flow
-
-```
-User right-clicks KPI row → Context menu appears → "🤖 Analyze with LLM"
-  → Progress spinner modal → Background thread:
-      1. Look up action item data from _kpi_id_map + detailed_items
-      2. Build structured prompt
-      3. Call Azure OpenAI
-      4. Save response JSON to %LOCALAPPDATA%/sfireporter/analyses/
-      5. root.after(0, ...) → display AnalysisModal
-```
+| Field | Value |
+|-------|-------|
+| **Work Item** | SFI-020 |
+| **Author** | Program Manager (Golazo) |
+| **Status** | DRAFT |
+| **Date** | 2026-02-06 |
 
 ---
 
-## 2. Architecture
+## 1. Summary
 
-### 2.1 New Modules
-
-| Module | Path | Responsibility |
-|--------|------|----------------|
-| `llm_client.py` | `SFIReporter/src/sfi_reporter/llm_client.py` | Azure OpenAI wrapper: config, prompt building, API call |
-| `llm_storage.py` | `SFIReporter/src/sfi_reporter/llm_storage.py` | Save/load analysis JSON to `%LOCALAPPDATA%/sfireporter/analyses/` |
-
-### 2.2 Modified Modules
-
-| Module | Changes |
-|--------|---------|
-| `tk_app.py` | Add right-click bindings to `tree_kpis` + `DrillDownModal._tree`; add `AnalysisModal` class; add `_on_analyze_with_llm()` handler; add `_show_analysis_progress()` |
-| `pyproject.toml` | Add `openai>=1.0.0` dependency |
-
-### 2.3 Component Diagram
-
-```
-┌──────────────────────────────────────────────────────┐
-│  tk_app.py                                           │
-│  ┌──────────────┐   ┌───────────────┐                │
-│  │ SFIReporter   │   │ DrillDownModal │                │
-│  │ .tree_kpis    │   │ ._tree         │                │
-│  │ <Button-3> ──►│   │ <Button-3> ──►│                │
-│  └──────┬───────┘   └───────┬───────┘                │
-│         └────────┬──────────┘                        │
-│                  ▼                                    │
-│        _on_analyze_with_llm(item_data)               │
-│                  │                                    │
-│         ┌────────┴────────┐                          │
-│         │ threading.Thread │                          │
-│         └────────┬────────┘                          │
-│                  ▼                                    │
-│  ┌───────────────────────────┐                       │
-│  │ AnalysisProgressModal     │  (spinner/status)     │
-│  └───────────────────────────┘                       │
-│                  │ root.after(0, ...)                 │
-│                  ▼                                    │
-│  ┌───────────────────────────┐                       │
-│  │ AnalysisModal             │  (result display)     │
-│  └───────────────────────────┘                       │
-└──────────────────────────────────────────────────────┘
-              │                        │
-              ▼                        ▼
-┌──────────────────┐    ┌──────────────────────┐
-│  llm_client.py   │    │  llm_storage.py      │
-│  - LLMConfig     │    │  - save_analysis()   │
-│  - build_prompt()│    │  - load_analysis()   │
-│  - analyze_item()│    │  - get_analysis_path()│
-└──────────────────┘    └──────────────────────┘
-         │                         │
-         ▼                         ▼
-┌──────────────────┐    ┌──────────────────────┐
-│  Azure OpenAI    │    │  %LOCALAPPDATA%/     │
-│  (GPT-4o)        │    │  sfireporter/analyses│
-└──────────────────┘    └──────────────────────┘
-```
+Add a right-click "Analyze with LLM" option to KPI/Action Item rows in the SFIReporter desktop app. When triggered, the action item's structured data fields are sent to Azure OpenAI, which returns a structured analysis (Mission, Steps to Done, Resources Needing Repair, Risk of Delay). The result is displayed in a modal and automatically persisted as a JSON file under `%LOCALAPPDATA%`.
 
 ---
 
-## 3. Detailed Design
+## 2. Problem Statement
 
-### 3.1 Context Menu Binding
+SFI engineers must manually read through action item fields, follow links, and mentally synthesize what a KPI is asking, what steps are needed, which resources are affected, and how urgent it is. This is time-consuming and error-prone, especially across dozens of action items. There is no way to get a quick, structured summary of an action item's ask.
 
-**Pattern**: Follows tkinter `<Button-3>` convention. A `tk.Menu` is created on-demand at the click position.
+---
 
-**In `SFIReporterApp._build_ui()`:**
-```python
-self.tree_kpis.bind("<Button-3>", self._on_kpi_right_click)
-```
+## 3. Business Case
 
-**In `DrillDownModal.__init__()`:**
-```python
-self._tree.bind("<Button-3>", self._on_item_right_click)
-```
+| Dimension | Detail |
+|-----------|--------|
+| **Why now** | LLM APIs (Azure OpenAI) are stable and enterprise-approved; action item volume is growing |
+| **Impact** | Reduces per-item triage time from 5–15 min to ~30 sec |
+| **KPIs** | Analysis invocation count, avg response time, error rate |
+| **Revenue/Cost** | Azure OpenAI pay-per-token cost (~$0.005/analysis est.) |
 
-**Handler pattern:**
-```python
-def _on_kpi_right_click(self, event):
-    iid = self.tree_kpis.identify_row(event.y)
-    if not iid:
-        return
-    self.tree_kpis.selection_set(iid)
-    menu = tk.Menu(self.root, tearoff=0)
-    menu.add_command(
-        label="🤖 Analyze with LLM",
-        command=lambda: self._on_analyze_with_llm(iid),
-    )
-    menu.tk_popup(event.x_root, event.y_root)
-```
+---
 
-### 3.2 `llm_client.py` — LLM Integration
+## 4. Stakeholders
 
-#### Configuration
+| Role | Interest |
+|------|----------|
+| SFI Engineers | Primary users — need fast triage |
+| SFI Managers | Benefit from team using tool efficiently |
+| Security/Compliance | API key handling, data sent to LLM |
 
-```python
-@dataclass
-class LLMConfig:
-    endpoint: str       # AZURE_OPENAI_ENDPOINT env var
-    api_key: str        # AZURE_OPENAI_API_KEY env var
-    deployment: str     # AZURE_OPENAI_DEPLOYMENT env var (default: "gpt-4o")
-    api_version: str    # default: "2024-10-21"
-    timeout: int        # default: 30 seconds
+---
 
-    @classmethod
-    def from_env(cls) -> "LLMConfig":
-        """Load config from environment variables. Raises LLMConfigError if missing."""
-```
+## 5. Functional Requirements
 
-**Environment variables:**
+### FR-1: Right-Click Context Menu
+- Bind `<Button-3>` on `self.tree_kpis` (main KPI treeview) and on the treeview inside `DetailModal` (drill-down)
+- Show a `tk.Menu` with a single option: "🤖 Analyze with LLM"
+- Menu appears at the clicked row; the row is selected on right-click
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `AZURE_OPENAI_ENDPOINT` | Yes | — | Azure OpenAI resource endpoint |
-| `AZURE_OPENAI_API_KEY` | Yes | — | API key |
-| `AZURE_OPENAI_DEPLOYMENT` | No | `gpt-4o` | Deployment/model name |
-| `AZURE_OPENAI_API_VERSION` | No | `2024-10-21` | API version |
+### FR-2: LLM Integration
+- New module `sfi_reporter/llm_client.py`
+- `LLMConfig` dataclass for Azure OpenAI settings (endpoint, API key, deployment, API version) sourced from environment variables
+- `build_prompt(item: dict) → str` — constructs a structured prompt from action item fields
+- `analyze_item(item: dict, config: LLMConfig) → AnalysisResult` — calls Azure OpenAI Chat Completions API
+- `AnalysisResult` dataclass with fields: `mission`, `steps_to_done`, `resources_needing_repair`, `risk_of_delay`, `raw_response`, `timestamp`, `model`, `action_item_id`
 
-#### Prompt Construction
+### FR-3: Prompt Structure
+System prompt instructs the LLM to return four labeled sections:
+1. **Mission** — What is being asked
+2. **Steps to Done** — Concise numbered steps to remediate
+3. **Resources Needing Repair** — Specific resources/services affected
+4. **Risk of Delay** — Business impact of not acting
 
-`build_prompt(item: dict) -> list[dict]`
+Input data includes: title, status, SLA type, due date, ETA, owner, service name, service tree hierarchy, remediation text, clouds/environments, asset types.
 
-The system prompt instructs the LLM to produce a structured analysis with exactly four sections:
+### FR-4: Result Display
+- New `AnalysisModal(tk.Toplevel)` — displays the four sections with labeled headers
+- Scrollable text widget (consistent with `ItemDetailsModal` pattern)
+- Shows model name, timestamp, and action item title in the header
+- Copy-to-clipboard button for the full analysis text
 
-```
-You are an SFI (Security, Fundamentals, and Infrastructure) remediation analyst.
-Analyze the following action item data and produce a structured assessment.
-
-## Output Format (use these exact section headers):
-
-### 🎯 Mission
-What is being asked? Summarize the remediation objective in 2-3 sentences.
-
-### ✅ Steps to Done
-Provide a concise, numbered list of actionable steps to complete remediation.
-
-### 🔧 Resources Needing Repair
-List the specific resources, services, or assets that need attention.
-Include resource type, name/ID, and subscription if available.
-
-### ⚠️ Risk of Delay
-What are the consequences of not completing this on time?
-Consider SLA impact, compliance implications, and downstream effects.
-```
-
-The user message includes formatted action item data:
-- Title, KPI ID, Status, SLA Type, Due Date, ETA
-- Service tree (Division → Group → Organization → Service)
-- Ownership (Assigned To, Action Owner)
-- Remediation text, Details
-- Cloud/Environment info
-- Asset types and resource URIs
-
-#### API Call
-
-`analyze_item(item: dict, config: LLMConfig) -> AnalysisResult`
-
-Uses the `openai` Python SDK with Azure configuration:
-```python
-client = AzureOpenAI(
-    azure_endpoint=config.endpoint,
-    api_key=config.api_key,
-    api_version=config.api_version,
-)
-response = client.chat.completions.create(
-    model=config.deployment,
-    messages=build_prompt(item),
-    temperature=0.3,  # Low for factual analysis
-    max_tokens=2000,
-)
-```
-
-#### Return Type
-
-```python
-@dataclass
-class AnalysisResult:
-    action_item_id: str
-    kpi_id: str
-    title: str
-    analysis_text: str      # Raw LLM response (markdown)
-    mission: str             # Parsed section
-    steps_to_done: str       # Parsed section
-    resources: str           # Parsed section
-    risk_of_delay: str       # Parsed section
-    model: str               # Model used
-    timestamp: str           # ISO 8601
-    prompt_tokens: int
-    completion_tokens: int
-```
-
-### 3.3 `llm_storage.py` — Persistent Storage
-
-#### Storage Location
-
-```
-%LOCALAPPDATA%/sfireporter/analyses/<action_item_id>.json
-```
-
-Uses `%LOCALAPPDATA%` (durable) rather than `%TEMP%` (volatile), consistent with `s360_client` cache pattern.
-
-#### File Format
-
-```json
-{
+### FR-5: Persistent Storage
+- New module `sfi_reporter/llm_storage.py`
+- Save path: `%LOCALAPPDATA%/sfireporter/analyses/<action_item_id>.json`
+- JSON schema:
+  ```json
+  {
     "schema_version": 1,
-    "action_item_id": "AI-12345",
-    "kpi_id": "KPI-67890",
-    "title": "Remediate Azure SQL TDE encryption",
-    "analysis_text": "### 🎯 Mission\n...",
-    "mission": "...",
-    "steps_to_done": "...",
-    "resources": "...",
-    "risk_of_delay": "...",
+    "action_item_id": "...",
+    "action_item_title": "...",
+    "analysis": {
+      "mission": "...",
+      "steps_to_done": "...",
+      "resources_needing_repair": "...",
+      "risk_of_delay": "..."
+    },
     "model": "gpt-4o",
-    "timestamp": "2026-02-06T14:30:00Z",
-    "prompt_tokens": 450,
-    "completion_tokens": 800
-}
-```
+    "timestamp": "2026-02-06T12:00:00Z",
+    "raw_response": "..."
+  }
+  ```
+- Functions: `save_analysis(result: AnalysisResult)`, `load_analysis(action_item_id: str) → dict | None`, `analysis_exists(action_item_id: str) → bool`
 
-#### Functions
-
-```python
-def get_analyses_dir() -> Path:
-    """Return %LOCALAPPDATA%/sfireporter/analyses/, creating if needed."""
-
-def save_analysis(result: AnalysisResult) -> Path:
-    """Write analysis to JSON file. Returns the file path."""
-
-def load_analysis(action_item_id: str) -> AnalysisResult | None:
-    """Load analysis from disk. Returns None if not found or corrupted."""
-
-def analysis_exists(action_item_id: str) -> bool:
-    """Check if a saved analysis exists for this action item."""
-```
-
-#### Write Strategy
-
-Atomic write (write to `.tmp`, then `os.replace()`) — consistent with the column metadata cache pattern in `data.py`.
-
-### 3.4 `AnalysisModal` — Result Display
-
-Follows the `ItemDetailsModal` pattern:
-
-- `tk.Toplevel` with `transient()`, `grab_set()`
-- Scrollable `tk.Text` widget with tagged text
-- **Section headers** use emoji + bold tags (same pattern as detail modal's group headers)
-- **Sections**: 🎯 Mission, ✅ Steps to Done, 🔧 Resources Needing Repair, ⚠️ Risk of Delay
-- **Footer**: timestamp, model name, token usage
-- **Buttons**: "Close", "📋 Copy to Clipboard"
-- Read-only (`state=tk.DISABLED`)
-
-### 3.5 Progress Indication
-
-While the LLM call is in flight:
-- A small `tk.Toplevel` modal with a `ttk.Progressbar(mode='indeterminate')` and status label
-- Text updates: "Preparing analysis..." → "Calling Azure OpenAI..." → "Saving result..."
-- Modal is destroyed when analysis completes (success or error)
-- Follows the existing `_update_status` pattern for thread-safe UI updates via `root.after(0, ...)`
-
-### 3.6 Error Handling
-
-| Error | User Experience |
-|-------|----------------|
-| Missing env vars (`AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`) | `messagebox.showerror` with setup instructions |
-| Network timeout / API error | `messagebox.showerror` with error details |
-| Rate limited (429) | `messagebox.showwarning` with "Try again in a moment" |
-| LLM response unparseable | Show raw response in modal with warning banner |
-| File write failure | Show analysis in modal + log warning (best-effort save) |
-
-### 3.7 Threading Model
-
-```
-Main Thread                    Background Thread
-───────────                    ─────────────────
-_on_analyze_with_llm()
-  ├─ look up item data
-  ├─ show AnalysisProgressModal
-  ├─ Thread(target=_do_analysis).start()
-  │                            _do_analysis():
-  │                              ├─ LLMConfig.from_env()
-  │                              ├─ analyze_item(item, config)
-  │                              ├─ save_analysis(result)
-  │                              └─ root.after(0, _on_analysis_complete)
-  │
-_on_analysis_complete(result):
-  ├─ close AnalysisProgressModal
-  ├─ open AnalysisModal(result)
-  └─ (or show error if failed)
-```
+### FR-6: Background Threading
+- Follow the existing `_do_refresh` pattern: `threading.Thread(daemon=True)` + `root.after(0, callback)`
+- Show a progress modal (`AnalysisProgressModal`) with a message like "Analyzing action item…" and a pulsing progress bar
+- Disable the "Analyze with LLM" menu option while an analysis is in progress
 
 ---
 
-## 4. Dependencies
+## 6. Non-Functional Requirements
 
-### New Runtime Dependency
+| NFR | Target |
+|-----|--------|
+| **Latency** | LLM response < 30s |
+| **Security** | API key from env var only; never logged/displayed |
+| **Persistence** | Valid JSON; survives reboots (uses `%LOCALAPPDATA%`) |
+| **Compatibility** | Windows primary; Python ≥ 3.10 |
+| **Dependency** | `openai>=1.0.0` (already added to pyproject.toml) |
+| **Error handling** | Graceful degradation on LLM failure with user-visible error message |
 
-```toml
-dependencies = [
-    "accia-s360>=0.1.0",
-    "openai>=1.0.0",
-]
+---
+
+## 7. Proposed Approach (High Level)
+
+### New Files
+| File | Purpose |
+|------|---------|
+| `SFIReporter/src/sfi_reporter/llm_client.py` | LLMConfig, build_prompt, analyze_item, AnalysisResult |
+| `SFIReporter/src/sfi_reporter/llm_storage.py` | save_analysis, load_analysis, analysis_exists |
+
+### Modified Files
+| File | Changes |
+|------|---------|
+| `SFIReporter/src/sfi_reporter/tk_app.py` | Add `<Button-3>` bindings, AnalysisModal, AnalysisProgressModal, context menu handler, `_analyze_with_llm()` method |
+| `SFIReporter/pyproject.toml` | Add `openai>=1.0.0` dependency |
+
+### Architecture Flow
+```
+Right-click KPI row
+  → tk.Menu("Analyze with LLM")
+    → _analyze_with_llm(item_dict)
+      → Show AnalysisProgressModal
+      → threading.Thread:
+          → build_prompt(item)
+          → analyze_item(item, config)  # Azure OpenAI call
+          → save_analysis(result)       # Write to %LOCALAPPDATA%
+          → root.after(0, show_result)
+            → Close AnalysisProgressModal
+            → Open AnalysisModal(result)
 ```
 
-The `openai` package supports both OpenAI and Azure OpenAI via `AzureOpenAI` client. No additional Azure SDK needed.
-
-### PyInstaller Impact
-
-The `openai` package and its transitive deps (`httpx`, `pydantic`, etc.) must be included in the `.spec` file for the packaged build. This may increase the bundle size by ~5-10 MB.
-
----
-
-## 5. Security Considerations
-
-- API key read from environment variable only — never logged, never displayed in UI
-- `LLMConfig.__repr__` masks the API key: `api_key=****`
-- Action item data sent to Azure OpenAI stays within the Microsoft tenant (Azure OpenAI, not public OpenAI)
-- No PII beyond what's already in the action item data (aliases, service names)
+### Environment Variables
+| Variable | Purpose | Example |
+|----------|---------|---------|
+| `AZURE_OPENAI_ENDPOINT` | Azure OpenAI resource URL | `https://my-resource.openai.azure.com/` |
+| `AZURE_OPENAI_API_KEY` | API key | `sk-...` |
+| `AZURE_OPENAI_DEPLOYMENT` | Model deployment name | `gpt-4o` |
+| `AZURE_OPENAI_API_VERSION` | API version | `2024-02-15-preview` |
 
 ---
 
-## 6. Risks & Mitigations
+## 8. Alternatives Considered
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| LLM produces inaccurate analysis | User acts on wrong info | Include disclaimer footer: "AI-generated analysis — verify before acting" |
-| Token limit exceeded for large items | API error or truncated response | Truncate input data to ~3000 tokens; prioritize key fields |
-| Azure OpenAI endpoint changes | Feature breaks | Config via env vars makes endpoint easily updatable |
-| `openai` package bloats PyInstaller build | Larger installer | Monitor size; consider lazy import if needed |
-| Saved JSON format needs to evolve | Old files unreadable | `schema_version` field enables migration logic |
+| Alternative | Reason Rejected |
+|-------------|----------------|
+| Local LLM (Ollama/llama.cpp) | Larger footprint; not enterprise-standardized; inconsistent quality |
+| Sidebar panel instead of modal | More complex layout changes; modal is consistent with existing `ItemDetailsModal` pattern |
+| Store analyses in SQLite | Over-engineered for this use case; JSON files are simpler and consistent with existing `CacheManager` pattern |
+| Store analyses in `%TEMP%` | Volatile; user explicitly wants durability |
 
 ---
 
-## 7. Future Considerations (Out of Scope)
+## 9. Risks & Mitigations
 
-- **SFI-021**: URL content enrichment — adds a `url_content` field to the prompt
-- **SFI-022**: View saved analyses — adds "View Saved Analysis" to context menu
-- Version history for analyses
-- Configurable prompt templates
-- Streaming response display
+| Risk | Likelihood | Impact | Mitigation |
+|------|-----------|--------|------------|
+| Azure OpenAI rate limiting | Medium | Degraded UX | Show retry message; exponential backoff |
+| API key not configured | High (first run) | Feature unusable | Clear error message with setup instructions |
+| Token limit exceeded | Low | Truncated analysis | Limit prompt size; exclude low-value fields |
+| Azure OpenAI cost overrun | Low | Budget impact | Token usage is minimal per call (~$0.005) |
+
+---
+
+## 10. Dependencies
+
+| Dependency | Type | Notes |
+|------------|------|-------|
+| `openai>=1.0.0` | Python package | Azure OpenAI client |
+| Azure OpenAI resource | Cloud service | User must provision and configure |
+| Existing `detail_items` data | Internal | Action item dicts from `data.py` |
+
+---
+
+## 11. Migration / Rollout / Rollback
+
+| Phase | Action |
+|-------|--------|
+| **Rollout** | Feature is additive; ship with next SFIReporter build |
+| **Rollback** | Remove context menu bindings + new modules; saved JSONs are inert |
+| **Migration** | None — new feature, no existing data to migrate |
+
+---
+
+## 12. Observability Plan
+
+| Signal | How |
+|--------|-----|
+| Analysis invocations | Counter logged per session |
+| LLM response time | Logged per call (INFO level) |
+| Errors | Logged with tracebacks (ERROR level) |
+| Token usage | Logged per call from API response |
+
+---
+
+## 13. Test Strategy Summary
+
+| Test Type | Scope |
+|-----------|-------|
+| **Unit** | `build_prompt` output structure, `LLMConfig` from env vars, `save/load/exists` storage operations |
+| **Unit (mocked)** | `analyze_item` with mocked OpenAI client, error handling paths |
+| **Integration** | Right-click binding fires handler, handler passes correct item data, modal displays result |
+| **Manual** | End-to-end with live Azure OpenAI (smoke test) |

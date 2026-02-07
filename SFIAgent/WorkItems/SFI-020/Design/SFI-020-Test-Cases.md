@@ -1,225 +1,145 @@
-# SFI-020 Test Cases
+# SFI-020 — Test Cases
 
-**Work Item**: SFI-020  
-**Date**: 2026-02-06
+## Right-Click KPI Row → Analyze with LLM (Core)
 
----
-
-## Test Strategy
-
-- **Unit tests**: `llm_client.py` and `llm_storage.py` are fully testable with mocks (no GUI dependency).
-- **Integration tests**: `tk_app.py` context menu and modal can be tested with the existing `test_tk_app.py` pattern (mock tk root).
-- **All Azure OpenAI calls are mocked** — no real API calls in tests.
+| Author | Date | Mapped To |
+|--------|------|-----------|
+| QA (Golazo) | 2026-02-06 | SFI-020 Acceptance Criteria |
 
 ---
 
-## TC-1: LLM Config Loads from Environment Variables
+## Test Case Mapping to Acceptance Criteria
 
-**Module**: `llm_client.py`  
-**Function**: `LLMConfig.from_env()`
-
-| Step | Action | Expected |
-|------|--------|----------|
-| 1 | Set `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY` in env | Config object created with correct values |
-| 2 | Set `AZURE_OPENAI_DEPLOYMENT` to `"gpt-4o-mini"` | `config.deployment == "gpt-4o-mini"` |
-| 3 | Omit `AZURE_OPENAI_DEPLOYMENT` | `config.deployment == "gpt-4o"` (default) |
-
----
-
-## TC-2: LLM Config Raises on Missing Required Vars
-
-**Module**: `llm_client.py`  
-**Function**: `LLMConfig.from_env()`
-
-| Step | Action | Expected |
-|------|--------|----------|
-| 1 | Unset `AZURE_OPENAI_ENDPOINT` | `LLMConfigError` raised with helpful message |
-| 2 | Unset `AZURE_OPENAI_API_KEY` | `LLMConfigError` raised with helpful message |
+| AC# | Acceptance Criterion | Test Cases |
+|-----|---------------------|------------|
+| AC1 | Right-click shows context menu | TC-01, TC-02, TC-03 |
+| AC2 | LLM analysis displayed in modal | TC-04, TC-05, TC-06, TC-07 |
+| AC3 | Result saved to disk | TC-08, TC-09, TC-10 |
+| AC4 | UI remains responsive | TC-11, TC-12 |
+| AC5 | Error handling | TC-13, TC-14, TC-15, TC-16 |
 
 ---
 
-## TC-3: Prompt Builder Includes Key Action Item Fields
+## Group 1: Context Menu (AC1)
 
-**Module**: `llm_client.py`  
-**Function**: `build_prompt(item)`
+### TC-01: Right-click KPI row shows context menu
+- **Given**: SFIReporterApp is loaded with data; KPI treeview has rows
+- **When**: User right-clicks (`<Button-3>`) a KPI row in `tree_kpis`
+- **Then**: A context menu appears with "🤖 Analyze with LLM" option
+- **And**: The clicked row is selected (highlighted)
+- **Verify**: `tree.selection()` returns the right-clicked row's iid
 
-| Step | Action | Expected |
-|------|--------|----------|
-| 1 | Pass item dict with title, SLA, dates, ownership, remediation | System message contains structured instructions |
-| 2 | Verify user message | Contains title, SLA type, due date, assigned to, remediation text |
-| 3 | Pass item with empty `Remediation` field | Prompt still valid; field shown as "N/A" or omitted |
-| 4 | Pass item with very large `Remediation` text (>5000 chars) | Text is truncated to fit token budget |
+### TC-02: Right-click in DetailModal treeview shows context menu
+- **Given**: A `DetailModal` is open with action item rows
+- **When**: User right-clicks a row in the DetailModal's treeview
+- **Then**: Same context menu appears with "🤖 Analyze with LLM"
+- **And**: The clicked row is selected
 
----
-
-## TC-4: Prompt Builder Accepts Optional URL Content
-
-**Module**: `llm_client.py`  
-**Function**: `build_prompt(item, url_content=None)`
-
-| Step | Action | Expected |
-|------|--------|----------|
-| 1 | Call with `url_content=None` | Prompt has no URL content section |
-| 2 | Call with `url_content={"https://...": "page text"}` | Prompt includes URL content section (future SFI-021 use) |
+### TC-03: Right-click on empty space does NOT show context menu
+- **Given**: KPI treeview is visible with rows
+- **When**: User right-clicks on empty space below the last row
+- **Then**: No context menu appears
+- **Verify**: `tree.identify_row(event.y)` returns empty string → menu not posted
 
 ---
 
-## TC-5: Analyze Item Returns Structured Result
+## Group 2: LLM Analysis + Display (AC2)
 
-**Module**: `llm_client.py`  
-**Function**: `analyze_item(item, config)`  
-**Mocking**: Mock `AzureOpenAI.chat.completions.create`
+### TC-04: build_prompt produces structured prompt from item data
+- **Given**: A complete action item dict with all expected fields
+- **When**: `build_prompt(item)` is called
+- **Then**: Returns a string containing the item's title, status, SLA, dates, owner, service name, remediation text
+- **And**: The prompt instructs the LLM to return Mission, Steps to Done, Resources Needing Repair, Risk of Delay sections
 
-| Step | Action | Expected |
-|------|--------|----------|
-| 1 | Mock returns well-formed response with 4 sections | `AnalysisResult` has non-empty `mission`, `steps_to_done`, `resources`, `risk_of_delay` |
-| 2 | Verify `timestamp` is ISO 8601 format | Parseable datetime string |
-| 3 | Verify `prompt_tokens` and `completion_tokens` populated from response usage | Matches mocked usage values |
+### TC-05: build_prompt handles missing/None fields gracefully
+- **Given**: An action item dict with only `id` and `Title` fields (others missing or None)
+- **When**: `build_prompt(item)` is called
+- **Then**: Returns a valid prompt string without errors
+- **And**: Missing fields show as "N/A" or are omitted
 
----
+### TC-06: analyze_item returns structured AnalysisResult (mocked)
+- **Given**: A mocked Azure OpenAI client that returns a well-formatted response
+- **When**: `analyze_item(item, config)` is called
+- **Then**: Returns an `AnalysisResult` with `mission`, `steps_to_done`, `resources_needing_repair`, `risk_of_delay` populated
+- **And**: `timestamp` is set, `action_item_id` matches input
 
-## TC-6: Analyze Item Handles API Errors
-
-**Module**: `llm_client.py`  
-**Function**: `analyze_item(item, config)`
-
-| Step | Action | Expected |
-|------|--------|----------|
-| 1 | Mock raises `openai.APIConnectionError` | `LLMError` raised with "connection" context |
-| 2 | Mock raises `openai.RateLimitError` | `LLMError` raised with "rate limit" context |
-| 3 | Mock raises `openai.AuthenticationError` | `LLMError` raised with "authentication" context |
-| 4 | Mock returns response with no parseable sections | `AnalysisResult.analysis_text` has raw content; section fields are empty strings |
-
----
-
-## TC-7: Save Analysis Writes Valid JSON
-
-**Module**: `llm_storage.py`  
-**Function**: `save_analysis(result)`
-
-| Step | Action | Expected |
-|------|--------|----------|
-| 1 | Call with valid `AnalysisResult` | JSON file created at expected path |
-| 2 | Read the file back | Valid JSON with `schema_version`, `action_item_id`, `timestamp`, all section fields |
-| 3 | Call again with same `action_item_id` | File overwritten (not duplicated) |
+### TC-07: AnalysisModal displays all four sections
+- **Given**: An `AnalysisResult` with all four sections populated
+- **When**: `AnalysisModal` is opened with the result
+- **Then**: Modal displays labeled sections: Mission, Steps to Done, Resources Needing Repair, Risk of Delay
+- **And**: Action item title and timestamp are shown in the header
 
 ---
 
-## TC-8: Save Analysis Uses Atomic Write
+## Group 3: Persistent Storage (AC3)
 
-**Module**: `llm_storage.py`  
-**Function**: `save_analysis(result)`
+### TC-08: save_analysis writes valid JSON to correct path
+- **Given**: An `AnalysisResult` for action item "AI-12345"
+- **When**: `save_analysis(result)` is called
+- **Then**: A file exists at `<LOCALAPPDATA>/sfireporter/analyses/AI-12345.json`
+- **And**: File contains valid JSON with `schema_version`, `action_item_id`, `analysis`, `timestamp`
 
-| Step | Action | Expected |
-|------|--------|----------|
-| 1 | Mock `os.replace` to raise `OSError` | Original file (if any) is not corrupted; error propagated |
-| 2 | Verify `.tmp` file is written first | Temp file created before rename |
+### TC-09: load_analysis reads back saved data
+- **Given**: A saved analysis JSON file for "AI-12345"
+- **When**: `load_analysis("AI-12345")` is called
+- **Then**: Returns a dict matching the saved data
+- **And**: `analysis.mission`, `analysis.steps_to_done`, etc. are present
 
----
-
-## TC-9: Load Analysis Returns Saved Data
-
-**Module**: `llm_storage.py`  
-**Function**: `load_analysis(action_item_id)`
-
-| Step | Action | Expected |
-|------|--------|----------|
-| 1 | Save an analysis, then load it | Returns `AnalysisResult` matching saved data |
-| 2 | Load with non-existent `action_item_id` | Returns `None` |
-| 3 | Write corrupted JSON to analysis file, then load | Returns `None` (graceful failure) |
+### TC-10: analysis_exists returns correct boolean
+- **Given**: Analysis saved for "AI-12345" but NOT for "AI-99999"
+- **When**: `analysis_exists("AI-12345")` and `analysis_exists("AI-99999")` are called
+- **Then**: Returns `True` and `False` respectively
 
 ---
 
-## TC-10: Analysis Exists Check
+## Group 4: UI Responsiveness (AC4)
 
-**Module**: `llm_storage.py`  
-**Function**: `analysis_exists(action_item_id)`
+### TC-11: Analysis runs on background thread
+- **Given**: "Analyze with LLM" is triggered
+- **When**: The LLM call is in progress
+- **Then**: The call executes on a non-main thread (`threading.current_thread() != threading.main_thread()`)
+- **And**: The main thread (UI) is not blocked
 
-| Step | Action | Expected |
-|------|--------|----------|
-| 1 | No saved file | Returns `False` |
-| 2 | After saving analysis | Returns `True` |
-
----
-
-## TC-11: Context Menu Appears on Right-Click (KPI Treeview)
-
-**Module**: `tk_app.py`  
-**Scope**: `SFIReporterApp`
-
-| Step | Action | Expected |
-|------|--------|----------|
-| 1 | Simulate `<Button-3>` event on a populated KPI row | `tk.Menu` created with "🤖 Analyze with LLM" command |
-| 2 | Simulate `<Button-3>` on empty area (no row) | No menu shown |
+### TC-12: Concurrent analysis is blocked
+- **Given**: An analysis is already in progress
+- **When**: User right-clicks another row and clicks "Analyze with LLM"
+- **Then**: The menu option is disabled or shows "Analysis in progress…"
+- **And**: Only one LLM call is active at a time
 
 ---
 
-## TC-12: Context Menu Appears on Right-Click (DrillDownModal)
+## Group 5: Error Handling (AC5)
 
-**Module**: `tk_app.py`  
-**Scope**: `DrillDownModal`
+### TC-13: Missing API key shows configuration error
+- **Given**: `AZURE_OPENAI_API_KEY` environment variable is not set
+- **When**: User clicks "Analyze with LLM"
+- **Then**: A `messagebox.showerror` appears with the missing variable name(s) and setup instructions
+- **And**: No LLM call is attempted
 
-| Step | Action | Expected |
-|------|--------|----------|
-| 1 | Simulate `<Button-3>` event on a populated item row | `tk.Menu` created with "🤖 Analyze with LLM" command |
-| 2 | Simulate `<Button-3>` on empty area | No menu shown |
+### TC-14: LLM API timeout shows error
+- **Given**: Azure OpenAI API times out (mocked to raise `openai.APITimeoutError`)
+- **When**: `analyze_item` is called
+- **Then**: Raises or returns an error
+- **And**: The UI shows a user-friendly error message, not a raw traceback
 
----
+### TC-15: LLM API returns unexpected format
+- **Given**: Azure OpenAI returns a response that doesn't follow the section header format
+- **When**: `analyze_item` processes the response
+- **Then**: Falls back to displaying the raw response text in the modal
+- **And**: No crash or unhandled exception
 
-## TC-13: Analyze Handler Sends Correct Data to LLM
-
-**Module**: `tk_app.py`  
-**Mocking**: Mock `llm_client.analyze_item`, mock `llm_storage.save_analysis`
-
-| Step | Action | Expected |
-|------|--------|----------|
-| 1 | Trigger analysis on a KPI row | `analyze_item` called with the correct item dict from `detailed_items` |
-| 2 | Verify item dict contains `_kpi_id` field | Present and matching the selected KPI |
-
----
-
-## TC-14: Analysis Result Saved After Successful LLM Call
-
-**Module**: `tk_app.py`  
-**Mocking**: Mock `llm_client.analyze_item` (returns result), mock `llm_storage.save_analysis`
-
-| Step | Action | Expected |
-|------|--------|----------|
-| 1 | Trigger analysis, mock returns `AnalysisResult` | `save_analysis` called with the result |
-| 2 | Verify file path uses action item ID | Path matches `%LOCALAPPDATA%/sfireporter/analyses/<id>.json` |
+### TC-16: Corrupted saved analysis file
+- **Given**: An analysis JSON file exists but contains invalid JSON
+- **When**: `load_analysis` is called for that action item
+- **Then**: Returns `None` (or raises a handled exception)
+- **And**: Does not crash the application
 
 ---
 
-## TC-15: Error Shown When LLM Config Missing
+## Security Tests
 
-**Module**: `tk_app.py`  
-**Mocking**: Mock `LLMConfig.from_env()` to raise `LLMConfigError`
-
-| Step | Action | Expected |
-|------|--------|----------|
-| 1 | Trigger analysis with no env vars set | `messagebox.showerror` called with setup instructions |
-| 2 | No background thread spawned | Thread not started |
-
----
-
-## TC-16: Error Shown When LLM API Fails
-
-**Module**: `tk_app.py`  
-**Mocking**: Mock `analyze_item` to raise `LLMError`
-
-| Step | Action | Expected |
-|------|--------|----------|
-| 1 | Trigger analysis, mock raises error | `messagebox.showerror` called with error details |
-| 2 | Progress modal dismissed | Modal destroyed after error |
-
----
-
-## TC-17: LLM Config Repr Masks API Key
-
-**Module**: `llm_client.py`  
-**Function**: `LLMConfig.__repr__()`
-
-| Step | Action | Expected |
-|------|--------|----------|
-| 1 | Create config with `api_key="sk-secret123"` | `repr()` shows `api_key='****'` |
-| 2 | `str()` also masks | No plaintext key in any string representation |
+### TC-17: API key not in logs or UI
+- **Given**: LLM config is loaded with an API key
+- **When**: An analysis completes (success or error)
+- **Then**: The API key does not appear in log files, modal text, or error messages
+- **Verify**: Search log output and modal text widgets for the key string

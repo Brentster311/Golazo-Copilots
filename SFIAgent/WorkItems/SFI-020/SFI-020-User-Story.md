@@ -1,6 +1,6 @@
 # SFI-020: Right-Click KPI Row → Analyze with LLM (Core)
 
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 ---
 
