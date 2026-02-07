@@ -2,10 +2,12 @@
 """Golazo Copilot MCP Server - Entry point for GitHub Copilot integration."""
 
 import asyncio
+from pathlib import Path
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
+from . import __version__
 from .tools.gcp_create_workitem import gcp_create_workitem
 from .tools.gcp_transition import gcp_transition
 from .tools.gcp_mark import gcp_mark_dor, gcp_mark_dod
@@ -13,8 +15,8 @@ from .tools.gcp_status import gcp_status
 from .tools.gcp_bootstrap import gcp_bootstrap
 from .tools.gcp_consent import gcp_consent
 
-# Create server instance
-server = Server("golazo-copilot")
+# Create server instance with version in name
+server = Server(f"golazo-copilot v{__version__}")
 
 # Status icons (using ASCII to avoid encoding issues)
 ICON_OK = "[OK]"
@@ -23,6 +25,23 @@ ICON_WARN = "[WARN]"
 ICON_PENDING = "[...]"
 ICON_CHECK = "[x]"
 ICON_EMPTY = "[ ]"
+
+
+def resolve_work_items_dir(workspace_path: str | None) -> Path:
+    """
+    Resolve workspace_path to an absolute work_items_dir Path.
+    
+    Args:
+        workspace_path: Optional workspace root path (string or None)
+        
+    Returns:
+        Absolute Path to the WorkItems directory
+    """
+    if workspace_path:
+        base = Path(workspace_path)
+    else:
+        base = Path.cwd()
+    return (base / "WorkItems").resolve()
 
 
 @server.list_tools()
@@ -44,6 +63,10 @@ async def list_tools() -> list[Tool]:
                         "enum": ["complete", "express", "spike"],
                         "default": "complete",
                         "description": "Workflow profile determining which gates are enforced"
+                    },
+                    "workspace_path": {
+                        "type": "string",
+                        "description": "Workspace root path containing the WorkItems folder (auto-detected if not provided)"
                     }
                 },
                 "required": ["work_item_id"]
@@ -69,6 +92,10 @@ async def list_tools() -> list[Tool]:
                         "type": "boolean",
                         "default": False,
                         "description": "Force transition even if gates not met (requires prior consent)"
+                    },
+                    "workspace_path": {
+                        "type": "string",
+                        "description": "Workspace root path containing the WorkItems folder (auto-detected if not provided)"
                     }
                 },
                 "required": ["work_item_id", "role"]
@@ -97,6 +124,10 @@ async def list_tools() -> list[Tool]:
                         "type": "boolean",
                         "default": True,
                         "description": "Whether item is complete"
+                    },
+                    "workspace_path": {
+                        "type": "string",
+                        "description": "Workspace root path containing the WorkItems folder (auto-detected if not provided)"
                     }
                 },
                 "required": ["work_item_id"]
@@ -126,6 +157,10 @@ async def list_tools() -> list[Tool]:
                         "type": "boolean",
                         "default": True,
                         "description": "Whether item is complete"
+                    },
+                    "workspace_path": {
+                        "type": "string",
+                        "description": "Workspace root path containing the WorkItems folder (auto-detected if not provided)"
                     }
                 },
                 "required": ["work_item_id"]
@@ -133,13 +168,17 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="gcp_status",
-            description="Get comprehensive workflow status for a work item",
+            description="Get comprehensive workflow status for a work item. Returns current role, phase, DoR/DoD checklist status, next steps, deviations, and the Golazo Copilot version number. Use this to check the installed Golazo version.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "work_item_id": {
                         "type": "string",
                         "description": "Work item identifier"
+                    },
+                    "workspace_path": {
+                        "type": "string",
+                        "description": "Workspace root path containing the WorkItems folder (auto-detected if not provided)"
                     }
                 },
                 "required": ["work_item_id"]
@@ -171,7 +210,7 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="gcp_consent",
-            description="Record consent for bypassing workflow gates (required before force=True)",
+            description="Record Project Owner consent for bypassing workflow gates. The rationale MUST be provided by the Project Owner (human), not generated by the assistant. Required before using force=True.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -187,6 +226,10 @@ async def list_tools() -> list[Tool]:
                     "reason": {
                         "type": "string",
                         "description": "Justification for the deviation (min 10 characters)"
+                    },
+                    "workspace_path": {
+                        "type": "string",
+                        "description": "Workspace root path containing the WorkItems folder (auto-detected if not provided)"
                     }
                 },
                 "required": ["work_item_id", "action", "reason"]
@@ -199,9 +242,11 @@ async def list_tools() -> list[Tool]:
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     """Handle tool calls."""
     if name == "gcp_create_workitem":
+        work_items_dir = resolve_work_items_dir(arguments.get("workspace_path"))
         result = await gcp_create_workitem(
             work_item_id=arguments["work_item_id"],
-            profile=arguments.get("profile", "complete")
+            profile=arguments.get("profile", "complete"),
+            work_items_dir=work_items_dir
         )
         
         if result["success"]:
@@ -218,10 +263,12 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         return [TextContent(type="text", text=content)]
     
     elif name == "gcp_transition":
+        work_items_dir = resolve_work_items_dir(arguments.get("workspace_path"))
         result = await gcp_transition(
             work_item_id=arguments["work_item_id"],
             role=arguments["role"],
-            force=arguments.get("force", False)
+            force=arguments.get("force", False),
+            work_items_dir=work_items_dir
         )
         
         if result["success"]:
@@ -242,11 +289,13 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         return [TextContent(type="text", text=content)]
     
     elif name == "gcp_mark_dor":
+        work_items_dir = resolve_work_items_dir(arguments.get("workspace_path"))
         result = await gcp_mark_dor(
             work_item_id=arguments["work_item_id"],
             item=arguments.get("item"),
             items=arguments.get("items"),
-            complete=arguments.get("complete", True)
+            complete=arguments.get("complete", True),
+            work_items_dir=work_items_dir
         )
         
         if result["success"]:
@@ -269,11 +318,13 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         return [TextContent(type="text", text=content)]
     
     elif name == "gcp_mark_dod":
+            work_items_dir = resolve_work_items_dir(arguments.get("workspace_path"))
             result = await gcp_mark_dod(
                 work_item_id=arguments["work_item_id"],
                 item=arguments.get("item"),
                 items=arguments.get("items"),
-                complete=arguments.get("complete", True)
+                complete=arguments.get("complete", True),
+                work_items_dir=work_items_dir
             )
         
             if result["success"]:
@@ -289,8 +340,10 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             return [TextContent(type="text", text=content)]
     
     elif name == "gcp_status":
+        work_items_dir = resolve_work_items_dir(arguments.get("workspace_path"))
         result = await gcp_status(
-            work_item_id=arguments["work_item_id"]
+            work_item_id=arguments["work_item_id"],
+            work_items_dir=work_items_dir
         )
         
         if result.get("active", False):
@@ -304,12 +357,21 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             
             next_steps = "\n".join(f"- {step}" for step in result["next_steps"])
             
-            content = f"""**Golazo Status**
+            # Format deviations
+            deviations_section = ""
+            if result.get("deviations"):
+                deviations_lines = []
+                for d in result["deviations"]:
+                    consumed = " (consumed)" if d["consumed"] else ""
+                    deviations_lines.append(f"- {d['id']}: {d['action']} - \"{d['reason']}\"{consumed}")
+                deviations_section = "\n\n**Deviations:**\n" + "\n".join(deviations_lines)
+            
+            content = f"""**Golazo Status** (v{result['version']})
 - Work Item: {result['work_item_id']}
 - Current Role: **{result['current_role']}**
 - Phase: {result['current_phase']}
 - DoR: {dor_status}
-- DoD: {dod_status}
+- DoD: {dod_status}{deviations_section}
 
 **Next Steps:**
 {next_steps}
@@ -318,7 +380,8 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 {result['role_instructions']}
 """
         else:
-            content = f"{ICON_WARN} {result.get('message', 'No active work item')}"
+            version_info = f" (v{result.get('version', 'unknown')})" if 'version' in result else ""
+            content = f"{ICON_WARN}{version_info} {result.get('message', 'No active work item')}"
         
         return [TextContent(type="text", text=content)]
     
@@ -348,10 +411,12 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         return [TextContent(type="text", text=content)]
     
     elif name == "gcp_consent":
+        work_items_dir = resolve_work_items_dir(arguments.get("workspace_path"))
         result = await gcp_consent(
             work_item_id=arguments["work_item_id"],
             action=arguments["action"],
-            reason=arguments["reason"]
+            reason=arguments["reason"],
+            work_items_dir=work_items_dir
         )
         
         if result["success"]:

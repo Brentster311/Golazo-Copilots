@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.0",
+  "work_item_id": "GCP-0013",
+  "profile": "complete",
+  "current_phase": "completion",
+  "current_role": "retrospective",
+  "created_at": "2026-02-06T18:25:13.628924Z",
+  "updated_at": "2026-02-06T23:20:25.569376Z",
+  "dor": {
+    "userStory": true,
+    "designDoc": true,
+    "reviewComments": true,
+    "testCases": true
+  },
+  "dod": {
+    "branchCreated": true,
+    "testsWrittenFirst": true,
+    "testsPass": true,
+    "buildPasses": true,
+    "docsUpdated": true,
+    "refactorComplete": true,
+    "committed": true
+  },
+  "role_history": [
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-02-06T18:25:13.628924Z",
+      "exited_at": "2026-02-06T23:20:11.897628Z"
+    },
+    {
+      "role": "program-manager",
+      "entered_at": "2026-02-06T23:20:11.897628Z",
+      "exited_at": "2026-02-06T23:20:14.254658Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-02-06T23:20:14.254658Z",
+      "exited_at": "2026-02-06T23:20:15.847133Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-02-06T23:20:15.847133Z",
+      "exited_at": "2026-02-06T23:20:18.317713Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-02-06T23:20:18.317713Z",
+      "exited_at": "2026-02-06T23:20:19.932677Z"
+    },
+    {
+      "role": "refactor-expert",
+      "entered_at": "2026-02-06T23:20:19.932677Z",
+      "exited_at": "2026-02-06T23:20:22.024658Z"
+    },
+    {
+      "role": "builder",
+      "entered_at": "2026-02-06T23:20:22.024658Z",
+      "exited_at": "2026-02-06T23:20:23.809572Z"
+    },
+    {
+      "role": "documentor",
+      "entered_at": "2026-02-06T23:20:23.809572Z",
+      "exited_at": "2026-02-06T23:20:25.569376Z"
+    },
+    {
+      "role": "retrospective",
+      "entered_at": "2026-02-06T23:20:25.569376Z",
+      "exited_at": null
+    }
+  ],
+  "deviations": [
+    {
+      "id": "dev-001",
+      "action": "skip_role",
+      "reason": "Work already implemented - syncing state.json to match actual IMPLEMENTED status",
+      "role": "project-owner-assistant",
+      "timestamp": "2026-02-06T23:20:06.660400Z",
+      "consumed": false,
+      "consumed_at": null
+    }
+  ]
+}

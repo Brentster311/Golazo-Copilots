@@ -186,6 +186,9 @@ class ActionItemsEndpoint:
         """
         Save ETA updates.
 
+        Each update is sent as a separate POST request to match the
+        production payload format used by the Sauron SFI_Agent.
+
         Args:
             updates: List of ETA updates to save.
 
@@ -197,46 +200,62 @@ class ActionItemsEndpoint:
             S360AuthError: If authentication fails.
         """
         logger.info("Saving %d ETA updates", len(updates))
-        
+
         endpoint = "/ActionItems/SaveETAsByIds"
-        payload = {
-            "items": [update.to_api_payload() for update in updates]
-        }
+        failed_items: list[str] = []
 
-        response = self._make_request("POST", endpoint, json_data=payload)
+        for update in updates:
+            payload = update.to_api_payload()
+            logger.info(
+                "Saving ETA for action item %s (KPI %s)",
+                update.action_item_id,
+                update.kpi_id,
+            )
 
-        # Handle non-200 responses
-        if response.status_code != 200:
+            response = self._make_request("POST", endpoint, json_data=payload)
+
+            if response.status_code != 200:
+                try:
+                    data = response.json()
+                    msg = data.get("message", data.get("error", response.text))
+                except ValueError:
+                    msg = response.text
+                error_msg = f"HTTP {response.status_code}: {msg}"
+                logger.warning(
+                    "Failed to save ETA for %s: %s",
+                    update.action_item_id,
+                    error_msg,
+                )
+                failed_items.append(update.action_item_id)
+                # If only one update, return immediately with error
+                if len(updates) == 1:
+                    return SaveResult(
+                        success=False,
+                        failed_items=failed_items,
+                        error_message=error_msg,
+                    )
+                continue
+
+            # Check for partial failure in 200 response.
+            # The API may return True (bool) on success, or a dict
+            # with failedItems on partial failure.
             try:
                 data = response.json()
-                return SaveResult(
-                    success=False,
-                    error_message=f"HTTP {response.status_code}: {data.get('message', data.get('error', response.text))}",
-                )
+                if isinstance(data, dict) and data.get("failedItems"):
+                    failed_items.append(update.action_item_id)
+                    continue
+                # bool True or empty dict = success, fall through
             except ValueError:
-                return SaveResult(
-                    success=False,
-                    error_message=f"HTTP {response.status_code}: {response.text}",
-                )
+                pass
 
-        # Handle 200 response - check for partial failures
-        try:
-            data = response.json()
-            if data is None:
-                return SaveResult(success=True)
-            
-            failed = data.get("failedItems", [])
-            if failed:
-                logger.warning("Partial failure: %d items failed", len(failed))
-                return SaveResult(
-                    success=False,
-                    failed_items=failed,
-                    error_message=data.get("message"),
-                )
-            
-            logger.info("ETA updates saved successfully")
-            return SaveResult(success=True)
-        except ValueError:
-            # If we got 200 but can't parse JSON, assume success
-            logger.info("ETA updates saved successfully")
-            return SaveResult(success=True)
+            logger.info("ETA saved for %s", update.action_item_id)
+
+        if failed_items:
+            return SaveResult(
+                success=False,
+                failed_items=failed_items,
+                error_message=f"{len(failed_items)} of {len(updates)} updates failed",
+            )
+
+        logger.info("All %d ETA updates saved successfully", len(updates))
+        return SaveResult(success=True)

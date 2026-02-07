@@ -1,126 +1,165 @@
 """
-Test cases for SFI-015: Detail Modal Color Indicators
+SFI-015: Detail Modal Color Indicators — Automated Tests
 
-Manual testing guide provided in SFIReporter/tests/test_detail_modal_colors.md
-Automated verification of emoji rendering in section headers.
+Verifies that section headers in the ItemDetailsModal use the correct
+colored circle emoji indicators:
+  - Status: 🔴 (red circle)
+  - Dates: 🔵 (blue circle)
+  - Ownership: 🟣 (purple circle)
+  - Service & Program: ⚫ (black circle)
+
+Tests verify actual production code via source inspection and
+the group_item_fields() pure function.
 """
 
-def test_section_header_emojis():
-    """Verify section headers use correct colored circle emojis."""
-    
-    # Expected emoji mapping for detail modal section headers
-    expected_emojis = {
-        'identity': '📋',      # Clipboard (unchanged)
-        'status': '🔴',        # Red circle
-        'dates': '🔵',         # Blue circle (CHANGED from 📅)
-        'ownership': '🟣',     # Purple circle (CHANGED from 👤)
-        'service_program': '⚫',  # Black circle (CHANGED from 🔧)
-        'subscription': '☁️',  # Cloud (unchanged)
-        'resources': '🔗',     # Chain (unchanged)
-        'other': '📎',         # Pushpin (unchanged)
-    }
-    
-    # This is a manual verification test
-    # In practice, developers should:
-    # 1. Run the SFI Reporter app
-    # 2. Open an action item detail view
-    # 3. Visually verify each section header displays the correct emoji
-    # 4. Compare colors with sidebar list view
-    
-    print("✓ Test Case TC-001: Status header shows red circle emoji (🔴)")
-    assert expected_emojis['status'] == '🔴', "Status emoji should be red circle"
-    
-    print("✓ Test Case TC-002: Dates header shows blue circle emoji (🔵)")
-    assert expected_emojis['dates'] == '🔵', "Dates emoji should be blue circle"
-    
-    print("✓ Test Case TC-003: Ownership header shows purple circle emoji (🟣)")
-    assert expected_emojis['ownership'] == '🟣', "Ownership emoji should be purple circle"
-    
-    print("✓ Test Case TC-004: Service & Program header shows black circle emoji (⚫)")
-    assert expected_emojis['service_program'] == '⚫', "Service & Program emoji should be black circle"
-    
-    print("\n✓ All section header emoji assertions passed!")
-    return True
+import inspect
+
+from sfi_reporter.tk_app import group_item_fields, FIELD_GROUPS
 
 
-def verify_section_indicators_in_code():
+# ── TC-001 through TC-004: Section header emoji verification ────────
+
+class TestSectionHeaderEmojis:
+    """Verify the production code group_titles dict contains correct emojis.
+
+    Since group_titles is a local variable inside _build_content(), we inspect
+    the source code to verify the emoji strings without instantiating tkinter.
     """
-    Verify that tk_app.py uses the correct emoji mappings.
-    
-    This is a code pattern verification that can be integrated into CI/CD.
-    """
-    try:
-        with open('SFIReporter/src/sfi_reporter/tk_app.py', 'r') as f:
-            content = f.read()
-            
-            # Check for required emoji mappings
-            checks = {
-                "'status': '🔴 Status'": "Status emoji",
-                "'dates': '🔵 Dates'": "Dates emoji",  
-                "'ownership': '🟣 Ownership'": "Ownership emoji",
-                "'service_program': '⚫ Service & Program'": "Service & Program emoji",
-            }
-            
-            passed = 0
-            failed = 0
-            
-            for pattern, description in checks.items():
-                if pattern in content:
-                    print(f"✓ Found {description}: {pattern}")
-                    passed += 1
-                else:
-                    print(f"✗ Missing {description}: {pattern}")
-                    failed += 1
-            
-            print(f"\n{passed}/{len(checks)} emoji mappings correct")
-            return failed == 0
-            
-    except FileNotFoundError:
-        print("Warning: tk_app.py not found at expected path")
-        return False
+
+    @staticmethod
+    def _get_build_content_source() -> str:
+        """Get the source code of ItemDetailsModal._build_content."""
+        # Import inside to avoid tkinter initialization at module level
+        from sfi_reporter.tk_app import ItemDetailsModal
+        return inspect.getsource(ItemDetailsModal._build_content)
+
+    def test_status_header_has_red_circle(self):
+        """TC-001: Status section header uses 🔴 red circle."""
+        source = self._get_build_content_source()
+        assert "'status': '🔴 Status'" in source
+
+    def test_dates_header_has_blue_circle(self):
+        """TC-002: Dates section header uses 🔵 blue circle."""
+        source = self._get_build_content_source()
+        assert "'dates': '🔵 Dates'" in source
+
+    def test_ownership_header_has_purple_circle(self):
+        """TC-003: Ownership section header uses 🟣 purple circle."""
+        source = self._get_build_content_source()
+        assert "'ownership': '🟣 Ownership'" in source
+
+    def test_service_program_header_has_black_circle(self):
+        """TC-004: Service & Program section header uses ⚫ black circle."""
+        source = self._get_build_content_source()
+        assert "'service_program': '⚫ Service & Program'" in source
+
+    def test_no_old_calendar_emoji_for_dates(self):
+        """Regression: Dates should not use the old 📅 calendar emoji."""
+        source = self._get_build_content_source()
+        assert "'dates': '📅" not in source
+
+    def test_no_old_person_emoji_for_ownership(self):
+        """Regression: Ownership should not use the old 👤 person emoji."""
+        source = self._get_build_content_source()
+        assert "'ownership': '👤" not in source
+
+    def test_no_old_wrench_emoji_for_service(self):
+        """Regression: Service & Program should not use the old 🔧 wrench emoji."""
+        source = self._get_build_content_source()
+        assert "'service_program': '🔧" not in source
+
+    def test_unchanged_sections_preserved(self):
+        """Non-circle sections retain their original emojis."""
+        source = self._get_build_content_source()
+        assert "'identity': '📋 Identity'" in source
+        assert "'resources': '🔗 Resources & Details'" in source
+        assert "'other': '📎 Other'" in source
+
+    def test_all_eight_groups_present_in_group_titles(self):
+        """Verify group_titles has entries for all 8 section groups."""
+        source = self._get_build_content_source()
+        for group in ['identity', 'status', 'dates', 'ownership',
+                      'service_program', 'subscription', 'resources', 'other']:
+            assert f"'{group}':" in source, f"Missing group_titles entry for '{group}'"
+
+    def test_group_order_in_build_content(self):
+        """Verify groups are rendered in the correct order."""
+        source = self._get_build_content_source()
+        expected_order = [
+            'identity', 'status', 'dates', 'ownership',
+            'service_program', 'subscription', 'resources', 'other'
+        ]
+        # The group_order list should appear in source
+        assert "group_order = ['identity', 'status', 'dates', 'ownership', 'service_program'" in source
 
 
-if __name__ == "__main__":
-    print("=" * 60)
-    print("SFI-015: Detail Modal Color Indicators - Test Suite")
-    print("=" * 60)
-    print()
-    
-    # Automated emoji assertion tests
-    print("Running automated emoji verification...")
-    test_section_header_emojis()
-    
-    print("\n" + "=" * 60)
-    print("Manual Verification Tests Required:")
-    print("=" * 60)
-    print("""
-TC-001: Status Header Color Indicator
-      - Open SFI Reporter
-      - Click an action item to open detail view
-      - Verify "🔴 Status" shows red circle
-      
-TC-002: Dates Header Color Indicator
-      - Verify "🔵 Dates" shows blue circle
-      
-TC-003: Ownership Header Color Indicator
-      - Verify "🟣 Ownership" shows purple circle
-      
-TC-004: Service & Program Header Color Indicator
-      - Verify "⚫ Service & Program" shows black/dark circle
-      
-TC-005: Color Consistency
-      - Open sidebar list view alongside detail modal
-      - Compare colored circles - should match exactly
-      
-TC-006-007: Modal Rendering
-      - Test in popup mode (click item)
-      - Test in embedded mode (if applicable)
-      
-TC-008-012: Edge Cases & Regression
-      - Test with long section names
-      - Test font size scaling
-      - Test dark mode rendering
-      - Verify all information still displays
-      - Verify modal still responds to interactions
-    """)
-    print("=" * 60)
+# ── TC-005: group_item_fields pure function ─────────────────────────
+
+class TestGroupItemFields:
+    """Verify the grouping function correctly categorizes item fields."""
+
+    def test_status_fields_grouped(self):
+        """Status-related fields are placed in the 'status' group."""
+        item = {'SlaType': 0, 'classificationType': 'SFI'}
+        groups = group_item_fields(item)
+        field_names = [name for name, _ in groups['status']]
+        assert 'SlaType' in field_names
+        assert 'classificationType' in field_names
+
+    def test_date_fields_grouped(self):
+        """Date-related fields are placed in the 'dates' group."""
+        item = {'dueDate': '2026-01-15', 'EtaDate': '2026-02-01'}
+        groups = group_item_fields(item)
+        field_names = [name for name, _ in groups['dates']]
+        assert 'dueDate' in field_names
+        assert 'EtaDate' in field_names
+
+    def test_ownership_fields_grouped(self):
+        """Ownership-related fields are placed in the 'ownership' group."""
+        item = {'assignedTo': 'user@ms.com', 'ActionOwnerAlias': 'testuser'}
+        groups = group_item_fields(item)
+        field_names = [name for name, _ in groups['ownership']]
+        assert 'assignedTo' in field_names
+        assert 'ActionOwnerAlias' in field_names
+
+    def test_service_program_fields_grouped(self):
+        """Service/program fields are placed in the 'service_program' group."""
+        item = {'serviceTreeId': 'abc-123', 'S360_ProgramIds': ['p1']}
+        groups = group_item_fields(item)
+        field_names = [name for name, _ in groups['service_program']]
+        assert 'serviceTreeId' in field_names
+        assert 'S360_ProgramIds' in field_names
+
+    def test_unknown_fields_go_to_other(self):
+        """Fields not in FIELD_GROUPS are placed in 'other'."""
+        item = {'customField': 'some value'}
+        groups = group_item_fields(item)
+        field_names = [name for name, _ in groups['other']]
+        assert 'customField' in field_names
+
+    def test_empty_values_excluded(self):
+        """Fields with empty/None values are excluded from groups."""
+        item = {'SlaType': '', 'dueDate': None, 'title': 'Test'}
+        groups = group_item_fields(item)
+        # SlaType with empty string should be excluded
+        status_fields = [name for name, _ in groups['status']]
+        assert 'SlaType' not in status_fields
+
+    def test_all_field_groups_have_keys(self):
+        """FIELD_GROUPS constant covers the expected section keys."""
+        expected = {'identity', 'status', 'dates', 'ownership',
+                    'service_program', 'subscription', 'resources'}
+        assert set(FIELD_GROUPS.keys()) == expected
+
+
+# ── TC-006: Header font tag ─────────────────────────────────────────
+
+class TestHeaderStyling:
+    """Verify the text widget header tag is configured for readability."""
+
+    def test_header_tag_uses_segoe_ui_bold(self):
+        """Header tag should use Segoe UI bold for emoji readability."""
+        from sfi_reporter.tk_app import ItemDetailsModal
+        source = inspect.getsource(ItemDetailsModal._build_content)
+        assert "tag_configure('header', font=(\"Segoe UI\"" in source
+        assert '"bold"' in source

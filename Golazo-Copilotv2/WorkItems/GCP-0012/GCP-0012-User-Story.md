@@ -1,6 +1,6 @@
 # GCP-0012: Allow Backward Role Transitions
 
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 ## User Story
 

@@ -1,6 +1,6 @@
 # SFI-005: Detailed Progress Messages During Data Fetch
 
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 ## User Story
 
@@ -15,7 +15,7 @@
 - Parallel fetching optimization
 
 ## Assumptions
-- **Assumption (explicit):** Existing Flet desktop app (SFI-004)
+- **Assumption (explicit):** Existing Tkinter desktop app
 - **Assumption (explicit):** Updates status text in real-time during fetch
 
 ## Acceptance Criteria

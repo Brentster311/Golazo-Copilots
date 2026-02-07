@@ -1,5 +1,7 @@
 # GCP-0005: Consent and Deviation Recording
 
+**Status**: IMPLEMENTED
+
 ## User Story
 
 **As a** developer using Golazo Copilot,  

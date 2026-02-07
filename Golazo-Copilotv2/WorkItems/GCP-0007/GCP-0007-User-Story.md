@@ -1,5 +1,7 @@
 # GCP-0007: CLI Commands
 
+**Status**: IMPLEMENTED
+
 ## User Story
 
 **As a** developer who prefers terminal workflows,  

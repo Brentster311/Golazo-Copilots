@@ -88,7 +88,7 @@ async def gcp_consent(
         "success": True,
         "deviation_id": deviation_id,
         "action": action,
-        "message": f"Consent recorded. You may now use force=True for {action}.",
+        "message": f"Consent recorded from Project Owner. You may now use force=True for {action}.",
     }
 
 

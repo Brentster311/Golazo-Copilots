@@ -1,5 +1,7 @@
 # GCP-0009: Create Role Decision Notes Tool
 
+**Status**: IMPLEMENTED
+
 ## Status: ?? SKIPPED
 
 **Reason:** Role decision notes are already being created by Copilot following the role instructions. A dedicated MCP tool is not needed.

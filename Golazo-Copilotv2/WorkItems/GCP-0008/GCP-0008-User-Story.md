@@ -1,5 +1,7 @@
 # GCP-0008: Workflow Profiles
 
+**Status**: IMPLEMENTED
+
 ## User Story
 
 **As a** developer with varying workflow needs,  

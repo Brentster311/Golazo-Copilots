@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.0",
+  "work_item_id": "GCP-0014",
+  "profile": "complete",
+  "current_phase": "completion",
+  "current_role": "retrospective",
+  "created_at": "2026-02-06T18:25:20.957500Z",
+  "updated_at": "2026-02-06T23:39:18.020101Z",
+  "dor": {
+    "userStory": true,
+    "designDoc": true,
+    "reviewComments": true,
+    "testCases": true
+  },
+  "dod": {
+    "branchCreated": true,
+    "testsWrittenFirst": true,
+    "testsPass": true,
+    "buildPasses": true,
+    "docsUpdated": true,
+    "refactorComplete": true,
+    "committed": true
+  },
+  "role_history": [
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-02-06T18:25:20.957500Z",
+      "exited_at": "2026-02-06T23:35:09.097437Z"
+    },
+    {
+      "role": "program-manager",
+      "entered_at": "2026-02-06T23:35:09.097437Z",
+      "exited_at": "2026-02-06T23:35:46.640121Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-02-06T23:35:46.640121Z",
+      "exited_at": "2026-02-06T23:36:15.161213Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-02-06T23:36:15.161213Z",
+      "exited_at": "2026-02-06T23:36:17.769099Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-02-06T23:36:17.769099Z",
+      "exited_at": "2026-02-06T23:38:19.730468Z"
+    },
+    {
+      "role": "refactor-expert",
+      "entered_at": "2026-02-06T23:38:19.730468Z",
+      "exited_at": "2026-02-06T23:38:23.168822Z"
+    },
+    {
+      "role": "builder",
+      "entered_at": "2026-02-06T23:38:23.168822Z",
+      "exited_at": "2026-02-06T23:39:00.331556Z"
+    },
+    {
+      "role": "documentor",
+      "entered_at": "2026-02-06T23:39:00.331556Z",
+      "exited_at": "2026-02-06T23:39:06.278565Z"
+    },
+    {
+      "role": "builder",
+      "entered_at": "2026-02-06T23:39:06.278565Z",
+      "exited_at": "2026-02-06T23:39:14.527762Z"
+    },
+    {
+      "role": "documentor",
+      "entered_at": "2026-02-06T23:39:14.527762Z",
+      "exited_at": "2026-02-06T23:39:18.020101Z"
+    },
+    {
+      "role": "retrospective",
+      "entered_at": "2026-02-06T23:39:18.020101Z",
+      "exited_at": null
+    }
+  ],
+  "deviations": []
+}

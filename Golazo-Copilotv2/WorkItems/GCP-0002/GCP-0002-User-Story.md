@@ -1,5 +1,7 @@
 # GCP-0002: Role Transitions
 
+**Status**: IMPLEMENTED
+
 ## User Story
 
 **As a** developer using Golazo Copilot,  

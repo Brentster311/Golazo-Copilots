@@ -1,4 +1,4 @@
-<!-- Golazo Copilot Version: 2.8.0 -->
+<!-- Golazo Copilot Version: 2.11.2 -->
 # Golazo Copilot v2
 
 This workspace uses Golazo Copilot MCP server for workflow management.
@@ -86,18 +86,6 @@ gcp_mark_dod(work_item_id="<id>", item="committed", complete=true)
 | Review Comments | `WorkItems/<id>/Design/<id>-Review-Comments.md` |
 | Test Cases | `WorkItems/<id>/Design/<id>-Test-Cases.md` |
 | Role Notes | `WorkItems/<id>/RoleDecisionNotes/<id>-<role>.md` |
-
----
-
-## Each Role MUST Create:
-- **Project Owner Assistant**: User Story + `<id>-project-owner-assistant.md`
-- **Program Manager**: Design Doc + `<id>-program-manager.md`
-- **Quality Assurance**: Review Comments + Test Cases + `<id>-quality-assurance.md`
-- **Architect**: Architect notes in Review Comments + `<id>-architect.md`
-- **Developer**: Code + Tests + `<id>-developer.md`
-- **Refactor Expert**: Refactored code + `<id>-refactor-expert.md`
-- **Builder**: Build/commit + `<id>-builder.md`
-- **Documentor**: Updated docs + `<id>-documentor.md`
 
 ---
 

@@ -24,7 +24,7 @@ class TestDataFetching:
         
         mock_team_info.return_value = ([{'Name': 'Svc1', 'Id': '123'}], ['123'])
         mock_action_items.return_value = {'ActionItemSummaryList': []}
-        mock_detailed.return_value = []
+        mock_detailed.return_value = ([], [])  # (rows, failed_kpis)
         mock_programs.return_value = {}
         
         from sfi_reporter.tk_app import do_refresh
@@ -70,7 +70,7 @@ class TestDataFetching:
         
         mock_team_info.return_value = ([{'Name': 'Svc1', 'Id': '123'}], ['123'])
         mock_action_items.return_value = {'ActionItemSummaryList': []}
-        mock_detailed.return_value = []
+        mock_detailed.return_value = ([], [])  # (rows, failed_kpis)
         mock_programs.return_value = {}
         
         status_messages = []
@@ -383,7 +383,10 @@ class TestSortableTreeview:
         from sfi_reporter.tk_app import SortableTreeview
         import tkinter as tk
         
-        root = tk.Tk()
+        try:
+            root = tk.Tk()
+        except tk.TclError:
+            pytest.skip("Tcl/Tk not available in this environment")
         root.withdraw()
         
         try:
