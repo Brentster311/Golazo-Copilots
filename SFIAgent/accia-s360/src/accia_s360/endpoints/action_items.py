@@ -236,12 +236,15 @@ class ActionItemsEndpoint:
                     )
                 continue
 
-            # Check for partial failure in 200 response
+            # Check for partial failure in 200 response.
+            # The API may return True (bool) on success, or a dict
+            # with failedItems on partial failure.
             try:
                 data = response.json()
-                if data and data.get("failedItems"):
+                if isinstance(data, dict) and data.get("failedItems"):
                     failed_items.append(update.action_item_id)
                     continue
+                # bool True or empty dict = success, fall through
             except ValueError:
                 pass
 

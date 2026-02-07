@@ -383,7 +383,10 @@ class TestSortableTreeview:
         from sfi_reporter.tk_app import SortableTreeview
         import tkinter as tk
         
-        root = tk.Tk()
+        try:
+            root = tk.Tk()
+        except tk.TclError:
+            pytest.skip("Tcl/Tk not available in this environment")
         root.withdraw()
         
         try:

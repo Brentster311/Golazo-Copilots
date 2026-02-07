@@ -2037,7 +2037,11 @@ class SFIReporterApp:
         self.clear_btn = ttk.Button(controls_frame, text="🗑️ Clear Cache", command=self._on_clear_cache)
         self.clear_btn.pack(side=tk.LEFT, padx=5)
         
-        self.retry_btn = ttk.Button(controls_frame, text="🔁 Retry Failed KPIs", command=self._on_retry_failed)
+        self.retry_btn = tk.Button(controls_frame, text="🔁 Retry Failed KPIs",
+                                    command=self._on_retry_failed,
+                                    bg="#d9534f", fg="white", activebackground="#c9302c",
+                                    activeforeground="white", font=("Segoe UI", 9, "bold"),
+                                    relief=tk.RAISED, padx=8, pady=2)
         # Hidden until there are failures
         
         self.query_btn = ttk.Button(controls_frame, text="🔍 Filter", command=self._on_query, state="disabled")
