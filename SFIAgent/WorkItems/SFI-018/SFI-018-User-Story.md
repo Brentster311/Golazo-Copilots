@@ -1,6 +1,6 @@
 # SFI-018 — In-App Azure Login
 
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 ## User Story
 
