@@ -10,12 +10,22 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from golazo_copilot.tools.gcp_create_workitem import gcp_create_workitem
-from golazo_copilot.tools.gcp_transition import gcp_transition
+from golazo_copilot.tools.gcp_transition import gcp_transition, ROLE_SUFFIX_MAP
 from golazo_copilot.tools.gcp_consent import gcp_consent
 from golazo_copilot.core.persistence import load_state, save_state
 
 
 TEST_WORKITEMS_DIR = Path(__file__).parent / "test-workitems"
+
+
+def create_role_notes(work_item_id: str, role: str, work_items_dir: Path = TEST_WORKITEMS_DIR):
+    """Helper to create role notes file for a given role."""
+    suffix = ROLE_SUFFIX_MAP.get(role, role)
+    notes_dir = work_items_dir / work_item_id / "RoleDecisionNotes"
+    notes_dir.mkdir(parents=True, exist_ok=True)
+    notes_file = notes_dir / f"{work_item_id}-{suffix}.md"
+    notes_file.write_text(f"# {work_item_id}: {role} Notes\n\nTest notes.")
+    return notes_file
 
 
 @pytest.fixture(autouse=True)
@@ -71,9 +81,14 @@ class TestConsentRequiredForForce:
     async def test_force_fails_without_consent(self):
         """Should fail force transition without prior consent."""
         await gcp_create_workitem(work_item_id="force-1", work_items_dir=TEST_WORKITEMS_DIR)
+        # Create role notes before each transition
+        create_role_notes("force-1", "project-owner-assistant")
         await gcp_transition(work_item_id="force-1", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("force-1", "program-manager")
         await gcp_transition(work_item_id="force-1", role="quality-assurance", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("force-1", "quality-assurance")
         await gcp_transition(work_item_id="force-1", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("force-1", "architect")
         
         # Try to force without consent
         result = await gcp_transition(
@@ -90,9 +105,14 @@ class TestConsentRequiredForForce:
     async def test_force_succeeds_with_consent(self):
         """Should succeed force transition after consent."""
         await gcp_create_workitem(work_item_id="force-2", work_items_dir=TEST_WORKITEMS_DIR)
+        # Create role notes before each transition
+        create_role_notes("force-2", "project-owner-assistant")
         await gcp_transition(work_item_id="force-2", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("force-2", "program-manager")
         await gcp_transition(work_item_id="force-2", role="quality-assurance", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("force-2", "quality-assurance")
         await gcp_transition(work_item_id="force-2", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("force-2", "architect")
         
         # Give consent first
         await gcp_consent(
@@ -212,9 +232,14 @@ class TestConsentSingleUse:
     async def test_consent_consumed_after_use(self):
         """Should consume consent after forced action."""
         await gcp_create_workitem(work_item_id="single-1", work_items_dir=TEST_WORKITEMS_DIR)
+        # Create role notes before each transition
+        create_role_notes("single-1", "project-owner-assistant")
         await gcp_transition(work_item_id="single-1", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("single-1", "program-manager")
         await gcp_transition(work_item_id="single-1", role="quality-assurance", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("single-1", "quality-assurance")
         await gcp_transition(work_item_id="single-1", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("single-1", "architect")
         
         # Give consent
         await gcp_consent(
@@ -233,6 +258,8 @@ class TestConsentSingleUse:
         )
         assert result1["success"] is True
         
+        # Create developer notes before going back
+        create_role_notes("single-1", "developer")
         # Go back to architect
         await gcp_transition(work_item_id="single-1", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
         

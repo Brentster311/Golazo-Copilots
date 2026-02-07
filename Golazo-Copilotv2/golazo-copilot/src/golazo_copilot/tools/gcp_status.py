@@ -29,7 +29,7 @@ async def gcp_status(
     if not work_item_exists(work_item_id, work_items_dir):
         return {
             "active": False,
-            "message": f"No active work item '{work_item_id}'. Use gcp_init to start.",
+            "message": f"No active work item '{work_item_id}'. Use gcp_create_workitem to start.",
             "version": __version__,
         }
     

@@ -1,4 +1,4 @@
-<!-- Golazo Version: 2.10.0 -->
+<!-- Golazo Version: 2.11.2 -->
 # Role: Refactor Expert
 
 ## Purpose

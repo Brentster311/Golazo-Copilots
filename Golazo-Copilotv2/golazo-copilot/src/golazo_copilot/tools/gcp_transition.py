@@ -49,6 +49,7 @@ async def gcp_transition(
     work_items_dir: Path = DEFAULT_WORKITEMS_DIR,
     project_root: Path | None = None,
     force: bool = False,
+    force_without_notes: bool = False,
 ) -> dict:
     """
     Transition to a new role in the workflow.
@@ -58,7 +59,8 @@ async def gcp_transition(
         role: Target role to transition to
         work_items_dir: Directory for work items
         project_root: Project root for local role overrides
-        force: Force transition even if gates not met (requires prior consent)
+        force: Force transition even if DoR gates not met (requires prior consent)
+        force_without_notes: Force transition even if role notes missing (requires prior consent)
     
     Returns:
         Dict with success status, current role/phase, and role instructions
@@ -116,20 +118,34 @@ async def gcp_transition(
                     "missing": missing,
                 }
     
-    
     # Check if backward transition
     backward = is_backward_transition(current_role, role)
     warning = None
     if backward:
         warning = "Moving backward to rework. Previous progress preserved."
     
-    # Check if outgoing role has decision notes (warn if missing)
+    # Check if outgoing role has decision notes (BLOCK if missing - GCP-0020)
     if not check_role_notes_exist(work_item_id, current_role, work_items_dir):
-        notes_warning = f"Missing role notes for '{current_role}'"
-        if warning:
-            warning = f"{warning} {notes_warning}"
+        notes_path = get_role_notes_path(work_item_id, current_role, work_items_dir)
+        if force_without_notes:
+            # Check for consent
+            if not has_valid_consent(state, "skip_role"):
+                return {
+                    "success": False,
+                    "error": "Cannot force transition without recorded consent. Call gcp_consent with action='skip_role' first.",
+                    "missing_file": str(notes_path),
+                }
+            # Consume the consent
+            consume_consent(state, "skip_role")
+            # Save state after consuming consent
+            save_state(work_item_id, state, work_items_dir)
         else:
-            warning = notes_warning
+            return {
+                "success": False,
+                "error": f"Cannot transition from '{current_role}': Missing role notes file.",
+                "missing_file": str(notes_path),
+                "hint": f"Create the file first, or use force_without_notes=True with prior gcp_consent(action='skip_role')",
+            }
     
     # Update state
     now = datetime.now(timezone.utc)

@@ -9,7 +9,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from golazo_copilot.tools.gcp_create_workitem import gcp_create_workitem
-from golazo_copilot.tools.gcp_transition import gcp_transition
+from golazo_copilot.tools.gcp_transition import gcp_transition, ROLE_SUFFIX_MAP
 from golazo_copilot.tools.gcp_mark import gcp_mark_dor
 from golazo_copilot.tools.gcp_status import gcp_status
 
@@ -17,6 +17,16 @@ from golazo_copilot.tools.gcp_status import gcp_status
 
 
 TEST_WORKITEMS_DIR = Path(__file__).parent / "test-workitems"
+
+
+def create_role_notes(work_item_id: str, role: str, work_items_dir: Path = TEST_WORKITEMS_DIR):
+    """Helper to create role notes file for a given role."""
+    suffix = ROLE_SUFFIX_MAP.get(role, role)
+    notes_dir = work_items_dir / work_item_id / "RoleDecisionNotes"
+    notes_dir.mkdir(parents=True, exist_ok=True)
+    notes_file = notes_dir / f"{work_item_id}-{suffix}.md"
+    notes_file.write_text(f"# {work_item_id}: {role} Notes\n\nTest notes.")
+    return notes_file
 
 
 @pytest.fixture(autouse=True)
@@ -130,6 +140,7 @@ class TestStatusAfterTransition:
     async def test_status_reflects_transition(self):
         """Should reflect current role after transition."""
         await gcp_create_workitem(work_item_id="trans-status", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("trans-status", "project-owner-assistant")
         await gcp_transition(
             work_item_id="trans-status",
             role="program-manager",
@@ -216,16 +227,13 @@ class TestStatusMissingNotes:
     async def test_status_includes_missing_notes_list(self):
         """TC-04: Should list roles missing decision notes."""
         await gcp_create_workitem(work_item_id="missing-notes-1", work_items_dir=TEST_WORKITEMS_DIR)
+        # Create PO notes before transition (required by blocking enforcement)
+        create_role_notes("missing-notes-1", "project-owner-assistant")
         await gcp_transition(
             work_item_id="missing-notes-1",
             role="program-manager",
             work_items_dir=TEST_WORKITEMS_DIR
         )
-        
-        # Only create PO notes, not PM notes
-        notes_dir = TEST_WORKITEMS_DIR / "missing-notes-1" / "RoleDecisionNotes"
-        notes_dir.mkdir(parents=True, exist_ok=True)
-        (notes_dir / "missing-notes-1-project-owner-assistant.md").write_text("# PO Notes")
         
         result = await gcp_status(
             work_item_id="missing-notes-1",
