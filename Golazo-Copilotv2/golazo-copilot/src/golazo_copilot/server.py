@@ -125,6 +125,10 @@ async def list_tools() -> list[Tool]:
                         "default": True,
                         "description": "Whether item is complete"
                     },
+                    "evidence": {
+                        "type": "string",
+                        "description": "Evidence proving the item is complete (file path, command output, etc.)"
+                    },
                     "workspace_path": {
                         "type": "string",
                         "description": "Workspace root path containing the WorkItems folder (auto-detected if not provided)"
@@ -146,7 +150,7 @@ async def list_tools() -> list[Tool]:
                     "item": {
                         "type": "string",
                         "enum": ["branchCreated", "testsWrittenFirst", "testsPass",
-                                 "buildPasses", "docsUpdated", "refactorComplete", "committed"],
+                                 "buildPasses", "docsUpdated", "refactorComplete", "committed", "retroComplete"],
                         "description": "Single DoD item to mark"
                     },
                     "items": {
@@ -157,6 +161,10 @@ async def list_tools() -> list[Tool]:
                         "type": "boolean",
                         "default": True,
                         "description": "Whether item is complete"
+                    },
+                    "evidence": {
+                        "type": "string",
+                        "description": "Evidence proving the item is complete (file path, command output, git SHA, etc.)"
                     },
                     "workspace_path": {
                         "type": "string",
@@ -295,6 +303,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             item=arguments.get("item"),
             items=arguments.get("items"),
             complete=arguments.get("complete", True),
+            evidence=arguments.get("evidence"),
             work_items_dir=work_items_dir
         )
         
@@ -324,6 +333,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
                 item=arguments.get("item"),
                 items=arguments.get("items"),
                 complete=arguments.get("complete", True),
+                evidence=arguments.get("evidence"),
                 work_items_dir=work_items_dir
             )
         
