@@ -16,6 +16,8 @@ from sfi_reporter.cache import (
     clear_cache,
 )
 from sfi_reporter.data import get_current_user_alias
+from sfi_reporter.llm_client import LLMConfig, LLMConfigError, LLMError, analyze_item, AnalysisResult
+from sfi_reporter.llm_storage import save_analysis, load_analysis, analysis_exists
 from sfi_reporter.logging_config import setup_logging, get_log_path, patch_subprocess_windows
 
 logger = logging.getLogger(__name__)
@@ -1150,6 +1152,8 @@ class DetailModal(tk.Toplevel):
             
             # Bind double-click to open item details
             tree.bind('<Double-1>', self._on_item_double_click)
+            # Bind right-click for LLM analysis context menu
+            tree.bind('<Button-3>', self._on_item_right_click)
         
         # Close button
         btn_frame = ttk.Frame(main_frame)
@@ -1172,6 +1176,23 @@ class DetailModal(tk.Toplevel):
         
         # Open item details modal
         ItemDetailsModal(self, item)
+
+    def _on_item_right_click(self, event):
+        """Handle right-click on item row to show context menu."""
+        iid = self.tree.identify_row(event.y)
+        if not iid:
+            return
+        self.tree.selection_set(iid)
+        item = self._item_map.get(iid)
+        if not item:
+            return
+
+        menu = tk.Menu(self, tearoff=0)
+        menu.add_command(
+            label="\U0001f916 Analyze with LLM",
+            command=lambda: _launch_llm_analysis(self, item),
+        )
+        menu.tk_popup(event.x_root, event.y_root)
 
 
 class ItemDetailsModal(tk.Toplevel):
@@ -2166,6 +2187,8 @@ class SFIReporterApp:
         
         # Bind double-click for drill-down
         self.action_tree.bind('<Double-1>', self._on_action_double_click)
+        # Bind right-click for LLM analysis context menu
+        self.action_tree.bind('<Button-3>', self._on_kpi_right_click)
     
     def _load_cached_data(self, user_alias: str = None):
         """Load cached data for a user.
@@ -2471,7 +2494,35 @@ class SFIReporterApp:
             items,
             self._service_name_map
         )
-    
+
+    def _on_kpi_right_click(self, event):
+        """Handle right-click on KPI row to show LLM analysis context menu."""
+        iid = self.action_tree.identify_row(event.y)
+        if not iid:
+            return
+        self.action_tree.selection_set(iid)
+        kpi_id = self._kpi_id_map.get(iid)
+        if not kpi_id:
+            return
+
+        # Get the first matching action item for this KPI
+        items = [
+            item for item in self.current_data.get('detailed_items', [])
+            if item.get('_kpi_id') == kpi_id
+        ]
+        if not items:
+            return
+
+        # Use the first item as representative for analysis
+        item = items[0]
+
+        menu = tk.Menu(self.root, tearoff=0)
+        menu.add_command(
+            label="\U0001f916 Analyze with LLM",
+            command=lambda: _launch_llm_analysis(self.root, item),
+        )
+        menu.tk_popup(event.x_root, event.y_root)
+
     def _update_status(self, message: str, color: str = "black"):
         """Update status label (thread-safe)."""
         self.root.after(0, lambda: self._do_update_status(message, color))
@@ -2855,6 +2906,197 @@ class SFIReporterApp:
         self.query_btn.configure(text=f"🔍 Filter ({n})")
 
         self._update_tables(data, is_filtered=True)
+
+
+# ---------------------------------------------------------------------------
+# LLM Analysis UI Components
+# ---------------------------------------------------------------------------
+
+class AnalysisProgressModal(tk.Toplevel):
+    """Modal progress dialog shown while LLM analysis is in flight."""
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.title("Analyzing...")
+        self.geometry("350x120")
+        self.resizable(False, False)
+        self.transient(parent)
+        self.grab_set()
+
+        # Prevent closing while in progress
+        self.protocol("WM_DELETE_WINDOW", lambda: None)
+
+        # Center on parent
+        self.update_idletasks()
+        x = parent.winfo_x() + (parent.winfo_width() - 350) // 2
+        y = parent.winfo_y() + (parent.winfo_height() - 120) // 2
+        self.geometry(f"+{x}+{y}")
+
+        frame = ttk.Frame(self, padding=20)
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        self.status_label = ttk.Label(frame, text="Preparing analysis...", font=("Segoe UI", 10))
+        self.status_label.pack(pady=(0, 10))
+
+        self.progress = ttk.Progressbar(frame, mode="indeterminate", length=280)
+        self.progress.pack()
+        self.progress.start(15)
+
+    def update_status(self, text: str):
+        """Update the status label (call from main thread only)."""
+        self.status_label.configure(text=text)
+
+    def close(self):
+        """Stop progress and destroy."""
+        self.progress.stop()
+        self.grab_release()
+        self.destroy()
+
+
+class AnalysisModal(tk.Toplevel):
+    """Modal dialog displaying the LLM analysis result."""
+
+    def __init__(self, parent, result: AnalysisResult):
+        super().__init__(parent)
+
+        title_text = result.title[:60] + "..." if len(result.title) > 60 else result.title
+        self.title(f"LLM Analysis: {title_text}")
+        self.geometry("800x650")
+        self.transient(parent)
+        self.grab_set()
+
+        # Center on parent
+        self.update_idletasks()
+        x = parent.winfo_x() + (parent.winfo_width() - 800) // 2
+        y = parent.winfo_y() + (parent.winfo_height() - 650) // 2
+        self.geometry(f"+{x}+{y}")
+
+        self._result = result
+        self._create_widgets()
+
+        self.bind("<Escape>", lambda e: self.destroy())
+        self.focus_set()
+
+    def _create_widgets(self):
+        """Build the analysis display."""
+        main_frame = ttk.Frame(self, padding=10)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Scrollable text widget
+        text_frame = ttk.Frame(main_frame)
+        text_frame.pack(fill=tk.BOTH, expand=True)
+
+        y_scroll = ttk.Scrollbar(text_frame, orient=tk.VERTICAL)
+        self.text = tk.Text(
+            text_frame,
+            wrap=tk.WORD,
+            font=("Segoe UI", 10),
+            yscrollcommand=y_scroll.set,
+            padx=12,
+            pady=8,
+        )
+        y_scroll.configure(command=self.text.yview)
+        y_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        self.text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Configure tags
+        self.text.tag_configure("header", font=("Segoe UI", 13, "bold"), spacing1=12, spacing3=4)
+        self.text.tag_configure("section", font=("Segoe UI", 10), lmargin1=10, lmargin2=10)
+        self.text.tag_configure("disclaimer", font=("Segoe UI", 8, "italic"), foreground="#888888")
+        self.text.tag_configure("meta", font=("Segoe UI", 8), foreground="#666666")
+
+        r = self._result
+
+        sections = [
+            ("\U0001f3af Mission", r.mission or "(No mission section parsed)"),
+            ("\u2705 Steps to Done", r.steps_to_done or "(No steps section parsed)"),
+            ("\U0001f527 Resources Needing Repair", r.resources or "(No resources section parsed)"),
+            ("\u26a0\ufe0f Risk of Delay", r.risk_of_delay or "(No risk section parsed)"),
+        ]
+
+        for heading, body in sections:
+            self.text.insert(tk.END, f"{heading}\n", "header")
+            self.text.insert(tk.END, f"{body}\n\n", "section")
+
+        # Separator
+        self.text.insert(tk.END, "\n" + "\u2500" * 60 + "\n\n", "meta")
+
+        # Metadata footer
+        ts = r.timestamp[:19].replace("T", " ") if r.timestamp else "unknown"
+        meta = f"Model: {r.model}  |  Analyzed: {ts} UTC  |  Tokens: {r.prompt_tokens} in / {r.completion_tokens} out"
+        self.text.insert(tk.END, meta + "\n", "meta")
+        self.text.insert(tk.END, "\nAI-generated analysis \u2014 verify before acting.\n", "disclaimer")
+
+        self.text.configure(state=tk.DISABLED)
+
+        # Button bar
+        btn_frame = ttk.Frame(main_frame)
+        btn_frame.pack(fill=tk.X, pady=(10, 0))
+
+        ttk.Button(btn_frame, text="\U0001f4cb Copy to Clipboard", command=self._copy_to_clipboard).pack(side=tk.LEFT)
+        ttk.Button(btn_frame, text="Close", command=self.destroy).pack(side=tk.RIGHT)
+
+    def _copy_to_clipboard(self):
+        """Copy the full analysis text to clipboard."""
+        self.clipboard_clear()
+        self.clipboard_append(self._result.analysis_text)
+        # Brief flash feedback
+        original = self.title()
+        self.title("Copied to clipboard!")
+        self.after(1500, lambda: self.title(original))
+
+
+def _launch_llm_analysis(parent, item: dict):
+    """Launch LLM analysis for an action item (shared by KPI tree and DrillDownModal).
+
+    Args:
+        parent: The parent tkinter widget (for modal positioning).
+        item: The action item data dict.
+    """
+    # Validate config before spawning thread
+    try:
+        config = LLMConfig.from_env()
+    except LLMConfigError as e:
+        messagebox.showerror("LLM Configuration Required", str(e), parent=parent)
+        return
+
+    # Get the root window for after() calls
+    root = parent.winfo_toplevel()
+
+    progress = AnalysisProgressModal(parent)
+
+    def do_analysis():
+        try:
+            root.after(0, lambda: progress.update_status("Calling Azure OpenAI..."))
+            result = analyze_item(item, config)
+
+            root.after(0, lambda: progress.update_status("Saving result..."))
+            try:
+                save_analysis(result)
+            except OSError as e:
+                logger.warning("Failed to save analysis: %s", e)
+
+            root.after(0, lambda: _on_analysis_complete(root, progress, result))
+
+        except LLMError as e:
+            root.after(0, lambda: _on_analysis_error(root, progress, str(e)))
+        except Exception as e:
+            logger.error("Unexpected error during LLM analysis: %s", e)
+            root.after(0, lambda: _on_analysis_error(root, progress, f"Unexpected error: {e}"))
+
+    threading.Thread(target=do_analysis, daemon=True).start()
+
+
+def _on_analysis_complete(root, progress: AnalysisProgressModal, result: AnalysisResult):
+    """Handle successful analysis completion (main thread)."""
+    progress.close()
+    AnalysisModal(root, result)
+
+
+def _on_analysis_error(root, progress: AnalysisProgressModal, error_msg: str):
+    """Handle analysis error (main thread)."""
+    progress.close()
+    messagebox.showerror("LLM Analysis Failed", error_msg, parent=root)
 
 
 def main():

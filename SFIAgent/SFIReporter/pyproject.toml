@@ -14,6 +14,7 @@ authors = [
 ]
 dependencies = [
     "accia-s360>=0.1.0",
+    "openai>=1.0.0",
 ]
 
 [project.optional-dependencies]

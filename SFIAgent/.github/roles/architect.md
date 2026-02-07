@@ -1,4 +1,4 @@
-<!-- Golazo Version: 2.8.0 -->
+<!-- Golazo Version: 2.11.2 -->
 # Role: Architect
 
 ## Purpose
