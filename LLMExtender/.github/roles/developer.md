@@ -16,7 +16,6 @@ Verify DoR is fully satisfied (see `.github/copilot-instructions.md`). If DoR is
 
 ## Responsibilities
 - **Write test code FIRST** based on Test Cases document (TDD red phase)
-- **Cross-reference every test case in the Test Cases document against actual test functions before marking `testsWrittenFirst`** — every TC-N must map to at least one test. If any are missing, write them before proceeding.
 - Verify tests fail initially before writing production code
 - Implement production code to make tests pass (TDD green phase)
 - Implement exactly what is specified (User Story + Design Doc)

@@ -4,6 +4,8 @@ from pathlib import Path
 from importlib import resources
 import shutil
 
+from golazo_copilot import __version__
+
 
 # Workspace markers - at least one must exist
 WORKSPACE_MARKERS = [".git", "pyproject.toml", "package.json", "Cargo.toml", ".hg"]
@@ -28,11 +30,23 @@ def _is_workspace(path: Path) -> bool:
 
 
 def _get_default_instructions() -> str:
-    """Get default copilot instructions content."""
-    return '''<!-- Golazo Copilot Version: 2.11.2 -->
+    """Get default copilot instructions content with current version."""
+    return f'''<!-- Golazo Copilot Version: {__version__} -->
 # Golazo Copilot v2
 
 This workspace uses Golazo Copilot MCP server for workflow management.
+
+## FORBIDDEN ACTIONS (NEVER DO THESE)
+
+1. **NEVER edit `state.json` directly** - All state changes MUST go through `gcp_*` MCP tools. Editing state.json is a workflow violation that corrupts the work item.
+
+2. **NEVER bypass gates** - If `gcp_mark_dor` or `gcp_transition` fails, FIX THE ISSUE (e.g., provide required evidence). Do not work around it.
+
+3. **NEVER skip to Developer role** - You must complete all prior roles and DoR items first.
+
+4. **NEVER write production code without DoR complete** - If DoR is incomplete, you are in the wrong phase.
+
+---
 
 ## REQUIRED: Before EVERY Response
 1. Call `gcp_status(work_item_id="<current-id>")` to get current state
@@ -88,8 +102,8 @@ gcp_transition(work_item_id="<id>", role="program-manager")
 4. architect
 5. developer (requires DoR complete!)
 6. refactor-expert
-7. builder
-8. documentor
+7. documentor
+8. builder
 9. retrospective
 
 ---
@@ -100,10 +114,11 @@ gcp_transition(work_item_id="<id>", role="program-manager")
 gcp_mark_dod(work_item_id="<id>", item="branchCreated", complete=true)
 gcp_mark_dod(work_item_id="<id>", item="testsWrittenFirst", complete=true)
 gcp_mark_dod(work_item_id="<id>", item="testsPass", complete=true)
-gcp_mark_dod(work_item_id="<id>", item="buildPasses", complete=true)
-gcp_mark_dod(work_item_id="<id>", item="docsUpdated", complete=true)
 gcp_mark_dod(work_item_id="<id>", item="refactorComplete", complete=true)
+gcp_mark_dod(work_item_id="<id>", item="docsUpdated", complete=true)
+gcp_mark_dod(work_item_id="<id>", item="buildPasses", complete=true)
 gcp_mark_dod(work_item_id="<id>", item="committed", complete=true)
+gcp_mark_dod(work_item_id="<id>", item="retroComplete", complete=true)
 ```
 
 ---
@@ -116,6 +131,8 @@ gcp_mark_dod(work_item_id="<id>", item="committed", complete=true)
 | Design Doc | `WorkItems/<id>/Design/<id>-design-doc.md` |
 | Review Comments | `WorkItems/<id>/Design/<id>-Review-Comments.md` |
 | Test Cases | `WorkItems/<id>/Design/<id>-Test-Cases.md` |
+| Refactoring Plan | `WorkItems/<id>/Design/<id>-Refactoring-Plan.md` |
+| Retro Plan | `WorkItems/<id>/Design/<id>-Retro-Plan.md` |
 | Role Notes | `WorkItems/<id>/RoleDecisionNotes/<id>-<role>.md` |
 
 ---

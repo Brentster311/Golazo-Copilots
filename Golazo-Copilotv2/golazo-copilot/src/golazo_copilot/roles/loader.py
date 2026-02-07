@@ -1,7 +1,18 @@
 """Role instruction loader."""
 
+import re
 from pathlib import Path
 from importlib import resources
+
+from golazo_copilot import __version__
+
+
+def _update_version_comment(content: str) -> str:
+    """Update version comment in role content to match current package version."""
+    # Replace any existing Golazo Version comment with current version
+    pattern = r'<!-- Golazo Version: [\d.]+ -->'
+    replacement = f'<!-- Golazo Version: {__version__} -->'
+    return re.sub(pattern, replacement, content)
 
 
 def load_role_instructions(role: str, project_root: Path | None = None) -> str:
@@ -25,7 +36,8 @@ def load_role_instructions(role: str, project_root: Path | None = None) -> str:
     # Try local first
     local_path = project_root / ".github" / "roles" / f"{role}.md"
     if local_path.exists():
-        return local_path.read_text(encoding='utf-8')
+        content = local_path.read_text(encoding='utf-8')
+        return _update_version_comment(content)
     
     # Fall back to package defaults
     return load_default_role(role)
@@ -37,7 +49,8 @@ def load_default_role(role: str) -> str:
         # Try to load from package resources
         files = resources.files("golazo_copilot.roles.defaults")
         role_file = files.joinpath(f"{role}.md")
-        return role_file.read_text(encoding='utf-8')
+        content = role_file.read_text(encoding='utf-8')
+        return _update_version_comment(content)
     except (FileNotFoundError, TypeError):
         # Return placeholder if not found
         return f"# {role}\n\nRole instructions not found. Please create .github/roles/{role}.md"

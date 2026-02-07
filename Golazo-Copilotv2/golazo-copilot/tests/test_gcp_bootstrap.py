@@ -187,3 +187,25 @@ class TestBootstrapWorkspaceDetection:
         
         assert result["success"] is False
         assert "workspace" in result["error"].lower()
+
+
+class TestBootstrapVersionConsistency:
+    """AC7: Version in generated files matches package version."""
+
+    @pytest.mark.asyncio
+    async def test_instructions_version_matches_package(self):
+        """Bootstrap should embed current package version in instructions."""
+        from golazo_copilot import __version__
+        
+        await gcp_bootstrap(workspace_path=TEST_WORKSPACE_DIR)
+        
+        content = (TEST_WORKSPACE_DIR / ".github" / "copilot-instructions.md").read_text()
+        assert f"Version: {__version__}" in content
+
+    def test_role_loader_updates_version(self):
+        """Role loader should update version comments to current version."""
+        from golazo_copilot import __version__
+        from golazo_copilot.roles.loader import load_default_role
+        
+        content = load_default_role("developer")
+        assert f"Golazo Version: {__version__}" in content
