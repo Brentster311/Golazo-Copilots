@@ -25,6 +25,12 @@ def create_role_notes(work_item_id: str, role: str, work_items_dir: Path = TEST_
     return notes_file
 
 
+def mark_all_dor_complete(state):
+    """Helper to mark all DoR items as complete."""
+    for item in state.dor.values():
+        item.complete = True
+
+
 @pytest.fixture(autouse=True)
 def cleanup():
     """Clean up test directory before and after each test."""
@@ -53,7 +59,7 @@ class TestBackwardTransitions:
         
         # Mark DoR complete
         state = load_state("back-1", TEST_WORKITEMS_DIR)
-        state.dor = {k: True for k in state.dor}
+        mark_all_dor_complete(state)
         save_state("back-1", state, TEST_WORKITEMS_DIR)
         
         create_role_notes("back-1", "architect")
@@ -80,7 +86,7 @@ class TestBackwardTransitions:
         
         # Verify progress preserved
         state = load_state("back-1", TEST_WORKITEMS_DIR)
-        assert all(state.dor.values())  # DoR should still be complete
+        assert all(v.complete for v in state.dor.values())  # DoR should still be complete
 
     @pytest.mark.asyncio
     async def test_forward_skip_still_fails(self):
@@ -114,7 +120,7 @@ class TestBackwardTransitions:
         await gcp_transition(work_item_id="back-3", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
         
         state = load_state("back-3", TEST_WORKITEMS_DIR)
-        state.dor = {k: True for k in state.dor}
+        mark_all_dor_complete(state)
         save_state("back-3", state, TEST_WORKITEMS_DIR)
         
         create_role_notes("back-3", "architect")
@@ -147,7 +153,7 @@ class TestBackwardTransitions:
         await gcp_transition(work_item_id="back-4", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
         
         state = load_state("back-4", TEST_WORKITEMS_DIR)
-        state.dor = {k: True for k in state.dor}
+        mark_all_dor_complete(state)
         save_state("back-4", state, TEST_WORKITEMS_DIR)
         
         create_role_notes("back-4", "architect")

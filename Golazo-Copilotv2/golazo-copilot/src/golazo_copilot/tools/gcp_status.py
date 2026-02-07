@@ -73,6 +73,10 @@ async def gcp_status(
                     missing_notes.append(entry.role)
                 seen_roles.add(entry.role)
     
+    # Build simplified items view (just complete status, not full ChecklistItem)
+    dor_items = {k: v.complete for k, v in state.dor.items()}
+    dod_items = {k: v.complete for k, v in state.dod.items()}
+    
     return {
         "active": True,
         "version": __version__,
@@ -82,12 +86,12 @@ async def gcp_status(
         "current_role": state.current_role,
         "dor": {
             "complete": dor_complete,
-            "items": dict(state.dor),
+            "items": dor_items,
             "missing": dor_missing,
         },
         "dod": {
             "complete": dod_complete,
-            "items": dict(state.dod),
+            "items": dod_items,
             "missing": dod_missing,
         },
         "deviations": deviations,

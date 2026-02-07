@@ -27,6 +27,12 @@ def create_role_notes(work_item_id: str, role: str, work_items_dir: Path = TEST_
     return notes_file
 
 
+def mark_all_dor_complete(state):
+    """Helper to mark all DoR items as complete."""
+    for item in state.dor.values():
+        item.complete = True
+
+
 async def advance_to_role(work_item_id: str, target_role: str, work_items_dir: Path = TEST_WORKITEMS_DIR):
     """Helper to advance through roles with notes to reach target role."""
     role_sequence = [
@@ -45,7 +51,7 @@ async def advance_to_role(work_item_id: str, target_role: str, work_items_dir: P
             # Handle DoR gate for developer
             if next_role == "developer":
                 state = load_state(work_item_id, work_items_dir)
-                state.dor = {k: True for k in state.dor}
+                mark_all_dor_complete(state)
                 save_state(work_item_id, state, work_items_dir)
             await gcp_transition(work_item_id=work_item_id, role=next_role, work_items_dir=work_items_dir)
 
@@ -258,7 +264,7 @@ class TestDoRGate:
         
         # Mark DoR complete
         state = load_state("dor-gate-3", TEST_WORKITEMS_DIR)
-        state.dor = {k: True for k in state.dor}
+        mark_all_dor_complete(state)
         save_state("dor-gate-3", state, TEST_WORKITEMS_DIR)
         
         result = await gcp_transition(
@@ -298,7 +304,7 @@ class TestPhaseTransitions:
         create_role_notes("phase-2", "architect")
         
         state = load_state("phase-2", TEST_WORKITEMS_DIR)
-        state.dor = {k: True for k in state.dor}
+        mark_all_dor_complete(state)
         save_state("phase-2", state, TEST_WORKITEMS_DIR)
         
         await gcp_transition(work_item_id="phase-2", role="developer", work_items_dir=TEST_WORKITEMS_DIR)
@@ -336,13 +342,13 @@ class TestBackwardTransitions:
         create_role_notes("backward-2", "program-manager")
         
         state = load_state("backward-2", TEST_WORKITEMS_DIR)
-        state.dor["userStory"] = True
+        state.dor["userStory"].complete = True
         save_state("backward-2", state, TEST_WORKITEMS_DIR)
         
         await gcp_transition(work_item_id="backward-2", role="project-owner-assistant", work_items_dir=TEST_WORKITEMS_DIR)
         
         state = load_state("backward-2", TEST_WORKITEMS_DIR)
-        assert state.dor["userStory"] is True
+        assert state.dor["userStory"].complete is True
 
 
 
@@ -626,7 +632,7 @@ class TestBlockingRoleNotes:
         
         # Complete DoR
         state = load_state("block-7", TEST_WORKITEMS_DIR)
-        state.dor = {k: True for k in state.dor}
+        mark_all_dor_complete(state)
         save_state("block-7", state, TEST_WORKITEMS_DIR)
         
         await gcp_transition(work_item_id="block-7", role="developer", work_items_dir=TEST_WORKITEMS_DIR)

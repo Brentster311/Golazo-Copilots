@@ -55,6 +55,40 @@ Track completion of development work:
 - **Refactor Complete** – Code quality improvements done
 - **Committed** – Changes committed to source control
 
+#### Evidence-Based Validation (v2.15.0+)
+When marking DoR/DoD items as complete, **evidence is required** to prove the work was done. This prevents claims without proof and creates an audit trail.
+
+```python
+# Without evidence - FAILS
+gcp_mark_dor(work_item_id="GCP-0001", item="userStory")
+# Error: "Missing evidence for 'userStory'. Expected: file path to User Story markdown"
+
+# With evidence - SUCCEEDS
+gcp_mark_dor(work_item_id="GCP-0001", item="userStory", evidence="WorkItems/GCP-0001/GCP-0001-User-Story.md")
+```
+
+**Evidence types by item:**
+
+| Item | Evidence Type | Example |
+|------|---------------|---------|
+| userStory | File path | `WorkItems/GCP-0001/GCP-0001-User-Story.md` |
+| designDoc | File path | `WorkItems/GCP-0001/Design/GCP-0001-design-doc.md` |
+| reviewComments | File path | `WorkItems/GCP-0001/Design/GCP-0001-Review-Comments.md` |
+| testCases | File path | `WorkItems/GCP-0001/Design/GCP-0001-Test-Cases.md` |
+| branchCreated | Git branch name | `feature/GCP-0001` |
+| testsWrittenFirst | File path(s) | `tests/test_feature.py` |
+| testsPass | Command output | `pytest output: 29 passed` |
+| buildPasses | Command output | `Build successful` |
+| docsUpdated | File path(s) | `README.md` |
+| refactorComplete | Path or N/A | `N/A: No refactoring needed` |
+| committed | Git commit SHA | `abc1234` |
+
+Evidence is validated before the state is updated:
+- **File paths** – Must exist in the workspace
+- **Git branches** – Must exist (`git branch --list`)
+- **Git commits** – Must be valid SHA (`git rev-parse`)
+- **N/A format** – Must start with "N/A:" followed by a reason
+
 #### Multi-Session Support
 Work on multiple features simultaneously. Each work item has independent state, allowing you to:
 - Switch between work items without losing progress
