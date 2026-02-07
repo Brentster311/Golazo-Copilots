@@ -1,6 +1,6 @@
 # SFI-001: S360 API Direct Access Library
 
-**Status**: IN PROGRESS
+**Status**: IMPLEMENTED
 
 ---
 

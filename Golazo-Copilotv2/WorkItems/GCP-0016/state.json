@@ -1,0 +1,96 @@
+{
+  "schema_version": "1.0",
+  "work_item_id": "GCP-0016",
+  "profile": "express",
+  "current_phase": "definition",
+  "current_role": "architect",
+  "created_at": "2026-02-06T18:25:24.933086Z",
+  "updated_at": "2026-02-06T19:12:59.736506Z",
+  "dor": {
+    "userStory": true,
+    "designDoc": true,
+    "reviewComments": false,
+    "testCases": true
+  },
+  "dod": {
+    "branchCreated": true,
+    "testsWrittenFirst": true,
+    "testsPass": true,
+    "buildPasses": true,
+    "docsUpdated": true,
+    "refactorComplete": true,
+    "committed": true
+  },
+  "role_history": [
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-02-06T18:25:24.933086Z",
+      "exited_at": "2026-02-06T18:29:26.223139Z"
+    },
+    {
+      "role": "program-manager",
+      "entered_at": "2026-02-06T18:29:26.223139Z",
+      "exited_at": "2026-02-06T18:29:34.722605Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-02-06T18:29:34.722605Z",
+      "exited_at": "2026-02-06T18:29:37.947251Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-02-06T18:29:37.947251Z",
+      "exited_at": "2026-02-06T18:29:46.690736Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-02-06T18:29:46.690736Z",
+      "exited_at": "2026-02-06T19:08:23.036490Z"
+    },
+    {
+      "role": "refactor-expert",
+      "entered_at": "2026-02-06T19:08:23.036490Z",
+      "exited_at": "2026-02-06T19:08:26.358507Z"
+    },
+    {
+      "role": "builder",
+      "entered_at": "2026-02-06T19:08:26.358507Z",
+      "exited_at": "2026-02-06T19:08:29.587360Z"
+    },
+    {
+      "role": "documentor",
+      "entered_at": "2026-02-06T19:08:29.587360Z",
+      "exited_at": "2026-02-06T19:08:37.588435Z"
+    },
+    {
+      "role": "retrospective",
+      "entered_at": "2026-02-06T19:08:37.588435Z",
+      "exited_at": "2026-02-06T19:12:59.736506Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-02-06T19:12:59.736506Z",
+      "exited_at": null
+    }
+  ],
+  "deviations": [
+    {
+      "id": "dev-001",
+      "action": "skip_role",
+      "reason": "Express profile for documentation-only change - skipping PM/QA to go directly to implementation",
+      "role": "project-owner-assistant",
+      "timestamp": "2026-02-06T18:29:21.552761Z",
+      "consumed": false,
+      "consumed_at": null
+    },
+    {
+      "id": "dev-002",
+      "action": "skip_dor",
+      "reason": "Express profile doc-only change - reviewComments not needed for README link addition",
+      "role": "architect",
+      "timestamp": "2026-02-06T18:29:44.031911Z",
+      "consumed": true,
+      "consumed_at": "2026-02-06T18:29:46.690729Z"
+    }
+  ]
+}

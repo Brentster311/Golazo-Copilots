@@ -2,9 +2,11 @@
 
 from pathlib import Path
 
+from .. import __version__
 from ..core.persistence import load_state, work_item_exists, DEFAULT_WORKITEMS_DIR
 from ..core.checklists import get_missing_items, is_checklist_complete
 from ..roles.loader import load_role_instructions
+from .gcp_transition import get_role_notes_path
 
 
 async def gcp_status(
@@ -27,7 +29,8 @@ async def gcp_status(
     if not work_item_exists(work_item_id, work_items_dir):
         return {
             "active": False,
-            "message": f"No active work item '{work_item_id}'. Use gcp_init to start.",
+            "message": f"No active work item '{work_item_id}'. Use gcp_create_workitem to start.",
+            "version": __version__,
         }
     
     # Load state
@@ -47,8 +50,32 @@ async def gcp_status(
     # Generate next steps
     next_steps = _generate_next_steps(state, dor_complete, dod_complete, dor_missing)
     
+    # Build deviations list
+    deviations = [
+        {
+            "id": d.id,
+            "action": d.action,
+            "reason": d.reason,
+            "timestamp": d.timestamp.isoformat(),
+            "consumed": d.consumed,
+        }
+        for d in state.deviations
+    ]
+    
+    # Check for missing role notes (completed roles only)
+    missing_notes = []
+    seen_roles = set()
+    for entry in state.role_history:
+        if entry.exited_at is not None:  # Role has been exited (completed)
+            if entry.role not in seen_roles:
+                notes_path = get_role_notes_path(work_item_id, entry.role, work_items_dir)
+                if not notes_path.exists():
+                    missing_notes.append(entry.role)
+                seen_roles.add(entry.role)
+    
     return {
         "active": True,
+        "version": __version__,
         "work_item_id": state.work_item_id,
         "profile": state.profile,
         "current_phase": state.current_phase,
@@ -63,6 +90,8 @@ async def gcp_status(
             "items": dict(state.dod),
             "missing": dod_missing,
         },
+        "deviations": deviations,
+        "missing_notes": missing_notes,
         "role_instructions": role_instructions,
         "next_steps": next_steps,
     }

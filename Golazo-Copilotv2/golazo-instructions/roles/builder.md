@@ -1,4 +1,4 @@
-<!-- Golazo Version: 2.8.0 -->
+<!-- Golazo Version: 2.11.2 -->
 # Role: Builder
 
 ## Purpose
@@ -26,6 +26,37 @@ Verify the system builds successfully, manage git operations, and ensure the wor
 - Verify packaging/bundling works (if applicable)
 - Document build commands used
 - Report any build warnings or errors
+
+### Version Management (before Commit)
+Determine appropriate version bump based on changes in this work item:
+
+| Change Type | Bump | Example |
+|-------------|------|---------|
+| Breaking/incompatible API changes | MAJOR | 2.x.x → 3.0.0 |
+| New features, backwards compatible | MINOR | 2.8.x → 2.9.0 |
+| Bug fixes, backwards compatible | PATCH | 2.8.0 → 2.8.1 |
+
+**Version update process:**
+1. Review changes to determine bump type (ask PO if unclear)
+2. Locate ALL version declarations in the project (search for current version string)
+3. Update ALL locations consistently - never update just one
+4. Verify version consistency before committing
+
+**Common version locations** (language-dependent):
+- Package manifests (package.json, pyproject.toml, *.csproj, pom.xml, Cargo.toml)
+- Source code version constants (__version__, VERSION, version.h)
+- Documentation headers, README badges
+- API response headers or metadata endpoints
+
+**Version update is REQUIRED when:**
+- New features are added (MINOR)
+- Breaking changes are made (MAJOR)
+- Bug fixes are released (PATCH)
+
+**Version update is SKIPPED when:**
+- Changes are documentation-only with no code changes
+- Changes are internal refactoring with no user-visible impact
+- Work item explicitly states "no version bump"
 
 ### Git Operations (Commit - after Documentor)
 - Stage all changes: `git add .`

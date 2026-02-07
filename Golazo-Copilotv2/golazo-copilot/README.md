@@ -2,6 +2,12 @@
 
 A Model Context Protocol (MCP) server that brings **programmatic workflow enforcement** to GitHub Copilot. Golazo Copilot transforms the Golazo development methodology from markdown-based guidance into a system with:
 
+## What is Golazo?
+
+Golazo is a structured development methodology that ensures high-quality software delivery through role-based workflows, gates, and auditable artifacts. For a complete explanation of the Golazo methodology, see the [Golazo README](https://github.com/microsoft/golazo/blob/main/README.md).
+
+## Features
+
 - **Persistent state tracking** – Workflow progress is saved to `state.json` files, surviving session restarts
 - **Automated role transitions** – Enforce the correct sequence: Project Owner → Program Manager → QA → Architect → Developer → Refactor Expert → Builder → Documentor → Retrospective
 - **Definition of Ready (DoR) gates** – Block development work until user story, design doc, review comments, and test cases are complete
@@ -9,6 +15,7 @@ A Model Context Protocol (MCP) server that brings **programmatic workflow enforc
 - **Multi-session support** – Switch between work items while preserving context
 - **Workflow profiles** – Choose `complete`, `express`, or `spike` modes based on task complexity
 - **Deviation recording** – Audit trail when gates are bypassed with justification
+- **Role notes enforcement** – Blocks transitions when role decision notes are missing (bypass with consent)
 
 ### Feature Details
 
@@ -78,6 +85,15 @@ When you need to bypass a gate (e.g., skip DoR to explore a spike), the system:
 2. Records the action, reason, timestamp, and current role
 3. Stores deviations in the work item's `state.json`
 4. Enables retrospective review of process deviations
+
+#### Role Notes Enforcement
+The Golazo workflow requires every role to produce a decision notes document. The system enforces this by:
+1. **Blocking on transition** – When you transition away from a role, `gcp_transition` checks if decision notes exist for that role. If missing, the transition **fails** with an error indicating the expected file path.
+2. **Force with consent** – If you need to bypass, use `gcp_consent(action='skip_role')` first, then `gcp_transition(..., force_without_notes=True)`.
+3. **Status visibility** – `gcp_status` includes a `missing_notes` list showing which completed roles lack decision notes.
+4. **Expected file naming** – Notes should be at `WorkItems/<id>/RoleDecisionNotes/<id>-<role>.md`
+
+This ensures an audit trail of decisions made at each workflow stage.
 
 ## Prerequisites
 
@@ -211,8 +227,8 @@ If it starts without errors (no output, waiting for input), the server is workin
 | Tool | Description |
 |------|-------------|
 | `gcp_create_workitem` | Initialize a new work item with persistent state tracking |
-| `gcp_status` | Get comprehensive workflow status for a work item |
-| `gcp_transition` | Move between workflow roles (enforces DoR gate) |
+| `gcp_status` | Get comprehensive workflow status, including missing role notes |
+| `gcp_transition` | Move between workflow roles (enforces DoR gate, warns on missing notes) |
 | `gcp_mark_dor` | Mark Definition of Ready items as complete |
 | `gcp_mark_dod` | Mark Definition of Done items as complete |
 | `gcp_consent` | Record consent for bypassing workflow gates |

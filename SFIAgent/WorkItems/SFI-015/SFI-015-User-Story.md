@@ -1,16 +1,16 @@
-# SFI-015: Detail Page Color Indicators Not Rendering
+# SFI-015: Detail Page Color Indicators
 
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 ---
 
 ## User Story
 
-**Title**: Fix colored section indicators in detail modal
+**Title**: Verify and test colored section indicators in detail modal
 
 **As a**: End user viewing SFI action item details  
-**I want**: Section headers (Status, Dates, Ownership, Service & Program) to display with colored circle indicators, just like in the list view  
-**So that**: The detail view is visually consistent with the sidebar list and I can quickly scan section types by color
+**I want**: Section headers (Status, Dates, Ownership, Service & Program) to display with colored circle indicators matching the conceptual color scheme  
+**So that**: The detail view is visually consistent and I can quickly scan section types by color
 
 ---
 
@@ -20,73 +20,56 @@
 - Adding new section types
 - Accessibility compliance (will be handled separately)
 - Mobile/responsive layout
+- Flet app (removed — tkinter only)
 
 ---
 
 ## Assumptions
 
-- **Assumption (explicit)**: The color scheme should match the sidebar list view (Status=🔴, Dates=🔵, Ownership=🟣, Service & Program=⚫)
-- **Assumption (explicit)**: The detail modal is rendered using tkinter Label widgets
-- **Assumption (explicit)**: The issue is in the tkinter implementation, not the data layer
+- **Assumption (explicit)**: The color scheme uses emoji circles: Status=🔴, Dates=🔵, Ownership=🟣, Service & Program=⚫
+- **Assumption (explicit)**: The detail modal is rendered via `ItemDetailsModal` in `tk_app.py` using a tk.Text widget with tagged inserts
+- **Assumption (explicit)**: The emoji fix is already applied in the `group_titles` dict; this work item formalizes it with proper automated tests
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] Status section header shows a red/colored circle indicator (not black/text)
-- [ ] Dates section header shows a blue/colored circle indicator  
-- [ ] Ownership section header shows a purple/colored circle indicator
-- [ ] Service & Program section header shows a gray/colored circle indicator
-- [ ] All colored indicators are visually identical to those in the sidebar list view
-- [ ] Detail modal renders correctly in both popup and embedded modes
+- [ ] Status section header shows 🔴 red circle indicator
+- [ ] Dates section header shows 🔵 blue circle indicator
+- [ ] Ownership section header shows 🟣 purple circle indicator
+- [ ] Service & Program section header shows ⚫ black circle indicator
+- [ ] Automated tests verify all four section headers use correct emoji from production code
+- [ ] Existing weak test file replaced with proper production-code-verifying tests
 
 ---
 
 ## Non-Functional Requirements
 
 - No performance degradation when opening detail view
-- Colored indicators must scale correctly with different font sizes
-- Should work on Windows and any other supported platform
+- Should work on Windows (primary platform)
 
 ---
 
 ## Telemetry / Metrics Expected
 
-- None - this is a UI rendering fix
+- None — this is a UI cosmetic verification
 
 ---
 
 ## Rollout / Rollback Notes
 
 - Change is cosmetic; no breakage risk
-- Can be deployed directly in next release
-- If needed, can be reverted by removing color rendering code from detail modal builder
+- If needed, can be reverted by restoring previous emoji (📅, 👤, 🔧)
 
 ---
 
 ## Root Cause Analysis
 
-The detail modal (`SFIReporter/src/sfi_reporter/tk_app.py`, likely around `DetailWindow` or detail modal functions) constructs section headers but likely:
-1. Does not include the Unicode emoji/circle characters used in the sidebar
-2. Or applies different formatting/font to header labels
-
-The sidebar list view successfully renders colored indicators, so the approach should be copied to the detail view.
+The `ItemDetailsModal._build_content()` method in `tk_app.py` originally used non-circle emojis (📅 calendar, 👤 person, 🔧 wrench) for section headers instead of colored circles. The fix replaced them with 🔴, 🔵, 🟣, ⚫. The existing test file (`test_detail_modal_colors.py`) only asserts on string constants and has manual-only verification — it does not import or verify the actual production code.
 
 ---
 
 ## Related Files
 
-- `SFIReporter/src/sfi_reporter/tk_app.py`: Detail modal construction
-- `SFIReporter/src/sfi_reporter/flet_app.py`: Flet version (if applicable)
-
----
-
-## Priority
-
-Low - Cosmetic issue; does not impact functionality
-
----
-
-## Created
-
-2026-02-05
+- `SFIReporter/src/sfi_reporter/tk_app.py`: `ItemDetailsModal._build_content()` — `group_titles` dict
+- `SFIReporter/tests/test_detail_modal_colors.py`: Current weak test file (to be replaced)

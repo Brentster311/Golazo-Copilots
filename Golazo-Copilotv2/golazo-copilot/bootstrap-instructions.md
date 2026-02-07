@@ -87,18 +87,6 @@ gcp_mark_dod(work_item_id="<id>", item="committed", complete=true)
 
 ---
 
-## Each Role MUST Create:
-- **Project Owner**: User Story + `<id>-project-owner.md`
-- **Program Manager**: Design Doc + `<id>-program-manager.md`
-- **Quality Assurance**: Review Comments + Test Cases + `<id>-quality-assurance.md`
-- **Architect**: Architect notes in Review Comments + `<id>-architect.md`
-- **Developer**: Code + Tests + `<id>-developer.md`
-- **Refactor Expert**: Refactored code + `<id>-refactor-expert.md`
-- **Builder**: Build/commit + `<id>-builder.md`
-- **Documentor**: Updated docs + `<id>-documentor.md`
-
----
-
 ## Gate Enforcement
 - **DoR Gate**: Cannot transition to `developer` until ALL DoR items are complete
 - If `gcp_transition` fails, call `gcp_status` to see what's missing

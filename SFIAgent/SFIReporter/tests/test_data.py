@@ -1,5 +1,14 @@
 """Tests for data module."""
 import pytest
+import sfi_reporter.data as data_module
+
+
+@pytest.fixture(autouse=True)
+def _reset_client_singleton():
+    """Reset the S360Client singleton before each test."""
+    data_module._client_instance = None
+    yield
+    data_module._client_instance = None
 
 
 class TestUserDetection:

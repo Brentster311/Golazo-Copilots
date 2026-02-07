@@ -1,5 +1,7 @@
 # GCP-0004: Workflow Status Display
 
+**Status**: IMPLEMENTED
+
 ## User Story
 
 **As a** developer using Golazo Copilot,  

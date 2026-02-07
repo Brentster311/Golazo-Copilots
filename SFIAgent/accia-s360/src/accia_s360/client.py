@@ -155,6 +155,7 @@ class S360Client:
         action_item_id: str,
         new_eta: datetime,
         notes: str,
+        assigned_to: str = "",
         sla_type: str = "InSla",
     ) -> SaveResult:
         """
@@ -166,6 +167,7 @@ class S360Client:
             action_item_id: The action item ID.
             new_eta: The new ETA datetime.
             notes: Status notes.
+            assigned_to: Alias of the action owner.
             sla_type: SLA type (default: "InSla").
 
         Returns:
@@ -177,6 +179,7 @@ class S360Client:
             action_item_id=action_item_id,
             new_eta=new_eta,
             notes=notes,
+            assigned_to=assigned_to,
             sla_type=sla_type,
         )
         return self.save_etas([update])

@@ -2,12 +2,15 @@
 
 Provides functions to interact with Services 360 API via accia-s360.
 """
+import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 import json
 import os
 from threading import Lock
 from typing import Any, Optional
+
+logger = logging.getLogger(__name__)
 
 try:
     from accia_s360 import S360Client
@@ -70,7 +73,7 @@ def save_column_cache(cache: dict) -> None:
             json.dump(cache, f, indent=2)
         os.replace(temp_path, path)  # Atomic on Windows & POSIX
     except IOError as e:
-        print(f"[DEBUG] Error saving column cache: {e}")
+        logger.error("Error saving column cache: %s", e)
 
 
 def get_cached_columns(kpi_id: str) -> Optional[list[str]]:
@@ -104,7 +107,7 @@ def cache_kpi_columns(kpi_id: str, columns: list[str]) -> None:
             "discovered_at": datetime.now(timezone.utc).isoformat()
         }
         save_column_cache(cache)
-        print(f"[DEBUG] Cached {len(columns)} columns for KPI {kpi_id}")
+        logger.debug("Cached %d columns for KPI %s", len(columns), kpi_id)
 
 
 def merge_columns_with_essentials(columns: list[str]) -> list[str]:
@@ -125,8 +128,15 @@ def merge_columns_with_essentials(columns: list[str]) -> list[str]:
     return result
 
 
+_client_instance: Any = None
+
+
 def get_client() -> Any:
-    """Get an S360Client instance.
+    """Get a shared S360Client instance (singleton).
+    
+    The client is thread-safe for read operations and reuses
+    a single AzureCliCredential so tokens are cached rather
+    than re-acquired on every API call.
     
     Returns:
         S360Client instance.
@@ -134,9 +144,12 @@ def get_client() -> Any:
     Raises:
         ImportError: If accia-s360 is not installed.
     """
+    global _client_instance
     if S360Client is None:
         raise ImportError("accia-s360 package is not installed")
-    return S360Client()
+    if _client_instance is None:
+        _client_instance = S360Client()
+    return _client_instance
 
 
 def get_current_user_alias() -> Optional[str]:
@@ -215,7 +228,7 @@ def get_user_team_info(user_alias: str) -> tuple[list[dict], list[str]]:
         return [], audience_ids
         
     except Exception as e:
-        print(f"[DEBUG] Error in get_user_team_info: {e}")
+        logger.error("Error in get_user_team_info: %s", e, exc_info=True)
         return [], []
 
 
@@ -259,15 +272,15 @@ def get_action_items_summary(service_ids: list[str]) -> Optional[dict]:
     
     try:
         client = get_client()
-        print(f"[DEBUG] Fetching action items for {len(service_ids)} services: {service_ids[:3]}...")
+        logger.info("Fetching action items for %d services: %s...", len(service_ids), service_ids[:3])
         result = client.get_action_items_summary(service_ids)
-        print(f"[DEBUG] Action items result: {result}")
+        logger.debug("Action items result keys: %s", list(result.keys()) if isinstance(result, dict) else type(result))
         return result
     except TimeoutError:
-        print("[DEBUG] Timeout fetching action items")
+        logger.error("Timeout fetching action items")
         return {}
     except Exception as e:
-        print(f"[DEBUG] Error fetching action items: {e}")
+        logger.error("Error fetching action items: %s", e, exc_info=True)
         return None
 
 
@@ -293,7 +306,7 @@ def get_all_columns(service_ids: list[str], kpi_id: str) -> list[str]:
         )
         return grid.get("AllColumns", [])
     except Exception as e:
-        print(f"[DEBUG] Error fetching AllColumns: {e}")
+        logger.error("Error fetching AllColumns: %s", e, exc_info=True)
         return []
 
 
@@ -357,7 +370,7 @@ REQUESTED_COLUMNS = [
 ]
 
 
-def get_detailed_action_items(service_ids: list[str], kpi_ids: list[str], on_status: Optional[callable] = None, kpi_names: Optional[dict] = None) -> list[dict]:
+def get_detailed_action_items(service_ids: list[str], kpi_ids: list[str], on_status: Optional[callable] = None, kpi_names: Optional[dict] = None) -> tuple[list[dict], list[dict]]:
     """Get detailed action items grid data for calculating Invalid ETA and program stats.
     
     Uses per-KPI column discovery with caching:
@@ -371,22 +384,23 @@ def get_detailed_action_items(service_ids: list[str], kpi_ids: list[str], on_sta
         kpi_names: Optional dict mapping KPI ID to KPI name for status messages.
         
     Returns:
-        List of detailed action item rows with discovered columns.
+        Tuple of (rows, failed_kpis) where rows is a list of action item dicts
+        and failed_kpis is a list of {"kpi_id", "kpi_name", "error"} dicts.
     """
     if not service_ids or not kpi_ids:
-        return []
+        return [], []
     
     kpi_names = kpi_names or {}
     total = len(kpi_ids)
     
     # Thread-safe progress tracking
     completed_count = [0]  # Using list for mutable in closure
+    failed_kpis: list[dict] = []  # Track KPIs that fail during fetch
     status_lock = Lock()
     
     def fetch_kpi_grid(kpi_id: str) -> list[dict]:
         """Fetch grid data for a single KPI with column cache."""
         try:
-            # Each thread needs its own client instance
             client = get_client()
             
             # Check cache for this KPI's columns
@@ -395,7 +409,7 @@ def get_detailed_action_items(service_ids: list[str], kpi_ids: list[str], on_sta
             if cached_columns:
                 # Cache hit - single API call
                 columns_to_use = merge_columns_with_essentials(cached_columns)
-                print(f"[DEBUG] Using {len(columns_to_use)} cached columns for KPI {kpi_id}")
+                logger.debug("Using %d cached columns for KPI %s", len(columns_to_use), kpi_id)
             else:
                 # Cache miss - discovery required
                 # First call: get default columns from response
@@ -419,7 +433,7 @@ def get_detailed_action_items(service_ids: list[str], kpi_ids: list[str], on_sta
                 
                 if not discovered_columns:
                     # Fallback to curated list if no columns discovered
-                    print(f"[DEBUG] No columns discovered for KPI {kpi_id}, using fallback")
+                    logger.warning("No columns discovered for KPI %s, using fallback", kpi_id)
                     discovered_columns = REQUESTED_COLUMNS
                 
                 # Cache for next time
@@ -446,11 +460,16 @@ def get_detailed_action_items(service_ids: list[str], kpi_ids: list[str], on_sta
             
             return rows
         except Exception as e:
-            print(f"[DEBUG] Error fetching grid for KPI {kpi_id}: {e}")
-            # Still update progress on error
-            if on_status:
-                with status_lock:
-                    completed_count[0] += 1
+            logger.error("Error fetching grid for KPI %s: %s", kpi_id, e)
+            # Record the failure
+            with status_lock:
+                failed_kpis.append({
+                    "kpi_id": kpi_id,
+                    "kpi_name": kpi_names.get(kpi_id, kpi_id),
+                    "error": str(e),
+                })
+                completed_count[0] += 1
+                if on_status:
                     on_status(f"Fetching KPIs: {completed_count[0]}/{total} complete")
             return []
     
@@ -470,10 +489,14 @@ def get_detailed_action_items(service_ids: list[str], kpi_ids: list[str], on_sta
                 rows = future.result()
                 all_rows.extend(rows)
         
-        return all_rows
+        if failed_kpis:
+            names = [f.get('kpi_name', f.get('kpi_id')) for f in failed_kpis]
+            logger.warning("%d KPI(s) failed: %s", len(failed_kpis), names)
+        
+        return all_rows, failed_kpis
     except Exception as e:
-        print(f"[DEBUG] Error in get_detailed_action_items: {e}")
-        return []
+        logger.error("Error in get_detailed_action_items: %s", e, exc_info=True)
+        return [], failed_kpis
 
 
 def is_invalid_eta(eta_date: Optional[str]) -> bool:
@@ -519,10 +542,10 @@ def get_all_programs() -> dict[str, str]:
             if pid and display_name:
                 program_names[pid] = display_name
                 
-        print(f"[DEBUG] Loaded {len(program_names)} programs from API")
+        logger.info("Loaded %d programs from API", len(program_names))
         return program_names
     except Exception as e:
-        print(f"[DEBUG] Error fetching programs: {e}")
+        logger.error("Error fetching programs: %s", e, exc_info=True)
         return {}
 
 

