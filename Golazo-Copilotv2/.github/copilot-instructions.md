@@ -31,26 +31,26 @@ Then create User Story at `WorkItems/<id>/<id>-User-Story.md`
 
 ---
 
-## Marking Progress (IMPORTANT: use `complete` not `value`)
+## Marking Progress (IMPORTANT: evidence is REQUIRED)
 
 After creating **User Story**:
 ```
-gcp_mark_dor(work_item_id="<id>", item="userStory", complete=true)
+gcp_mark_dor(work_item_id="<id>", item="userStory", evidence="WorkItems/<id>/<id>-User-Story.md")
 ```
 
 After creating **Design Doc**:
 ```
-gcp_mark_dor(work_item_id="<id>", item="designDoc", complete=true)
+gcp_mark_dor(work_item_id="<id>", item="designDoc", evidence="WorkItems/<id>/Design/<id>-design-doc.md")
 ```
 
 After creating **Review Comments**:
 ```
-gcp_mark_dor(work_item_id="<id>", item="reviewComments", complete=true)
+gcp_mark_dor(work_item_id="<id>", item="reviewComments", evidence="WorkItems/<id>/Design/<id>-Review-Comments.md")
 ```
 
 After creating **Test Cases**:
 ```
-gcp_mark_dor(work_item_id="<id>", item="testCases", complete=true)
+gcp_mark_dor(work_item_id="<id>", item="testCases", evidence="WorkItems/<id>/Design/<id>-Test-Cases.md")
 ```
 
 ---
