@@ -5,7 +5,14 @@
 | Artifact | Path | Description |
 |----------|------|-------------|
 | Executable | `dist/SFIReporter.exe` | Standalone Windows exe (PyInstaller --onefile) |
-| Distributable | `dist/SFIReporter.zip` | Zip of the exe for sharing |
+| Distributable | `dist/SFIReporter.zip` | Zip for sharing (contains exe + README) |
+
+### Zip Contents
+
+| File | Source |
+|------|--------|
+| `SFIReporter.exe` | `dist/SFIReporter.exe` |
+| `README.md` | `SFIReporter/README.md` |
 
 > **`dist/` is gitignored.** Artifacts must be rebuilt locally after pulling.
 
@@ -21,13 +28,13 @@ python -m pytest tests/ -v
 python -m PyInstaller --onefile --name SFIReporter --hidden-import sfi_reporter.query_builder src/sfi_reporter/tk_app.py
 
 # 3. Update the zip (MUST follow every exe rebuild)
-Compress-Archive -Path dist/SFIReporter.exe -DestinationPath dist/SFIReporter.zip -Force
+Compress-Archive -Path dist/SFIReporter.exe, README.md -DestinationPath dist/SFIReporter.zip -Force
 ```
 
 ### One-liner
 
 ```powershell
-python -m pytest tests/ -v; if ($LASTEXITCODE -eq 0) { python -m PyInstaller --onefile --name SFIReporter --hidden-import sfi_reporter.query_builder src/sfi_reporter/tk_app.py; Compress-Archive -Path dist/SFIReporter.exe -DestinationPath dist/SFIReporter.zip -Force }
+python -m pytest tests/ -v; if ($LASTEXITCODE -eq 0) { python -m PyInstaller --onefile --name SFIReporter --hidden-import sfi_reporter.query_builder src/sfi_reporter/tk_app.py; Compress-Archive -Path dist/SFIReporter.exe, README.md -DestinationPath dist/SFIReporter.zip -Force }
 ```
 
 ## Hidden Imports
