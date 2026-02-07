@@ -46,7 +46,7 @@ COLUMN_DISPLAY_NAMES = {
     'EtaStatus': 'ETA Status',
     'S360_ServiceTreeServiceName': 'Service Name',
     'S360_AssignedToName': 'Assigned To',
-    'S360_ProgramIds': 'Program IDs',
+    'S360_ProgramIds': 'Program',
     'ActionItemStatus': 'Status',
     'S360_ServiceTreeDivisionName': 'Division',
     'S360_ServiceTreeGroupName': 'Group',
@@ -56,7 +56,23 @@ COLUMN_DISPLAY_NAMES = {
     'createdDate': 'Created Date',
     'closedDate': 'Closed Date',
     'Remediation': 'Remediation',
+    '_service_owner': 'Service Owner',
 }
+
+# Curated filter fields (order matters for UI)
+FILTER_FIELDS = [
+    'S360_ServiceTreeServiceName',  # Service Name
+    'S360_AssignedToName',          # Assigned To
+    'S360_ProgramIds',              # Program
+    'ActionOwnerName',              # Action Owner
+    'dueDate',                      # Due Date
+    'EtaDate',                      # ETA Date
+]
+
+# Additional field shown only for managers
+MANAGER_ONLY_FIELDS = [
+    '_service_owner',               # Service Owner (virtual field)
+]
 
 
 @dataclass
@@ -149,7 +165,13 @@ def _match_clause(item: dict, clause: QueryClause) -> bool:
     Returns:
         True if item matches the clause.
     """
-    raw_value = item.get(clause.field)
+    # For program field, prefer the resolved display name if enriched,
+    # otherwise fall back to the raw value so evaluate_clauses() works
+    # without requiring _enrich_items() (e.g. in unit tests).
+    if clause.field == 'S360_ProgramIds' and '_resolved_program' in item:
+        raw_value = item['_resolved_program']
+    else:
+        raw_value = item.get(clause.field)
     field_type = get_field_type(clause.field)
 
     if field_type == "date":
@@ -514,9 +536,12 @@ class QueryBuilder(tk.Toplevel):
         action_items: list[dict],
         program_names: dict[str, str],
         service_names: dict[str, str],
+        is_manager: bool = False,
+        service_owners: dict[str, list[str]] = None,
+        on_apply: Optional[callable] = None,
     ):
         super().__init__(parent)
-        self.title("🔍 Query Builder")
+        self.title("🔍 Filter")
         self.geometry("1050x650")
         self.transient(parent)
 
@@ -529,8 +554,14 @@ class QueryBuilder(tk.Toplevel):
         self._items = action_items
         self._program_names = program_names
         self._service_names = service_names
+        self._is_manager = is_manager
+        self._service_owners = service_owners or {}
+        self._on_apply = on_apply
         self._clause_rows: list[ClauseRow] = []
         self._filtered_items: list[dict] = []
+
+        # Enrich items with resolved program names and service owner (virtual fields)
+        self._enrich_items()
 
         # Build field list and value lookups
         self._fields, self._field_display, self._data_values = self._build_field_metadata()
@@ -541,16 +572,31 @@ class QueryBuilder(tk.Toplevel):
         self.bind("<Escape>", lambda e: self.destroy())
         self.focus_set()
 
-    def _build_field_metadata(self):
-        """Build field list, display name map, and distinct value sets."""
-        all_keys: set[str] = set()
+    def _enrich_items(self):
+        """Add virtual fields to items for filtering.
+
+        - _resolved_program: first program ID resolved to display name
+        - _service_owner: service owner name (from service_owners lookup)
+        """
         for item in self._items:
-            all_keys.update(item.keys())
+            # Resolve program name
+            pids = item.get('S360_ProgramIds', [])
+            if isinstance(pids, list) and pids:
+                item['_resolved_program'] = self._program_names.get(pids[0], pids[0])
+            else:
+                item['_resolved_program'] = ''
 
-        # Remove internal keys
-        all_keys.discard("_kpi_id")
+            # Resolve service owner
+            if self._service_owners:
+                svc_name = item.get('S360_ServiceTreeServiceName', '')
+                owners = self._service_owners.get(svc_name, [])
+                item['_service_owner'] = owners[0] if owners else ''
 
-        fields = sorted(all_keys)
+    def _build_field_metadata(self):
+        """Build curated field list, display name map, and distinct value sets."""
+        fields = list(FILTER_FIELDS)
+        if self._is_manager:
+            fields.extend(MANAGER_ONLY_FIELDS)
 
         # Display names
         field_display = {}
@@ -562,16 +608,17 @@ class QueryBuilder(tk.Toplevel):
         for f in fields:
             values: set[str] = set()
             for item in self._items:
-                v = item.get(f)
+                # For S360_ProgramIds, use the resolved program name
+                if f == 'S360_ProgramIds':
+                    v = item.get('_resolved_program', '')
+                else:
+                    v = item.get(f)
                 if v is None:
                     continue
                 if isinstance(v, list):
                     for elem in v:
                         s = str(elem).strip()
                         if s:
-                            # Resolve program IDs to names
-                            if f == "S360_ProgramIds":
-                                s = self._program_names.get(s, s)
                             values.add(s)
                 else:
                     s = str(v).strip()
@@ -627,6 +674,7 @@ class QueryBuilder(tk.Toplevel):
         btn_frame.pack(fill=tk.X, pady=5)
 
         ttk.Button(btn_frame, text="▶ Run Query", command=self._run_query).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="✅ Apply", command=self._apply_filter).pack(side=tk.LEFT, padx=5)
         ttk.Button(btn_frame, text="🗑 Clear All", command=self._clear_all).pack(side=tk.LEFT, padx=5)
 
         self._result_count_var = tk.StringVar()
@@ -809,6 +857,23 @@ class QueryBuilder(tk.Toplevel):
 
             self._update_remove_buttons()
             self._ussec_var.set(include_ussec)
+
+    def _apply_filter(self):
+        """Apply the current filter to the whole app and close."""
+        clauses = self._get_clauses()
+        include_ussec = self._ussec_var.get()
+
+        # Evaluate the filter
+        filtered = evaluate_clauses(self._items, clauses, include_ussec)
+
+        # Save to cache
+        save_clause_cache(clauses, include_ussec)
+
+        # Call back to the main app with filtered items
+        if self._on_apply:
+            self._on_apply(filtered, clauses)
+
+        self.destroy()
 
     def _on_result_double_click(self, event):
         """Drill into filtered items for a program."""

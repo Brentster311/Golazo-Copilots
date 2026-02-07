@@ -1498,6 +1498,7 @@ class SFIReporterApp:
         self.root.geometry("1200x750")
         
         self.current_data: dict = {}
+        self._unfiltered_data: dict = {}  # original data before any filter
         self.detected_alias = get_current_user_alias() or ""
         
         # Mappings for drill-down (populated when data loads)
@@ -1547,7 +1548,7 @@ class SFIReporterApp:
         self.retry_btn = ttk.Button(controls_frame, text="🔁 Retry Failed KPIs", command=self._on_retry_failed)
         # Hidden until there are failures
         
-        self.query_btn = ttk.Button(controls_frame, text="🔍 Query", command=self._on_query, state="disabled")
+        self.query_btn = ttk.Button(controls_frame, text="🔍 Filter", command=self._on_query, state="disabled")
         self.query_btn.pack(side=tk.LEFT, padx=5)
         
         # State for retry
@@ -1691,12 +1692,14 @@ class SFIReporterApp:
         if alias:
             self._load_cached_data(alias)
     
-    def _update_tables(self, data: dict):
+    def _update_tables(self, data: dict, *, is_filtered: bool = False):
         """Update tables with data."""
         self.current_data = data
+        if not is_filtered:
+            self._unfiltered_data = data
         
-        # Enable query button now that data is loaded
-        if data.get('action_items'):
+        # Enable filter button now that data is loaded
+        if data.get('detailed_items'):
             self.query_btn.configure(state="normal")
         
         # Clear existing rows and mappings
@@ -2151,22 +2154,115 @@ class SFIReporterApp:
             self._update_status("Cache cleared", "blue")
 
     def _on_query(self):
-        """Open the query builder window."""
+        """Open the filter builder window."""
         from sfi_reporter.query_builder import QueryBuilder
 
-        action_items = self.current_data.get('action_items', [])
-        program_names = self.current_data.get('program_names', {})
+        # Always filter against the original unfiltered data
+        source = self._unfiltered_data or self.current_data
+        action_items = source.get('detailed_items', [])
+        program_names = source.get('programs_lookup', {})
         service_names = {
             s.get('Id', ''): s.get('Name', '')
-            for s in self.current_data.get('services', [])
+            for s in source.get('services', [])
         }
+        is_manager = source.get('is_manager', False)
+        service_owners = source.get('service_owners', {})
 
         QueryBuilder(
             self.root,
             action_items=action_items,
             program_names=program_names,
             service_names=service_names,
+            is_manager=is_manager,
+            service_owners=service_owners,
+            on_apply=self._on_filter_applied,
         )
+
+    def _on_filter_applied(self, filtered_items: list, clauses: list):
+        """Handle filter applied from QueryBuilder — rebuild tables with filtered data."""
+        # No active clauses — restore original unfiltered view
+        if not clauses:
+            original = self._unfiltered_data or self.current_data
+            self.query_btn.configure(text="🔍 Filter")
+            self._update_tables(original)
+            return
+
+        # Build a filtered copy of the *original* data with the filtered items
+        from sfi_reporter.data import is_invalid_eta
+        data = dict(self._unfiltered_data or self.current_data)
+        data['detailed_items'] = filtered_items
+
+        # Recompute stats from filtered items
+        program_names = data.get('programs_lookup', {})
+        service_stats = {}
+        kpi_stats = {}
+        program_stats = {}
+        kpi_names = data.get('kpi_names', {})
+
+        for row in filtered_items:
+            svc_id = row.get('S360_ServiceId', 'Unknown')
+            svc_name = row.get('S360_ServiceTreeServiceName', 'Unknown')
+            kpi_id = row.get('_kpi_id', 'Unknown')
+            sla_type = row.get('SlaType', '')
+            eta_date = row.get('EtaDate')
+            pid_list = row.get('S360_ProgramIds') or []
+
+            is_out_of_sla = sla_type == 'OutOfSla'
+            is_invalid = is_invalid_eta(eta_date)
+
+            if svc_id not in service_stats:
+                service_stats[svc_id] = {'name': svc_name, 'count': 0, 'sla': 0, 'invalid_eta': 0}
+            service_stats[svc_id]['count'] += 1
+            if is_out_of_sla:
+                service_stats[svc_id]['sla'] += 1
+            if is_invalid:
+                service_stats[svc_id]['invalid_eta'] += 1
+
+            if kpi_id not in kpi_stats:
+                kpi_stats[kpi_id] = {'name': kpi_names.get(kpi_id, kpi_id), 'count': 0, 'sla': 0, 'invalid_eta': 0}
+            kpi_stats[kpi_id]['count'] += 1
+            if is_out_of_sla:
+                kpi_stats[kpi_id]['sla'] += 1
+            if is_invalid:
+                kpi_stats[kpi_id]['invalid_eta'] += 1
+
+            if pid_list:
+                pid = pid_list[0]
+                pname = program_names.get(pid, 'Other Program')
+                if pname not in program_stats:
+                    program_stats[pname] = {'count': 0, 'sla': 0, 'invalid_eta': 0, 'id': pid}
+                program_stats[pname]['count'] += 1
+                if is_out_of_sla:
+                    program_stats[pname]['sla'] += 1
+                if is_invalid:
+                    program_stats[pname]['invalid_eta'] += 1
+            else:
+                if 'Unassigned' not in program_stats:
+                    program_stats['Unassigned'] = {'count': 0, 'sla': 0, 'invalid_eta': 0, 'id': 'unassigned'}
+                program_stats['Unassigned']['count'] += 1
+                if is_out_of_sla:
+                    program_stats['Unassigned']['sla'] += 1
+                if is_invalid:
+                    program_stats['Unassigned']['invalid_eta'] += 1
+
+        data['service_stats'] = service_stats
+        data['kpi_stats'] = kpi_stats
+        data['program_stats'] = program_stats
+
+        # Recompute owner stats if manager
+        if data.get('is_manager') and service_stats:
+            svc_owners = data.get('service_owners', {})
+            org_map = data.get('org_mapping', {})
+            data['owner_stats'] = aggregate_by_owner(
+                filtered_items, svc_owners,
+                org_mapping=org_map if org_map else None,
+            )
+
+        # Update filter button text to show active filter
+        n = len(filtered_items)
+        self.query_btn.configure(text=f"🔍 Filter ({n})")
+
+        self._update_tables(data, is_filtered=True)
 
 
 def main():
