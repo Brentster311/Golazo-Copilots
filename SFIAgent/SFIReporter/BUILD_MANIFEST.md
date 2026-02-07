@@ -25,7 +25,7 @@ Run from `SFIReporter/`:
 python -m pytest tests/ -v
 
 # 2. Build the exe
-python -m PyInstaller --onefile --name SFIReporter --hidden-import sfi_reporter.query_builder src/sfi_reporter/tk_app.py
+python -m PyInstaller --onefile --name SFIReporter --hidden-import sfi_reporter.query_builder --hidden-import sfi_reporter.eta_logic src/sfi_reporter/tk_app.py
 
 # 3. Update the zip (MUST follow every exe rebuild)
 Compress-Archive -Path dist/SFIReporter.exe, README.md -DestinationPath dist/SFIReporter.zip -Force
@@ -34,7 +34,7 @@ Compress-Archive -Path dist/SFIReporter.exe, README.md -DestinationPath dist/SFI
 ### One-liner
 
 ```powershell
-python -m pytest tests/ -v; if ($LASTEXITCODE -eq 0) { python -m PyInstaller --onefile --name SFIReporter --hidden-import sfi_reporter.query_builder src/sfi_reporter/tk_app.py; Compress-Archive -Path dist/SFIReporter.exe, README.md -DestinationPath dist/SFIReporter.zip -Force }
+python -m pytest tests/ -v; if ($LASTEXITCODE -eq 0) { python -m PyInstaller --onefile --name SFIReporter --hidden-import sfi_reporter.query_builder --hidden-import sfi_reporter.eta_logic src/sfi_reporter/tk_app.py; Compress-Archive -Path dist/SFIReporter.exe, README.md -DestinationPath dist/SFIReporter.zip -Force }
 ```
 
 ## Hidden Imports
@@ -44,6 +44,7 @@ PyInstaller cannot auto-discover these — they must be passed explicitly:
 | Module | Reason |
 |--------|--------|
 | `sfi_reporter.query_builder` | Lazy-imported from `tk_app.py` via `from sfi_reporter.query_builder import QueryBuilder` inside `_on_query()` |
+| `sfi_reporter.eta_logic` | Lazy-imported from `tk_app.py` ETA dialog classes inside `_on_save()`, `_show_current()`, `_run_bulk()`, `_on_update_etas()` |
 
 ## Prerequisites
 

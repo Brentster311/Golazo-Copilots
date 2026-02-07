@@ -79,17 +79,38 @@ class EtaUpdate:
     action_item_id: str
     new_eta: datetime
     notes: str
+    assigned_to: str = ""
     sla_type: str = "InSla"
 
     def to_api_payload(self) -> dict[str, Any]:
-        """Convert to S360 API payload format."""
+        """Convert to S360 API payload format.
+
+        Produces the payload shape used by the production Sauron SFI_Agent::
+
+            {
+              "ETADate": "2026-02-28",
+              "UserStatus": "...",
+              "KpiId": "guid",
+              "ActionItems": [{
+                "ServiceId": "guid",
+                "ActionItemId": "id",
+                "AssignedTo": "alias",
+                "SLAType": "InSla"
+              }]
+            }
+        """
         return {
-            "KpiId": self.kpi_id,
-            "ServiceId": self.service_id,
-            "ActionItemId": self.action_item_id,
-            "Eta": self.new_eta.isoformat(),
+            "ETADate": self.new_eta.strftime("%Y-%m-%d"),
             "UserStatus": self.notes,
-            "SLAType": self.sla_type,
+            "KpiId": self.kpi_id,
+            "ActionItems": [
+                {
+                    "ServiceId": self.service_id,
+                    "ActionItemId": self.action_item_id,
+                    "AssignedTo": self.assigned_to,
+                    "SLAType": self.sla_type,
+                }
+            ],
         }
 
 

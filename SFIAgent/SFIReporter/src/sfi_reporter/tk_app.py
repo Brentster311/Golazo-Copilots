@@ -1212,6 +1212,18 @@ class ItemDetailsModal(tk.Toplevel):
         ColumnSelectorDialog(self, available, on_apply=self._on_columns_changed,
                            empty_columns=empty_cols)
     
+    def _open_eta_editor(self):
+        """Open the single-item ETA editor from detail view (AC-4)."""
+        SingleEtaEditDialog(self, self._item, on_saved=self._on_eta_saved)
+    
+    def _on_eta_saved(self, item: dict, eta_date: str, notes: str):
+        """Handle a single ETA save — update the in-memory item."""
+        item['EtaDate'] = eta_date
+        if notes:
+            item['EtaStatus'] = notes
+        # Refresh the detail view to reflect new values
+        self._on_columns_changed()
+    
     def _on_columns_changed(self):
         """Callback when column selection changes - rebuild display."""
         # Clear and rebuild content
@@ -1400,10 +1412,12 @@ class ItemDetailsModal(tk.Toplevel):
         # Make text read-only
         text.configure(state=tk.DISABLED)
         
-        # Button frame with Columns and Close
+        # Button frame with Columns, Update ETA and Close
         btn_frame = ttk.Frame(self._main_frame)
         btn_frame.pack(fill=tk.X, pady=(10, 0))
         ttk.Button(btn_frame, text="Columns", command=self._open_column_selector).pack(side=tk.LEFT)
+        ttk.Button(btn_frame, text="📅 Update ETA",
+                   command=self._open_eta_editor).pack(side=tk.LEFT, padx=5)
         ttk.Button(btn_frame, text="Close", command=self.destroy).pack(side=tk.RIGHT)
 
 
@@ -1489,6 +1503,484 @@ class SortableTreeview(ttk.Treeview):
         self._sort_reverse[col] = not reverse
 
 
+# ---------------------------------------------------------------------------
+# ETA Update Dialogs  (SFI-019)
+# ---------------------------------------------------------------------------
+
+class SingleEtaEditDialog(tk.Toplevel):
+    """Small dialog for editing a single item's ETA from the detail view (AC-4)."""
+
+    def __init__(self, parent, item: dict, on_saved=None):
+        super().__init__(parent)
+        self.title("Update ETA")
+        self.geometry("420x260")
+        self.transient(parent)
+        self.grab_set()
+
+        self.update_idletasks()
+        x = parent.winfo_x() + (parent.winfo_width() - 420) // 2
+        y = parent.winfo_y() + (parent.winfo_height() - 260) // 2
+        self.geometry(f"+{x}+{y}")
+
+        self._item = item
+        self._on_saved = on_saved
+        self._create_widgets()
+        self.bind('<Escape>', lambda e: self.destroy())
+        self.focus_set()
+
+    # ---- widget creation ---------------------------------------------------
+    def _create_widgets(self):
+        from sfi_reporter.eta_logic import propose_eta
+
+        frame = ttk.Frame(self, padding=15)
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        title = clean_html_from_title(self._item.get('title', ''))[:60]
+        ttk.Label(frame, text=title, font=("Segoe UI", 10, "bold"),
+                  wraplength=380).pack(anchor=tk.W)
+
+        current_eta = (self._item.get('EtaDate') or 'None')[:10]
+        ttk.Label(frame, text=f"Current ETA: {current_eta}",
+                  foreground="gray").pack(anchor=tk.W, pady=(5, 0))
+
+        proposed = propose_eta(
+            self._item.get('dueDate') or self._item.get('DueDate'))
+
+        # New ETA
+        eta_frame = ttk.Frame(frame)
+        eta_frame.pack(fill=tk.X, pady=(10, 0))
+        ttk.Label(eta_frame, text="New ETA:").pack(side=tk.LEFT)
+        self._eta_var = tk.StringVar(value=proposed)
+        self._eta_entry = ttk.Entry(eta_frame, textvariable=self._eta_var,
+                                     width=15)
+        self._eta_entry.pack(side=tk.LEFT, padx=(5, 0))
+        ttk.Label(eta_frame, text="(YYYY-MM-DD)",
+                  foreground="gray").pack(side=tk.LEFT, padx=5)
+
+        # Status / notes
+        notes_frame = ttk.Frame(frame)
+        notes_frame.pack(fill=tk.X, pady=(5, 0))
+        ttk.Label(notes_frame, text="Status:").pack(side=tk.LEFT)
+        self._notes_var = tk.StringVar(
+            value=self._item.get('EtaStatus') or '')
+        self._notes_entry = ttk.Entry(notes_frame,
+                                       textvariable=self._notes_var, width=35)
+        self._notes_entry.pack(side=tk.LEFT, padx=(5, 0))
+
+        # Error label
+        self._error_var = tk.StringVar()
+        self._error_label = ttk.Label(frame, textvariable=self._error_var,
+                                       foreground="red")
+        self._error_label.pack(anchor=tk.W, pady=(5, 0))
+
+        # Buttons
+        btn_frame = ttk.Frame(frame)
+        btn_frame.pack(fill=tk.X, pady=(15, 0))
+        self._save_btn = ttk.Button(btn_frame, text="💾 Save",
+                                     command=self._on_save)
+        self._save_btn.pack(side=tk.RIGHT, padx=(5, 0))
+        ttk.Button(btn_frame, text="Cancel",
+                   command=self.destroy).pack(side=tk.RIGHT)
+
+    # ---- save logic --------------------------------------------------------
+    def _on_save(self):
+        from sfi_reporter.eta_logic import validate_eta_date, build_eta_update
+        from sfi_reporter.data import get_client, get_current_user_alias
+
+        date_str = self._eta_var.get().strip()
+        ok, msg = validate_eta_date(date_str)
+        if not ok:
+            self._error_var.set(msg)
+            return
+
+        self._error_var.set("")
+        self._save_btn.configure(state=tk.DISABLED)
+
+        update = build_eta_update(
+            self._item,
+            date_str,
+            notes=self._notes_var.get().strip(),
+            fallback_alias=get_current_user_alias() or "",
+        )
+
+        def _save_bg():
+            try:
+                client = get_client()
+                result = client.save_etas([update])
+                self.after(0, lambda: self._on_save_result(result, date_str))
+            except Exception as exc:
+                self.after(0, lambda: self._on_save_error(str(exc)))
+
+        threading.Thread(target=_save_bg, daemon=True).start()
+
+    def _on_save_result(self, result, date_str: str):
+        if result.success:
+            logger.info("ETA saved for %s -> %s",
+                        self._item.get('id'), date_str)
+            if self._on_saved:
+                self._on_saved(self._item, date_str,
+                               self._notes_var.get().strip())
+            self.destroy()
+        else:
+            self._save_btn.configure(state=tk.NORMAL)
+            msg = result.error_message or "Unknown error"
+            self._error_var.set(f"Save failed: {msg}")
+            logger.warning("ETA save failed for %s: %s",
+                           self._item.get('id'), msg)
+
+    def _on_save_error(self, msg: str):
+        self._save_btn.configure(state=tk.NORMAL)
+        self._error_var.set(f"Error: {msg}")
+
+
+class EtaModeDialog(tk.Toplevel):
+    """Ask user to choose Manual or Bulk mode (AC-1)."""
+
+    def __init__(self, parent, invalid_count: int, on_choice=None):
+        super().__init__(parent)
+        self.title("Update Invalid ETAs")
+        self.geometry("360x200")
+        self.transient(parent)
+        self.grab_set()
+
+        self.update_idletasks()
+        x = parent.winfo_x() + (parent.winfo_width() - 360) // 2
+        y = parent.winfo_y() + (parent.winfo_height() - 200) // 2
+        self.geometry(f"+{x}+{y}")
+
+        self._on_choice = on_choice
+        self._create_widgets(invalid_count)
+        self.bind('<Escape>', lambda e: self.destroy())
+        self.focus_set()
+
+    def _create_widgets(self, count: int):
+        frame = ttk.Frame(self, padding=20)
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        ttk.Label(frame, text=f"📅 {count} item(s) with invalid ETAs",
+                  font=("Segoe UI", 11, "bold")).pack(pady=(0, 15))
+
+        ttk.Button(
+            frame, text="📝 Manual — review each item",
+            command=lambda: self._choose("manual"),
+        ).pack(fill=tk.X, pady=3)
+        ttk.Button(
+            frame, text="⚡ Bulk — auto-apply proposed dates",
+            command=lambda: self._choose("bulk"),
+        ).pack(fill=tk.X, pady=3)
+        ttk.Button(frame, text="Cancel",
+                   command=self.destroy).pack(fill=tk.X, pady=(10, 0))
+
+    def _choose(self, mode: str):
+        self._on_choice(mode)
+        self.destroy()
+
+
+class ManualEtaReviewDialog(tk.Toplevel):
+    """Step through items one-at-a-time for manual ETA review (AC-2)."""
+
+    def __init__(self, parent, items: list[dict], on_complete=None):
+        super().__init__(parent)
+        self.title("Manual ETA Review")
+        self.geometry("520x340")
+        self.transient(parent)
+        self.grab_set()
+
+        self.update_idletasks()
+        x = parent.winfo_x() + (parent.winfo_width() - 520) // 2
+        y = parent.winfo_y() + (parent.winfo_height() - 340) // 2
+        self.geometry(f"+{x}+{y}")
+
+        self._items = items
+        self._index = 0
+        self._saved: list[tuple[dict, str, str]] = []   # (item, eta, notes)
+        self._skipped: list[dict] = []
+        self._failed: list[tuple[dict, str]] = []
+        self._on_complete = on_complete
+
+        self._frame = ttk.Frame(self, padding=15)
+        self._frame.pack(fill=tk.BOTH, expand=True)
+        self._show_current()
+
+        self.bind('<Escape>', lambda e: self._cancel())
+        self.focus_set()
+
+    # ---- per-item view -----------------------------------------------------
+    def _show_current(self):
+        from sfi_reporter.eta_logic import propose_eta
+
+        for w in self._frame.winfo_children():
+            w.destroy()
+
+        if self._index >= len(self._items):
+            self._show_summary()
+            return
+
+        item = self._items[self._index]
+        n = self._index + 1
+        total = len(self._items)
+
+        ttk.Label(self._frame, text=f"Item {n} of {total}",
+                  font=("Segoe UI", 11, "bold")).pack(anchor=tk.W)
+
+        title = clean_html_from_title(item.get('title', ''))[:80]
+        ttk.Label(self._frame, text=title,
+                  wraplength=480).pack(anchor=tk.W, pady=(5, 0))
+
+        info_text = (
+            f"Service: {item.get('S360_ServiceTreeServiceName', 'N/A')}\n"
+            f"Current ETA: {(item.get('EtaDate') or 'None')[:10]}\n"
+            f"Due Date: "
+            f"{(item.get('dueDate') or item.get('DueDate') or 'N/A')[:10]}"
+        )
+        ttk.Label(self._frame, text=info_text,
+                  foreground="gray").pack(anchor=tk.W, pady=(5, 0))
+
+        proposed = propose_eta(item.get('dueDate') or item.get('DueDate'))
+
+        # ETA entry
+        eta_f = ttk.Frame(self._frame)
+        eta_f.pack(fill=tk.X, pady=(10, 0))
+        ttk.Label(eta_f, text="New ETA:").pack(side=tk.LEFT)
+        self._eta_var = tk.StringVar(value=proposed)
+        ttk.Entry(eta_f, textvariable=self._eta_var,
+                  width=15).pack(side=tk.LEFT, padx=5)
+
+        notes_f = ttk.Frame(self._frame)
+        notes_f.pack(fill=tk.X, pady=(5, 0))
+        ttk.Label(notes_f, text="Status:").pack(side=tk.LEFT)
+        self._notes_var = tk.StringVar(
+            value=item.get('EtaStatus') or '')
+        ttk.Entry(notes_f, textvariable=self._notes_var,
+                  width=35).pack(side=tk.LEFT, padx=5)
+
+        self._error_var = tk.StringVar()
+        ttk.Label(self._frame, textvariable=self._error_var,
+                  foreground="red").pack(anchor=tk.W, pady=(5, 0))
+
+        btn_f = ttk.Frame(self._frame)
+        btn_f.pack(fill=tk.X, pady=(10, 0))
+        self._accept_btn = ttk.Button(btn_f, text="✅ Accept",
+                                       command=self._accept)
+        self._accept_btn.pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Button(btn_f, text="⏭️ Skip",
+                   command=self._skip).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_f, text="❌ Cancel",
+                   command=self._cancel).pack(side=tk.RIGHT)
+
+    # ---- accept / skip / cancel -------------------------------------------
+    def _accept(self):
+        from sfi_reporter.eta_logic import validate_eta_date, build_eta_update
+        from sfi_reporter.data import get_client, get_current_user_alias
+
+        date_str = self._eta_var.get().strip()
+        ok, msg = validate_eta_date(date_str)
+        if not ok:
+            self._error_var.set(msg)
+            return
+
+        self._accept_btn.configure(state=tk.DISABLED)
+        item = self._items[self._index]
+        update = build_eta_update(
+            item, date_str,
+            notes=self._notes_var.get().strip(),
+            fallback_alias=get_current_user_alias() or "",
+        )
+
+        def _save_bg():
+            try:
+                client = get_client()
+                result = client.save_etas([update])
+                self.after(0, lambda: self._on_result(result, item, date_str))
+            except Exception as exc:
+                self.after(0, lambda: self._on_error(item, str(exc)))
+
+        threading.Thread(target=_save_bg, daemon=True).start()
+
+    def _on_result(self, result, item, date_str):
+        if result.success:
+            logger.info("Manual ETA saved for %s -> %s",
+                        item.get('id'), date_str)
+            self._saved.append(
+                (item, date_str, self._notes_var.get().strip()))
+        else:
+            msg = result.error_message or "Unknown"
+            logger.warning("Manual ETA failed for %s: %s",
+                           item.get('id'), msg)
+            self._failed.append((item, msg))
+        self._index += 1
+        self._show_current()
+
+    def _on_error(self, item, msg):
+        logger.warning("Manual ETA error for %s: %s",
+                       item.get('id'), msg)
+        self._failed.append((item, msg))
+        self._index += 1
+        self._show_current()
+
+    def _skip(self):
+        self._skipped.append(self._items[self._index])
+        self._index += 1
+        self._show_current()
+
+    def _cancel(self):
+        self._skipped.extend(self._items[self._index:])
+        self._show_summary()
+
+    # ---- summary -----------------------------------------------------------
+    def _show_summary(self):
+        for w in self._frame.winfo_children():
+            w.destroy()
+
+        ttk.Label(self._frame, text="📊 Manual Update Summary",
+                  font=("Segoe UI", 12, "bold")).pack(pady=(0, 10))
+        ttk.Label(self._frame,
+                  text=f"✅ Saved: {len(self._saved)}").pack(anchor=tk.W)
+        ttk.Label(self._frame,
+                  text=f"⏭️ Skipped: {len(self._skipped)}").pack(anchor=tk.W)
+        ttk.Label(self._frame,
+                  text=f"❌ Failed: {len(self._failed)}").pack(anchor=tk.W)
+
+        if self._failed:
+            ttk.Label(self._frame, text="\nFailed items:",
+                      foreground="red").pack(anchor=tk.W)
+            for item, msg in self._failed[:5]:
+                ttk.Label(
+                    self._frame,
+                    text=f"  • {item.get('id', '?')}: {msg}",
+                    foreground="red", wraplength=480,
+                ).pack(anchor=tk.W)
+
+        logger.info("Manual ETA update complete: %d saved, %d skipped, "
+                    "%d failed", len(self._saved), len(self._skipped),
+                    len(self._failed))
+
+        ttk.Button(self._frame, text="Close",
+                   command=self._finish).pack(pady=(15, 0))
+
+    def _finish(self):
+        if self._on_complete:
+            self._on_complete(self._saved, self._skipped, self._failed)
+        self.destroy()
+
+
+class BulkEtaProgressDialog(tk.Toplevel):
+    """Show progress during bulk ETA update (AC-3)."""
+
+    def __init__(self, parent, items: list[dict], on_complete=None):
+        super().__init__(parent)
+        self.title("Bulk ETA Update")
+        self.geometry("450x220")
+        self.transient(parent)
+        self.grab_set()
+
+        self.update_idletasks()
+        x = parent.winfo_x() + (parent.winfo_width() - 450) // 2
+        y = parent.winfo_y() + (parent.winfo_height() - 220) // 2
+        self.geometry(f"+{x}+{y}")
+
+        self._items = items
+        self._on_complete = on_complete
+        self._saved: list[tuple[dict, str, str]] = []
+        self._failed: list[tuple[dict, str]] = []
+
+        self._frame = ttk.Frame(self, padding=15)
+        self._frame.pack(fill=tk.BOTH, expand=True)
+
+        ttk.Label(self._frame, text=f"⚡ Updating {len(items)} item(s)…",
+                  font=("Segoe UI", 11, "bold")).pack(pady=(0, 10))
+
+        self._progress_var = tk.IntVar(value=0)
+        self._progress = ttk.Progressbar(
+            self._frame, maximum=len(items),
+            variable=self._progress_var, length=400)
+        self._progress.pack(fill=tk.X, pady=5)
+
+        self._status_var = tk.StringVar(value="Starting…")
+        ttk.Label(self._frame,
+                  textvariable=self._status_var).pack(anchor=tk.W)
+
+        # Prevent close while running
+        self.protocol("WM_DELETE_WINDOW", lambda: None)
+
+        self.after(100, self._start)
+
+    def _start(self):
+        threading.Thread(target=self._run_bulk, daemon=True).start()
+
+    def _run_bulk(self):
+        from sfi_reporter.eta_logic import propose_eta, build_eta_update
+        from sfi_reporter.data import get_client, get_current_user_alias
+
+        client = get_client()
+        alias = get_current_user_alias() or ""
+
+        # Save items one-at-a-time for per-item error tracking
+        for i, item in enumerate(self._items):
+            eta_str = propose_eta(
+                item.get('dueDate') or item.get('DueDate'))
+            update = build_eta_update(item, eta_str, fallback_alias=alias)
+
+            self.after(0, lambda idx=i, it=item: self._status_var.set(
+                f"Saving {idx + 1}/{len(self._items)}: "
+                f"{it.get('id', '?')[:30]}"
+            ))
+
+            try:
+                result = client.save_etas([update])
+                if result.success:
+                    self._saved.append((item, eta_str, ""))
+                    logger.info("Bulk ETA saved for %s -> %s",
+                                item.get('id'), eta_str)
+                else:
+                    msg = result.error_message or "Unknown"
+                    self._failed.append((item, msg))
+                    logger.warning("Bulk ETA failed for %s: %s",
+                                   item.get('id'), msg)
+            except Exception as exc:
+                self._failed.append((item, str(exc)))
+                logger.warning("Bulk ETA error for %s: %s",
+                               item.get('id'), exc)
+
+            self.after(0, lambda idx=i: self._progress_var.set(idx + 1))
+
+        self.after(0, self._show_summary)
+
+    def _show_summary(self):
+        self.protocol("WM_DELETE_WINDOW", self._finish)
+
+        for w in self._frame.winfo_children():
+            w.destroy()
+
+        ttk.Label(self._frame, text="📊 Bulk Update Summary",
+                  font=("Segoe UI", 12, "bold")).pack(pady=(0, 10))
+        ttk.Label(self._frame,
+                  text=f"✅ Saved: {len(self._saved)}").pack(anchor=tk.W)
+        ttk.Label(self._frame,
+                  text=f"❌ Failed: {len(self._failed)}").pack(anchor=tk.W)
+
+        if self._failed:
+            ttk.Label(self._frame, text="\nFailed items:",
+                      foreground="red").pack(anchor=tk.W)
+            for item, msg in self._failed[:5]:
+                ttk.Label(
+                    self._frame,
+                    text=f"  • {item.get('id', '?')}: {msg}",
+                    foreground="red", wraplength=400,
+                ).pack(anchor=tk.W)
+
+        logger.info("Bulk ETA update complete: %d saved, %d failed",
+                    len(self._saved), len(self._failed))
+
+        ttk.Button(self._frame, text="Close",
+                   command=self._finish).pack(pady=(15, 0))
+
+    def _finish(self):
+        if self._on_complete:
+            self._on_complete(self._saved, [], self._failed)
+        self.destroy()
+
+
 class SFIReporterApp:
     """Main application class."""
     
@@ -1550,6 +2042,10 @@ class SFIReporterApp:
         
         self.query_btn = ttk.Button(controls_frame, text="🔍 Filter", command=self._on_query, state="disabled")
         self.query_btn.pack(side=tk.LEFT, padx=5)
+        
+        self.eta_btn = ttk.Button(controls_frame, text="📋 Update ETAs",
+                                   command=self._on_update_etas, state="disabled")
+        self.eta_btn.pack(side=tk.LEFT, padx=5)
         
         # State for retry
         self._failed_kpis: list[dict] = []
@@ -1701,6 +2197,7 @@ class SFIReporterApp:
         # Enable filter button now that data is loaded
         if data.get('detailed_items'):
             self.query_btn.configure(state="normal")
+            self.eta_btn.configure(state="normal")
         
         # Clear existing rows and mappings
         for item in self.services_tree.get_children():
@@ -1980,6 +2477,97 @@ class SFIReporterApp:
         self.status_var.set(message)
         self.status_label.configure(foreground=color)
     
+    def _on_update_etas(self):
+        """Handle 'Update ETAs' button click (AC-1).
+
+        Filters the current data for items with invalid ETAs, then opens
+        a mode-selection dialog (Manual / Bulk).
+        """
+        from sfi_reporter.eta_logic import get_items_needing_eta_update
+
+        items = (self.current_data or {}).get('detailed_items', [])
+        invalid = get_items_needing_eta_update(items)
+
+        if not invalid:
+            messagebox.showinfo("All ETAs Current",
+                                "No items with invalid ETAs found.")
+            return
+
+        def on_mode(mode: str):
+            if mode == "manual":
+                ManualEtaReviewDialog(
+                    self.root, invalid,
+                    on_complete=self._on_eta_update_complete)
+            else:
+                BulkEtaProgressDialog(
+                    self.root, invalid,
+                    on_complete=self._on_eta_update_complete)
+
+        EtaModeDialog(self.root, len(invalid), on_choice=on_mode)
+
+    def _on_eta_update_complete(self, saved, skipped, failed):
+        """Post-save callback — mutate cache and re-render tables (AC-5)."""
+        from sfi_reporter.data import is_invalid_eta
+        from datetime import datetime
+
+        if not saved:
+            return
+
+        # Mutate the in-memory items
+        for item, eta_str, notes in saved:
+            item['EtaDate'] = eta_str
+            if notes:
+                item['EtaStatus'] = notes
+
+        # Recompute invalid_eta stats from current data
+        data = self.current_data
+        if data:
+            detailed = data.get('detailed_items', [])
+            for stats_dict in (data.get('service_stats', {}),
+                               data.get('kpi_stats', {}),
+                               data.get('program_stats', {})):
+                for key in stats_dict:
+                    stats_dict[key]['invalid_eta'] = 0
+
+            for row in detailed:
+                if is_invalid_eta(row.get('EtaDate')):
+                    svc_id = row.get('S360_ServiceId', 'Unknown')
+                    kpi_id = row.get('_kpi_id', 'Unknown')
+                    if svc_id in data.get('service_stats', {}):
+                        data['service_stats'][svc_id]['invalid_eta'] += 1
+                    if kpi_id in data.get('kpi_stats', {}):
+                        data['kpi_stats'][kpi_id]['invalid_eta'] += 1
+
+                    pid_list = row.get('S360_ProgramIds') or []
+                    if pid_list:
+                        programs_lookup = data.get('programs_lookup', {})
+                        pname = programs_lookup.get(pid_list[0], 'Other Program')
+                        if pname in data.get('program_stats', {}):
+                            data['program_stats'][pname]['invalid_eta'] += 1
+
+            # Recompute owner stats for manager view
+            if data.get('is_manager') and data.get('owner_stats'):
+                svc_owners = data.get('service_owners', {})
+                org_map = data.get('org_mapping', {})
+                data['owner_stats'] = aggregate_by_owner(
+                    detailed, svc_owners,
+                    org_mapping=org_map if org_map else None,
+                )
+
+            self._update_tables(data, is_filtered=bool(
+                self._unfiltered_data and
+                self._unfiltered_data is not data))
+
+            # Persist updated items back to disk cache
+            alias = self.alias_var.get().strip()
+            if alias:
+                data['timestamp'] = datetime.now().isoformat()
+                write_cache(alias, data)
+
+        n = len(saved)
+        self._update_status(
+            f"✅ {n} ETA(s) updated successfully!", "green")
+
     def _on_refresh(self):
         """Handle refresh button click."""
         alias = self.alias_var.get().strip()
