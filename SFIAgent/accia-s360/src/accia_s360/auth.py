@@ -1,19 +1,28 @@
 """
 Azure authentication manager for S360 Client.
+
+Credential chain: AzureCliCredential → InteractiveBrowserCredential.
+If the user has a valid ``az login`` session the CLI credential is used
+(zero friction).  Otherwise a browser window opens for interactive AAD login.
 """
 
 import logging
 from typing import Any
 
 import requests
+from azure.core.credentials import AccessToken, TokenCredential
 from azure.core.exceptions import ClientAuthenticationError
-from azure.identity import AzureCliCredential
+from azure.identity import AzureCliCredential, InteractiveBrowserCredential
 
 from accia_s360.config import S360Config
 from accia_s360.exceptions import S360AuthError
 from accia_s360.models import UserInfo
 
 logger = logging.getLogger(__name__)
+
+# Microsoft corporate tenant – used for InteractiveBrowserCredential so users
+# are not prompted with an org-picker.
+_MS_TENANT_ID = "72f988bf-86f1-41af-91ab-2d7cd011db47"
 
 __all__ = ["S360Auth", "AuthManager"]
 
@@ -38,18 +47,64 @@ class S360Auth:
 
 
 class AuthManager:
-    """Handles Azure authentication and token management."""
+    """Handles Azure authentication and token management.
+
+    Uses a two-step credential chain:
+    1. ``AzureCliCredential`` – instant if ``az login`` session is valid.
+    2. ``InteractiveBrowserCredential`` – opens system browser for AAD login.
+    """
 
     def __init__(self, config: S360Config | None = None) -> None:
         self.config = config or S360Config()
-        self._credential: AzureCliCredential | None = None
+        self._cli_credential: AzureCliCredential | None = None
+        self._browser_credential: InteractiveBrowserCredential | None = None
         self._cached_user_info: UserInfo | None = None
 
-    def _get_credential(self) -> AzureCliCredential:
+    def _get_cli_credential(self) -> AzureCliCredential:
         """Get or create the Azure CLI credential."""
-        if self._credential is None:
-            self._credential = AzureCliCredential()
-        return self._credential
+        if self._cli_credential is None:
+            self._cli_credential = AzureCliCredential()
+        return self._cli_credential
+
+    def _get_browser_credential(self) -> InteractiveBrowserCredential:
+        """Get or create the interactive browser credential."""
+        if self._browser_credential is None:
+            self._browser_credential = InteractiveBrowserCredential(
+                tenant_id=_MS_TENANT_ID,
+            )
+        return self._browser_credential
+
+    def _get_token_with_chain(self, scope: str) -> AccessToken:
+        """Try CLI credential first, fall back to browser.
+
+        Args:
+            scope: The OAuth scope to request.
+
+        Returns:
+            AccessToken from whichever credential succeeded.
+
+        Raises:
+            ClientAuthenticationError: If both credentials fail.
+        """
+        # --- Try AzureCliCredential first ---
+        try:
+            logger.debug("Auth: trying AzureCliCredential...")
+            token = self._get_cli_credential().get_token(scope)
+            logger.debug("Auth: AzureCliCredential succeeded")
+            return token
+        except ClientAuthenticationError:
+            logger.debug(
+                "Auth: CLI unavailable, trying InteractiveBrowserCredential..."
+            )
+
+        # --- Fall back to InteractiveBrowserCredential ---
+        try:
+            token = self._get_browser_credential().get_token(scope)
+            logger.debug("Auth: InteractiveBrowserCredential succeeded")
+            return token
+        except ClientAuthenticationError:
+            logger.error("Auth: all credentials failed for scope %s", scope)
+            raise
 
     def get_s360_token(self) -> str:
         """
@@ -63,8 +118,7 @@ class AuthManager:
         """
         logger.debug("Acquiring S360 bearer token...")
         try:
-            credential = self._get_credential()
-            token = credential.get_token(self.config.s360_scope)
+            token = self._get_token_with_chain(self.config.s360_scope)
             logger.debug("Successfully acquired S360 bearer token")
             return token.token
         except ClientAuthenticationError as e:
@@ -72,7 +126,7 @@ class AuthManager:
             raise S360AuthError(
                 "Failed to acquire S360 token",
                 scope=self.config.s360_scope,
-                suggestion="Try running 'az login' to authenticate.",
+                suggestion="Try clicking Refresh Data to re-authenticate.",
             ) from e
         except Exception as e:
             logger.error("Unexpected auth error: %s", str(e))
@@ -93,8 +147,7 @@ class AuthManager:
         """
         logger.debug("Acquiring Graph API bearer token...")
         try:
-            credential = self._get_credential()
-            token = credential.get_token(self.config.graph_scope)
+            token = self._get_token_with_chain(self.config.graph_scope)
             logger.debug("Successfully acquired Graph API bearer token")
             return token.token
         except ClientAuthenticationError as e:
@@ -102,7 +155,7 @@ class AuthManager:
             raise S360AuthError(
                 "Failed to acquire Graph token",
                 scope=self.config.graph_scope,
-                suggestion="Try running 'az login' to authenticate.",
+                suggestion="Try clicking Refresh Data to re-authenticate.",
             ) from e
         except Exception as e:
             logger.error("Unexpected auth error: %s", str(e))
@@ -150,7 +203,7 @@ class AuthManager:
                 raise S360AuthError(
                     f"Access denied to Graph API (HTTP {response.status_code})",
                     scope=self.config.graph_scope,
-                    suggestion="Your token may have expired. Try 'az login' again.",
+                    suggestion="Your token may have expired. Try clicking Refresh Data to re-authenticate.",
                 )
             else:
                 raise S360AuthError(

@@ -38,13 +38,14 @@ streamlit run src/sfi_reporter/app.py
 - **Empty column indicators**: Column picker shows "(empty)" suffix for columns with no data
 - **KPI failure notification**: Orange warning when individual KPI fetches fail, with failed KPI names listed
 - **Retry failed KPIs**: One-click retry for just the failed KPIs — recovered items merge into existing data
-- **Query Builder**: Ad-hoc clause-based query builder (🔍 Query button) — filter by any field with And/Or logic, date expressions like `@Today - 7`, auto-excludes USSec Shadow items, results grouped by program with drill-down. Query clauses persist across sessions.
+- **Filter**: Curated filter builder (\ud83d\udd0d Filter button) \u2014 filter by Service Name, Assigned To, Program, Action Owner, Due Date, ETA Date (+ Service Owner for managers). Apply filters the entire app; clauses persist across sessions.
+- **In-app Azure login**: Automatically uses `az login` session if available; otherwise opens a browser window for Microsoft login \u2014 no external scripts needed
 - **Diagnostic logging**: Rotating log file at `%TEMP%\sfireporter\sfi_reporter.log` (DEBUG+)
 
 ## Requirements
 
 - Python 3.10+
-- Azure CLI authenticated (`az login`)
+- Azure CLI optional (app opens browser login if `az login` session unavailable)
 - accia-s360 package installed
 
 ## Development

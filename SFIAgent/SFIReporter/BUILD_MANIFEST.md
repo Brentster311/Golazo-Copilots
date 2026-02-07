@@ -13,7 +13,6 @@
 |------|--------|----------|
 | `SFIReporter.exe` | `dist/SFIReporter.exe` | The app |
 | `README.md` | `SFIReporter/README.md` | Usage docs |
-| `LAUNCHME.ps1` | `SFIReporter/LAUNCHME.ps1` | Runs `az login` then launches the exe |
 
 > **`dist/` is gitignored.** Artifacts must be rebuilt locally after pulling.
 
@@ -29,13 +28,13 @@ python -m pytest tests/ -v
 python -m PyInstaller --onefile --name SFIReporter --hidden-import sfi_reporter.query_builder src/sfi_reporter/tk_app.py
 
 # 3. Update the zip (MUST follow every exe rebuild)
-Compress-Archive -Path dist/SFIReporter.exe, README.md, LAUNCHME.ps1 -DestinationPath dist/SFIReporter.zip -Force
+Compress-Archive -Path dist/SFIReporter.exe, README.md -DestinationPath dist/SFIReporter.zip -Force
 ```
 
 ### One-liner
 
 ```powershell
-python -m pytest tests/ -v; if ($LASTEXITCODE -eq 0) { python -m PyInstaller --onefile --name SFIReporter --hidden-import sfi_reporter.query_builder src/sfi_reporter/tk_app.py; Compress-Archive -Path dist/SFIReporter.exe, README.md, LAUNCHME.ps1 -DestinationPath dist/SFIReporter.zip -Force }
+python -m pytest tests/ -v; if ($LASTEXITCODE -eq 0) { python -m PyInstaller --onefile --name SFIReporter --hidden-import sfi_reporter.query_builder src/sfi_reporter/tk_app.py; Compress-Archive -Path dist/SFIReporter.exe, README.md -DestinationPath dist/SFIReporter.zip -Force }
 ```
 
 ## Hidden Imports
@@ -50,4 +49,4 @@ PyInstaller cannot auto-discover these — they must be passed explicitly:
 
 - Python 3.10+
 - `pip install -e ".[dev]"` (includes PyInstaller, pytest)
-- Azure CLI authenticated (`az login`) — needed for tests that hit live APIs
+- Azure CLI (`az login`) optional — app falls back to browser login if unavailable
