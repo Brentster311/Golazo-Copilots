@@ -12,10 +12,10 @@ TRANSITIONS: dict[str, list[str]] = {
     "quality-assurance": ["architect", "program-manager"],
     "architect": ["developer", "quality-assurance"],
     "developer": ["refactor-expert", "architect"],
-    "refactor-expert": ["builder", "developer"],
-    "builder": ["documentor", "refactor-expert"],
-    "documentor": ["retrospective", "builder"],
-    "retrospective": ["documentor"],
+    "refactor-expert": ["documentor", "developer"],
+    "documentor": ["builder", "refactor-expert"],
+    "builder": ["retrospective", "documentor"],
+    "retrospective": ["builder"],
 }
 
 # Phase for each role
@@ -26,8 +26,8 @@ PHASE_MAP: dict[str, Literal["definition", "development", "completion"]] = {
     "architect": "definition",
     "developer": "development",
     "refactor-expert": "development",
-    "builder": "development",
     "documentor": "completion",
+    "builder": "completion",
     "retrospective": "completion",
 }
 
@@ -45,8 +45,8 @@ ROLE_ORDER = [
     "architect",
     "developer",
     "refactor-expert",
-    "builder",
     "documentor",
+    "builder",
     "retrospective",
 ]
 

@@ -53,6 +53,7 @@ class WorkItemState(BaseModel):
         "docsUpdated": ChecklistItem(),
         "refactorComplete": ChecklistItem(),
         "committed": ChecklistItem(),
+        "retroComplete": ChecklistItem(),
     })
     role_history: list[RoleHistoryEntry] = Field(default_factory=list)
     deviations: list[Deviation] = Field(default_factory=list)
