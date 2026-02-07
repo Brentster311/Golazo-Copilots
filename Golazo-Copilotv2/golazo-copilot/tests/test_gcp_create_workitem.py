@@ -101,12 +101,9 @@ class TestGcpCreateWorkitemSuccess:
         await gcp_create_workitem(work_item_id="dor-test", work_items_dir=TEST_WORKITEMS_DIR)
 
         state = load_state("dor-test", TEST_WORKITEMS_DIR)
-        assert state.dor == {
-            "userStory": False,
-            "designDoc": False,
-            "reviewComments": False,
-            "testCases": False,
-        }
+        # All DoR items should have complete=False
+        assert all(not item.complete for item in state.dor.values())
+        assert set(state.dor.keys()) == {"userStory", "designDoc", "reviewComments", "testCases"}
 
     @pytest.mark.asyncio
     async def test_dod_items_all_false(self):
@@ -114,14 +111,11 @@ class TestGcpCreateWorkitemSuccess:
         await gcp_create_workitem(work_item_id="dod-test", work_items_dir=TEST_WORKITEMS_DIR)
 
         state = load_state("dod-test", TEST_WORKITEMS_DIR)
-        assert state.dod == {
-            "branchCreated": False,
-            "testsWrittenFirst": False,
-            "testsPass": False,
-            "buildPasses": False,
-            "docsUpdated": False,
-            "refactorComplete": False,
-            "committed": False,
+        # All DoD items should have complete=False
+        assert all(not item.complete for item in state.dod.values())
+        assert set(state.dod.keys()) == {
+            "branchCreated", "testsWrittenFirst", "testsPass",
+            "buildPasses", "docsUpdated", "refactorComplete", "committed"
         }
 
     @pytest.mark.asyncio

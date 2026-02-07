@@ -1,6 +1,9 @@
 """Transition validation logic for Golazo Copilot workflow."""
 
-from typing import Literal
+from typing import Literal, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .types import ChecklistItem
 
 # Valid transitions from each role
 TRANSITIONS: dict[str, list[str]] = {
@@ -109,12 +112,20 @@ def get_phase_for_role(role: str) -> Literal["definition", "development", "compl
     return PHASE_MAP.get(role, "definition")
 
 
-def check_dor_gate(dor: dict[str, bool]) -> tuple[bool, list[str]]:
+def check_dor_gate(dor: "dict[str, ChecklistItem | bool]") -> tuple[bool, list[str]]:
     """
     Check if DoR is complete.
     
     Returns:
         Tuple of (is_complete, list_of_missing_items).
     """
-    missing = [item for item, complete in dor.items() if not complete]
+    missing = []
+    for item, value in dor.items():
+        if isinstance(value, bool):
+            if not value:
+                missing.append(item)
+        else:
+            # ChecklistItem
+            if not value.complete:
+                missing.append(item)
     return len(missing) == 0, missing

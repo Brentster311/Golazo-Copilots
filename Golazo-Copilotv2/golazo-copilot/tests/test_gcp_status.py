@@ -14,9 +14,15 @@ from golazo_copilot.tools.gcp_mark import gcp_mark_dor
 from golazo_copilot.tools.gcp_status import gcp_status
 
 
-
-
 TEST_WORKITEMS_DIR = Path(__file__).parent / "test-workitems"
+
+
+def create_test_file(work_item_id: str, filename: str) -> str:
+    """Create a test file and return its path."""
+    path = TEST_WORKITEMS_DIR / work_item_id / filename
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("Test content")
+    return str(path)
 
 
 def create_role_notes(work_item_id: str, role: str, work_items_dir: Path = TEST_WORKITEMS_DIR):
@@ -102,9 +108,12 @@ class TestStatusDoRDoD:
     async def test_dor_status_after_marking(self):
         """Should reflect marked items."""
         await gcp_create_workitem(work_item_id="dor-status-2", work_items_dir=TEST_WORKITEMS_DIR)
+        create_test_file("dor-status-2", "user-story.md")
+        create_test_file("dor-status-2", "design-doc.md")
         await gcp_mark_dor(
             work_item_id="dor-status-2",
             items={"userStory": True, "designDoc": True},
+            evidence="user-story.md, design-doc.md",
             work_items_dir=TEST_WORKITEMS_DIR
         )
         

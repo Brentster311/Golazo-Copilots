@@ -1,8 +1,15 @@
 """Pydantic models for Golazo Copilot state."""
 
 from datetime import datetime
-from typing import Literal
-from pydantic import BaseModel, Field
+from typing import Literal, Any
+from pydantic import BaseModel, Field, field_validator
+
+
+class ChecklistItem(BaseModel):
+    """A DoR/DoD item with evidence support."""
+    complete: bool = False
+    evidence: str | None = None
+    validated_at: datetime | None = None
 
 
 class RoleHistoryEntry(BaseModel):
@@ -32,23 +39,41 @@ class WorkItemState(BaseModel):
     current_role: str
     created_at: datetime
     updated_at: datetime
-    dor: dict[str, bool] = Field(default_factory=lambda: {
-        "userStory": False,
-        "designDoc": False,
-        "reviewComments": False,
-        "testCases": False,
+    dor: dict[str, ChecklistItem] = Field(default_factory=lambda: {
+        "userStory": ChecklistItem(),
+        "designDoc": ChecklistItem(),
+        "reviewComments": ChecklistItem(),
+        "testCases": ChecklistItem(),
     })
-    dod: dict[str, bool] = Field(default_factory=lambda: {
-        "branchCreated": False,
-        "testsWrittenFirst": False,
-        "testsPass": False,
-        "buildPasses": False,
-        "docsUpdated": False,
-        "refactorComplete": False,
-        "committed": False,
+    dod: dict[str, ChecklistItem] = Field(default_factory=lambda: {
+        "branchCreated": ChecklistItem(),
+        "testsWrittenFirst": ChecklistItem(),
+        "testsPass": ChecklistItem(),
+        "buildPasses": ChecklistItem(),
+        "docsUpdated": ChecklistItem(),
+        "refactorComplete": ChecklistItem(),
+        "committed": ChecklistItem(),
     })
     role_history: list[RoleHistoryEntry] = Field(default_factory=list)
     deviations: list[Deviation] = Field(default_factory=list)
+
+    @field_validator("dor", "dod", mode="before")
+    @classmethod
+    def migrate_legacy_checklist(cls, v: Any) -> dict[str, Any]:
+        """Migrate legacy boolean format to ChecklistItem format."""
+        if not isinstance(v, dict):
+            return v
+        result = {}
+        for key, value in v.items():
+            if isinstance(value, bool):
+                # Legacy format: just a boolean -> convert to dict for pydantic
+                result[key] = {"complete": value}
+            elif isinstance(value, dict):
+                # New format: already a dict
+                result[key] = value
+            else:
+                result[key] = value
+        return result
 
 
 class GcpInitResult(BaseModel):

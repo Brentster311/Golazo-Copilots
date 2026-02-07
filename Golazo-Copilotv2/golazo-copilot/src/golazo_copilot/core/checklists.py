@@ -1,5 +1,10 @@
 """Checklist validation logic."""
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .types import ChecklistItem
+
 # Valid DoR items
 VALID_DOR_ITEMS = {"userStory", "designDoc", "reviewComments", "testCases"}
 
@@ -34,11 +39,18 @@ def validate_dod_item(item: str) -> tuple[bool, str | None]:
     return True, None
 
 
-def get_missing_items(checklist: dict[str, bool]) -> list[str]:
+def _is_item_complete(item: "ChecklistItem | bool") -> bool:
+    """Check if a checklist item is complete, supporting both old and new formats."""
+    if isinstance(item, bool):
+        return item
+    return item.complete
+
+
+def get_missing_items(checklist: "dict[str, ChecklistItem | bool]") -> list[str]:
     """Get list of items that are not complete."""
-    return [item for item, complete in checklist.items() if not complete]
+    return [item for item, value in checklist.items() if not _is_item_complete(value)]
 
 
-def is_checklist_complete(checklist: dict[str, bool]) -> bool:
+def is_checklist_complete(checklist: "dict[str, ChecklistItem | bool]") -> bool:
     """Check if all items in checklist are complete."""
-    return all(checklist.values())
+    return all(_is_item_complete(v) for v in checklist.values())
