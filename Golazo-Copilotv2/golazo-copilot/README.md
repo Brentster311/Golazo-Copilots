@@ -15,7 +15,7 @@ Golazo is a structured development methodology that ensures high-quality softwar
 - **Multi-session support** – Switch between work items while preserving context
 - **Workflow profiles** – Choose `complete`, `express`, or `spike` modes based on task complexity
 - **Deviation recording** – Audit trail when gates are bypassed with justification
-- **Role notes enforcement** – Warns when role decision notes are missing on transition
+- **Role notes enforcement** – Blocks transitions when role decision notes are missing (bypass with consent)
 
 ### Feature Details
 
@@ -88,9 +88,10 @@ When you need to bypass a gate (e.g., skip DoR to explore a spike), the system:
 
 #### Role Notes Enforcement
 The Golazo workflow requires every role to produce a decision notes document. The system enforces this by:
-1. **Warning on transition** – When you transition away from a role, `gcp_transition` checks if decision notes exist for that role. If missing, a warning is returned (transition still succeeds).
-2. **Status visibility** – `gcp_status` includes a `missing_notes` list showing which completed roles lack decision notes.
-3. **Expected file naming** – Notes should be at `WorkItems/<id>/RoleDecisionNotes/<id>-<role>.md`
+1. **Blocking on transition** – When you transition away from a role, `gcp_transition` checks if decision notes exist for that role. If missing, the transition **fails** with an error indicating the expected file path.
+2. **Force with consent** – If you need to bypass, use `gcp_consent(action='skip_role')` first, then `gcp_transition(..., force_without_notes=True)`.
+3. **Status visibility** – `gcp_status` includes a `missing_notes` list showing which completed roles lack decision notes.
+4. **Expected file naming** – Notes should be at `WorkItems/<id>/RoleDecisionNotes/<id>-<role>.md`
 
 This ensures an audit trail of decisions made at each workflow stage.
 

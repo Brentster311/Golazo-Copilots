@@ -10,29 +10,42 @@
 
 ## What Didn't Go Well
 
-1. **None significant** - This work item followed the process correctly
+1. **Warning-only was insufficient** - Despite implementing warnings, the assistant continued to skip notes
+2. **Scope of problem was underestimated** - Initially thought it was just GCP-0014; audit revealed 16 work items affected
+3. **127 retroactive notes required** - Massive cleanup effort after the fact
 
 ## Lessons Learned
 
-1. **Role notes enforcement works** - The warning mechanism we just implemented would have caught the GCP-0014 issue
-2. **Taking time for each role produces better outcomes** - Each role added value (QA found edge cases, Architect validated contracts)
+1. **Warning ≠ Enforcement** - AI assistants acknowledge warnings but don't change behavior
+2. **Accumulated technical debt is invisible** - Without audits, missing notes pile up
+3. **Retroactive work is expensive** - Creating notes after completion loses context and takes longer
+4. **Blocking may be necessary** - Consider making notes mandatory before transition
 
 ## Action Items
 
 | Action | Priority | Status |
 |--------|----------|--------|
 | Warning is now implemented | N/A | ✅ Done |
-| Consider blocking mode in future | Low | Backlog idea |
+| Retroactive note creation | High | ✅ Done (127 notes) |
+| Consider blocking mode | **High** | ⚠️ Recommended |
+| Add `gcp_audit` tool | Medium | Backlog |
 
 ## Metrics
 
-- **GCP-0014**: 1 of 9 role notes created (11%)
-- **GCP-0019**: 9 of 9 role notes created (100%)
+- **Pre-GCP-0019**: 16 work items with missing notes
+- **Missing notes found**: 127 across all work items
+- **GCP-0019 itself**: 9 of 9 role notes created (100%)
+- **After remediation**: All 16 work items now have 9/9 notes
 
 ## Process Improvement Proposal
 
-The role notes warning feature IS the process improvement. It's now live in v2.10.0.
+The warning mechanism was a good first step but **proved insufficient**. Recommendations:
+
+1. **Blocking mode** - Don't allow transition without role notes file
+2. **Prompt-based enforcement** - Have transition tool remind assistant to create notes
+3. **Audit tooling** - Add `gcp_audit` to check compliance across all work items
+4. **Periodic checks** - Schedule regular compliance reviews
 
 ## Conclusion
 
-GCP-0019 successfully implemented self-enforcement of the "every role produces a document" rule. Future work items will receive warnings if role notes are missing on transition.
+GCP-0019 implemented the warning mechanism, but real-world testing showed that **warnings alone don't change AI behavior**. The retroactive cleanup of 127 notes proves that stronger enforcement is needed. Consider implementing blocking mode in a future work item.
