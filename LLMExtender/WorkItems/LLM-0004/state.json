@@ -5,10 +5,10 @@
   "current_phase": "definition",
   "current_role": "program-manager",
   "created_at": "2026-02-07T23:19:32.204021Z",
-  "updated_at": "2026-02-07T23:20:50.478189Z",
+  "updated_at": "2026-02-07T23:22:00.142916Z",
   "dor": {
     "userStory": true,
-    "designDoc": false,
+    "designDoc": true,
     "reviewComments": false,
     "testCases": false
   },
