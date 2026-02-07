@@ -11,7 +11,8 @@ VALID_DOR_ITEMS = {"userStory", "designDoc", "reviewComments", "testCases"}
 # Valid DoD items
 VALID_DOD_ITEMS = {
     "branchCreated", "testsWrittenFirst", "testsPass",
-    "buildPasses", "docsUpdated", "refactorComplete", "committed"
+    "buildPasses", "docsUpdated", "refactorComplete", "committed",
+    "retroComplete"
 }
 
 

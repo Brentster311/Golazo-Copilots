@@ -9,7 +9,7 @@ Golazo is a structured development methodology that ensures high-quality softwar
 ## Features
 
 - **Persistent state tracking** – Workflow progress is saved to `state.json` files, surviving session restarts
-- **Automated role transitions** – Enforce the correct sequence: Project Owner → Program Manager → QA → Architect → Developer → Refactor Expert → Builder → Documentor → Retrospective
+- **Automated role transitions** – Enforce the correct sequence: Project Owner → Program Manager → QA → Architect → Developer → Refactor Expert → Documentor → Builder → Retrospective
 - **Definition of Ready (DoR) gates** – Block development work until user story, design doc, review comments, and test cases are complete
 - **Definition of Done (DoD) tracking** – Track branch creation, tests, builds, docs, and commits
 - **Multi-session support** – Switch between work items while preserving context
@@ -30,8 +30,8 @@ The Golazo workflow enforces a structured progression through roles:
 4. **Architect** – Create design document, make technical decisions
 5. **Developer** – Implement the solution (requires DoR complete)
 6. **Refactor Expert** – Improve code quality without changing behavior
-7. **Builder** – Verify builds pass, handle CI/CD concerns
-8. **Documentor** – Update documentation to reflect changes
+7. **Documentor** – Update documentation to reflect changes
+8. **Builder** – Verify builds pass, handle CI/CD concerns
 9. **Retrospective** – Review what worked and what didn't
 
 Transitions are validated—you cannot skip roles or jump directly to Developer without completing earlier phases.
@@ -50,10 +50,11 @@ Track completion of development work:
 - **Branch Created** – Feature branch exists
 - **Tests Written First** – TDD approach followed
 - **Tests Pass** – All tests green
-- **Build Passes** – CI/CD pipeline succeeds
+- **Refactor Complete** – Code quality improvements documented
 - **Docs Updated** – Documentation reflects changes
-- **Refactor Complete** – Code quality improvements done
+- **Build Passes** – CI/CD pipeline succeeds
 - **Committed** – Changes committed to source control
+- **Retro Complete** – Retrospective analysis documented
 
 #### Evidence-Based Validation (v2.15.0+)
 When marking DoR/DoD items as complete, **evidence is required** to prove the work was done. This prevents claims without proof and creates an audit trail.
@@ -78,16 +79,17 @@ gcp_mark_dor(work_item_id="GCP-0001", item="userStory", evidence="WorkItems/GCP-
 | branchCreated | Git branch name | `feature/GCP-0001` |
 | testsWrittenFirst | File path(s) | `tests/test_feature.py` |
 | testsPass | Command output | `pytest output: 29 passed` |
-| buildPasses | Command output | `Build successful` |
+| refactorComplete | File path | `WorkItems/GCP-0001/Design/GCP-0001-Refactoring-Plan.md` |
 | docsUpdated | File path(s) | `README.md` |
-| refactorComplete | Path or N/A | `N/A: No refactoring needed` |
+| buildPasses | Command output | `Build successful` |
 | committed | Git commit SHA | `abc1234` |
+| retroComplete | File path | `WorkItems/GCP-0001/Design/GCP-0001-Retro-Plan.md` |
 
 Evidence is validated before the state is updated:
 - **File paths** – Must exist in the workspace
 - **Git branches** – Must exist (`git branch --list`)
 - **Git commits** – Must be valid SHA (`git rev-parse`)
-- **N/A format** – Must start with "N/A:" followed by a reason
+- **Command output** – Must be non-empty string
 
 #### Multi-Session Support
 Work on multiple features simultaneously. Each work item has independent state, allowing you to:

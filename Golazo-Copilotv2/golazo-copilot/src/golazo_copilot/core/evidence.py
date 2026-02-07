@@ -17,13 +17,12 @@ class EvidenceResult:
 # Evidence type mapping for each DoR/DoD item
 FILE_EVIDENCE_ITEMS = {
     "userStory", "designDoc", "reviewComments", "testCases",
-    "testsWrittenFirst", "docsUpdated"
+    "testsWrittenFirst", "docsUpdated", "refactorComplete", "retroComplete"
 }
 
 GIT_BRANCH_ITEMS = {"branchCreated"}
 GIT_COMMIT_ITEMS = {"committed"}
 COMMAND_EVIDENCE_ITEMS = {"testsPass", "buildPasses"}
-NA_ALLOWED_ITEMS = {"refactorComplete"}
 
 
 def validate_file_evidence(
@@ -219,45 +218,6 @@ def validate_command_evidence(evidence: str) -> EvidenceResult:
     return EvidenceResult(valid=True, message="", normalized_path=None)
 
 
-def validate_na_evidence(evidence: str) -> EvidenceResult:
-    """
-    Validate N/A evidence (must have a reason).
-    
-    Args:
-        evidence: N/A string with reason
-        
-    Returns:
-        EvidenceResult with validation status
-    """
-    if not evidence or not evidence.strip():
-        return EvidenceResult(
-            valid=False,
-            message="Empty evidence provided"
-        )
-    
-    evidence = evidence.strip()
-    
-    if evidence.upper().startswith("N/A:"):
-        reason = evidence[4:].strip()
-        if len(reason) < 5:
-            return EvidenceResult(
-                valid=False,
-                message="N/A evidence requires a reason (at least 5 characters). "
-                        "Example: 'N/A: No refactoring needed for this change'"
-            )
-        return EvidenceResult(valid=True, message="", normalized_path=None)
-    elif evidence.upper() == "N/A":
-        return EvidenceResult(
-            valid=False,
-            message="N/A evidence requires a reason. "
-                    "Expected format: 'N/A: <reason>'. "
-                    "Example: 'N/A: No refactoring needed for this change'"
-        )
-    
-    # Not N/A, treat as file evidence
-    return EvidenceResult(valid=True, message="", normalized_path=evidence)
-
-
 def validate_evidence(
     item: str,
     evidence: Union[str, list[str]],
@@ -301,18 +261,6 @@ def validate_evidence(
             )
         return validate_command_evidence(evidence)
     
-    if item in NA_ALLOWED_ITEMS:
-        if not isinstance(evidence, str):
-            return EvidenceResult(
-                valid=False,
-                message=f"Evidence must be a string, got {type(evidence).__name__}"
-            )
-        # Check for N/A or file path
-        if evidence.strip().upper().startswith("N/A"):
-            return validate_na_evidence(evidence)
-        else:
-            return validate_file_evidence(evidence, workspace_path)
-    
     # Unknown item - accept any non-empty evidence
     if isinstance(evidence, str) and not evidence.strip():
         return EvidenceResult(
@@ -346,7 +294,8 @@ def get_evidence_hint(item: str, work_item_id: str = "<id>") -> str:
         "testsPass": "Command output or CI link showing tests pass (e.g., 'pytest output: 29 passed')",
         "buildPasses": "Command output or CI link showing build passes (e.g., 'Build successful')",
         "docsUpdated": "File path(s) to updated docs (e.g., 'README.md')",
-        "refactorComplete": "File path(s) to refactored code, or 'N/A: <reason>' if no refactoring needed",
+        "refactorComplete": f"File path to Refactoring Plan (e.g., 'WorkItems/{work_item_id}/Design/{work_item_id}-Refactoring-Plan.md')",
         "committed": "Git commit SHA (e.g., 'abc1234')",
+        "retroComplete": f"File path to Retro Plan (e.g., 'WorkItems/{work_item_id}/Design/{work_item_id}-Retro-Plan.md')",
     }
     return hints.get(item, "Evidence string describing the completed work")

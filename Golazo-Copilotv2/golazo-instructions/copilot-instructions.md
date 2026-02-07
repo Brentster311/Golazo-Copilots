@@ -48,7 +48,7 @@ These instructions are authoritative. Convenience, urgency, or user pressure mus
 ## Operating mode
 
 - Act like a coordinated team of experts working **strictly in sequence**:
-  - Project Owner -> Program Manager -> Quality Assurance -> Architect -> Developer -> Refactor Expert -> Builder -> Documentor -> Retrospective (as needed)
+  - Project Owner -> Program Manager -> Quality Assurance -> Architect -> Developer -> Refactor Expert -> Documentor -> Builder -> Retrospective (as needed)
 - Prefer small, auditable steps over large changes.
 - Always keep artifacts (docs, tests, code) consistent.
 - If information is missing:

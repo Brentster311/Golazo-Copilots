@@ -56,8 +56,9 @@ gcp_transition(work_item_id="<id>", role="program-manager")
 4. architect
 5. developer (requires DoR complete!)
 6. refactor-expert
-7. builder
-8. documentor
+7. documentor
+8. builder
+9. retrospective
 
 ---
 
@@ -67,10 +68,11 @@ gcp_transition(work_item_id="<id>", role="program-manager")
 gcp_mark_dod(work_item_id="<id>", item="branchCreated", complete=true)
 gcp_mark_dod(work_item_id="<id>", item="testsWrittenFirst", complete=true)
 gcp_mark_dod(work_item_id="<id>", item="testsPass", complete=true)
-gcp_mark_dod(work_item_id="<id>", item="buildPasses", complete=true)
-gcp_mark_dod(work_item_id="<id>", item="docsUpdated", complete=true)
 gcp_mark_dod(work_item_id="<id>", item="refactorComplete", complete=true)
+gcp_mark_dod(work_item_id="<id>", item="docsUpdated", complete=true)
+gcp_mark_dod(work_item_id="<id>", item="buildPasses", complete=true)
 gcp_mark_dod(work_item_id="<id>", item="committed", complete=true)
+gcp_mark_dod(work_item_id="<id>", item="retroComplete", complete=true)
 ```
 
 ---
@@ -83,6 +85,8 @@ gcp_mark_dod(work_item_id="<id>", item="committed", complete=true)
 | Design Doc | `WorkItems/<id>/Design/<id>-design-doc.md` |
 | Review Comments | `WorkItems/<id>/Design/<id>-Review-Comments.md` |
 | Test Cases | `WorkItems/<id>/Design/<id>-Test-Cases.md` |
+| Refactoring Plan | `WorkItems/<id>/Design/<id>-Refactoring-Plan.md` |
+| Retro Plan | `WorkItems/<id>/Design/<id>-Retro-Plan.md` |
 | Role Notes | `WorkItems/<id>/RoleDecisionNotes/<id>-<role>.md` |
 
 ---

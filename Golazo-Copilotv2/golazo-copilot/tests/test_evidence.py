@@ -343,24 +343,26 @@ class TestEvidenceStorage:
 class TestEdgeCases:
     """TC27-TC30: Edge cases."""
 
-    def test_na_evidence_for_refactor(self):
-        """TC27: N/A evidence for refactorComplete."""
+    def test_refactor_complete_requires_file(self):
+        """TC27: refactorComplete requires file path (not N/A)."""
         from golazo_copilot.core.evidence import validate_evidence
         
+        # N/A is no longer valid for refactorComplete
         result = validate_evidence(
             "refactorComplete",
             "N/A: No refactoring needed for this change",
             Path.cwd()
         )
-        assert result.valid is True
+        assert result.valid is False
 
-    def test_na_without_reason_rejected(self):
-        """TC28: N/A without reason rejected."""
+    def test_retro_complete_requires_file(self):
+        """TC28: retroComplete requires file path."""
         from golazo_copilot.core.evidence import validate_evidence
         
-        result = validate_evidence("refactorComplete", "N/A", Path.cwd())
+        # Test that retroComplete requires a valid file
+        result = validate_evidence("retroComplete", "nonexistent.md", Path.cwd())
         assert result.valid is False
-        assert "reason" in result.message.lower()
+        assert "not found" in result.message.lower()
 
     def test_unicode_in_file_path(self):
         """TC29: Unicode in file path."""
