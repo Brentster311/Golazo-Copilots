@@ -107,8 +107,27 @@ def _fetch_with_browser(
     auth: AuthStrategy | None = None,
     timeout: float = 30.0,
     max_length: int = _DEFAULT_MAX_LENGTH,
+    browser_auth: str | None = None,
 ) -> str:
     """Fetch a URL using a headless Chromium browser (sync)."""
+    from llm_extender.auth.aad_browser import (
+        decode_jwt_claims,
+        detect_aad_redirect,
+        is_user_credential,
+        parse_aad_authorize_url,
+        run_device_code_flow,
+    )
+
+    # Validate browser_auth + auth combo
+    if browser_auth == "aad" and auth is not None and not is_user_credential(auth):
+        from llm_extender.exceptions import AuthenticationError
+
+        raise AuthenticationError(
+            "browser_auth='aad' requires user credentials (Azure CLI, "
+            "device code, etc.), not Managed Service Identity. "
+            "MSI has no interactive session for browser-based AAD login."
+        )
+
     try:
         launcher = _get_sync_playwright()
     except ImportError:
@@ -130,6 +149,29 @@ def _fetch_with_browser(
             page = context.new_page()
             page.goto(url, timeout=timeout_ms)
             page.wait_for_load_state("domcontentloaded", timeout=timeout_ms)
+
+            # AAD device code flow if redirected to AAD login
+            if browser_auth == "aad" and detect_aad_redirect(page.url):
+                aad_url = page.url
+                params = parse_aad_authorize_url(aad_url)
+                tenant = params.get("tenant_id", "common")
+                scope = params.get("scope", "")
+                scopes = [s for s in scope.split() if s] or ["openid"]
+
+                token_result = run_device_code_flow(
+                    tenant_id=tenant, scopes=scopes, timeout=timeout,
+                )
+                fresh_token = token_result.get("access_token", "")
+
+                # Re-navigate with fresh token
+                context.set_extra_http_headers(
+                    {"Authorization": f"Bearer {fresh_token}"}
+                )
+                page.goto(url, timeout=timeout_ms)
+                page.wait_for_load_state(
+                    "domcontentloaded", timeout=timeout_ms,
+                )
+
             text = page.inner_text("body")
     except ProviderError:
         raise
@@ -155,8 +197,26 @@ async def _afetch_with_browser(
     auth: AuthStrategy | None = None,
     timeout: float = 30.0,
     max_length: int = _DEFAULT_MAX_LENGTH,
+    browser_auth: str | None = None,
 ) -> str:
     """Fetch a URL using a headless Chromium browser (async)."""
+    from llm_extender.auth.aad_browser import (
+        detect_aad_redirect,
+        is_user_credential,
+        parse_aad_authorize_url,
+        run_device_code_flow,
+    )
+
+    # Validate browser_auth + auth combo
+    if browser_auth == "aad" and auth is not None and not is_user_credential(auth):
+        from llm_extender.exceptions import AuthenticationError
+
+        raise AuthenticationError(
+            "browser_auth='aad' requires user credentials (Azure CLI, "
+            "device code, etc.), not Managed Service Identity. "
+            "MSI has no interactive session for browser-based AAD login."
+        )
+
     try:
         launcher = _get_async_playwright()
     except ImportError:
@@ -178,6 +238,29 @@ async def _afetch_with_browser(
             page = await context.new_page()
             await page.goto(url, timeout=timeout_ms)
             await page.wait_for_load_state("domcontentloaded", timeout=timeout_ms)
+
+            # AAD device code flow if redirected to AAD login
+            if browser_auth == "aad" and detect_aad_redirect(page.url):
+                aad_url = page.url
+                params = parse_aad_authorize_url(aad_url)
+                tenant = params.get("tenant_id", "common")
+                scope = params.get("scope", "")
+                scopes = [s for s in scope.split() if s] or ["openid"]
+
+                token_result = run_device_code_flow(
+                    tenant_id=tenant, scopes=scopes, timeout=timeout,
+                )
+                fresh_token = token_result.get("access_token", "")
+
+                # Re-navigate with fresh token
+                await context.set_extra_http_headers(
+                    {"Authorization": f"Bearer {fresh_token}"}
+                )
+                await page.goto(url, timeout=timeout_ms)
+                await page.wait_for_load_state(
+                    "domcontentloaded", timeout=timeout_ms,
+                )
+
             text = await page.inner_text("body")
     except ProviderError:
         raise
@@ -201,6 +284,9 @@ async def _afetch_with_browser(
 # Public API
 # ---------------------------------------------------------------------------
 
+_VALID_BROWSER_AUTH = frozenset({"aad"})
+
+
 def fetch_url(
     url: str,
     *,
@@ -208,6 +294,7 @@ def fetch_url(
     timeout: float = 30.0,
     max_length: int = _DEFAULT_MAX_LENGTH,
     render_js: bool = False,
+    browser_auth: str | None = None,
 ) -> str:
     """Fetch a URL and return its text content (HTML stripped).
 
@@ -221,17 +308,37 @@ def fetch_url(
         render_js: If ``True``, use a headless Chromium browser
             (via Playwright) to render JavaScript before extracting
             text.  Requires ``pip install llm-extender[browser]``.
+        browser_auth: Optional browser authentication mode. Use
+            ``"aad"`` to enable AAD device-code-flow authentication
+            for sites that require browser-based AAD login.
+            Requires ``render_js=True`` and user credentials (not MSI).
 
     Returns:
         The extracted text content from the page.
 
     Raises:
-        ProviderError: If the HTTP request fails (non-2xx status)
-            or if Playwright is not installed when ``render_js=True``.
+        ProviderError: If the HTTP request fails (non-2xx status),
+            Playwright is not installed when ``render_js=True``, or
+            ``browser_auth`` is used without ``render_js=True``.
+        AuthenticationError: If ``browser_auth='aad'`` is used with
+            Managed Service Identity credentials.
     """
+    if browser_auth is not None:
+        if browser_auth not in _VALID_BROWSER_AUTH:
+            raise ProviderError(
+                f"Unsupported browser_auth='{browser_auth}'. "
+                f"Valid options: {sorted(_VALID_BROWSER_AUTH)}"
+            )
+        if not render_js:
+            raise ProviderError(
+                "browser_auth requires render_js=True. "
+                "Browser authentication only works with a headless browser."
+            )
+
     if render_js:
         return _fetch_with_browser(
-            url, auth=auth, timeout=timeout, max_length=max_length
+            url, auth=auth, timeout=timeout, max_length=max_length,
+            browser_auth=browser_auth,
         )
 
     headers: dict[str, str] = {"User-Agent": _USER_AGENT}
@@ -277,6 +384,7 @@ async def afetch_url(
     timeout: float = 30.0,
     max_length: int = _DEFAULT_MAX_LENGTH,
     render_js: bool = False,
+    browser_auth: str | None = None,
 ) -> str:
     """Fetch a URL asynchronously and return its text content (HTML stripped).
 
@@ -290,17 +398,37 @@ async def afetch_url(
         render_js: If ``True``, use a headless Chromium browser
             (via Playwright) to render JavaScript before extracting
             text.  Requires ``pip install llm-extender[browser]``.
+        browser_auth: Optional browser authentication mode. Use
+            ``"aad"`` to enable AAD device-code-flow authentication
+            for sites that require browser-based AAD login.
+            Requires ``render_js=True`` and user credentials (not MSI).
 
     Returns:
         The extracted text content from the page.
 
     Raises:
-        ProviderError: If the HTTP request fails (non-2xx status)
-            or if Playwright is not installed when ``render_js=True``.
+        ProviderError: If the HTTP request fails (non-2xx status),
+            Playwright is not installed when ``render_js=True``, or
+            ``browser_auth`` is used without ``render_js=True``.
+        AuthenticationError: If ``browser_auth='aad'`` is used with
+            Managed Service Identity credentials.
     """
+    if browser_auth is not None:
+        if browser_auth not in _VALID_BROWSER_AUTH:
+            raise ProviderError(
+                f"Unsupported browser_auth='{browser_auth}'. "
+                f"Valid options: {sorted(_VALID_BROWSER_AUTH)}"
+            )
+        if not render_js:
+            raise ProviderError(
+                "browser_auth requires render_js=True. "
+                "Browser authentication only works with a headless browser."
+            )
+
     if render_js:
         return await _afetch_with_browser(
-            url, auth=auth, timeout=timeout, max_length=max_length
+            url, auth=auth, timeout=timeout, max_length=max_length,
+            browser_auth=browser_auth,
         )
 
     headers: dict[str, str] = {"User-Agent": _USER_AGENT}
