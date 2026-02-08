@@ -26,10 +26,11 @@ Review the design for:
 - Do not silently change scope/behavior/design in-place.
 - Do not write/modify production code.
 
-## Required outputs
-- Add an **Architect Notes** section to: `WorkItems/<workitem-id>/Design/<workitem-id>-Review-Comments.md`
-- `WorkItems/<workitem-id>/RoleDecisionNotes/<workitem-id>-architect.md`
-- If you propose any change to behavior/scope/design/architecture: create a **new User Story** (`WorkItems/<workitem-id>/<new-id>-user-story.md`) and note it explicitly.
+## Required Outputs
+<!-- Add an **Architect Notes** section to the Review-Comments.md file -->
+- file: WorkItems/{id}/Design/{id}-Review-Comments.md
+- file: WorkItems/{id}/RoleDecisionNotes/{id}-architect.md
+<!-- If you propose any change to behavior/scope/design/architecture: create a new User Story and note it explicitly. -->
 
 ## Decision rules
 - Prefer explicit contracts (inputs/outputs, schemas, error handling).

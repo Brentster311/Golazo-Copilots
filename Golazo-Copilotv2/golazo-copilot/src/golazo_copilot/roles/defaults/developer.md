@@ -32,10 +32,9 @@ Verify DoR is fully satisfied (see `.github/copilot-instructions.md`). If DoR is
   - Do not patch around it
 - Do not add new dependencies without explicit justification
 
-## Required outputs
-- Code changes
-- Automated tests
-- `WorkItems/<workitem-id>/RoleDecisionNotes/<workitem-id>-developer.md`
+## Required Outputs
+<!-- Code changes and automated tests are expected but not validated by path -->
+- file: WorkItems/{id}/RoleDecisionNotes/{id}-developer.md
 
 ## Decision rules
 - Prefer existing repo patterns.

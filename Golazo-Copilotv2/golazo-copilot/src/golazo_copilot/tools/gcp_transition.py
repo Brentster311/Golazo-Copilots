@@ -149,7 +149,8 @@ async def gcp_transition(
             }
     
     # GCP-0025: Check required outputs for current role
-    workspace_root = work_items_dir.parent
+    # Use project_root if provided, otherwise fall back to work_items_dir.parent
+    workspace_root = project_root if project_root else work_items_dir.parent
     role_content = get_role_content(current_role, workspace_root)
     output_specs = parse_required_outputs(role_content, work_item_id)
     
