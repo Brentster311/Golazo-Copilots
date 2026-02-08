@@ -132,6 +132,7 @@ async def _mark_checklist(
     
     # Evidence validation: required when marking complete (but not when unmarking)
     marking_complete = any(v for v in updates.values())
+    
     if marking_complete:
         if evidence is None:
             # Get hint for the first item being marked complete
@@ -145,7 +146,9 @@ async def _mark_checklist(
         # Validate the evidence
         # Only validate for the single item case (bulk updates require more complex evidence handling)
         if item is not None and complete:
-            result = validate_evidence(item, evidence, work_items_dir)
+            # Use workspace root (parent of WorkItems) for git operations
+            workspace_root = work_items_dir.parent
+            result = validate_evidence(item, evidence, workspace_root)
             if not result.valid:
                 return {
                     "success": False,
