@@ -98,6 +98,7 @@ class LLMClient:
         url_auth: AuthStrategy | None = None,
         max_length: int = 50_000,
         render_js: bool = False,
+        browser_auth: str | None = None,
     ) -> str:
         """Fetch URL content and use it as context for a completion.
 
@@ -114,6 +115,8 @@ class LLMClient:
                 content (default 50 000).
             render_js: If ``True``, use a headless browser to render
                 JavaScript before extracting text.
+            browser_auth: Optional browser auth mode (``"aad"`` for
+                AAD device-code-flow). Requires ``render_js=True``.
 
         Returns:
             The model's response as a string.
@@ -123,7 +126,8 @@ class LLMClient:
                 returns an error.
         """
         content = fetch_url(
-            url, auth=url_auth, max_length=max_length, render_js=render_js
+            url, auth=url_auth, max_length=max_length,
+            render_js=render_js, browser_auth=browser_auth,
         )
         augmented = _build_context_prompt(url, content, prompt)
         return self._provider.complete(augmented)
@@ -136,6 +140,7 @@ class LLMClient:
         url_auth: AuthStrategy | None = None,
         max_length: int = 50_000,
         render_js: bool = False,
+        browser_auth: str | None = None,
     ) -> str:
         """Async version of :meth:`complete_with_url`.
 
@@ -148,6 +153,8 @@ class LLMClient:
                 content (default 50 000).
             render_js: If ``True``, use a headless browser to render
                 JavaScript before extracting text.
+            browser_auth: Optional browser auth mode (``"aad"`` for
+                AAD device-code-flow). Requires ``render_js=True``.
 
         Returns:
             The model's response as a string.
@@ -157,7 +164,8 @@ class LLMClient:
                 returns an error.
         """
         content = await afetch_url(
-            url, auth=url_auth, max_length=max_length, render_js=render_js
+            url, auth=url_auth, max_length=max_length,
+            render_js=render_js, browser_auth=browser_auth,
         )
         augmented = _build_context_prompt(url, content, prompt)
         return await self._provider.acomplete(augmented)

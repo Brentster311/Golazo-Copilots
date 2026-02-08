@@ -253,6 +253,40 @@ with LLMClient(config, auth=llm_auth) as client:
 
 Authentication tokens are automatically injected as `Authorization` headers into the browser context. When `render_js=False` (the default), the library uses fast httpx HTTP requests with HTML-to-text extraction.
 
+### AAD Browser Authentication
+
+For internal AAD-protected web apps that require browser-based login (not just Bearer tokens), use `browser_auth="aad"` to trigger an MSAL device code flow:
+
+```python
+from llm_extender import LLMClient, LLMConfig, AzureChainedAuth
+
+config = LLMConfig(
+    provider="azure_openai",
+    model="gpt-4o",
+    base_url="https://your-resource.openai.azure.com",
+    deployment="gpt-4",
+)
+llm_auth = AzureChainedAuth()
+url_auth = AzureChainedAuth(scope="https://target-app/.default")
+
+with LLMClient(config, auth=llm_auth) as client:
+    response = client.complete_with_url(
+        prompt="Summarize this dashboard",
+        url="https://internal-app.microsoft.com",
+        url_auth=url_auth,
+        render_js=True,
+        browser_auth="aad",  # Triggers device code flow if AAD redirect detected
+    )
+```
+
+When `browser_auth="aad"` is set:
+1. The browser navigates to the target URL
+2. If redirected to AAD login (login.microsoftonline.com), a device code flow starts
+3. Instructions are printed to stderr: *"To sign in, visit https://microsoft.com/devicelogin and enter code XXXXX"*
+4. After authentication, the browser re-navigates with fresh tokens
+
+> **Note:** `browser_auth="aad"` requires user credentials (Azure CLI, device code, etc.). Managed Service Identity (MSI) is rejected — MSI has no interactive session for browser-based login.
+
 ### Standalone Fetch
 
 Use `fetch_url` / `afetch_url` directly without an LLM call:

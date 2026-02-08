@@ -1,6 +1,6 @@
 # LLM-0008: Interactive AAD Browser Login for Authenticated URL Fetches
 
-## Status: BACKLOG
+## Status: IMPLEMENTED
 
 ## User Story
 
