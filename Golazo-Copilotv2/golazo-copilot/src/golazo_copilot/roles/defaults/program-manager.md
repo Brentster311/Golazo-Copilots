@@ -31,9 +31,9 @@ Create a Design Doc that includes:
 - Do not write/modify production code.
 - Do not change scope beyond the User Story (if needed, create a new User Story).
 
-## Required outputs
-- `WorkItems/<workitem-id>/Design/<workitem-id>-design-doc.md`
-- `WorkItems/<workitem-id>/RoleDecisionNotes/<workitem-id>-program-manager.md`
+## Required Outputs
+- file: WorkItems/{id}/Design/{id}-design-doc.md
+- file: WorkItems/{id}/RoleDecisionNotes/{id}-program-manager.md
 
 ## Decision rules
 - Optimize for clarity and sequencing; assume a reviewer will challenge gaps.

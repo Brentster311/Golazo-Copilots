@@ -25,9 +25,9 @@ Verify all tests are passing. If tests are failing, STOP and return to **Develop
 - Do not fix bugs (that's a new User Story)
 - Do not change public APIs without creating a new User Story
 
-## Required outputs
-- Refactored code (if improvements identified)
-- `WorkItems/<workitem-id>/RoleDecisionNotes/<workitem-id>-refactor.md`
+## Required Outputs
+<!-- Refactored code (if improvements identified) is expected but not validated by path -->
+- file: WorkItems/{id}/RoleDecisionNotes/{id}-refactor.md
 
 ## Decision rules
 - If refactoring would change behavior, create a new User Story instead

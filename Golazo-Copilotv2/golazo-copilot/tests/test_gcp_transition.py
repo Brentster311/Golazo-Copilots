@@ -15,6 +15,23 @@ from golazo_copilot.core.persistence import load_state, save_state
 
 
 TEST_WORKITEMS_DIR = Path(__file__).parent / "test-workitems"
+# Use tests/ as workspace root so role files can be created there
+TEST_WORKSPACE_ROOT = Path(__file__).parent
+
+# All roles that need empty role files for testing (no Required Outputs)
+ALL_ROLES = [
+    "project-owner-assistant", "program-manager", "quality-assurance",
+    "architect", "developer", "refactor-expert", "builder", "documentor", "retrospective"
+]
+
+
+def create_empty_role_files(workspace_root: Path = TEST_WORKSPACE_ROOT):
+    """Create role files with no Required Outputs section for testing."""
+    roles_dir = workspace_root / ".github" / "roles"
+    roles_dir.mkdir(parents=True, exist_ok=True)
+    for role in ALL_ROLES:
+        role_file = roles_dir / f"{role}.md"
+        role_file.write_text(f"# Role: {role}\n\n## Purpose\nTest role.\n")
 
 
 def create_role_notes(work_item_id: str, role: str, work_items_dir: Path = TEST_WORKITEMS_DIR):
@@ -61,9 +78,15 @@ def cleanup():
     """Clean up test directory before and after each test."""
     if TEST_WORKITEMS_DIR.exists():
         shutil.rmtree(TEST_WORKITEMS_DIR)
+    # Create empty role files so tests use them instead of package defaults
+    create_empty_role_files()
     yield
     if TEST_WORKITEMS_DIR.exists():
         shutil.rmtree(TEST_WORKITEMS_DIR)
+    # Clean up role files
+    roles_dir = TEST_WORKSPACE_ROOT / ".github"
+    if roles_dir.exists():
+        shutil.rmtree(roles_dir)
 
 
 class TestSuccessfulTransition:

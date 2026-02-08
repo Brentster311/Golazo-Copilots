@@ -22,10 +22,10 @@ Confirm the **Work Item ID**. If none is provided, use `WIP-000`.
 - Do not write/modify production code.
 - Do not invent requirements without labeling them **Assumption (explicit)**.
 
-## Required outputs
-- If the request is decomposed, include a brief rationale explaining why the original request was too large.
-- `WorkItems/<workitem-id>/<workitem-id>-user-story.md`
-- `WorkItems/<workitem-id>/RoleDecisionNotes/<workitem-id>-project-owner-assistant.md`
+## Required Outputs
+<!-- If the request is decomposed, include a brief rationale explaining why the original request was too large. -->
+- file: WorkItems/{id}/{id}-User-Story.md
+- file: WorkItems/{id}/RoleDecisionNotes/{id}-project-owner-assistant.md
 
 ## User Story format (required)
 **Status**: BACKLOG | IN PROGRESS | IMPLEMENTED
