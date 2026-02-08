@@ -3,9 +3,9 @@
   "work_item_id": "LLM-0001",
   "profile": "express",
   "current_phase": "completion",
-  "current_role": "builder",
+  "current_role": "retrospective",
   "created_at": "2026-02-08T03:44:20.969557Z",
-  "updated_at": "2026-02-08T03:53:09.024204Z",
+  "updated_at": "2026-02-08T03:53:27.614052Z",
   "dor": {
     "userStory": {
       "complete": true,
@@ -104,6 +104,11 @@
     {
       "role": "builder",
       "entered_at": "2026-02-08T03:53:09.024204Z",
+      "exited_at": "2026-02-08T03:53:27.614052Z"
+    },
+    {
+      "role": "retrospective",
+      "entered_at": "2026-02-08T03:53:27.614052Z",
       "exited_at": null
     }
   ],
