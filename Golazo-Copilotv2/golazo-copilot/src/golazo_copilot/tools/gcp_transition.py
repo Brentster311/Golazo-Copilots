@@ -13,7 +13,8 @@ from ..core.transitions import (
     check_dor_gate,
     DOR_GATE_ROLE,
 )
-from ..roles.loader import load_role_instructions
+from ..core.output_validator import parse_required_outputs, validate_all_outputs
+from ..roles.loader import load_role_instructions, get_role_content
 from .gcp_consent import has_valid_consent, consume_consent
 
 
@@ -146,6 +147,34 @@ async def gcp_transition(
                 "missing_file": str(notes_path),
                 "hint": f"Create the file first, or use force_without_notes=True with prior gcp_consent(action='skip_role')",
             }
+    
+    # GCP-0025: Check required outputs for current role
+    workspace_root = work_items_dir.parent
+    role_content = get_role_content(current_role, workspace_root)
+    output_specs = parse_required_outputs(role_content, work_item_id)
+    
+    if output_specs:
+        validation_result = validate_all_outputs(output_specs, workspace_root)
+        if not validation_result.valid:
+            missing_outputs = [o["spec"].path_or_pattern for o in validation_result.outputs if not o["valid"]]
+            if force:
+                # Check for consent to skip outputs
+                if not has_valid_consent(state, "skip_dor"):
+                    return {
+                        "success": False,
+                        "error": "Cannot force transition without recorded consent. Call gcp_consent(action='skip_dor') first.",
+                        "missing_outputs": missing_outputs,
+                    }
+                # Consume the consent
+                consume_consent(state, "skip_dor")
+                save_state(work_item_id, state, work_items_dir)
+            else:
+                return {
+                    "success": False,
+                    "error": f"Cannot transition from '{current_role}': {validation_result.message}",
+                    "missing_outputs": missing_outputs,
+                    "hint": "Create the missing outputs, or use force=True with prior gcp_consent(action='skip_dor')",
+                }
     
     # Update state
     now = datetime.now(timezone.utc)

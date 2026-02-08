@@ -62,3 +62,31 @@ def has_local_role_override(role: str, project_root: Path | None = None) -> bool
         project_root = Path.cwd()
     local_path = project_root / ".github" / "roles" / f"{role}.md"
     return local_path.exists()
+
+
+def get_role_content(role: str, project_root: Path | None = None) -> str:
+    """
+    Get raw role file content for parsing (without version update).
+    
+    Args:
+        role: Role name
+        project_root: Project root directory
+        
+    Returns:
+        Raw role file content
+    """
+    if project_root is None:
+        project_root = Path.cwd()
+    
+    # Try local first
+    local_path = project_root / ".github" / "roles" / f"{role}.md"
+    if local_path.exists():
+        return local_path.read_text(encoding='utf-8')
+    
+    # Fall back to package defaults
+    try:
+        files = resources.files("golazo_copilot.roles.defaults")
+        role_file = files.joinpath(f"{role}.md")
+        return role_file.read_text(encoding='utf-8')
+    except (FileNotFoundError, TypeError):
+        return ""

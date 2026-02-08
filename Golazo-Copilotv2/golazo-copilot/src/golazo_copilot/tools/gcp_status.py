@@ -5,7 +5,8 @@ from pathlib import Path
 from .. import __version__
 from ..core.persistence import load_state, work_item_exists, DEFAULT_WORKITEMS_DIR
 from ..core.checklists import get_missing_items, is_checklist_complete
-from ..roles.loader import load_role_instructions
+from ..core.output_validator import parse_required_outputs, validate_all_outputs
+from ..roles.loader import load_role_instructions, get_role_content
 from .gcp_transition import get_role_notes_path
 
 
@@ -73,6 +74,23 @@ async def gcp_status(
                     missing_notes.append(entry.role)
                 seen_roles.add(entry.role)
     
+    # GCP-0025: Validate required outputs for current role
+    workspace_root = work_items_dir.parent
+    role_content = get_role_content(state.current_role, workspace_root)
+    output_specs = parse_required_outputs(role_content, work_item_id)
+    
+    required_outputs = []
+    outputs_complete = True
+    if output_specs:
+        validation_result = validate_all_outputs(output_specs, workspace_root)
+        outputs_complete = validation_result.valid
+        for output in validation_result.outputs:
+            required_outputs.append({
+                "path": output["spec"].path_or_pattern,
+                "type": output["spec"].type,
+                "valid": output["valid"],
+            })
+    
     # Build simplified items view (just complete status, not full ChecklistItem)
     dor_items = {k: v.complete for k, v in state.dor.items()}
     dod_items = {k: v.complete for k, v in state.dod.items()}
@@ -93,6 +111,10 @@ async def gcp_status(
             "complete": dod_complete,
             "items": dod_items,
             "missing": dod_missing,
+        },
+        "required_outputs": {
+            "complete": outputs_complete,
+            "outputs": required_outputs,
         },
         "deviations": deviations,
         "missing_notes": missing_notes,
