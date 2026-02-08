@@ -13,7 +13,7 @@
 | LLM-0001 | Provider-Abstracted LLM Client | ✅ Implemented |
 | LLM-0002 | Config Persistence (JSON/YAML) | ❌ Cancelled |
 | LLM-0003 | Pluggable Auth Manager | ✅ Implemented |
-| LLM-0004 | Azure OpenAI Provider | 🔧 In Progress |
+| LLM-0004 | Azure OpenAI Provider | ✅ Implemented |
 
 ---
 
@@ -61,6 +61,7 @@ EnvVarAuth  MSIAuth  Callback  OpenAIProvider   AzureOpenAIProvider
 | `llm_extender/exceptions.py` | Exception hierarchy (`LLMExtenderError` → children) | LLM-0001 |
 | `llm_extender/providers/base.py` | `LLMProvider` ABC (complete/acomplete/close/aclose) | LLM-0001 |
 | `llm_extender/providers/openai.py` | `OpenAIProvider` — httpx-based, `/v1/chat/completions` | LLM-0001 |
+| `llm_extender/providers/azure_openai.py` | `AzureOpenAIProvider` — Azure deployment-based URLs | LLM-0004 |
 | `llm_extender/auth/base.py` | `AuthStrategy` ABC (resolve/aresolve, safe repr) | LLM-0003 |
 | `llm_extender/auth/env_var.py` | `EnvVarAuth` — reads from `os.environ` | LLM-0003 |
 | `llm_extender/auth/msi.py` | `ManagedIdentityAuth` — Azure MSI via `azure-identity` | LLM-0003 |
@@ -73,7 +74,7 @@ EnvVarAuth  MSIAuth  Callback  OpenAIProvider   AzureOpenAIProvider
 | Pattern | Where | Why |
 |---------|-------|-----|
 | **Strategy** | `AuthStrategy` → `EnvVarAuth`, `MSIAuth`, `CallbackAuth` | Pluggable credential resolution without coupling |
-| **Strategy** | `LLMProvider` → `OpenAIProvider`, (future `AzureOpenAIProvider`) | Swap providers via config alone |
+| **Strategy** | `LLMProvider` → `OpenAIProvider`, `AzureOpenAIProvider` | Swap providers via config alone |
 | **Registry** | `PROVIDER_REGISTRY` dict in `client.py` | Name-based provider lookup, clear error on miss |
 | **Facade** | `LLMClient` | Single entry point hides provider complexity |
 | **Context Manager** | `LLMClient.__enter__`/`__aenter__` | Deterministic resource cleanup (httpx clients) |
@@ -103,9 +104,9 @@ llm-extender
 
 ---
 
-## What LLM-0004 Adds
+## What LLM-0004 Added
 
-The next work item introduces an `AzureOpenAIProvider` that:
+LLM-0004 introduced an `AzureOpenAIProvider` that:
 
 - Targets Azure's URL: `{base_url}/openai/deployments/{deployment}/chat/completions?api-version={api_version}`
 - Adds `deployment` and `api_version` fields to `LLMConfig`
@@ -129,4 +130,5 @@ Tests live in `tests/` and cover:
 | `test_auth_callback.py` | Sync/async callback resolution |
 | `test_auth_client_integration.py` | Client + auth strategies end-to-end |
 | `test_auth_security.py` | No secrets in repr/str/logs |
+| `test_azure_openai_provider.py` | Azure OpenAI URL, auth, sync/async, errors |
 | `conftest.py` | Shared fixtures |

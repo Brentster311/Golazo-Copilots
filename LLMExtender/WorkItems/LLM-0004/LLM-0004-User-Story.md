@@ -1,6 +1,6 @@
 # LLM-0004: Azure OpenAI Provider
 
-## Status: IN PROGRESS
+## Status: IMPLEMENTED
 
 ## User Story
 

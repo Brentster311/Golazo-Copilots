@@ -134,6 +134,31 @@ except LLMExtenderError as e:
 | Provider | Name | Notes |
 |---|---|---|
 | OpenAI | `"openai"` | Also works with any OpenAI-compatible API |
+| Azure OpenAI | `"azure_openai"` | Uses deployment-based URLs with Azure AD token auth |
+
+### Azure OpenAI
+
+```python
+from llm_extender import LLMClient, LLMConfig, CallbackAuth
+
+# Use DefaultAzureCredential for token-based auth
+from azure.identity import DefaultAzureCredential
+credential = DefaultAzureCredential()
+
+config = LLMConfig(
+    provider="azure_openai",
+    model="gpt-4",
+    base_url="https://your-resource.openai.azure.com",
+    deployment="your-deployment-name",
+    api_version="2024-12-01-preview",
+)
+auth = CallbackAuth(
+    callback=lambda: credential.get_token("https://cognitiveservices.azure.com/.default").token,
+)
+
+with LLMClient(config, auth=auth) as client:
+    response = client.complete("Hello from Azure!")
+```
 
 ## Development
 
