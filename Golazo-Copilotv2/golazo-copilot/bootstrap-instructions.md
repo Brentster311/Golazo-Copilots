@@ -1,3 +1,4 @@
+<!-- Golazo Copilot Version: 2.17.0 -->
 # Golazo Copilot v2
 
 This workspace uses Golazo Copilot MCP server for workflow management.
@@ -24,32 +25,32 @@ This workspace uses Golazo Copilot MCP server for workflow management.
 
 ## Starting a New Work Item
 ```
-gcp_init(work_item_id="<id>", profile="complete")
+gcp_create_workitem(work_item_id="<id>", profile="complete")
 ```
 Then create User Story at `WorkItems/<id>/<id>-User-Story.md`
 
 ---
 
-## Marking Progress (IMPORTANT: use `complete` not `value`)
+## Marking Progress (IMPORTANT: evidence is REQUIRED)
 
 After creating **User Story**:
 ```
-gcp_mark_dor(work_item_id="<id>", item="userStory", complete=true)
+gcp_mark_dor(work_item_id="<id>", item="userStory", evidence="WorkItems/<id>/<id>-User-Story.md")
 ```
 
 After creating **Design Doc**:
 ```
-gcp_mark_dor(work_item_id="<id>", item="designDoc", complete=true)
+gcp_mark_dor(work_item_id="<id>", item="designDoc", evidence="WorkItems/<id>/Design/<id>-design-doc.md")
 ```
 
 After creating **Review Comments**:
 ```
-gcp_mark_dor(work_item_id="<id>", item="reviewComments", complete=true)
+gcp_mark_dor(work_item_id="<id>", item="reviewComments", evidence="WorkItems/<id>/Design/<id>-Review-Comments.md")
 ```
 
 After creating **Test Cases**:
 ```
-gcp_mark_dor(work_item_id="<id>", item="testCases", complete=true)
+gcp_mark_dor(work_item_id="<id>", item="testCases", evidence="WorkItems/<id>/Design/<id>-Test-Cases.md")
 ```
 
 ---
@@ -61,8 +62,10 @@ To move to next role:
 gcp_transition(work_item_id="<id>", role="program-manager")
 ```
 
+**Note**: Transitions validate Required Outputs defined in role files. If outputs are missing, the transition will be blocked with a clear error message listing what's needed.
+
 **Valid roles in order:**
-1. project-owner
+1. project-owner-assistant
 2. program-manager
 3. quality-assurance
 4. architect
@@ -77,14 +80,13 @@ gcp_transition(work_item_id="<id>", role="program-manager")
 ## DoD Items (after development)
 
 ```
-gcp_mark_dod(work_item_id="<id>", item="branchCreated", complete=true)
-gcp_mark_dod(work_item_id="<id>", item="testsWrittenFirst", complete=true)
-gcp_mark_dod(work_item_id="<id>", item="testsPass", complete=true)
-gcp_mark_dod(work_item_id="<id>", item="refactorComplete", complete=true)
-gcp_mark_dod(work_item_id="<id>", item="docsUpdated", complete=true)
-gcp_mark_dod(work_item_id="<id>", item="buildPasses", complete=true)
-gcp_mark_dod(work_item_id="<id>", item="committed", complete=true)
-gcp_mark_dod(work_item_id="<id>", item="retroComplete", complete=true)
+gcp_mark_dod(work_item_id="<id>", item="branchCreated", evidence="git branch: feature/<id>")
+gcp_mark_dod(work_item_id="<id>", item="testsWrittenFirst", evidence="tests/test_<feature>.py")
+gcp_mark_dod(work_item_id="<id>", item="testsPass", evidence="pytest: 165 passed")
+gcp_mark_dod(work_item_id="<id>", item="refactorComplete", evidence="WorkItems/<id>/RoleDecisionNotes/<id>-refactor.md")
+gcp_mark_dod(work_item_id="<id>", item="docsUpdated", evidence="WorkItems/<id>/<id>-User-Story.md")
+gcp_mark_dod(work_item_id="<id>", item="buildPasses", evidence="pip install -e . successful")
+gcp_mark_dod(work_item_id="<id>", item="committed", evidence="git commit: abc1234")
 ```
 
 ---
