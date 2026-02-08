@@ -11,7 +11,7 @@ Usage:
         response = client.complete("Hello, world!")
 """
 
-from llm_extender.auth import AuthStrategy, CallbackAuth, EnvVarAuth, ManagedIdentityAuth
+from llm_extender.auth import AuthStrategy, AzureChainedAuth, CallbackAuth, EnvVarAuth, ManagedIdentityAuth
 from llm_extender.client import LLMClient
 from llm_extender.config import LLMConfig
 from llm_extender.exceptions import (
@@ -26,6 +26,7 @@ from llm_extender.providers.base import LLMProvider
 __all__ = [
     "AuthStrategy",
     "AuthenticationError",
+    "AzureChainedAuth",
     "AzureOpenAIProvider",
     "CallbackAuth",
     "EnvVarAuth",

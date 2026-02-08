@@ -99,6 +99,38 @@ with LLMClient(config, auth=auth) as client:
     response = client.complete("Hello")
 ```
 
+### Azure Chained Auth (CLI → MSI → API Key)
+
+Automatic credential resolution with a predictable, explicit chain:
+
+```python
+from llm_extender import LLMClient, LLMConfig, AzureChainedAuth
+
+# Requires: pip install azure-identity
+config = LLMConfig(
+    provider="azure_openai",
+    model="gpt-4o",
+    base_url="https://your-resource.openai.azure.com",
+    deployment="gpt-4",
+)
+
+# Tries: Azure CLI → Managed Identity → fail
+auth = AzureChainedAuth()
+
+with LLMClient(config, auth=auth) as client:
+    response = client.complete("Hello from Azure!")
+```
+
+The `scope` parameter can target different Azure AD resources:
+
+```python
+# For Azure Cognitive Services (default)
+llm_auth = AzureChainedAuth()
+
+# For Microsoft Graph or custom APIs
+url_auth = AzureChainedAuth(scope="https://graph.microsoft.com/.default")
+```
+
 ### Security
 
 - Credentials are **never** persisted to disk or logged
@@ -139,22 +171,17 @@ except LLMExtenderError as e:
 ### Azure OpenAI
 
 ```python
-from llm_extender import LLMClient, LLMConfig, CallbackAuth
-
-# Use DefaultAzureCredential for token-based auth
-from azure.identity import DefaultAzureCredential
-credential = DefaultAzureCredential()
+from llm_extender import LLMClient, LLMConfig, AzureChainedAuth
 
 config = LLMConfig(
     provider="azure_openai",
-    model="gpt-4",
+    model="gpt-4o",
     base_url="https://your-resource.openai.azure.com",
     deployment="your-deployment-name",
-    api_version="2024-12-01-preview",
 )
-auth = CallbackAuth(
-    callback=lambda: credential.get_token("https://cognitiveservices.azure.com/.default").token,
-)
+
+# Automatic: Azure CLI (local dev) → MSI (production) → API key (fallback)
+auth = AzureChainedAuth()
 
 with LLMClient(config, auth=auth) as client:
     response = client.complete("Hello from Azure!")
