@@ -69,11 +69,11 @@ class TestBootstrapInstructionsContent:
 
     @pytest.mark.asyncio
     async def test_includes_correct_parameter_names(self):
-        """Should use correct parameter names (complete, not value)."""
+        """Should use evidence parameter for marking progress."""
         await gcp_bootstrap(workspace_path=TEST_WORKSPACE_DIR)
         
         content = (TEST_WORKSPACE_DIR / ".github" / "copilot-instructions.md").read_text()
-        assert "complete=true" in content.lower() or "complete=True" in content
+        assert "evidence=" in content.lower()
 
     @pytest.mark.asyncio
     async def test_includes_role_transition_info(self):
