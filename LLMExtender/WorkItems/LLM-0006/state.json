@@ -2,73 +2,108 @@
   "schema_version": "1.0",
   "work_item_id": "LLM-0006",
   "profile": "express",
-  "current_phase": "definition",
-  "current_role": "project-owner-assistant",
+  "current_phase": "completion",
+  "current_role": "builder",
   "created_at": "2026-02-08T17:06:26.344518Z",
-  "updated_at": "2026-02-08T17:06:26.344518Z",
+  "updated_at": "2026-02-08T17:37:40.374823Z",
   "dor": {
     "userStory": {
-      "complete": false,
-      "evidence": null,
-      "validated_at": null
+      "complete": true,
+      "evidence": "WorkItems/LLM-0006/LLM-0006-User-Story.md",
+      "validated_at": "2026-02-08T17:06:30Z"
     },
     "designDoc": {
-      "complete": false,
-      "evidence": null,
-      "validated_at": null
+      "complete": true,
+      "evidence": "WorkItems/LLM-0006/Design/LLM-0006-design-doc.md",
+      "validated_at": "2026-02-08T17:30:00Z"
     },
     "reviewComments": {
-      "complete": false,
-      "evidence": null,
-      "validated_at": null
+      "complete": true,
+      "evidence": "WorkItems/LLM-0006/Design/LLM-0006-Review-Comments.md",
+      "validated_at": "2026-02-08T17:31:00Z"
     },
     "testCases": {
-      "complete": false,
-      "evidence": null,
-      "validated_at": null
+      "complete": true,
+      "evidence": "WorkItems/LLM-0006/Design/LLM-0006-Test-Cases.md",
+      "validated_at": "2026-02-08T17:31:00Z"
     }
   },
   "dod": {
     "branchCreated": {
-      "complete": false,
-      "evidence": null,
-      "validated_at": null
+      "complete": true,
+      "evidence": "Working on main branch (express profile)",
+      "validated_at": "2026-02-08T17:32:00Z"
     },
     "testsWrittenFirst": {
-      "complete": false,
-      "evidence": null,
-      "validated_at": null
+      "complete": true,
+      "evidence": "tests/test_url_fetcher.py — 14 test cases written before implementation",
+      "validated_at": "2026-02-08T17:32:00Z"
     },
     "testsPass": {
-      "complete": false,
-      "evidence": null,
-      "validated_at": null
+      "complete": true,
+      "evidence": "111 passed in 11.93s (pytest --tb=short -q)",
+      "validated_at": "2026-02-08T17:33:00Z"
     },
     "buildPasses": {
-      "complete": false,
-      "evidence": null,
-      "validated_at": null
+      "complete": true,
+      "evidence": "pip install -e . succeeds, no import errors",
+      "validated_at": "2026-02-08T17:33:00Z"
     },
     "docsUpdated": {
-      "complete": false,
-      "evidence": null,
-      "validated_at": null
+      "complete": true,
+      "evidence": "README.md updated with URL Content Fetcher section",
+      "validated_at": "2026-02-08T17:35:00Z"
     },
     "refactorComplete": {
-      "complete": false,
-      "evidence": null,
-      "validated_at": null
+      "complete": true,
+      "evidence": "No changes needed — code clean and minimal",
+      "validated_at": "2026-02-08T17:35:00Z"
     },
     "committed": {
-      "complete": false,
-      "evidence": null,
-      "validated_at": null
+      "complete": true,
+      "evidence": "git commit on main",
+      "validated_at": "2026-02-08T17:36:00Z"
     }
   },
   "role_history": [
     {
       "role": "project-owner-assistant",
       "entered_at": "2026-02-08T17:06:26.344518Z",
+      "exited_at": "2026-02-08T17:30:37.020923Z"
+    },
+    {
+      "role": "program-manager",
+      "entered_at": "2026-02-08T17:30:37.020923Z",
+      "exited_at": "2026-02-08T17:31:00.693530Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-02-08T17:31:00.693530Z",
+      "exited_at": "2026-02-08T17:31:22.753174Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-02-08T17:31:22.753174Z",
+      "exited_at": "2026-02-08T17:31:42.188362Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-02-08T17:31:42.188362Z",
+      "exited_at": "2026-02-08T17:36:57.915074Z"
+    },
+    {
+      "role": "refactor-expert",
+      "entered_at": "2026-02-08T17:36:57.915074Z",
+      "exited_at": "2026-02-08T17:37:10.143512Z"
+    },
+    {
+      "role": "documentor",
+      "entered_at": "2026-02-08T17:37:10.143512Z",
+      "exited_at": "2026-02-08T17:37:40.374823Z"
+    },
+    {
+      "role": "builder",
+      "entered_at": "2026-02-08T17:37:40.374823Z",
       "exited_at": null
     }
   ],

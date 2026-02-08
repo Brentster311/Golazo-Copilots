@@ -22,6 +22,7 @@ from llm_extender.exceptions import (
 )
 from llm_extender.providers.azure_openai import AzureOpenAIProvider
 from llm_extender.providers.base import LLMProvider
+from llm_extender.url_fetcher import afetch_url, fetch_url
 
 __all__ = [
     "AuthStrategy",
@@ -37,4 +38,6 @@ __all__ = [
     "ManagedIdentityAuth",
     "ProviderError",
     "UnsupportedProviderError",
+    "afetch_url",
+    "fetch_url",
 ]

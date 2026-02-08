@@ -187,6 +187,62 @@ with LLMClient(config, auth=auth) as client:
     response = client.complete("Hello from Azure!")
 ```
 
+## URL Content Fetcher
+
+Fetch web page content and inject it as LLM context — useful for summarizing articles, answering questions about online content, or grounding responses with real data.
+
+```python
+from llm_extender import LLMClient, LLMConfig, AzureChainedAuth
+
+config = LLMConfig(
+    provider="azure_openai",
+    model="gpt-4o",
+    base_url="https://your-resource.openai.azure.com",
+    deployment="gpt-4",
+)
+auth = AzureChainedAuth()
+
+with LLMClient(config, auth=auth) as client:
+    # Fetch a URL and ask a question about it
+    response = client.complete_with_url(
+        prompt="List the key points from this page",
+        url="https://example.com/article",
+    )
+    print(response)
+```
+
+### Authenticated URL Fetches
+
+For URLs that require authentication (e.g., internal APIs, Azure-hosted content):
+
+```python
+from llm_extender import AzureChainedAuth
+
+# LLM auth for the provider
+llm_auth = AzureChainedAuth()
+
+# Separate auth for the URL fetch (different scope)
+url_auth = AzureChainedAuth(scope="https://graph.microsoft.com/.default")
+
+with LLMClient(config, auth=llm_auth) as client:
+    response = client.complete_with_url(
+        prompt="Summarize this document",
+        url="https://internal.example.com/doc",
+        url_auth=url_auth,
+    )
+```
+
+### Standalone Fetch
+
+Use `fetch_url` / `afetch_url` directly without an LLM call:
+
+```python
+from llm_extender import fetch_url
+
+text = fetch_url("https://example.com/page", max_length=10_000)
+print(text)  # Plain text, HTML stripped
+```
+
 ## Development
 
 ```bash
