@@ -19,6 +19,8 @@ if TYPE_CHECKING:
 
 _USER_AGENT = "LLMExtender/1.0"
 _DEFAULT_MAX_LENGTH = 50_000
+_MAX_REDIRECTS = 10
+_REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
 
 
 # ---------------------------------------------------------------------------
@@ -85,11 +87,20 @@ def fetch_url(
     """
     headers: dict[str, str] = {"User-Agent": _USER_AGENT}
     if auth is not None:
-        token = auth.resolve()
-        headers["Authorization"] = f"Bearer {token}"
+        headers["Authorization"] = f"Bearer {auth.resolve()}"
 
-    with httpx.Client(timeout=httpx.Timeout(timeout), follow_redirects=True) as client:
-        response = client.get(url, headers=headers)
+    with httpx.Client(timeout=httpx.Timeout(timeout), follow_redirects=False) as client:
+        target = url
+        for _ in range(_MAX_REDIRECTS):
+            response = client.get(target, headers=headers)
+            if response.status_code in _REDIRECT_STATUSES:
+                target = str(response.url.join(response.headers["location"]))
+                continue
+            break
+        else:
+            raise ProviderError(
+                f"Too many redirects while fetching '{url}'"
+            )
 
     if response.status_code >= 400:
         raise ProviderError(
@@ -135,13 +146,22 @@ async def afetch_url(
     """
     headers: dict[str, str] = {"User-Agent": _USER_AGENT}
     if auth is not None:
-        token = await auth.aresolve()
-        headers["Authorization"] = f"Bearer {token}"
+        headers["Authorization"] = f"Bearer {await auth.aresolve()}"
 
     async with httpx.AsyncClient(
-        timeout=httpx.Timeout(timeout), follow_redirects=True
+        timeout=httpx.Timeout(timeout), follow_redirects=False
     ) as client:
-        response = await client.get(url, headers=headers)
+        target = url
+        for _ in range(_MAX_REDIRECTS):
+            response = await client.get(target, headers=headers)
+            if response.status_code in _REDIRECT_STATUSES:
+                target = str(response.url.join(response.headers["location"]))
+                continue
+            break
+        else:
+            raise ProviderError(
+                f"Too many redirects while fetching '{url}'"
+            )
 
     if response.status_code >= 400:
         raise ProviderError(

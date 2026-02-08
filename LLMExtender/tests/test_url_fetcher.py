@@ -325,6 +325,88 @@ class TestPlainText:
 # TC-14: Docstrings present
 # ===========================================================================
 
+
+# ===========================================================================
+# TC-15: Auth header survives cross-origin redirect
+# ===========================================================================
+
+class TestCrossOriginRedirectAuth:
+    def test_auth_header_present_after_redirect(self) -> None:
+        """TC-15: Bearer token must reach the final URL after a cross-origin redirect."""
+        from llm_extender.url_fetcher import fetch_url
+
+        mock_auth = MagicMock()
+        mock_auth.resolve.return_value = "redirect-token"
+
+        with respx.mock:
+            # First request returns a redirect to a different origin
+            respx.get("https://short.link/page").mock(
+                return_value=httpx.Response(
+                    301,
+                    headers={"location": "https://final.example.com/content"},
+                )
+            )
+            # Final destination returns content
+            final_route = respx.get("https://final.example.com/content").mock(
+                return_value=httpx.Response(200, text="<p>Redirected content</p>")
+            )
+
+            result = fetch_url("https://short.link/page", auth=mock_auth)
+
+            # Content should be returned
+            assert "Redirected content" in result
+
+            # Auth header MUST be present on the final (redirected) request
+            final_request = final_route.calls[0].request
+            assert final_request.headers["authorization"] == "Bearer redirect-token"
+
+    @pytest.mark.asyncio
+    async def test_async_auth_header_present_after_redirect(self) -> None:
+        """TC-15: Async variant also preserves auth across cross-origin redirect."""
+        from llm_extender.url_fetcher import afetch_url
+
+        mock_auth = MagicMock()
+        mock_auth.aresolve = AsyncMock(return_value="async-redirect-token")
+
+        with respx.mock:
+            respx.get("https://short.link/page").mock(
+                return_value=httpx.Response(
+                    301,
+                    headers={"location": "https://final.example.com/content"},
+                )
+            )
+            final_route = respx.get("https://final.example.com/content").mock(
+                return_value=httpx.Response(200, text="<p>Async redirected</p>")
+            )
+
+            result = await afetch_url("https://short.link/page", auth=mock_auth)
+
+            assert "Async redirected" in result
+            final_request = final_route.calls[0].request
+            assert final_request.headers["authorization"] == "Bearer async-redirect-token"
+
+    def test_no_auth_no_header_after_redirect(self) -> None:
+        """TC-15: Without auth, no Authorization header even after redirect."""
+        from llm_extender.url_fetcher import fetch_url
+
+        with respx.mock:
+            respx.get("https://short.link/page").mock(
+                return_value=httpx.Response(
+                    301,
+                    headers={"location": "https://final.example.com/content"},
+                )
+            )
+            final_route = respx.get("https://final.example.com/content").mock(
+                return_value=httpx.Response(200, text="<p>No auth</p>")
+            )
+
+            result = fetch_url("https://short.link/page")
+
+            assert "No auth" in result
+            final_request = final_route.calls[0].request
+            assert "authorization" not in final_request.headers
+
+
 class TestDocstrings:
     def test_fetch_url_has_docstring(self) -> None:
         """TC-14: fetch_url has a docstring."""
