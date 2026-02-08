@@ -24,3 +24,6 @@ include = ["llm_extender*"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "live: requires network access and real Azure credentials (deselect with '-m not live')",
+]
