@@ -275,3 +275,135 @@ class TestErrorCases:
         
         assert result["success"] is False
         assert "not found" in result["error"].lower() or "does not exist" in result["error"].lower()
+
+
+class TestBranchCreatedEvidence:
+    """Tests for branchCreated DoD item with git branch evidence."""
+
+    @pytest.mark.asyncio
+    async def test_branch_created_with_valid_branch(self, monkeypatch):
+        """Should succeed when branch exists (simulates agent sending branchCreated)."""
+        import subprocess
+        
+        await gcp_create_workitem(work_item_id="LLM-0004", work_items_dir=TEST_WORKITEMS_DIR)
+        
+        # Mock git branch --list to return the branch name (simulating existing branch)
+        def mock_run(*args, **kwargs):
+            if args[0][0] == "git" and args[0][1] == "branch":
+                class MockResult:
+                    stdout = "* feature/LLM-0004-azure-openai-provider\n"
+                    stderr = ""
+                    returncode = 0
+                return MockResult()
+            return subprocess.run(*args, **kwargs)
+        
+        monkeypatch.setattr(subprocess, "run", mock_run)
+        
+        # This simulates exactly what the agent sends:
+        # {
+        #   "complete": true,
+        #   "evidence": "feature/LLM-0004-azure-openai-provider",
+        #   "item": "branchCreated",
+        #   "work_item_id": "LLM-0004",
+        #   "workspace_path": "..."
+        # }
+        result = await gcp_mark_dod(
+            work_item_id="LLM-0004",
+            item="branchCreated",
+            complete=True,
+            evidence="feature/LLM-0004-azure-openai-provider",
+            work_items_dir=TEST_WORKITEMS_DIR
+        )
+        
+        assert result["success"] is True, f"Expected success but got: {result}"
+        assert result["items"]["branchCreated"] is True
+        assert result["evidence"] == "feature/LLM-0004-azure-openai-provider"
+
+    @pytest.mark.asyncio
+    async def test_branch_created_with_nonexistent_branch(self, monkeypatch):
+        """Should fail when branch does not exist."""
+        import subprocess
+        
+        await gcp_create_workitem(work_item_id="branch-fail", work_items_dir=TEST_WORKITEMS_DIR)
+        
+        # Mock git branch --list to return empty (branch doesn't exist)
+        def mock_run(*args, **kwargs):
+            if args[0][0] == "git" and args[0][1] == "branch":
+                class MockResult:
+                    stdout = ""
+                    stderr = ""
+                    returncode = 0
+                return MockResult()
+            return subprocess.run(*args, **kwargs)
+        
+        monkeypatch.setattr(subprocess, "run", mock_run)
+        
+        result = await gcp_mark_dod(
+            work_item_id="branch-fail",
+            item="branchCreated",
+            complete=True,
+            evidence="feature/nonexistent-branch",
+            work_items_dir=TEST_WORKITEMS_DIR
+        )
+        
+        assert result["success"] is False
+        assert "not found" in result["error"].lower() or "branch" in result["error"].lower()
+
+    @pytest.mark.asyncio
+    async def test_branch_created_with_empty_evidence(self):
+        """Should fail when branch name is empty."""
+        await gcp_create_workitem(work_item_id="branch-empty", work_items_dir=TEST_WORKITEMS_DIR)
+        
+        result = await gcp_mark_dod(
+            work_item_id="branch-empty",
+            item="branchCreated",
+            complete=True,
+            evidence="",
+            work_items_dir=TEST_WORKITEMS_DIR
+        )
+        
+        assert result["success"] is False
+        assert "empty" in result["error"].lower() or "evidence" in result["error"].lower()
+
+    @pytest.mark.asyncio
+    async def test_branch_created_with_formatted_evidence(self, monkeypatch):
+        """Should extract branch name from 'git branch: name @ sha' format."""
+        import subprocess
+        
+        await gcp_create_workitem(work_item_id="branch-fmt", work_items_dir=TEST_WORKITEMS_DIR)
+        
+        # Mock git branch --list to return the branch name
+        def mock_run(*args, **kwargs):
+            if args[0][0] == "git" and args[0][1] == "branch":
+                # Check that we're looking for the extracted branch name, not the full string
+                branch_arg = args[0][3] if len(args[0]) > 3 else ""
+                if branch_arg == "feature/LLM-0004-azure-openai-provider":
+                    class MockResult:
+                        stdout = "* feature/LLM-0004-azure-openai-provider\n"
+                        stderr = ""
+                        returncode = 0
+                    return MockResult()
+                # Return empty for the full string (would fail if not extracted)
+                class MockResult:
+                    stdout = ""
+                    stderr = ""
+                    returncode = 0
+                return MockResult()
+            return subprocess.run(*args, **kwargs)
+        
+        monkeypatch.setattr(subprocess, "run", mock_run)
+        
+        # This is EXACTLY what the agent sends - formatted evidence with sha:
+        result = await gcp_mark_dod(
+            work_item_id="branch-fmt",
+            item="branchCreated",
+            complete=True,
+            evidence="git branch: feature/LLM-0004-azure-openai-provider @ 2d2bd22",
+            work_items_dir=TEST_WORKITEMS_DIR
+        )
+        
+        assert result["success"] is True, f"Expected success but got: {result}"
+        assert result["items"]["branchCreated"] is True
+        # Should store the extracted branch name, not the full string
+        assert result["evidence"] == "feature/LLM-0004-azure-openai-provider"
+

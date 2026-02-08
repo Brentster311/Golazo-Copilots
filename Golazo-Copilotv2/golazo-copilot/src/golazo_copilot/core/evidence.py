@@ -85,12 +85,37 @@ def validate_file_evidence(
     return EvidenceResult(valid=True, message="", normalized_path=normalized)
 
 
+def _extract_branch_name(evidence: str) -> str:
+    """
+    Extract branch name from various evidence formats.
+    
+    Handles formats like:
+    - "feature/GCP-0001" (plain branch name)
+    - "git branch: feature/GCP-0001" (prefixed)
+    - "git branch: feature/GCP-0001 @ abc1234" (with commit)
+    
+    Returns:
+        Extracted branch name
+    """
+    import re
+    
+    evidence = evidence.strip()
+    
+    # Pattern: "git branch: <branch> @ <sha>" or "git branch: <branch>"
+    match = re.match(r'^git\s+branch:\s*([^\s@]+)', evidence, re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+    
+    # Just return as-is (assume it's a plain branch name)
+    return evidence
+
+
 def validate_git_branch(branch_name: str, workspace_path: Path) -> EvidenceResult:
     """
     Validate that a git branch exists.
     
     Args:
-        branch_name: Name of the branch to check
+        branch_name: Name of the branch to check (or formatted evidence string)
         workspace_path: Path to run git command from
         
     Returns:
@@ -101,6 +126,9 @@ def validate_git_branch(branch_name: str, workspace_path: Path) -> EvidenceResul
             valid=False,
             message="Empty branch name provided"
         )
+    
+    # Extract actual branch name from formatted evidence
+    branch_name = _extract_branch_name(branch_name)
     
     try:
         result = subprocess.run(
