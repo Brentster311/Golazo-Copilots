@@ -10,7 +10,6 @@ from mcp.types import TextContent, Tool
 from . import __version__
 from .tools.gcp_create_workitem import gcp_create_workitem
 from .tools.gcp_transition import gcp_transition
-from .tools.gcp_mark import gcp_mark_dor, gcp_mark_dod
 from .tools.gcp_status import gcp_status
 from .tools.gcp_bootstrap import gcp_bootstrap
 from .tools.gcp_consent import gcp_consent
@@ -99,79 +98,6 @@ async def list_tools() -> list[Tool]:
                     }
                 },
                 "required": ["work_item_id", "role"]
-            }
-        ),
-        Tool(
-            name="gcp_mark_dor",
-            description="Mark Definition of Ready items as complete or incomplete",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "work_item_id": {
-                        "type": "string",
-                        "description": "Work item identifier"
-                    },
-                    "item": {
-                        "type": "string",
-                        "enum": ["userStory", "designDoc", "reviewComments", "testCases"],
-                        "description": "Single DoR item to mark"
-                    },
-                    "items": {
-                        "type": "object",
-                        "description": "Multiple DoR items to mark (alternative to single item)"
-                    },
-                    "complete": {
-                        "type": "boolean",
-                        "default": True,
-                        "description": "Whether item is complete"
-                    },
-                    "evidence": {
-                        "type": "string",
-                        "description": "Evidence proving the item is complete (file path, command output, etc.)"
-                    },
-                    "workspace_path": {
-                        "type": "string",
-                        "description": "Workspace root path containing the WorkItems folder (auto-detected if not provided)"
-                    }
-                },
-                "required": ["work_item_id"]
-            }
-        ),
-        Tool(
-            name="gcp_mark_dod",
-            description="Mark Definition of Done items as complete or incomplete",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "work_item_id": {
-                        "type": "string",
-                        "description": "Work item identifier"
-                    },
-                    "item": {
-                        "type": "string",
-                        "enum": ["branchCreated", "testsWrittenFirst", "testsPass",
-                                 "buildPasses", "docsUpdated", "refactorComplete", "committed", "retroComplete"],
-                        "description": "Single DoD item to mark"
-                    },
-                    "items": {
-                        "type": "object",
-                        "description": "Multiple DoD items to mark"
-                    },
-                    "complete": {
-                        "type": "boolean",
-                        "default": True,
-                        "description": "Whether item is complete"
-                    },
-                    "evidence": {
-                        "type": "string",
-                        "description": "Evidence proving the item is complete (file path, command output, git SHA, etc.)"
-                    },
-                    "workspace_path": {
-                        "type": "string",
-                        "description": "Workspace root path containing the WorkItems folder (auto-detected if not provided)"
-                    }
-                },
-                "required": ["work_item_id"]
             }
         ),
         Tool(
@@ -295,59 +221,6 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             content = f"{ICON_FAIL} Transition failed: {result['error']}{missing}"
         
         return [TextContent(type="text", text=content)]
-    
-    elif name == "gcp_mark_dor":
-        work_items_dir = resolve_work_items_dir(arguments.get("workspace_path"))
-        result = await gcp_mark_dor(
-            work_item_id=arguments["work_item_id"],
-            item=arguments.get("item"),
-            items=arguments.get("items"),
-            complete=arguments.get("complete", True),
-            evidence=arguments.get("evidence"),
-            work_items_dir=work_items_dir
-        )
-        
-        if result["success"]:
-            warning = f"\n{ICON_WARN} {result['warning']}" if result.get("warning") else ""
-            status = f"{ICON_OK} Complete" if result["complete"] else f"{ICON_PENDING} Missing: {', '.join(result['missing'])}"
-            content = f"""{ICON_OK} DoR updated!{warning}
-
-**DoR Status:** {status}
-
-| Item | Status |
-|------|--------|
-| userStory | {ICON_CHECK if result['items']['userStory'] else ICON_EMPTY} |
-| designDoc | {ICON_CHECK if result['items']['designDoc'] else ICON_EMPTY} |
-| reviewComments | {ICON_CHECK if result['items']['reviewComments'] else ICON_EMPTY} |
-| testCases | {ICON_CHECK if result['items']['testCases'] else ICON_EMPTY} |
-"""
-        else:
-            content = f"{ICON_FAIL} Failed to update DoR: {result['error']}"
-        
-        return [TextContent(type="text", text=content)]
-    
-    elif name == "gcp_mark_dod":
-            work_items_dir = resolve_work_items_dir(arguments.get("workspace_path"))
-            result = await gcp_mark_dod(
-                work_item_id=arguments["work_item_id"],
-                item=arguments.get("item"),
-                items=arguments.get("items"),
-                complete=arguments.get("complete", True),
-                evidence=arguments.get("evidence"),
-                work_items_dir=work_items_dir
-            )
-        
-            if result["success"]:
-                warning = f"\n{ICON_WARN} {result['warning']}" if result.get("warning") else ""
-                status = f"{ICON_OK} Complete" if result["complete"] else f"{ICON_PENDING} Missing: {', '.join(result['missing'])}"
-                content = f"""{ICON_OK} DoD updated!{warning}
-
-    **DoD Status:** {status}
-    """
-            else:
-                content = f"{ICON_FAIL} Failed to update DoD: {result['error']}"
-        
-            return [TextContent(type="text", text=content)]
     
     elif name == "gcp_status":
         work_items_dir = resolve_work_items_dir(arguments.get("workspace_path"))

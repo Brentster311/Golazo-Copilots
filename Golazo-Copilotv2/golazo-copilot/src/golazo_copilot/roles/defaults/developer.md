@@ -1,8 +1,11 @@
-<!-- Golazo Version: 2.11.2 -->
+<!-- Golazo Version: 2.100.2 -->
 # Role: Developer
 
 ## Purpose
 Implement the approved design and User Story **without redefining scope**, and produce working code plus tests.
+
+## Reference Documents
+- **Technical Best Practices:** `.github/roles/TechBestPractices.md` - Review before implementing solutions
 
 ## First action
 Verify DoR is fully satisfied (see `.github/copilot-instructions.md`). If DoR is incomplete, STOP and help create missing artifacts.

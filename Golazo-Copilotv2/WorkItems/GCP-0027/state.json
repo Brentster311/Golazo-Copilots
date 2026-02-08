@@ -1,0 +1,76 @@
+{
+  "schema_version": "1.0",
+  "work_item_id": "GCP-0027",
+  "profile": "express",
+  "current_phase": "definition",
+  "current_role": "project-owner-assistant",
+  "created_at": "2026-02-08T03:37:38.680732Z",
+  "updated_at": "2026-02-08T03:37:38.680732Z",
+  "dor": {
+    "userStory": {
+      "complete": false,
+      "evidence": null,
+      "validated_at": null
+    },
+    "designDoc": {
+      "complete": false,
+      "evidence": null,
+      "validated_at": null
+    },
+    "reviewComments": {
+      "complete": false,
+      "evidence": null,
+      "validated_at": null
+    },
+    "testCases": {
+      "complete": false,
+      "evidence": null,
+      "validated_at": null
+    }
+  },
+  "dod": {
+    "branchCreated": {
+      "complete": false,
+      "evidence": null,
+      "validated_at": null
+    },
+    "testsWrittenFirst": {
+      "complete": false,
+      "evidence": null,
+      "validated_at": null
+    },
+    "testsPass": {
+      "complete": false,
+      "evidence": null,
+      "validated_at": null
+    },
+    "buildPasses": {
+      "complete": false,
+      "evidence": null,
+      "validated_at": null
+    },
+    "docsUpdated": {
+      "complete": false,
+      "evidence": null,
+      "validated_at": null
+    },
+    "refactorComplete": {
+      "complete": false,
+      "evidence": null,
+      "validated_at": null
+    },
+    "committed": {
+      "complete": false,
+      "evidence": null,
+      "validated_at": null
+    }
+  },
+  "role_history": [
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-02-08T03:37:38.680732Z",
+      "exited_at": null
+    }
+  ],
+  "deviations": []
+}

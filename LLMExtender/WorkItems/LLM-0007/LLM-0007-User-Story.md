@@ -1,6 +1,6 @@
 # LLM-0007: Client-Side Rendering Support for URL Fetcher
 
-## Status: BACKLOG
+## Status: IMPLEMENTED
 
 ## User Story
 

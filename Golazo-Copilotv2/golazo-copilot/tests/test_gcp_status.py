@@ -10,7 +10,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from golazo_copilot.tools.gcp_create_workitem import gcp_create_workitem
 from golazo_copilot.tools.gcp_transition import gcp_transition, ROLE_SUFFIX_MAP
-from golazo_copilot.tools.gcp_mark import gcp_mark_dor
 from golazo_copilot.tools.gcp_status import gcp_status
 
 
@@ -122,28 +121,6 @@ class TestStatusDoRDoD:
         
         assert result["dor"]["complete"] is False
         assert len(result["dor"]["missing"]) == 4
-
-    @pytest.mark.asyncio
-    async def test_dor_status_after_marking(self):
-        """Should reflect marked items."""
-        await gcp_create_workitem(work_item_id="dor-status-2", work_items_dir=TEST_WORKITEMS_DIR)
-        create_test_file("dor-status-2", "user-story.md")
-        create_test_file("dor-status-2", "design-doc.md")
-        await gcp_mark_dor(
-            work_item_id="dor-status-2",
-            items={"userStory": True, "designDoc": True},
-            evidence="user-story.md, design-doc.md",
-            work_items_dir=TEST_WORKITEMS_DIR
-        )
-        
-        result = await gcp_status(
-            work_item_id="dor-status-2",
-            work_items_dir=TEST_WORKITEMS_DIR
-        )
-        
-        assert result["dor"]["items"]["userStory"] is True
-        assert result["dor"]["items"]["designDoc"] is True
-        assert len(result["dor"]["missing"]) == 2
 
 
 class TestStatusNoWorkItem:

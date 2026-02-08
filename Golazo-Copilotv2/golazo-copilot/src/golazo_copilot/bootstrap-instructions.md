@@ -1,4 +1,4 @@
-<!-- Golazo Copilot Version: 2.17.0 -->
+<!-- Golazo Copilot Version: 2.100.0 -->
 # Golazo Copilot v2
 
 This workspace uses Golazo Copilot MCP server for workflow management.
@@ -7,11 +7,11 @@ This workspace uses Golazo Copilot MCP server for workflow management.
 
 1. **NEVER edit `state.json` directly** - All state changes MUST go through `gcp_*` MCP tools. Editing state.json is a workflow violation that corrupts the work item.
 
-2. **NEVER bypass gates** - If `gcp_mark_dor` or `gcp_transition` fails, FIX THE ISSUE (e.g., provide required evidence). Do not work around it.
+2. **NEVER bypass gates** - If `gcp_transition` fails, FIX THE ISSUE (create the required outputs). Do not work around it.
 
-3. **NEVER skip to Developer role** - You must complete all prior roles and DoR items first.
+3. **NEVER skip to Developer role** - You must complete all prior roles first.
 
-4. **NEVER write production code without DoR complete** - If DoR is incomplete, you are in the wrong phase.
+4. **NEVER write production code without completing prior roles** - If you're not in developer role yet, you are in the wrong phase.
 
 ---
 
@@ -31,63 +31,31 @@ Then create User Story at `WorkItems/<id>/<id>-User-Story.md`
 
 ---
 
-## Marking Progress (IMPORTANT: evidence is REQUIRED)
-
-After creating **User Story**:
-```
-gcp_mark_dor(work_item_id="<id>", item="userStory", evidence="WorkItems/<id>/<id>-User-Story.md")
-```
-
-After creating **Design Doc**:
-```
-gcp_mark_dor(work_item_id="<id>", item="designDoc", evidence="WorkItems/<id>/Design/<id>-design-doc.md")
-```
-
-After creating **Review Comments**:
-```
-gcp_mark_dor(work_item_id="<id>", item="reviewComments", evidence="WorkItems/<id>/Design/<id>-Review-Comments.md")
-```
-
-After creating **Test Cases**:
-```
-gcp_mark_dor(work_item_id="<id>", item="testCases", evidence="WorkItems/<id>/Design/<id>-Test-Cases.md")
-```
-
----
-
-## Role Transitions
+## Role Transitions (Automatic Output Validation)
 
 To move to next role:
 ```
 gcp_transition(work_item_id="<id>", role="program-manager")
 ```
 
-**Note**: Transitions validate Required Outputs defined in role files. If outputs are missing, the transition will be blocked with a clear error message listing what's needed.
+**How it works**: Each role file defines `## Required Outputs` that must exist before you can transition away from that role. The system automatically validates these outputs - no manual marking needed!
+
+**Example**: The `project-owner-assistant` role requires:
+- `file: WorkItems/{id}/{id}-User-Story.md`
+- `file: WorkItems/{id}/RoleDecisionNotes/{id}-project-owner-assistant.md`
+
+If these files don't exist, transition will fail with a clear error message listing what's missing.
 
 **Valid roles in order:**
 1. project-owner-assistant
 2. program-manager
 3. quality-assurance
 4. architect
-5. developer (requires DoR complete!)
+5. developer
 6. refactor-expert
 7. documentor
 8. builder
 9. retrospective
-
----
-
-## DoD Items (after development)
-
-```
-gcp_mark_dod(work_item_id="<id>", item="branchCreated", evidence="git branch: feature/<id>")
-gcp_mark_dod(work_item_id="<id>", item="testsWrittenFirst", evidence="tests/test_<feature>.py")
-gcp_mark_dod(work_item_id="<id>", item="testsPass", evidence="pytest: 165 passed")
-gcp_mark_dod(work_item_id="<id>", item="refactorComplete", evidence="WorkItems/<id>/RoleDecisionNotes/<id>-refactor.md")
-gcp_mark_dod(work_item_id="<id>", item="docsUpdated", evidence="WorkItems/<id>/<id>-User-Story.md")
-gcp_mark_dod(work_item_id="<id>", item="buildPasses", evidence="pip install -e . successful")
-gcp_mark_dod(work_item_id="<id>", item="committed", evidence="git commit: abc1234")
-```
 
 ---
 
@@ -106,5 +74,5 @@ gcp_mark_dod(work_item_id="<id>", item="committed", evidence="git commit: abc123
 ---
 
 ## Gate Enforcement
-- **DoR Gate**: Cannot transition to `developer` until ALL DoR items are complete
-- If `gcp_transition` fails, call `gcp_status` to see what's missing
+- **Output Validation Gate**: Cannot transition until all Required Outputs for the current role exist
+- If `gcp_transition` fails, check the error message for the missing file path and create it

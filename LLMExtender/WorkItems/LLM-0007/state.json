@@ -1,0 +1,96 @@
+{
+  "schema_version": "1.0",
+  "work_item_id": "LLM-0007",
+  "profile": "express",
+  "current_phase": "completion",
+  "current_role": "retrospective",
+  "created_at": "2026-02-08T18:00:00Z",
+  "updated_at": "2026-02-08T18:01:00.202484Z",
+  "dor": {
+    "userStory": {
+      "complete": true,
+      "evidence": "WorkItems/LLM-0007/LLM-0007-User-Story.md",
+      "validated_at": "2026-02-08T18:00:00Z"
+    },
+    "designDoc": {
+      "complete": true,
+      "evidence": "WorkItems/LLM-0007/Design/LLM-0007-design-doc.md",
+      "validated_at": "2026-02-08T18:01:00Z"
+    },
+    "reviewComments": {
+      "complete": true,
+      "evidence": "WorkItems/LLM-0007/Design/LLM-0007-Review-Comments.md",
+      "validated_at": "2026-02-08T18:01:00Z"
+    },
+    "testCases": {
+      "complete": true,
+      "evidence": "WorkItems/LLM-0007/Design/LLM-0007-Test-Cases.md",
+      "validated_at": "2026-02-08T18:01:00Z"
+    }
+  },
+  "dod": {
+    "branchCreated": {
+      "complete": true,
+      "evidence": "Working on main branch (express profile)",
+      "validated_at": "2026-02-08T18:02:00Z"
+    },
+    "testsWrittenFirst": {
+      "complete": true,
+      "evidence": "tests/test_render_js.py — 15 tests written before implementation",
+      "validated_at": "2026-02-08T18:02:00Z"
+    },
+    "testsPass": {
+      "complete": true,
+      "evidence": "129 passed (15 render_js + 114 existing)",
+      "validated_at": "2026-02-08T18:03:00Z"
+    },
+    "buildPasses": {
+      "complete": true,
+      "evidence": "pip install -e . succeeds, no import errors",
+      "validated_at": "2026-02-08T18:03:00Z"
+    },
+    "docsUpdated": {
+      "complete": true,
+      "evidence": "README.md updated with render_js and [browser] install sections",
+      "validated_at": "2026-02-08T18:03:00Z"
+    },
+    "refactorComplete": {
+      "complete": true,
+      "evidence": "RoleDecisionNotes/LLM-0007-refactor.md — no refactoring needed",
+      "validated_at": "2026-02-08T18:04:00Z"
+    },
+    "committed": {
+      "complete": true,
+      "evidence": "Commit fbc6edb on main",
+      "validated_at": "2026-02-08T18:05:00Z"
+    }
+  },
+  "role_history": [
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-02-08T18:00:00Z",
+      "exited_at": "2026-02-08T17:59:30.784800Z"
+    },
+    {
+      "role": "program-manager",
+      "entered_at": "2026-02-08T17:59:30.784800Z",
+      "exited_at": "2026-02-08T18:00:08.195272Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-02-08T18:00:08.195272Z",
+      "exited_at": "2026-02-08T18:00:39.947097Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-02-08T18:00:39.947097Z",
+      "exited_at": "2026-02-08T18:01:00.202484Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-02-08T18:01:00.202484Z",
+      "exited_at": null
+    }
+  ],
+  "deviations": []
+}
