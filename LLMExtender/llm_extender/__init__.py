@@ -20,11 +20,13 @@ from llm_extender.exceptions import (
     ProviderError,
     UnsupportedProviderError,
 )
+from llm_extender.providers.azure_openai import AzureOpenAIProvider
 from llm_extender.providers.base import LLMProvider
 
 __all__ = [
     "AuthStrategy",
     "AuthenticationError",
+    "AzureOpenAIProvider",
     "CallbackAuth",
     "EnvVarAuth",
     "LLMClient",

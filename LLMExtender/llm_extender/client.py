@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 from llm_extender.config import LLMConfig
 from llm_extender.exceptions import UnsupportedProviderError
 from llm_extender.providers.base import LLMProvider
+from llm_extender.providers.azure_openai import AzureOpenAIProvider
 from llm_extender.providers.openai import OpenAIProvider
 
 if TYPE_CHECKING:
@@ -22,6 +23,7 @@ if TYPE_CHECKING:
 # Provider registry: maps provider name to provider class.
 PROVIDER_REGISTRY: dict[str, type[LLMProvider]] = {
     "openai": OpenAIProvider,
+    "azure_openai": AzureOpenAIProvider,
 }
 
 
