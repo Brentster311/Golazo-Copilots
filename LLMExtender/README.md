@@ -232,6 +232,27 @@ with LLMClient(config, auth=llm_auth) as client:
     )
 ```
 
+### Client-Side Rendering (SPAs)
+
+For pages that require JavaScript to render content (e.g., single-page apps), use `render_js=True` to launch a headless Chromium browser via Playwright:
+
+```bash
+# Install the optional browser dependency
+pip install llm-extender[browser]
+playwright install chromium
+```
+
+```python
+with LLMClient(config, auth=llm_auth) as client:
+    response = client.complete_with_url(
+        prompt="Summarize this dashboard",
+        url="https://spa.example.com",
+        render_js=True,  # Uses headless Chromium instead of httpx
+    )
+```
+
+Authentication tokens are automatically injected as `Authorization` headers into the browser context. When `render_js=False` (the default), the library uses fast httpx HTTP requests with HTML-to-text extraction.
+
 ### Standalone Fetch
 
 Use `fetch_url` / `afetch_url` directly without an LLM call:
@@ -239,8 +260,13 @@ Use `fetch_url` / `afetch_url` directly without an LLM call:
 ```python
 from llm_extender import fetch_url
 
+# Standard HTTP fetch (fast, default)
 text = fetch_url("https://example.com/page", max_length=10_000)
 print(text)  # Plain text, HTML stripped
+
+# Browser-rendered fetch (for SPAs)
+text = fetch_url("https://spa.example.com", render_js=True)
+print(text)  # Rendered page content
 ```
 
 ## Development

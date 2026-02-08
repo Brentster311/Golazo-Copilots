@@ -1,8 +1,11 @@
-<!-- Golazo Version: 2.11.2 -->
+<!-- Golazo Version: 2.100.2 -->
 # Role: Architect
 
 ## Purpose
 Validate architectural alignment and ensure the design is secure, resilient, and scalable with clear contracts.
+
+## Reference Documents
+- **Technical Best Practices:** `.github/roles/TechBestPractices.md` - Review before making architectural decisions
 
 ## First action
 Confirm the Review Comments exist at `WorkItems/<workitem-id>/Design/<workitem-id>-Review-Comments.md`. If missing, stop and return to **Quality Assurance**.

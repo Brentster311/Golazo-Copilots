@@ -70,7 +70,7 @@ async def gcp_transition(
     if not work_item_exists(work_item_id, work_items_dir):
         return {
             "success": False,
-            "error": f"Work item '{work_item_id}' does not exist. Use gcp_init first.",
+            "error": f"Work item '{work_item_id}' does not exist. Use gcp_create_workitem first.",
         }
     
     # Validate role name
@@ -141,10 +141,12 @@ async def gcp_transition(
             # Save state after consuming consent
             save_state(work_item_id, state, work_items_dir)
         else:
+            # Show relative path from workspace root for clarity
+            relative_path = f"WorkItems/{work_item_id}/RoleDecisionNotes/{work_item_id}-{ROLE_SUFFIX_MAP.get(current_role, current_role)}.md"
             return {
                 "success": False,
-                "error": f"Cannot transition from '{current_role}': Missing role notes file.",
-                "missing_file": str(notes_path),
+                "error": f"Cannot transition from '{current_role}': Missing role notes file at '{relative_path}'. Create this file to document your work in the '{current_role}' role before transitioning.",
+                "missing_file": relative_path,
                 "hint": f"Create the file first, or use force_without_notes=True with prior gcp_consent(action='skip_role')",
             }
     

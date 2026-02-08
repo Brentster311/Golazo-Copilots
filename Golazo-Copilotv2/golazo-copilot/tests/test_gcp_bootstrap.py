@@ -68,12 +68,12 @@ class TestBootstrapInstructionsContent:
         assert "gcp_status" in content
 
     @pytest.mark.asyncio
-    async def test_includes_correct_parameter_names(self):
-        """Should use evidence parameter for marking progress."""
+    async def test_includes_output_validation_info(self):
+        """Should include output validation instructions (replaced evidence-based marking)."""
         await gcp_bootstrap(workspace_path=TEST_WORKSPACE_DIR)
         
         content = (TEST_WORKSPACE_DIR / ".github" / "copilot-instructions.md").read_text()
-        assert "evidence=" in content.lower()
+        assert "required outputs" in content.lower()
 
     @pytest.mark.asyncio
     async def test_includes_role_transition_info(self):

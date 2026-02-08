@@ -21,6 +21,7 @@ DEFAULT_ROLES = [
     "builder.md",
     "documentor.md",
     "retrospective.md",
+    "TechBestPractices.md",
 ]
 
 
