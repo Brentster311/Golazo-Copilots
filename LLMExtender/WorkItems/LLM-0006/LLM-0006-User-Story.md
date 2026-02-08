@@ -1,6 +1,6 @@
 # LLM-0006: URL Content Fetcher
 
-## Status: BACKLOG
+## Status: IMPLEMENTED
 
 ## User Story
 

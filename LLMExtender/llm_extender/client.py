@@ -14,6 +14,7 @@ from llm_extender.exceptions import UnsupportedProviderError
 from llm_extender.providers.base import LLMProvider
 from llm_extender.providers.azure_openai import AzureOpenAIProvider
 from llm_extender.providers.openai import OpenAIProvider
+from llm_extender.url_fetcher import afetch_url, fetch_url, _build_context_prompt
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -88,6 +89,68 @@ class LLMClient:
             ProviderError: If the provider returns an error.
         """
         return await self._provider.acomplete(prompt)
+
+    def complete_with_url(
+        self,
+        prompt: str,
+        url: str,
+        *,
+        url_auth: AuthStrategy | None = None,
+        max_length: int = 50_000,
+    ) -> str:
+        """Fetch URL content and use it as context for a completion.
+
+        Downloads the content at *url*, converts HTML to plain text,
+        truncates to *max_length* characters, then sends the combined
+        context + prompt to the provider.
+
+        Args:
+            prompt: The user question or instruction.
+            url: The URL whose content should be fetched as context.
+            url_auth: Optional auth strategy for the HTTP request.
+                The resolved token is sent as a Bearer header.
+            max_length: Maximum characters to keep from the fetched
+                content (default 50 000).
+
+        Returns:
+            The model's response as a string.
+
+        Raises:
+            ProviderError: If the URL cannot be fetched or the provider
+                returns an error.
+        """
+        content = fetch_url(url, auth=url_auth, max_length=max_length)
+        augmented = _build_context_prompt(url, content, prompt)
+        return self._provider.complete(augmented)
+
+    async def acomplete_with_url(
+        self,
+        prompt: str,
+        url: str,
+        *,
+        url_auth: AuthStrategy | None = None,
+        max_length: int = 50_000,
+    ) -> str:
+        """Async version of :meth:`complete_with_url`.
+
+        Args:
+            prompt: The user question or instruction.
+            url: The URL whose content should be fetched as context.
+            url_auth: Optional auth strategy for the HTTP request.
+                The resolved token is sent as a Bearer header.
+            max_length: Maximum characters to keep from the fetched
+                content (default 50 000).
+
+        Returns:
+            The model's response as a string.
+
+        Raises:
+            ProviderError: If the URL cannot be fetched or the provider
+                returns an error.
+        """
+        content = await afetch_url(url, auth=url_auth, max_length=max_length)
+        augmented = _build_context_prompt(url, content, prompt)
+        return await self._provider.acomplete(augmented)
 
     def close(self) -> None:
         """Close the underlying provider and release resources."""
