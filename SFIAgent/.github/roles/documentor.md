@@ -25,9 +25,9 @@ Verify build passes. If build is failing, STOP and return to **Builder**.
 - Do not modify code behavior
 - Do not add new features via documentation
 
-## Required outputs
-- Updated documentation
-- `WorkItems/<workitem-id>/RoleDecisionNotes/<workitem-id>-documentor.md`
+## Required Outputs
+<!-- Updated documentation is expected but not validated by path -->
+- file: WorkItems/{id}/RoleDecisionNotes/{id}-documentor.md
 
 ## Decision rules
 - Documentation should match implementation exactly

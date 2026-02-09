@@ -39,11 +39,11 @@ Define test-first coverage that:
 - Do not write/modify production code.
 - Do not invent acceptance criteria; send gaps back to **Project Owner**.
 
-## Required outputs
-- `WorkItems/<workitem-id>/Design/<workitem-id>-Review-Comments.md` - Design critique and recommendations
-- `WorkItems/<workitem-id>/Design/<workitem-id>-Test-Cases.md` - Comprehensive test plan
-- `WorkItems/<workitem-id>/RoleDecisionNotes/<workitem-id>-quality-assurance.md` - Combined QA decision notes
-- Automated tests where feasible (may be stubbed/skipped only with explicit justification and follow-up plan)
+## Required Outputs
+- file: WorkItems/{id}/Design/{id}-Review-Comments.md
+- file: WorkItems/{id}/Design/{id}-Test-Cases.md
+- file: WorkItems/{id}/RoleDecisionNotes/{id}-quality-assurance.md
+<!-- Automated tests where feasible (may be stubbed/skipped only with explicit justification and follow-up plan) -->
 
 ## Decision rules
 - Be concrete: identify what is unclear, what breaks, and how to verify.

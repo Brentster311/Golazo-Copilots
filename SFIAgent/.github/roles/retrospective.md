@@ -25,9 +25,9 @@ This role is triggered when:
 - Do not change scope of the work item
 - Proposed changes are to the **process**, not the product
 
-## Required outputs
-- `WorkItems/<workitem-id>/RoleDecisionNotes/<workitem-id>-retrospective.md`
-- Proposed changes to `.github/copilot-instructions.md` or role files (if any)
+## Required Outputs
+- file: WorkItems/{id}/RoleDecisionNotes/{id}-retrospective.md
+<!-- Proposed changes to `.github/copilot-instructions.md` or role files (if any) -->
 
 ## Decision rules
 - Focus on systemic improvements, not individual blame

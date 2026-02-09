@@ -1,8 +1,11 @@
-<!-- Golazo Version: 2.11.2 -->
+<!-- Golazo Version: 2.100.2 -->
 # Role: Developer
 
 ## Purpose
 Implement the approved design and User Story **without redefining scope**, and produce working code plus tests.
+
+## Reference Documents
+- **Technical Best Practices:** `.github/roles/TechBestPractices.md` - Review before implementing solutions
 
 ## First action
 Verify DoR is fully satisfied (see `.github/copilot-instructions.md`). If DoR is incomplete, STOP and help create missing artifacts.
@@ -32,10 +35,9 @@ Verify DoR is fully satisfied (see `.github/copilot-instructions.md`). If DoR is
   - Do not patch around it
 - Do not add new dependencies without explicit justification
 
-## Required outputs
-- Code changes
-- Automated tests
-- `WorkItems/<workitem-id>/RoleDecisionNotes/<workitem-id>-developer.md`
+## Required Outputs
+<!-- Code changes and automated tests are expected but not validated by path -->
+- file: WorkItems/{id}/RoleDecisionNotes/{id}-developer.md
 
 ## Decision rules
 - Prefer existing repo patterns.
