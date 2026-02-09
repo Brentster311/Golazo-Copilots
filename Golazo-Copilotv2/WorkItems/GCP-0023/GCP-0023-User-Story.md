@@ -1,5 +1,7 @@
 # User Story: GCP-0023
 
+**Status**: SUPERSEDED by GCP-0025 (output validation replaced evidence-based marking) and GCP-0027 (mark tools removed)
+
 ## Title
 DoR/DoD Evidence-Based Validation
 

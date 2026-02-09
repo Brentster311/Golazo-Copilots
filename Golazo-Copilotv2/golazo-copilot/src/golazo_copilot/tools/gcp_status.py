@@ -1,12 +1,66 @@
 """gcp_status tool - Get comprehensive workflow status."""
 
+import re
 from pathlib import Path
 
 from .. import __version__
 from ..core.persistence import load_state, work_item_exists, DEFAULT_WORKITEMS_DIR
 from ..core.output_validator import parse_required_outputs, validate_all_outputs
+from ..core.transitions import ROLE_ORDER
 from ..roles.loader import load_role_instructions, get_role_content
 from .gcp_transition import get_role_notes_path
+
+_VERSION_PATTERN = re.compile(r'<!-- Golazo Copilot Version: ([\d.]+) -->')
+
+
+def _get_deployed_version(workspace_root: Path) -> str | None:
+    """Extract the version from the deployed .github/copilot-instructions.md.
+    
+    Returns the version string if found, or None if file is missing
+    or has no version comment.
+    """
+    try:
+        instructions_file = workspace_root / ".github" / "copilot-instructions.md"
+        if not instructions_file.exists():
+            return None
+        content = instructions_file.read_text(encoding="utf-8")
+        match = _VERSION_PATTERN.search(content)
+        return match.group(1) if match else None
+    except Exception:
+        return None
+
+
+def _compute_role_progress(state) -> dict:
+    """Compute role progress from state's role_history.
+    
+    Returns dict with:
+        roles: list of {"role": str, "status": "completed"|"in-progress"|"pending"}
+        roles_completed: int
+        roles_total: int
+    """
+    # Build latest entry per role from history
+    latest: dict[str, object] = {}
+    for entry in state.role_history:
+        latest[entry.role] = entry
+    
+    roles = []
+    completed = 0
+    for role in ROLE_ORDER:
+        entry = latest.get(role)
+        if entry and entry.exited_at is not None:
+            status = "completed"
+            completed += 1
+        elif role == state.current_role:
+            status = "in-progress"
+        else:
+            status = "pending"
+        roles.append({"role": role, "status": status})
+    
+    return {
+        "roles": roles,
+        "roles_completed": completed,
+        "roles_total": len(ROLE_ORDER),
+    }
 
 
 async def gcp_status(
@@ -83,6 +137,18 @@ async def gcp_status(
                     missing_notes.append(entry.role)
                 seen_roles.add(entry.role)
     
+    # GCP-0032: Check deployed version vs package version
+    deployed_version = _get_deployed_version(workspace_root)
+    version_warning = None
+    if deployed_version is not None and deployed_version != __version__:
+        version_warning = (
+            f"Workspace instructions are stale (v{deployed_version} != v{__version__}). "
+            f"Run gcp_bootstrap to update."
+        )
+    
+    # GCP-0033: Compute role progress
+    role_progress = _compute_role_progress(state)
+    
     return {
         "active": True,
         "version": __version__,
@@ -94,8 +160,10 @@ async def gcp_status(
             "complete": outputs_complete,
             "outputs": required_outputs,
         },
+        "role_progress": role_progress,
         "deviations": deviations,
         "missing_notes": missing_notes,
+        "version_warning": version_warning,
         "role_instructions": role_instructions,
         "next_steps": next_steps,
     }

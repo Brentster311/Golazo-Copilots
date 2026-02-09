@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from golazo_copilot.tools.gcp_create_workitem import gcp_create_workitem
 from golazo_copilot.tools.gcp_transition import gcp_transition, ROLE_SUFFIX_MAP
-from golazo_copilot.tools.gcp_status import gcp_status
+from golazo_copilot.tools.gcp_status import gcp_status, _get_deployed_version, _compute_role_progress
 
 
 TEST_WORKITEMS_DIR = Path(__file__).parent / "test-workitems"
@@ -250,3 +250,161 @@ class TestStatusMissingNotes:
         assert "missing_notes" in result
         # Only PO role has been visited, and notes exist
         assert "project-owner-assistant" not in result["missing_notes"]
+
+
+class TestVersionSync:
+    """GCP-0032: Bootstrap version sync check tests."""
+
+    def test_matching_version_returns_none(self, tmp_path):
+        """TC1.1: No warning when deployed version matches package version."""
+        from golazo_copilot import __version__
+        instructions_dir = tmp_path / ".github"
+        instructions_dir.mkdir(parents=True)
+        (instructions_dir / "copilot-instructions.md").write_text(
+            f"<!-- Golazo Copilot Version: {__version__} -->\n# Instructions"
+        )
+        result = _get_deployed_version(tmp_path)
+        assert result == __version__
+
+    def test_mismatched_version_returns_deployed(self, tmp_path):
+        """TC1.2: Returns deployed version string when it differs."""
+        instructions_dir = tmp_path / ".github"
+        instructions_dir.mkdir(parents=True)
+        (instructions_dir / "copilot-instructions.md").write_text(
+            "<!-- Golazo Copilot Version: 1.0.0 -->\n# Instructions"
+        )
+        result = _get_deployed_version(tmp_path)
+        assert result == "1.0.0"
+
+    def test_missing_file_returns_none(self, tmp_path):
+        """TC1.3: No warning when file doesn't exist."""
+        result = _get_deployed_version(tmp_path)
+        assert result is None
+
+    def test_no_version_comment_returns_none(self, tmp_path):
+        """TC1.4: No warning when file has no version comment."""
+        instructions_dir = tmp_path / ".github"
+        instructions_dir.mkdir(parents=True)
+        (instructions_dir / "copilot-instructions.md").write_text(
+            "# Just some instructions\nNo version here."
+        )
+        result = _get_deployed_version(tmp_path)
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_status_includes_version_warning_on_mismatch(self):
+        """TC2.1: gcp_status returns version_warning when versions differ."""
+        from golazo_copilot import __version__
+        await gcp_create_workitem(work_item_id="ver-warn-1", work_items_dir=TEST_WORKITEMS_DIR)
+
+        # Create .github/copilot-instructions.md with old version at workspace root
+        workspace_root = TEST_WORKITEMS_DIR.parent
+        instructions_dir = workspace_root / ".github"
+        instructions_dir.mkdir(parents=True, exist_ok=True)
+        instructions_file = instructions_dir / "copilot-instructions.md"
+        instructions_file.write_text("<!-- Golazo Copilot Version: 0.0.1 -->\n# Old")
+
+        try:
+            result = await gcp_status(
+                work_item_id="ver-warn-1",
+                work_items_dir=TEST_WORKITEMS_DIR
+            )
+            assert result.get("version_warning") is not None
+            assert "0.0.1" in result["version_warning"]
+            assert __version__ in result["version_warning"]
+            assert "gcp_bootstrap" in result["version_warning"]
+        finally:
+            # Restore the real instructions file if needed
+            instructions_file.write_text(
+                f"<!-- Golazo Copilot Version: {__version__} -->\n# Restored"
+            )
+
+    @pytest.mark.asyncio
+    async def test_status_no_warning_when_versions_match(self):
+        """TC2.2: gcp_status returns no version_warning when versions match."""
+        from golazo_copilot import __version__
+        await gcp_create_workitem(work_item_id="ver-warn-2", work_items_dir=TEST_WORKITEMS_DIR)
+
+        # Ensure .github/copilot-instructions.md has current version
+        workspace_root = TEST_WORKITEMS_DIR.parent
+        instructions_dir = workspace_root / ".github"
+        instructions_dir.mkdir(parents=True, exist_ok=True)
+        instructions_file = instructions_dir / "copilot-instructions.md"
+        instructions_file.write_text(
+            f"<!-- Golazo Copilot Version: {__version__} -->\n# Current"
+        )
+
+        result = await gcp_status(
+            work_item_id="ver-warn-2",
+            work_items_dir=TEST_WORKITEMS_DIR
+        )
+        assert result.get("version_warning") is None
+
+
+class TestRoleProgress:
+    """GCP-0033: Role progress display tests."""
+
+    @pytest.mark.asyncio
+    async def test_fresh_work_item_zero_completed(self):
+        """TC1.1: Fresh work item has 0 completed, PO in-progress."""
+        await gcp_create_workitem(work_item_id="progress-1", work_items_dir=TEST_WORKITEMS_DIR)
+
+        result = await gcp_status(
+            work_item_id="progress-1",
+            work_items_dir=TEST_WORKITEMS_DIR
+        )
+        progress = result["role_progress"]
+        assert progress["roles_completed"] == 0
+        assert progress["roles_total"] == 9
+
+        # PO should be in-progress
+        po = next(r for r in progress["roles"] if r["role"] == "project-owner-assistant")
+        assert po["status"] == "in-progress"
+
+        # All others should be pending
+        for entry in progress["roles"]:
+            if entry["role"] != "project-owner-assistant":
+                assert entry["status"] == "pending", f"{entry['role']} should be pending"
+
+    @pytest.mark.asyncio
+    async def test_after_transitions_correct_count(self):
+        """TC1.2: After transitions, completed count is correct."""
+        await gcp_create_workitem(work_item_id="progress-2", work_items_dir=TEST_WORKITEMS_DIR)
+
+        # Create required outputs for PO role
+        create_role_notes("progress-2", "project-owner-assistant")
+        create_test_file("progress-2", "progress-2-User-Story.md")
+
+        # Transition to PM
+        await gcp_transition(
+            work_item_id="progress-2", role="program-manager",
+            work_items_dir=TEST_WORKITEMS_DIR
+        )
+
+        result = await gcp_status(
+            work_item_id="progress-2",
+            work_items_dir=TEST_WORKITEMS_DIR
+        )
+        progress = result["role_progress"]
+        assert progress["roles_completed"] == 1  # PO completed
+
+        po = next(r for r in progress["roles"] if r["role"] == "project-owner-assistant")
+        assert po["status"] == "completed"
+
+        pm = next(r for r in progress["roles"] if r["role"] == "program-manager")
+        assert pm["status"] == "in-progress"
+
+    @pytest.mark.asyncio
+    async def test_role_progress_list_has_all_roles(self):
+        """TC1.3: Progress list contains all 9 workflow roles."""
+        await gcp_create_workitem(work_item_id="progress-3", work_items_dir=TEST_WORKITEMS_DIR)
+
+        result = await gcp_status(
+            work_item_id="progress-3",
+            work_items_dir=TEST_WORKITEMS_DIR
+        )
+        progress = result["role_progress"]
+        role_names = [r["role"] for r in progress["roles"]]
+        assert len(role_names) == 9
+        assert "project-owner-assistant" in role_names
+        assert "retrospective" in role_names
