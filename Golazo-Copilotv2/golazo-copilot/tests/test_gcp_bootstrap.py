@@ -20,8 +20,8 @@ def cleanup():
     if TEST_WORKSPACE_DIR.exists():
         shutil.rmtree(TEST_WORKSPACE_DIR)
     TEST_WORKSPACE_DIR.mkdir(parents=True)
-    # Create a .git folder to simulate a git repo
-    (TEST_WORKSPACE_DIR / ".git").mkdir()
+    # Create a WorkItems folder to simulate a valid workspace
+    (TEST_WORKSPACE_DIR / "WorkItems").mkdir()
     yield
     if TEST_WORKSPACE_DIR.exists():
         shutil.rmtree(TEST_WORKSPACE_DIR)
@@ -172,7 +172,7 @@ class TestBootstrapWorkspaceDetection:
 
     @pytest.mark.asyncio
     async def test_detects_git_workspace(self):
-        """Should detect workspace with .git folder."""
+        """Should detect workspace with WorkItems folder."""
         result = await gcp_bootstrap(workspace_path=TEST_WORKSPACE_DIR)
         
         assert result["success"] is True
@@ -180,13 +180,24 @@ class TestBootstrapWorkspaceDetection:
     @pytest.mark.asyncio
     async def test_fails_without_workspace_markers(self):
         """Should fail if no workspace detected."""
-        # Remove .git folder
-        shutil.rmtree(TEST_WORKSPACE_DIR / ".git")
+        # Remove WorkItems folder
+        shutil.rmtree(TEST_WORKSPACE_DIR / "WorkItems")
         
         result = await gcp_bootstrap(workspace_path=TEST_WORKSPACE_DIR)
         
         assert result["success"] is False
         assert "workspace" in result["error"].lower()
+
+    @pytest.mark.asyncio
+    async def test_git_alone_is_not_valid_marker(self):
+        """Should NOT recognize .git as a workspace marker."""
+        # Remove WorkItems, add .git
+        shutil.rmtree(TEST_WORKSPACE_DIR / "WorkItems")
+        (TEST_WORKSPACE_DIR / ".git").mkdir()
+        
+        result = await gcp_bootstrap(workspace_path=TEST_WORKSPACE_DIR)
+        
+        assert result["success"] is False
 
 
 class TestBootstrapVersionConsistency:
