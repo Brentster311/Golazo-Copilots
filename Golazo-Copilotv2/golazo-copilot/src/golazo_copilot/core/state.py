@@ -23,21 +23,6 @@ def create_initial_state(work_item_id: str, profile: Profile) -> WorkItemState:
         current_role="project-owner-assistant",
         created_at=now,
         updated_at=now,
-        dor={
-            "userStory": False,
-            "designDoc": False,
-            "reviewComments": False,
-            "testCases": False,
-        },
-        dod={
-            "branchCreated": False,
-            "testsWrittenFirst": False,
-            "testsPass": False,
-            "buildPasses": False,
-            "docsUpdated": False,
-            "refactorComplete": False,
-            "committed": False,
-        },
         role_history=[
             RoleHistoryEntry(
                 role="project-owner-assistant",

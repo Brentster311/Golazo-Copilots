@@ -126,7 +126,7 @@ class TestTransitionOutputValidation:
         # Record consent
         await gcp_consent(
             work_item_id="OUT-003",
-            action="skip_dor",
+            action="skip_outputs",
             reason="Testing force transition with consent",
             work_items_dir=TEST_WORKITEMS_DIR,
         )
@@ -240,3 +240,71 @@ class TestStatusOutputValidation:
         
         assert user_story_output["valid"] is True
         assert design_output["valid"] is False
+
+    @pytest.mark.asyncio
+    async def test_status_next_steps_include_remediation_for_missing(self):
+        """TC3.4 (GCP-0027): Next steps should include remediation for missing outputs."""
+        # Create role file with required outputs
+        create_role_file(TEST_WORKSPACE, "project-owner-assistant", """
+# Role: Project Owner Assistant
+
+## Required Outputs
+- file: WorkItems/{id}/{id}-User-Story.md
+- dir: WorkItems/{id}/Design
+""")
+
+        # Create work item
+        await gcp_create_workitem(work_item_id="REM-001", work_items_dir=TEST_WORKITEMS_DIR)
+
+        # Design dir NOT created, user story NOT created — both missing
+        result = await gcp_status(
+            work_item_id="REM-001",
+            work_items_dir=TEST_WORKITEMS_DIR,
+            project_root=TEST_WORKSPACE,
+        )
+
+        assert result["active"] is True
+        next_steps = result["next_steps"]
+
+        # Should include remediation for the missing file
+        assert any("Create file" in step and "User-Story" in step for step in next_steps), \
+            f"Expected file remediation in next_steps, got: {next_steps}"
+        # Should include remediation for the missing directory
+        assert any("Create directory" in step and "Design" in step for step in next_steps), \
+            f"Expected dir remediation in next_steps, got: {next_steps}"
+
+    @pytest.mark.asyncio
+    async def test_status_next_steps_no_remediation_when_all_present(self):
+        """TC3.5 (GCP-0027): Next steps should NOT include remediation when all outputs exist."""
+        # Create role file with required outputs
+        create_role_file(TEST_WORKSPACE, "project-owner-assistant", """
+# Role: Project Owner Assistant
+
+## Required Outputs
+- file: WorkItems/{id}/{id}-User-Story.md
+- dir: WorkItems/{id}/Design
+""")
+
+        # Create work item
+        await gcp_create_workitem(work_item_id="REM-002", work_items_dir=TEST_WORKITEMS_DIR)
+
+        # Create BOTH required outputs
+        user_story = TEST_WORKITEMS_DIR / "REM-002" / "REM-002-User-Story.md"
+        user_story.write_text("# User Story", encoding="utf-8")
+        design_dir = TEST_WORKITEMS_DIR / "REM-002" / "Design"
+        design_dir.mkdir(parents=True, exist_ok=True)
+
+        result = await gcp_status(
+            work_item_id="REM-002",
+            work_items_dir=TEST_WORKITEMS_DIR,
+            project_root=TEST_WORKSPACE,
+        )
+
+        assert result["active"] is True
+        next_steps = result["next_steps"]
+
+        # Should NOT include any "Create file" or "Create directory" remediation
+        assert not any("Create file" in step for step in next_steps), \
+            f"Unexpected file remediation in next_steps: {next_steps}"
+        assert not any("Create directory" in step for step in next_steps), \
+            f"Unexpected dir remediation in next_steps: {next_steps}"

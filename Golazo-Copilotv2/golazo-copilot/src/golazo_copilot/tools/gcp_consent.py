@@ -10,11 +10,10 @@ from ..core.persistence import load_state, save_state, work_item_exists, DEFAULT
 
 # Valid deviation actions
 VALID_ACTIONS = {
-    "skip_dor",      # Bypass Definition of Ready gate
-    "skip_dod",      # Bypass Definition of Done gate
-    "skip_role",     # Skip a role in the workflow
+    "skip_outputs",     # Bypass required outputs gate
+    "skip_role",        # Skip a role in the workflow
     "revert_progress",  # Undo completed items
-    "custom",        # Custom deviation
+    "custom",           # Custom deviation
 }
 
 MINIMUM_REASON_LENGTH = 10

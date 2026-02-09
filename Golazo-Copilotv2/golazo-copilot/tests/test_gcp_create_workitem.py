@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from golazo_copilot.tools.gcp_create_workitem import gcp_create_workitem
 from golazo_copilot.core.persistence import load_state
+from golazo_copilot.core.types import WorkItemState
 
 
 TEST_WORKITEMS_DIR = Path(__file__).parent / "test-workitems"
@@ -96,27 +97,20 @@ class TestGcpCreateWorkitemSuccess:
         assert state.current_role == "project-owner-assistant"
 
     @pytest.mark.asyncio
-    async def test_dor_items_all_false(self):
-        """Should initialize DoR items as false."""
-        await gcp_create_workitem(work_item_id="dor-test", work_items_dir=TEST_WORKITEMS_DIR)
+    async def test_state_has_no_dor_field(self):
+        """GCP-0031: New state should not have dor field."""
+        await gcp_create_workitem(work_item_id="no-dor-test", work_items_dir=TEST_WORKITEMS_DIR)
 
-        state = load_state("dor-test", TEST_WORKITEMS_DIR)
-        # All DoR items should have complete=False
-        assert all(not item.complete for item in state.dor.values())
-        assert set(state.dor.keys()) == {"userStory", "designDoc", "reviewComments", "testCases"}
+        state = load_state("no-dor-test", TEST_WORKITEMS_DIR)
+        assert not hasattr(state, "dor") or "dor" not in state.model_fields
 
     @pytest.mark.asyncio
-    async def test_dod_items_all_false(self):
-        """Should initialize DoD items as false."""
-        await gcp_create_workitem(work_item_id="dod-test", work_items_dir=TEST_WORKITEMS_DIR)
+    async def test_state_has_no_dod_field(self):
+        """GCP-0031: New state should not have dod field."""
+        await gcp_create_workitem(work_item_id="no-dod-test", work_items_dir=TEST_WORKITEMS_DIR)
 
-        state = load_state("dod-test", TEST_WORKITEMS_DIR)
-        # All DoD items should have complete=False
-        assert all(not item.complete for item in state.dod.values())
-        assert set(state.dod.keys()) == {
-            "branchCreated", "testsWrittenFirst", "testsPass",
-            "buildPasses", "docsUpdated", "refactorComplete", "committed"
-        }
+        state = load_state("no-dod-test", TEST_WORKITEMS_DIR)
+        assert not hasattr(state, "dod") or "dod" not in state.model_fields
 
     @pytest.mark.asyncio
     async def test_role_history_has_initial_entry(self):
@@ -248,3 +242,25 @@ class TestGcpCreateWorkitemErrorHandling:
 
         assert result["success"] is False
         assert "Invalid profile" in result["error"]
+
+
+class TestGcpBackwardCompatibility:
+    """GCP-0031: Old state.json with dor/dod fields should load without error."""
+
+    @pytest.mark.asyncio
+    async def test_old_state_with_dor_dod_loads(self):
+        """TC1.2: State files containing dor/dod should load silently."""
+        # Create a new work item first (to get correct structure)
+        await gcp_create_workitem(work_item_id="compat-1", work_items_dir=TEST_WORKITEMS_DIR)
+        
+        # Manually inject legacy dor/dod into the state.json
+        state_path = TEST_WORKITEMS_DIR / "compat-1" / "state.json"
+        raw = json.loads(state_path.read_text())
+        raw["dor"] = {"userStory": True, "designDoc": False, "reviewComments": False, "testCases": False}
+        raw["dod"] = {"branchCreated": False, "testsWrittenFirst": False}
+        state_path.write_text(json.dumps(raw))
+        
+        # Should load without error (extra="ignore" handles unknown fields)
+        state = load_state("compat-1", TEST_WORKITEMS_DIR)
+        assert state.work_item_id == "compat-1"
+        assert state.current_role == "project-owner-assistant"
