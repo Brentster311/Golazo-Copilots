@@ -227,6 +227,19 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         )
         
         if result.get("active", False):
+            # GCP-0032: Format version warning if present
+            version_warning = ""
+            if result.get("version_warning"):
+                version_warning = f"\n{ICON_WARN} {result['version_warning']}"
+            
+            # GCP-0033: Format role progress
+            progress_section = ""
+            role_progress = result.get("role_progress", {})
+            if role_progress:
+                completed = role_progress.get("roles_completed", 0)
+                total = role_progress.get("roles_total", 9)
+                progress_section = f"\n- Role Progress: {completed}/{total} complete"
+            
             # GCP-0027: Format required outputs section
             outputs_section = ""
             req_outputs = result.get("required_outputs", {})
@@ -252,10 +265,10 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
                     deviations_lines.append(f"- {d['id']}: {d['action']} - \"{d['reason']}\"{consumed}")
                 deviations_section = "\n\n**Deviations:**\n" + "\n".join(deviations_lines)
             
-            content = f"""**Golazo Status** (v{result['version']})
+            content = f"""**Golazo Status** (v{result['version']}){version_warning}
 - Work Item: {result['work_item_id']}
 - Current Role: **{result['current_role']}**
-- Phase: {result['current_phase']}{outputs_section}{deviations_section}
+- Phase: {result['current_phase']}{progress_section}{outputs_section}{deviations_section}
 
 **Next Steps:**
 {next_steps}
