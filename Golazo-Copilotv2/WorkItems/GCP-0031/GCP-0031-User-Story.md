@@ -1,6 +1,6 @@
 # GCP-0031: Remove DoR/DoD Checklist System
 
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 ## User Story
 
