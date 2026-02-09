@@ -8,7 +8,7 @@ from golazo_copilot import __version__
 
 
 # Workspace markers - at least one must exist
-WORKSPACE_MARKERS = [".git", "pyproject.toml", "package.json", "Cargo.toml", ".hg"]
+WORKSPACE_MARKERS = ["pyproject.toml", "package.json", "Cargo.toml", ".hg", "WorkItems"]
 
 # Default role files to copy
 DEFAULT_ROLES = [

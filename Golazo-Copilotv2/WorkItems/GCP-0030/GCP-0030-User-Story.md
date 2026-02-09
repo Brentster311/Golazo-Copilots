@@ -1,6 +1,6 @@
 # GCP-0030: Bootstrap Should Target Provided workspace_path, Not Walk Up to .git
 
-**Status**: BACKLOG
+**Status**: SUPERSEDED by GCP-0034
 
 ## User Story
 
