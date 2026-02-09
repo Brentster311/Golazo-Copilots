@@ -60,8 +60,7 @@ handler = KustoHandler(
 df = handler.GetDataFrameFromKustoQuery(
     Cluster="https://your-cluster.kusto.windows.net",
     Database="your_database",
-    Query="your_query | take 100",
-    CacheExpiryInMin=60
+    Query="your_query | take 100"
 )
 ```
 
