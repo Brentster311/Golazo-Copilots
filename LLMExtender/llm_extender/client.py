@@ -14,7 +14,7 @@ from llm_extender.exceptions import UnsupportedProviderError
 from llm_extender.providers.base import LLMProvider
 from llm_extender.providers.azure_openai import AzureOpenAIProvider
 from llm_extender.providers.openai import OpenAIProvider
-from llm_extender.url_fetcher import afetch_url, fetch_url, _build_context_prompt
+from llm_extender.url_fetcher import afetch_url, build_context_prompt, fetch_url
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -90,6 +90,56 @@ class LLMClient:
         """
         return await self._provider.acomplete(prompt)
 
+    def complete_with_context(
+        self,
+        prompt: str,
+        content: str,
+        source_url: str | None = None,
+    ) -> str:
+        """Send pre-fetched content as context along with a prompt.
+
+        Use this when content has been obtained outside the library
+        (e.g., via CDP browser, file read, or custom scraper).
+
+        Args:
+            prompt: The user question or instruction.
+            content: The pre-fetched text content to use as context.
+            source_url: Optional source URL for attribution in the
+                prompt. If ``None``, the URL is omitted.
+
+        Returns:
+            The model's response as a string.
+
+        Raises:
+            ProviderError: If the provider returns an error.
+        """
+        url = source_url or "unknown"
+        augmented = build_context_prompt(url, content, prompt)
+        return self._provider.complete(augmented)
+
+    async def acomplete_with_context(
+        self,
+        prompt: str,
+        content: str,
+        source_url: str | None = None,
+    ) -> str:
+        """Async version of :meth:`complete_with_context`.
+
+        Args:
+            prompt: The user question or instruction.
+            content: The pre-fetched text content to use as context.
+            source_url: Optional source URL for attribution.
+
+        Returns:
+            The model's response as a string.
+
+        Raises:
+            ProviderError: If the provider returns an error.
+        """
+        url = source_url or "unknown"
+        augmented = build_context_prompt(url, content, prompt)
+        return await self._provider.acomplete(augmented)
+
     def complete_with_url(
         self,
         prompt: str,
@@ -129,8 +179,7 @@ class LLMClient:
             url, auth=url_auth, max_length=max_length,
             render_js=render_js, browser_auth=browser_auth,
         )
-        augmented = _build_context_prompt(url, content, prompt)
-        return self._provider.complete(augmented)
+        return self.complete_with_context(prompt, content, source_url=url)
 
     async def acomplete_with_url(
         self,
@@ -167,8 +216,7 @@ class LLMClient:
             url, auth=url_auth, max_length=max_length,
             render_js=render_js, browser_auth=browser_auth,
         )
-        augmented = _build_context_prompt(url, content, prompt)
-        return await self._provider.acomplete(augmented)
+        return await self.acomplete_with_context(prompt, content, source_url=url)
 
     def close(self) -> None:
         """Close the underlying provider and release resources."""

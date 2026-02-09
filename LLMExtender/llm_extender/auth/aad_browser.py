@@ -8,9 +8,11 @@ Requires ``msal`` (included in the ``[browser]`` optional dependency).
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import sys
+import time
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
@@ -140,11 +142,13 @@ _MSAL_INSTALL_MSG = (
 )
 
 
-def _create_msal_app(tenant_id: str) -> Any:
+def _create_msal_app(tenant_id: str, client_id: str | None = None) -> Any:
     """Create an MSAL PublicClientApplication for device code flow.
 
-    Uses a well-known Microsoft public client ID if the target app's
-    client_id requires admin consent.
+    Args:
+        tenant_id: The AAD tenant ID.
+        client_id: The client ID to use. If ``None``, falls back to the
+            well-known Azure CLI public client ID.
 
     Raises:
         AuthenticationError: If ``msal`` is not installed.
@@ -154,12 +158,12 @@ def _create_msal_app(tenant_id: str) -> Any:
     except ImportError:
         raise AuthenticationError(_MSAL_INSTALL_MSG) from None
 
-    # Use a well-known Azure CLI client_id for device code flow.
-    # This avoids needing app registration for the target site.
+    # Fall back to Azure CLI client_id when no site-specific one is given.
     _AZURE_CLI_CLIENT_ID = "04b07795-a710-4e51-be09-a3fec46ee6ed"
+    effective_id = client_id or _AZURE_CLI_CLIENT_ID
 
     return msal.PublicClientApplication(
-        client_id=_AZURE_CLI_CLIENT_ID,
+        client_id=effective_id,
         authority=f"https://login.microsoftonline.com/{tenant_id}",
     )
 
@@ -168,6 +172,7 @@ def run_device_code_flow(
     *,
     tenant_id: str,
     scopes: list[str],
+    client_id: str | None = None,
     timeout: float = 60.0,
 ) -> dict[str, Any]:
     """Run an MSAL device code flow and return the token response.
@@ -178,6 +183,8 @@ def run_device_code_flow(
     Args:
         tenant_id: The AAD tenant ID.
         scopes: The scopes to request (e.g. ``["https://s360.com/.default"]``).
+        client_id: The client ID to use. If ``None``, falls back to the
+            well-known Azure CLI public client ID.
         timeout: Timeout in seconds for the user to authenticate.
 
     Returns:
@@ -186,7 +193,7 @@ def run_device_code_flow(
     Raises:
         AuthenticationError: If the flow fails or times out.
     """
-    app = _create_msal_app(tenant_id)
+    app = _create_msal_app(tenant_id, client_id=client_id)
     flow = app.initiate_device_flow(scopes=scopes)
 
     if "error" in flow:
@@ -207,3 +214,81 @@ def run_device_code_flow(
         )
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# AAD login-wait helpers (reusable by browser_auth="aad" and "cdp")
+# ---------------------------------------------------------------------------
+
+_DEFAULT_POLL_INTERVAL = 1.0
+
+
+def wait_for_aad_login(
+    page: Any,
+    timeout: float = 60.0,
+    *,
+    poll_interval: float = _DEFAULT_POLL_INTERVAL,
+) -> None:
+    """Block until the browser page navigates away from an AAD login host.
+
+    Polls ``page.url`` at *poll_interval* seconds. Returns as soon as
+    the URL host is no longer one of the known AAD login domains. Raises
+    :class:`~llm_extender.exceptions.AuthenticationError` if *timeout*
+    elapses while the page is still on an AAD host.
+
+    This helper is designed to be shared between the ``browser_auth="aad"``
+    (headless device-code flow) and the future ``browser_auth="cdp"``
+    (real-browser) authentication modes.
+
+    Args:
+        page: A Playwright sync ``Page`` object (or any object whose
+            ``.url`` property returns the current URL string).
+        timeout: Maximum seconds to wait for the login to complete.
+        poll_interval: Seconds between URL checks (keyword-only).
+
+    Raises:
+        AuthenticationError: If the page is still on an AAD host after
+            *timeout* seconds.
+    """
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if not detect_aad_redirect(page.url):
+            return
+        time.sleep(poll_interval)
+    raise AuthenticationError(
+        f"AAD login timed out after {timeout}s — the browser page "
+        f"is still on an AAD login host ({page.url})."
+    )
+
+
+async def await_for_aad_login(
+    page: Any,
+    timeout: float = 60.0,
+    *,
+    poll_interval: float = _DEFAULT_POLL_INTERVAL,
+) -> None:
+    """Async version of :func:`wait_for_aad_login`.
+
+    Polls ``page.url`` every *poll_interval* seconds using
+    :func:`asyncio.sleep`. Returns as soon as the URL host leaves the
+    AAD login domains.
+
+    Args:
+        page: A Playwright async ``Page`` object (or any object whose
+            ``.url`` property returns the current URL string).
+        timeout: Maximum seconds to wait for the login to complete.
+        poll_interval: Seconds between URL checks (keyword-only).
+
+    Raises:
+        AuthenticationError: If the page is still on an AAD host after
+            *timeout* seconds.
+    """
+    deadline = asyncio.get_event_loop().time() + timeout
+    while asyncio.get_event_loop().time() < deadline:
+        if not detect_aad_redirect(page.url):
+            return
+        await asyncio.sleep(poll_interval)
+    raise AuthenticationError(
+        f"AAD login timed out after {timeout}s — the browser page "
+        f"is still on an AAD login host ({page.url})."
+    )

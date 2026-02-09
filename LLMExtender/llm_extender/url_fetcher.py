@@ -116,6 +116,7 @@ def _fetch_with_browser(
         is_user_credential,
         parse_aad_authorize_url,
         run_device_code_flow,
+        wait_for_aad_login,
     )
 
     # Validate browser_auth + auth combo
@@ -135,7 +136,9 @@ def _fetch_with_browser(
 
     timeout_ms = timeout * 1000
     extra_headers: dict[str, str] = {}
-    if auth is not None:
+    # When browser_auth is set, skip Bearer on the initial request so the
+    # site redirects to AAD login instead of returning 403.
+    if auth is not None and browser_auth is None:
         extra_headers["Authorization"] = f"Bearer {auth.resolve()}"
 
     browser = None
@@ -155,11 +158,23 @@ def _fetch_with_browser(
                 aad_url = page.url
                 params = parse_aad_authorize_url(aad_url)
                 tenant = params.get("tenant_id", "common")
+                client_id = params.get("client_id", "")
+
+                # MSAL reserves openid/profile/offline_access — filter
+                # them out and fall back to {client_id}/.default.
+                _RESERVED = {"openid", "profile", "offline_access", "email"}
                 scope = params.get("scope", "")
-                scopes = [s for s in scope.split() if s] or ["openid"]
+                scopes = [s for s in scope.split() if s and s not in _RESERVED]
+                if not scopes and client_id:
+                    scopes = [f"{client_id}/.default"]
+                elif not scopes:
+                    scopes = [".default"]
 
                 token_result = run_device_code_flow(
-                    tenant_id=tenant, scopes=scopes, timeout=timeout,
+                    tenant_id=tenant,
+                    scopes=scopes,
+                    client_id=client_id or None,
+                    timeout=timeout,
                 )
                 fresh_token = token_result.get("access_token", "")
 
@@ -171,6 +186,9 @@ def _fetch_with_browser(
                 page.wait_for_load_state(
                     "domcontentloaded", timeout=timeout_ms,
                 )
+
+                # Wait for AAD login to complete (if still redirecting)
+                wait_for_aad_login(page, timeout=timeout)
 
             text = page.inner_text("body")
     except ProviderError:
@@ -201,6 +219,7 @@ async def _afetch_with_browser(
 ) -> str:
     """Fetch a URL using a headless Chromium browser (async)."""
     from llm_extender.auth.aad_browser import (
+        await_for_aad_login,
         detect_aad_redirect,
         is_user_credential,
         parse_aad_authorize_url,
@@ -224,7 +243,9 @@ async def _afetch_with_browser(
 
     timeout_ms = timeout * 1000
     extra_headers: dict[str, str] = {}
-    if auth is not None:
+    # When browser_auth is set, skip Bearer on the initial request so the
+    # site redirects to AAD login instead of returning 403.
+    if auth is not None and browser_auth is None:
         extra_headers["Authorization"] = f"Bearer {await auth.aresolve()}"
 
     browser = None
@@ -244,11 +265,23 @@ async def _afetch_with_browser(
                 aad_url = page.url
                 params = parse_aad_authorize_url(aad_url)
                 tenant = params.get("tenant_id", "common")
+                client_id = params.get("client_id", "")
+
+                # MSAL reserves openid/profile/offline_access — filter
+                # them out and fall back to {client_id}/.default.
+                _RESERVED = {"openid", "profile", "offline_access", "email"}
                 scope = params.get("scope", "")
-                scopes = [s for s in scope.split() if s] or ["openid"]
+                scopes = [s for s in scope.split() if s and s not in _RESERVED]
+                if not scopes and client_id:
+                    scopes = [f"{client_id}/.default"]
+                elif not scopes:
+                    scopes = [".default"]
 
                 token_result = run_device_code_flow(
-                    tenant_id=tenant, scopes=scopes, timeout=timeout,
+                    tenant_id=tenant,
+                    scopes=scopes,
+                    client_id=client_id or None,
+                    timeout=timeout,
                 )
                 fresh_token = token_result.get("access_token", "")
 
@@ -260,6 +293,9 @@ async def _afetch_with_browser(
                 await page.wait_for_load_state(
                     "domcontentloaded", timeout=timeout_ms,
                 )
+
+                # Wait for AAD login to complete (if still redirecting)
+                await await_for_aad_login(page, timeout=timeout)
 
             text = await page.inner_text("body")
     except ProviderError:
@@ -284,7 +320,7 @@ async def _afetch_with_browser(
 # Public API
 # ---------------------------------------------------------------------------
 
-_VALID_BROWSER_AUTH = frozenset({"aad"})
+_VALID_BROWSER_AUTH = frozenset({"aad", "cdp"})
 
 
 def fetch_url(
@@ -336,6 +372,12 @@ def fetch_url(
             )
 
     if render_js:
+        if browser_auth == "cdp":
+            from llm_extender.cdp_browser import _fetch_with_cdp_browser
+
+            return _fetch_with_cdp_browser(
+                url, timeout=timeout, max_length=max_length,
+            )
         return _fetch_with_browser(
             url, auth=auth, timeout=timeout, max_length=max_length,
             browser_auth=browser_auth,
@@ -426,6 +468,12 @@ async def afetch_url(
             )
 
     if render_js:
+        if browser_auth == "cdp":
+            from llm_extender.cdp_browser import _afetch_with_cdp_browser
+
+            return await _afetch_with_cdp_browser(
+                url, timeout=timeout, max_length=max_length,
+            )
         return await _afetch_with_browser(
             url, auth=auth, timeout=timeout, max_length=max_length,
             browser_auth=browser_auth,
@@ -469,6 +517,22 @@ async def afetch_url(
     return text
 
 
-def _build_context_prompt(url: str, content: str, user_prompt: str) -> str:
-    """Build the context-augmented prompt."""
+def build_context_prompt(url: str, content: str, user_prompt: str) -> str:
+    """Build a context-augmented prompt for LLM completion.
+
+    Combines fetched content with a user prompt in a standard format
+    that the LLM can use to answer questions about the content.
+
+    Args:
+        url: The source URL (for attribution in the prompt).
+        content: The fetched text content.
+        user_prompt: The user's question or instruction.
+
+    Returns:
+        A formatted string combining the content and prompt.
+    """
     return f"Content from {url}:\n\n{content}\n\n{user_prompt}"
+
+
+# Backward-compatible alias.
+_build_context_prompt = build_context_prompt
