@@ -76,7 +76,7 @@ For full documentation, see the Golazo Copilot README.
 async def gcp_bootstrap(
     workspace_path: Path | str | None = None,
     force: bool = False,
-    include_roles: bool = False,
+    include_roles: bool = True,
 ) -> dict:
     """
     Bootstrap Golazo Copilot in a workspace.
@@ -84,7 +84,7 @@ async def gcp_bootstrap(
     Creates:
     - .github/copilot-instructions.md
     - WorkItems/.gitkeep
-    - Optionally: .github/roles/*.md
+    - .github/roles/*.md (default role files)
     
     Args:
         workspace_path: Workspace root path (auto-detected if not provided)

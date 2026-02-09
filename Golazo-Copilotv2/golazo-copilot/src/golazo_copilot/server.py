@@ -131,7 +131,7 @@ async def list_tools() -> list[Tool]:
                     },
                     "include_roles": {
                         "type": "boolean",
-                        "default": False,
+                        "default": True,
                         "description": "Also copy default role files to .github/roles/"
                     },
                     "workspace_path": {
@@ -286,7 +286,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         result = await gcp_bootstrap(
             workspace_path=arguments.get("workspace_path"),
             force=arguments.get("force", False),
-            include_roles=arguments.get("include_roles", False)
+            include_roles=arguments.get("include_roles", True)
         )
         
         if result["success"]:
