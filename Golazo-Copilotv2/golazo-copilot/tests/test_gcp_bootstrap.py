@@ -148,9 +148,19 @@ class TestBootstrapRoleFiles:
     """AC5: Optional role files."""
 
     @pytest.mark.asyncio
-    async def test_does_not_copy_roles_by_default(self):
-        """Should not copy role files by default."""
-        await gcp_bootstrap(workspace_path=TEST_WORKSPACE_DIR)
+    async def test_copies_roles_by_default(self):
+        """Should copy role files by default."""
+        result = await gcp_bootstrap(workspace_path=TEST_WORKSPACE_DIR)
+        
+        assert result["success"] is True
+        roles_dir = TEST_WORKSPACE_DIR / ".github" / "roles"
+        assert roles_dir.is_dir()
+        assert (roles_dir / "project-owner-assistant.md").exists()
+
+    @pytest.mark.asyncio
+    async def test_does_not_copy_roles_when_excluded(self):
+        """Should not copy role files when include_roles=False."""
+        await gcp_bootstrap(workspace_path=TEST_WORKSPACE_DIR, include_roles=False)
         
         roles_dir = TEST_WORKSPACE_DIR / ".github" / "roles"
         assert not roles_dir.exists()
