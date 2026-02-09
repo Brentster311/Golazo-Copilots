@@ -106,23 +106,6 @@ class TestStatusBasic:
         assert len(result["role_instructions"]) > 50
 
 
-class TestStatusDoRDoD:
-    """DoR/DoD status tests."""
-
-    @pytest.mark.asyncio
-    async def test_dor_status_initially_incomplete(self):
-        """Should show DoR incomplete initially."""
-        await gcp_create_workitem(work_item_id="dor-status-1", work_items_dir=TEST_WORKITEMS_DIR)
-        
-        result = await gcp_status(
-            work_item_id="dor-status-1",
-            work_items_dir=TEST_WORKITEMS_DIR
-        )
-        
-        assert result["dor"]["complete"] is False
-        assert len(result["dor"]["missing"]) == 4
-
-
 class TestStatusNoWorkItem:
     """No work item tests."""
 
@@ -171,7 +154,7 @@ class TestStatusDeviations:
         await gcp_create_workitem(work_item_id="dev-status-1", work_items_dir=TEST_WORKITEMS_DIR)
         await gcp_consent(
             work_item_id="dev-status-1",
-            action="skip_dor",
+            action="skip_outputs",
             reason="PO approved spike exploration",
             work_items_dir=TEST_WORKITEMS_DIR
         )
@@ -183,7 +166,7 @@ class TestStatusDeviations:
         
         assert "deviations" in result
         assert len(result["deviations"]) == 1
-        assert result["deviations"][0]["action"] == "skip_dor"
+        assert result["deviations"][0]["action"] == "skip_outputs"
         assert result["deviations"][0]["reason"] == "PO approved spike exploration"
 
     @pytest.mark.asyncio

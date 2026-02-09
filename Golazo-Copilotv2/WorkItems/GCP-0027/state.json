@@ -2,10 +2,10 @@
   "schema_version": "1.0",
   "work_item_id": "GCP-0027",
   "profile": "express",
-  "current_phase": "definition",
-  "current_role": "project-owner-assistant",
-  "created_at": "2026-02-08T03:37:38.680732Z",
-  "updated_at": "2026-02-08T03:37:38.680732Z",
+  "current_phase": "completion",
+  "current_role": "retrospective",
+  "created_at": "2026-02-09T05:19:34.632606Z",
+  "updated_at": "2026-02-09T05:43:42.458131Z",
   "dor": {
     "userStory": {
       "complete": false,
@@ -68,9 +68,59 @@
   "role_history": [
     {
       "role": "project-owner-assistant",
-      "entered_at": "2026-02-08T03:37:38.680732Z",
+      "entered_at": "2026-02-09T05:19:34.632606Z",
+      "exited_at": "2026-02-09T05:20:23.619719Z"
+    },
+    {
+      "role": "program-manager",
+      "entered_at": "2026-02-09T05:20:23.619719Z",
+      "exited_at": "2026-02-09T05:32:40.051233Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-02-09T05:32:40.051233Z",
+      "exited_at": "2026-02-09T05:33:32.114341Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-02-09T05:33:32.114341Z",
+      "exited_at": "2026-02-09T05:36:54.138550Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-02-09T05:36:54.138550Z",
+      "exited_at": "2026-02-09T05:42:41.186302Z"
+    },
+    {
+      "role": "refactor-expert",
+      "entered_at": "2026-02-09T05:42:41.186302Z",
+      "exited_at": "2026-02-09T05:42:55.677778Z"
+    },
+    {
+      "role": "documentor",
+      "entered_at": "2026-02-09T05:42:55.677778Z",
+      "exited_at": "2026-02-09T05:43:18.673139Z"
+    },
+    {
+      "role": "builder",
+      "entered_at": "2026-02-09T05:43:18.673139Z",
+      "exited_at": "2026-02-09T05:43:42.458131Z"
+    },
+    {
+      "role": "retrospective",
+      "entered_at": "2026-02-09T05:43:42.458131Z",
       "exited_at": null
     }
   ],
-  "deviations": []
+  "deviations": [
+    {
+      "id": "dev-001",
+      "action": "skip_dor",
+      "reason": "DoR checklist items (userStory, designDoc, reviewComments, testCases) cannot be marked because gcp_mark_dor was removed. All actual artifacts exist (user story, design doc, review comments, test cases are all created). The DoR gate itself is legacy from the old mark-tool system that GCP-0027 is cleaning up.",
+      "role": "architect",
+      "timestamp": "2026-02-09T05:36:51.344976Z",
+      "consumed": true,
+      "consumed_at": "2026-02-09T05:36:54.138185Z"
+    }
+  ]
 }

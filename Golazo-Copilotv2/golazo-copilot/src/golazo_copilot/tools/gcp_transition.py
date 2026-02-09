@@ -10,8 +10,6 @@ from ..core.transitions import (
     validate_transition,
     is_backward_transition,
     get_phase_for_role,
-    check_dor_gate,
-    DOR_GATE_ROLE,
 )
 from ..core.output_validator import parse_required_outputs, validate_all_outputs
 from ..roles.loader import load_role_instructions, get_role_content
@@ -60,7 +58,7 @@ async def gcp_transition(
         role: Target role to transition to
         work_items_dir: Directory for work items
         project_root: Project root for local role overrides
-        force: Force transition even if DoR gates not met (requires prior consent)
+        force: Force transition even if output gates not met (requires prior consent)
         force_without_notes: Force transition even if role notes missing (requires prior consent)
     
     Returns:
@@ -97,27 +95,6 @@ async def gcp_transition(
     valid, error = validate_transition(current_role, role)
     if not valid:
         return {"success": False, "error": error}
-    
-    # Check DoR gate if transitioning to developer
-    if role == DOR_GATE_ROLE:
-        dor_complete, missing = check_dor_gate(state.dor)
-        if not dor_complete:
-            if force:
-                # Check for consent
-                if not has_valid_consent(state, "skip_dor"):
-                    return {
-                        "success": False,
-                        "error": "Cannot force transition without recorded consent. Call gcp_consent first.",
-                        "missing": missing,
-                    }
-                # Consume the consent
-                consume_consent(state, "skip_dor")
-            else:
-                return {
-                    "success": False,
-                    "error": "DoR must be complete before Development phase",
-                    "missing": missing,
-                }
     
     # Check if backward transition
     backward = is_backward_transition(current_role, role)
@@ -162,21 +139,21 @@ async def gcp_transition(
             missing_outputs = [o["spec"].path_or_pattern for o in validation_result.outputs if not o["valid"]]
             if force:
                 # Check for consent to skip outputs
-                if not has_valid_consent(state, "skip_dor"):
+                if not has_valid_consent(state, "skip_outputs"):
                     return {
                         "success": False,
-                        "error": "Cannot force transition without recorded consent. Call gcp_consent(action='skip_dor') first.",
+                        "error": "Cannot force transition without recorded consent. Call gcp_consent(action='skip_outputs') first.",
                         "missing_outputs": missing_outputs,
                     }
                 # Consume the consent
-                consume_consent(state, "skip_dor")
+                consume_consent(state, "skip_outputs")
                 save_state(work_item_id, state, work_items_dir)
             else:
                 return {
                     "success": False,
                     "error": f"Cannot transition from '{current_role}': {validation_result.message}",
                     "missing_outputs": missing_outputs,
-                    "hint": "Create the missing outputs, or use force=True with prior gcp_consent(action='skip_dor')",
+                    "hint": "Create the missing outputs, or use force=True with prior gcp_consent(action='skip_outputs')",
                 }
     
     # Update state

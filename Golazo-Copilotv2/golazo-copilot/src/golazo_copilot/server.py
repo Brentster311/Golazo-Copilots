@@ -102,7 +102,7 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="gcp_status",
-            description="Get comprehensive workflow status for a work item. Returns current role, phase, DoR/DoD checklist status, next steps, deviations, and the Golazo Copilot version number. Use this to check the installed Golazo version.",
+            description="Get comprehensive workflow status for a work item. Returns current role, phase, required outputs, next steps, deviations, and the Golazo Copilot version number. Use this to check the installed Golazo version.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -154,7 +154,7 @@ async def list_tools() -> list[Tool]:
                     },
                     "action": {
                         "type": "string",
-                        "enum": ["skip_dor", "skip_dod", "skip_role", "revert_progress", "custom"],
+                        "enum": ["skip_outputs", "skip_role", "revert_progress", "custom"],
                         "description": "Type of deviation being consented to"
                     },
                     "reason": {
@@ -215,10 +215,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 {result['role_instructions']}
 """
         else:
-            missing = ""
-            if result.get("missing"):
-                missing = f"\n\n**Missing DoR items:** {', '.join(result['missing'])}"
-            content = f"{ICON_FAIL} Transition failed: {result['error']}{missing}"
+            content = f"{ICON_FAIL} Transition failed: {result['error']}"
         
         return [TextContent(type="text", text=content)]
     
@@ -230,13 +227,19 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         )
         
         if result.get("active", False):
-            dor_count = sum(1 for v in result["dor"]["items"].values() if v)
-            dor_total = len(result["dor"]["items"])
-            dod_count = sum(1 for v in result["dod"]["items"].values() if v)
-            dod_total = len(result["dod"]["items"])
-            
-            dor_status = f"{ICON_OK} Complete" if result["dor"]["complete"] else f"{ICON_PENDING} {dor_count}/{dor_total}"
-            dod_status = f"{ICON_OK} Complete" if result["dod"]["complete"] else f"{ICON_PENDING} {dod_count}/{dod_total}"
+            # GCP-0027: Format required outputs section
+            outputs_section = ""
+            req_outputs = result.get("required_outputs", {})
+            output_list = req_outputs.get("outputs", [])
+            if output_list:
+                out_valid = sum(1 for o in output_list if o["valid"])
+                out_total = len(output_list)
+                out_status = f"{ICON_OK} Complete" if req_outputs.get("complete") else f"{ICON_PENDING} {out_valid}/{out_total}"
+                out_lines = []
+                for o in output_list:
+                    icon = ICON_CHECK if o["valid"] else ICON_EMPTY
+                    out_lines.append(f"  {icon} {o['path']}")
+                outputs_section = f"\n- Required Outputs: {out_status}\n" + "\n".join(out_lines)
             
             next_steps = "\n".join(f"- {step}" for step in result["next_steps"])
             
@@ -252,9 +255,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             content = f"""**Golazo Status** (v{result['version']})
 - Work Item: {result['work_item_id']}
 - Current Role: **{result['current_role']}**
-- Phase: {result['current_phase']}
-- DoR: {dor_status}
-- DoD: {dod_status}{deviations_section}
+- Phase: {result['current_phase']}{outputs_section}{deviations_section}
 
 **Next Steps:**
 {next_steps}

@@ -4,7 +4,6 @@ from pathlib import Path
 
 from .. import __version__
 from ..core.persistence import load_state, work_item_exists, DEFAULT_WORKITEMS_DIR
-from ..core.checklists import get_missing_items, is_checklist_complete
 from ..core.output_validator import parse_required_outputs, validate_all_outputs
 from ..roles.loader import load_role_instructions, get_role_content
 from .gcp_transition import get_role_notes_path
@@ -40,16 +39,26 @@ async def gcp_status(
     # Load role instructions
     role_instructions = load_role_instructions(state.current_role, project_root)
     
-    # Build DoR status
-    dor_missing = get_missing_items(state.dor)
-    dor_complete = is_checklist_complete(state.dor)
+    # GCP-0025: Validate required outputs for current role
+    # (Moved before _generate_next_steps so remediation can be included — AR-1)
+    workspace_root = work_items_dir.parent
+    role_content = get_role_content(state.current_role, workspace_root)
+    output_specs = parse_required_outputs(role_content, work_item_id)
     
-    # Build DoD status
-    dod_missing = get_missing_items(state.dod)
-    dod_complete = is_checklist_complete(state.dod)
+    required_outputs = []
+    outputs_complete = True
+    if output_specs:
+        validation_result = validate_all_outputs(output_specs, workspace_root)
+        outputs_complete = validation_result.valid
+        for output in validation_result.outputs:
+            required_outputs.append({
+                "path": output["spec"].path_or_pattern,
+                "type": output["spec"].type,
+                "valid": output["valid"],
+            })
     
-    # Generate next steps
-    next_steps = _generate_next_steps(state, dor_complete, dod_complete, dor_missing)
+    # Generate next steps (with output remediation — GCP-0027)
+    next_steps = _generate_next_steps(state, required_outputs)
     
     # Build deviations list
     deviations = [
@@ -74,27 +83,6 @@ async def gcp_status(
                     missing_notes.append(entry.role)
                 seen_roles.add(entry.role)
     
-    # GCP-0025: Validate required outputs for current role
-    workspace_root = work_items_dir.parent
-    role_content = get_role_content(state.current_role, workspace_root)
-    output_specs = parse_required_outputs(role_content, work_item_id)
-    
-    required_outputs = []
-    outputs_complete = True
-    if output_specs:
-        validation_result = validate_all_outputs(output_specs, workspace_root)
-        outputs_complete = validation_result.valid
-        for output in validation_result.outputs:
-            required_outputs.append({
-                "path": output["spec"].path_or_pattern,
-                "type": output["spec"].type,
-                "valid": output["valid"],
-            })
-    
-    # Build simplified items view (just complete status, not full ChecklistItem)
-    dor_items = {k: v.complete for k, v in state.dor.items()}
-    dod_items = {k: v.complete for k, v in state.dod.items()}
-    
     return {
         "active": True,
         "version": __version__,
@@ -102,16 +90,6 @@ async def gcp_status(
         "profile": state.profile,
         "current_phase": state.current_phase,
         "current_role": state.current_role,
-        "dor": {
-            "complete": dor_complete,
-            "items": dor_items,
-            "missing": dor_missing,
-        },
-        "dod": {
-            "complete": dod_complete,
-            "items": dod_items,
-            "missing": dod_missing,
-        },
         "required_outputs": {
             "complete": outputs_complete,
             "outputs": required_outputs,
@@ -123,33 +101,41 @@ async def gcp_status(
     }
 
 
-def _generate_next_steps(state, dor_complete: bool, dod_complete: bool, dor_missing: list[str]) -> list[str]:
-    """Generate intelligent next steps based on current state."""
+def _generate_next_steps(
+    state,
+    required_outputs: list[dict] | None = None,
+) -> list[str]:
+    """Generate intelligent next steps based on current state.
+    
+    Args:
+        state: Current work item state
+        required_outputs: List of output dicts with path/type/valid keys (GCP-0027)
+    """
     steps = []
     
+    # GCP-0027: Add remediation for missing required outputs
+    _REMEDIATION_VERBS = {"file": "Create file", "dir": "Create directory"}
+    if required_outputs:
+        for output in required_outputs:
+            if not output["valid"]:
+                verb = _REMEDIATION_VERBS.get(output["type"], f"Ensure {output['type']}")
+                steps.append(f"{verb}: {output['path']}")
+    
     if state.current_phase == "definition":
-        if not dor_complete:
-            for item in dor_missing:
-                steps.append(f"Complete {item}")
-            steps.append("Then transition to next role")
-        else:
-            steps.append("DoR complete - ready to transition to developer")
+        steps.append("Complete current role responsibilities, then transition to next role")
     
     elif state.current_phase == "development":
         if state.current_role == "developer":
             steps.append("Implement feature following TDD")
-            steps.append("Mark testsWrittenFirst when tests are written")
         elif state.current_role == "refactor-expert":
             steps.append("Review code for refactoring opportunities")
-            steps.append("Mark refactorComplete when done")
-        elif state.current_role == "builder":
-            steps.append("Build and verify")
-            steps.append("Mark buildPasses when build succeeds")
     
     elif state.current_phase == "completion":
-        if not dod_complete:
-            steps.append("Complete remaining DoD items")
-        else:
-            steps.append("DoD complete - work item finished!")
+        if state.current_role == "documentor":
+            steps.append("Update documentation")
+        elif state.current_role == "builder":
+            steps.append("Build and verify")
+        elif state.current_role == "retrospective":
+            steps.append("Conduct retrospective")
     
     return steps if steps else ["Continue with current role responsibilities"]
