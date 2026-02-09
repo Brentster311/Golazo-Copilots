@@ -297,3 +297,203 @@ class TestTruncate:
 
     def test_none_value(self):
         assert _truncate(None, 100) == ""
+
+
+# ── SFI-021: URL Content Enrichment Tests ─────────────────────────────
+
+class TestFetchActionItemUrls:
+    """TC-21-1 through TC-21-9: fetch_action_item_urls() function."""
+
+    ITEM_ALL_URLS = {
+        "id": "AI-99999",
+        "title": "Test item",
+        "ResourceURIs": "https://example.com/resource",
+        "ActionWikiLink": "https://wiki.example.com/page",
+        "CustomGroupingLink": "https://example.com/group",
+        "AssetTypeLink0": "https://example.com/asset0",
+        "AssetTypeLink1": "https://example.com/asset1",
+        "AssetTypeLink2": "https://example.com/asset2",
+    }
+
+    def test_extracts_all_url_fields(self, mocker):
+        """TC-21-1: All 6 URL fields are extracted and fetched."""
+        from sfi_reporter.llm_client import fetch_action_item_urls
+
+        mock_fetch = mocker.patch(
+            "sfi_reporter.llm_client.fetch_url",
+            return_value="content",
+        )
+
+        result = fetch_action_item_urls(self.ITEM_ALL_URLS)
+
+        assert len(result) == 6, f"Expected 6 URLs fetched, got {len(result)}"
+        assert mock_fetch.call_count == 6
+
+    def test_skips_empty_url_fields(self, mocker):
+        """TC-21-2: Only non-empty URL fields are fetched."""
+        from sfi_reporter.llm_client import fetch_action_item_urls
+
+        item = {
+            "id": "AI-99999",
+            "title": "Sparse item",
+            "ActionWikiLink": "https://wiki.example.com/page",
+            "ResourceURIs": "",
+            "CustomGroupingLink": None,
+        }
+
+        mock_fetch = mocker.patch(
+            "sfi_reporter.llm_client.fetch_url",
+            return_value="wiki content",
+        )
+
+        result = fetch_action_item_urls(item)
+
+        assert len(result) == 1, f"Expected 1 URL fetched for sparse item, got {len(result)}"
+        assert mock_fetch.call_count == 1
+        assert result["https://wiki.example.com/page"] == "wiki content"
+
+    def test_timed_out_url_skipped(self, mocker):
+        """TC-21-4: Timed-out URL is skipped, successful URL retained."""
+        from sfi_reporter.llm_client import fetch_action_item_urls
+        from llm_extender.exceptions import ProviderError
+
+        def side_effect(url, **kwargs):
+            if "wiki" in url:
+                return "good content"
+            raise ProviderError("timed out")
+
+        mocker.patch(
+            "sfi_reporter.llm_client.fetch_url",
+            side_effect=side_effect,
+        )
+
+        item = {
+            "ActionWikiLink": "https://wiki.example.com/page",
+            "ResourceURIs": "https://example.com/timeout",
+        }
+
+        result = fetch_action_item_urls(item)
+
+        assert len(result) == 1, "Timed out URL should be skipped, not raise"
+        assert "https://wiki.example.com/page" in result
+
+    def test_all_urls_fail_returns_empty(self, mocker):
+        """TC-21-5: When all URLs fail, returns empty dict."""
+        from sfi_reporter.llm_client import fetch_action_item_urls
+        from llm_extender.exceptions import ProviderError
+
+        mocker.patch(
+            "sfi_reporter.llm_client.fetch_url",
+            side_effect=ProviderError("error"),
+        )
+
+        item = {
+            "ActionWikiLink": "https://fail1.example.com",
+            "ResourceURIs": "https://fail2.example.com",
+        }
+
+        result = fetch_action_item_urls(item)
+
+        assert result == {}, "All-fail scenario should return empty dict"
+
+    def test_auth_gated_url_skipped(self, mocker):
+        """TC-21-6: 401/403 auth-gated URLs are skipped gracefully."""
+        from sfi_reporter.llm_client import fetch_action_item_urls
+        from llm_extender.exceptions import ProviderError
+
+        mocker.patch(
+            "sfi_reporter.llm_client.fetch_url",
+            side_effect=ProviderError("HTTP 403"),
+        )
+
+        item = {"ActionWikiLink": "https://auth-gated.example.com"}
+
+        result = fetch_action_item_urls(item)
+
+        assert result == {}, "Auth-gated URL should be skipped gracefully"
+
+    def test_resource_uris_multiple_urls(self, mocker):
+        """TC-21-8: ResourceURIs with multiple semicolon-separated URLs."""
+        from sfi_reporter.llm_client import fetch_action_item_urls
+
+        mocker.patch(
+            "sfi_reporter.llm_client.fetch_url",
+            return_value="content",
+        )
+
+        item = {"ResourceURIs": "https://a.com/1;https://b.com/2"}
+
+        result = fetch_action_item_urls(item)
+
+        assert len(result) == 2, f"Multiple ResourceURIs should be split and fetched, got {len(result)}"
+
+    def test_no_url_fields_returns_empty(self, mocker):
+        """TC-21-9: Item with no URL fields returns empty dict."""
+        from sfi_reporter.llm_client import fetch_action_item_urls
+
+        mock_fetch = mocker.patch(
+            "sfi_reporter.llm_client.fetch_url",
+            return_value="content",
+        )
+
+        item = {"id": "AI-99999", "title": "No URLs here"}
+
+        result = fetch_action_item_urls(item)
+
+        assert result == {}, "Item with no URLs should return empty dict without fetching"
+        assert mock_fetch.call_count == 0
+
+
+class TestBuildPromptURLContentTruncation:
+    """TC-21-7: URL content truncation in prompt."""
+
+    def test_large_url_content_truncated_in_prompt(self):
+        """TC-21-7: Large URL content is truncated in the prompt."""
+        url_content = {"https://example.com/big": "x" * 5000}
+        messages = build_prompt(SAMPLE_ITEM, url_content=url_content)
+        user_msg = messages[1]["content"]
+
+        assert "Additional Context from URLs" in user_msg
+        assert "[truncated]" in user_msg, "Large URL content should be truncated in prompt"
+
+
+class TestAnalyzeItemURLContent:
+    """TC-21-10: analyze_item passes url_content through."""
+
+    def test_url_content_flows_through(self, mocker):
+        """TC-21-10: url_content is passed through to the prompt."""
+        config = LLMConfig(
+            endpoint="https://test.openai.azure.com/",
+            api_key="test-key",
+            deployment="gpt-4o",
+        )
+
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = (
+            "### 🎯 Mission\nDo stuff.\n\n"
+            "### ✅ Steps to Done\n1. Step.\n\n"
+            "### 🔧 Resources Needing Repair\nRes.\n\n"
+            "### ⚠️ Risk of Delay\nRisk.\n"
+        )
+        mock_response.usage = MagicMock()
+        mock_response.usage.prompt_tokens = 500
+        mock_response.usage.completion_tokens = 200
+
+        mock_client_cls = mocker.patch("sfi_reporter.llm_client.AzureOpenAI", create=True)
+        mocker.patch.dict("sys.modules", {"openai": MagicMock(AzureOpenAI=mock_client_cls)})
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = mock_response
+        mock_client_cls.return_value = mock_client
+
+        url_content = {"https://wiki.example.com": "Wiki page about remediation steps."}
+
+        result = analyze_item(SAMPLE_ITEM, config, url_content=url_content)
+
+        # Verify the prompt sent to OpenAI contained URL content
+        call_args = mock_client.chat.completions.create.call_args
+        messages = call_args.kwargs.get("messages") or call_args[1].get("messages")
+        user_msg = messages[1]["content"]
+
+        assert "Additional Context from URLs" in user_msg, "url_content should flow through analyze_item to the prompt"
+        assert "Wiki page about remediation" in user_msg
