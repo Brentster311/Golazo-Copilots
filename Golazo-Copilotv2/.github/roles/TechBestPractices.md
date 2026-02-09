@@ -68,18 +68,6 @@ df = handler.GetDataFrameFromKustoQuery(
 
 ---
 
-## Git & Version Control
-
-*(Add Git best practices here)*
-
----
-
-## Testing
-
-*(Add testing best practices here)*
-
----
-
 ## How to Add New Best Practices
 
 1. Add a clear heading under the appropriate category
