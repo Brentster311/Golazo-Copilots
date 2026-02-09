@@ -16,7 +16,7 @@ from sfi_reporter.cache import (
     clear_cache,
 )
 from sfi_reporter.data import get_current_user_alias
-from sfi_reporter.llm_client import LLMConfig, LLMConfigError, LLMError, analyze_item, AnalysisResult
+from sfi_reporter.llm_client import LLMConfig, LLMConfigError, LLMError, analyze_item, fetch_action_item_urls, AnalysisResult
 from sfi_reporter.llm_storage import save_analysis, load_analysis, analysis_exists
 from sfi_reporter.logging_config import setup_logging, get_log_path, patch_subprocess_windows
 
@@ -3067,8 +3067,11 @@ def _launch_llm_analysis(parent, item: dict):
 
     def do_analysis():
         try:
+            root.after(0, lambda: progress.update_status("Fetching URL context..."))
+            url_content = fetch_action_item_urls(item)
+
             root.after(0, lambda: progress.update_status("Calling Azure OpenAI..."))
-            result = analyze_item(item, config)
+            result = analyze_item(item, config, url_content=url_content or None)
 
             root.after(0, lambda: progress.update_status("Saving result..."))
             try:
