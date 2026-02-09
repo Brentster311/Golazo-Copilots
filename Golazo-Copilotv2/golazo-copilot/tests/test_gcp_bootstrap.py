@@ -221,7 +221,7 @@ class TestBootstrapVersionConsistency:
         await gcp_bootstrap(workspace_path=TEST_WORKSPACE_DIR)
         
         content = (TEST_WORKSPACE_DIR / ".github" / "copilot-instructions.md").read_text()
-        assert f"Version: {__version__}" in content
+        assert f"Last Updated in Golazo Copilot Version: {__version__}" in content
 
     def test_role_loader_updates_version(self):
         """Role loader should update version comments to current version."""
@@ -229,4 +229,4 @@ class TestBootstrapVersionConsistency:
         from golazo_copilot.roles.loader import load_default_role
         
         content = load_default_role("developer")
-        assert f"Golazo Version: {__version__}" in content
+        assert f"Last Updated in Golazo Copilot Version: {__version__}" in content

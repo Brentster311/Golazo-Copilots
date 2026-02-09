@@ -261,7 +261,7 @@ class TestVersionSync:
         instructions_dir = tmp_path / ".github"
         instructions_dir.mkdir(parents=True)
         (instructions_dir / "copilot-instructions.md").write_text(
-            f"<!-- Golazo Copilot Version: {__version__} -->\n# Instructions"
+            f"<!-- Last Updated in Golazo Copilot Version: {__version__} -->\n# Instructions"
         )
         result = _get_deployed_version(tmp_path)
         assert result == __version__
@@ -271,7 +271,7 @@ class TestVersionSync:
         instructions_dir = tmp_path / ".github"
         instructions_dir.mkdir(parents=True)
         (instructions_dir / "copilot-instructions.md").write_text(
-            "<!-- Golazo Copilot Version: 1.0.0 -->\n# Instructions"
+            "<!-- Last Updated in Golazo Copilot Version: 1.0.0 -->\n# Instructions"
         )
         result = _get_deployed_version(tmp_path)
         assert result == "1.0.0"
@@ -302,7 +302,7 @@ class TestVersionSync:
         instructions_dir = workspace_root / ".github"
         instructions_dir.mkdir(parents=True, exist_ok=True)
         instructions_file = instructions_dir / "copilot-instructions.md"
-        instructions_file.write_text("<!-- Golazo Copilot Version: 0.0.1 -->\n# Old")
+        instructions_file.write_text("<!-- Last Updated in Golazo Copilot Version: 0.0.1 -->\n# Old")
 
         try:
             result = await gcp_status(
@@ -316,7 +316,7 @@ class TestVersionSync:
         finally:
             # Restore the real instructions file if needed
             instructions_file.write_text(
-                f"<!-- Golazo Copilot Version: {__version__} -->\n# Restored"
+                f"<!-- Last Updated in Golazo Copilot Version: {__version__} -->\n# Restored"
             )
 
     @pytest.mark.asyncio
@@ -331,7 +331,7 @@ class TestVersionSync:
         instructions_dir.mkdir(parents=True, exist_ok=True)
         instructions_file = instructions_dir / "copilot-instructions.md"
         instructions_file.write_text(
-            f"<!-- Golazo Copilot Version: {__version__} -->\n# Current"
+            f"<!-- Last Updated in Golazo Copilot Version: {__version__} -->\n# Current"
         )
 
         result = await gcp_status(
