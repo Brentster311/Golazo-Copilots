@@ -1,0 +1,111 @@
+{
+  "schema_version": "1.0",
+  "work_item_id": "SFI-021",
+  "profile": "complete",
+  "current_phase": "completion",
+  "current_role": "builder",
+  "created_at": "2026-02-09T03:36:48.836146Z",
+  "updated_at": "2026-02-09T04:28:23.917542Z",
+  "dor": {
+    "userStory": {
+      "complete": true,
+      "evidence": "WorkItems/SFI-021/SFI-021-User-Story.md",
+      "validated_at": "2026-02-09T03:36:55.834799Z"
+    },
+    "designDoc": {
+      "complete": true,
+      "evidence": "WorkItems/SFI-021/Design/SFI-021-design-doc.md",
+      "validated_at": "2026-02-09T03:37:57.561566Z"
+    },
+    "reviewComments": {
+      "complete": true,
+      "evidence": "WorkItems/SFI-021/Design/SFI-021-Review-Comments.md",
+      "validated_at": "2026-02-09T03:38:54.444197Z"
+    },
+    "testCases": {
+      "complete": true,
+      "evidence": "WorkItems/SFI-021/Design/SFI-021-Test-Cases.md",
+      "validated_at": "2026-02-09T03:38:54.444197Z"
+    }
+  },
+  "dod": {
+    "branchCreated": {
+      "complete": false,
+      "evidence": null,
+      "validated_at": null
+    },
+    "testsWrittenFirst": {
+      "complete": false,
+      "evidence": null,
+      "validated_at": null
+    },
+    "testsPass": {
+      "complete": false,
+      "evidence": null,
+      "validated_at": null
+    },
+    "buildPasses": {
+      "complete": false,
+      "evidence": null,
+      "validated_at": null
+    },
+    "docsUpdated": {
+      "complete": false,
+      "evidence": null,
+      "validated_at": null
+    },
+    "refactorComplete": {
+      "complete": false,
+      "evidence": null,
+      "validated_at": null
+    },
+    "committed": {
+      "complete": false,
+      "evidence": null,
+      "validated_at": null
+    }
+  },
+  "role_history": [
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-02-09T03:36:48.836146Z",
+      "exited_at": "2026-02-09T03:36:55.834799Z"
+    },
+    {
+      "role": "program-manager",
+      "entered_at": "2026-02-09T03:36:55.834799Z",
+      "exited_at": "2026-02-09T03:37:57.561566Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-02-09T03:37:57.561566Z",
+      "exited_at": "2026-02-09T03:38:54.444197Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-02-09T03:38:54.444197Z",
+      "exited_at": "2026-02-09T03:40:44.378988Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-02-09T03:40:44.378988Z",
+      "exited_at": "2026-02-09T04:27:19.561470Z"
+    },
+    {
+      "role": "refactor-expert",
+      "entered_at": "2026-02-09T04:27:19.561470Z",
+      "exited_at": "2026-02-09T04:27:58.096812Z"
+    },
+    {
+      "role": "documentor",
+      "entered_at": "2026-02-09T04:27:58.096812Z",
+      "exited_at": "2026-02-09T04:28:23.917542Z"
+    },
+    {
+      "role": "builder",
+      "entered_at": "2026-02-09T04:28:23.917542Z",
+      "exited_at": null
+    }
+  ],
+  "deviations": []
+}

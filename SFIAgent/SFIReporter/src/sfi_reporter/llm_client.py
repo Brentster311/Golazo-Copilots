@@ -4,8 +4,13 @@ Provides configuration, prompt building, and API call functionality.
 """
 import logging
 import os
+import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+
+from llm_extender.exceptions import ProviderError
+from llm_extender.url_fetcher import fetch_url
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +130,84 @@ def _truncate(text: str, max_chars: int = 2000) -> str:
     if not text or len(text) <= max_chars:
         return text or ""
     return text[:max_chars] + "... [truncated]"
+
+
+# ── SFI-021: URL Content Enrichment ───────────────────────────────────
+
+# Fields that may contain URLs to fetch for LLM context enrichment.
+_SINGLE_URL_FIELDS = (
+    "ActionWikiLink",
+    "CustomGroupingLink",
+    "AssetTypeLink0",
+    "AssetTypeLink1",
+    "AssetTypeLink2",
+)
+
+_RESOURCE_URI_SPLIT_RE = re.compile(r"[;\s,]+")
+
+
+def _extract_urls(item: dict) -> list[str]:
+    """Extract unique, non-empty URLs from known action-item fields."""
+    urls: list[str] = []
+    seen: set[str] = set()
+
+    # ResourceURIs can contain multiple URLs separated by ; , or whitespace
+    raw_uris = item.get("ResourceURIs") or ""
+    if raw_uris:
+        for part in _RESOURCE_URI_SPLIT_RE.split(str(raw_uris).strip()):
+            part = part.strip()
+            if part and part not in seen:
+                urls.append(part)
+                seen.add(part)
+
+    # Single-value URL fields
+    for field_name in _SINGLE_URL_FIELDS:
+        val = item.get(field_name) or ""
+        if val:
+            val = str(val).strip()
+            if val and val not in seen:
+                urls.append(val)
+                seen.add(val)
+
+    return urls
+
+
+def fetch_action_item_urls(item: dict) -> dict[str, str]:
+    """Fetch content from URLs embedded in an action item.
+
+    Extracts URLs from ResourceURIs, ActionWikiLink, CustomGroupingLink,
+    and AssetTypeLink0/1/2. Each URL is fetched concurrently using
+    llm-extender's ``fetch_url``.  Failed or timed-out URLs are silently
+    skipped.
+
+    Args:
+        item: Action item data dict.
+
+    Returns:
+        Mapping of URL → fetched text content (only successful fetches).
+    """
+    urls = _extract_urls(item)
+    if not urls:
+        return {}
+
+    results: dict[str, str] = {}
+
+    def _fetch_one(url: str) -> tuple[str, str | None]:
+        try:
+            content = fetch_url(url, timeout=10, max_length=1500)
+            return url, content
+        except Exception as exc:
+            logger.debug("URL fetch failed for %s: %s", url, exc)
+            return url, None
+
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        futures = {executor.submit(_fetch_one, url): url for url in urls}
+        for future in as_completed(futures):
+            url, content = future.result()
+            if content is not None:
+                results[url] = content
+
+    return results
 
 
 def _format_item_for_prompt(item: dict) -> str:
