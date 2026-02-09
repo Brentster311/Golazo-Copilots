@@ -10,7 +10,7 @@ from ..core.transitions import ROLE_ORDER
 from ..roles.loader import load_role_instructions, get_role_content
 from .gcp_transition import get_role_notes_path
 
-_VERSION_PATTERN = re.compile(r'<!-- Golazo Copilot Version: ([\d.]+) -->')
+_VERSION_PATTERN = re.compile(r'<!-- Last Updated in Golazo Copilot Version: ([\d.]+) -->')
 
 
 def _get_deployed_version(workspace_root: Path) -> str | None:

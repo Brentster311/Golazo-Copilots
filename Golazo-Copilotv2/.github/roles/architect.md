@@ -1,4 +1,4 @@
-<!-- Golazo Version: 2.100.2 -->
+<!-- Last Updated in Golazo Copilot Version: 2.100.10 -->
 # Role: Architect
 
 ## Purpose

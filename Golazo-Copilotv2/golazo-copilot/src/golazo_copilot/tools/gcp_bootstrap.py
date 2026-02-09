@@ -39,17 +39,10 @@ def _get_default_instructions() -> str:
         # Fall back to hardcoded if not found
         bootstrap_file = files.joinpath("bootstrap-instructions.md")
         content = bootstrap_file.read_text(encoding="utf-8")
-        # Update version comment if present
-        import re
-        content = re.sub(
-            r'<!-- Golazo Copilot Version: [\d.]+ -->',
-            f'<!-- Golazo Copilot Version: {__version__} -->',
-            content
-        )
         return content
     except (FileNotFoundError, TypeError):
         # Fall back to minimal hardcoded version
-        return f'''<!-- Golazo Copilot Version: {__version__} -->
+        return f'''<!-- Last Updated in Golazo Copilot Version: {__version__} -->
 # Golazo Copilot v2
 
 This workspace uses Golazo Copilot MCP server for workflow management.

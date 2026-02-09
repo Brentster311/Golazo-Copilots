@@ -1,18 +1,12 @@
 """Role instruction loader."""
 
-import re
 from pathlib import Path
 from importlib import resources
 
-from golazo_copilot import __version__
-
 
 def _update_version_comment(content: str) -> str:
-    """Update version comment in role content to match current package version."""
-    # Replace any existing Golazo Version comment with current version
-    pattern = r'<!-- Golazo Version: [\d.]+ -->'
-    replacement = f'<!-- Golazo Version: {__version__} -->'
-    return re.sub(pattern, replacement, content)
+    """Pass through role content unchanged. Version comments are static."""
+    return content
 
 
 def load_role_instructions(role: str, project_root: Path | None = None) -> str:
