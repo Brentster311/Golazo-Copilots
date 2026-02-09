@@ -1,6 +1,6 @@
 # Golazo Copilot
 
-A Model Context Protocol (MCP) server that brings **programmatic workflow enforcement** to GitHub Copilot. Golazo Copilot transforms the Golazo development methodology from markdown-based guidance into a system with:
+A Model Context Protocol (MCP) server that brings **programmatic workflow enforcement** to GitHub Copilot. Golazo Copilot transforms the Golazo development methodology from markdown-based guidance into a system with persistent state, automated gates, and auditable artifacts.
 
 ## What is Golazo?
 
@@ -10,86 +10,50 @@ Golazo is a structured development methodology that ensures high-quality softwar
 
 - **Persistent state tracking** – Workflow progress is saved to `state.json` files, surviving session restarts
 - **Automated role transitions** – Enforce the correct sequence: Project Owner → Program Manager → QA → Architect → Developer → Refactor Expert → Documentor → Builder → Retrospective
-- **Definition of Ready (DoR) gates** – Block development work until user story, design doc, review comments, and test cases are complete
-- **Definition of Done (DoD) tracking** – Track branch creation, tests, builds, docs, and commits
+- **Role-based output validation** – Each role defines required outputs (files, directories) that are automatically validated on transition
 - **Multi-session support** – Switch between work items while preserving context
 - **Workflow profiles** – Choose `complete`, `express`, or `spike` modes based on task complexity
 - **Deviation recording** – Audit trail when gates are bypassed with justification
 - **Role notes enforcement** – Blocks transitions when role decision notes are missing (bypass with consent)
+- **Version sync warning** – Alerts when the deployed workspace instructions don't match the running MCP server version
+- **Role progress display** – Shows completion progress (X/9 roles) for each work item
 
 ### Feature Details
 
 #### Persistent State Tracking
-Each work item maintains its own `state.json` file in the `WorkItems/<id>/` directory. This file records the current role, phase, DoR/DoD checklist status, role history with timestamps, and any deviations. State survives VS Code restarts, allowing you to resume exactly where you left off.
+Each work item maintains its own `state.json` file in the `WorkItems/<id>/` directory. This file records the current role, phase, role history with timestamps, and any deviations. State survives VS Code restarts, allowing you to resume exactly where you left off.
 
 #### Automated Role Transitions
 The Golazo workflow enforces a structured progression through roles:
 1. **Project Owner** – Define the user story and acceptance criteria
-2. **Program Manager** – Break down work, identify dependencies
-3. **Quality Assurance** – Define test cases before development
-4. **Architect** – Create design document, make technical decisions
-5. **Developer** – Implement the solution (requires DoR complete)
+2. **Program Manager** – Break down work, create design document
+3. **Quality Assurance** – Review design, define test cases
+4. **Architect** – Validate architectural alignment, review contracts
+5. **Developer** – Implement the solution with TDD
 6. **Refactor Expert** – Improve code quality without changing behavior
 7. **Documentor** – Update documentation to reflect changes
 8. **Builder** – Verify builds pass, handle CI/CD concerns
 9. **Retrospective** – Review what worked and what didn't
 
-Transitions are validated—you cannot skip roles or jump directly to Developer without completing earlier phases.
+Transitions are validated—you cannot skip roles or jump directly to Developer without completing earlier phases. Backward transitions to any prior role are always allowed.
 
-#### Definition of Ready (DoR) Gates
-Before entering the Development phase, all DoR items must be complete:
-- **User Story** – Clear description of what and why
-- **Design Doc** – Technical approach documented
-- **Review Comments** – Design reviewed and feedback addressed
-- **Test Cases** – How success will be verified
+#### Role-Based Output Validation
+Each role file (in `.github/roles/`) defines a `## Required Outputs` section listing the files or directories that must exist before you can transition away from that role. The system automatically validates these on transition.
 
-The `gcp_transition` tool blocks transitions to Developer until DoR is satisfied (unless consent is recorded).
-
-#### Definition of Done (DoD) Tracking
-Track completion of development work:
-- **Branch Created** – Feature branch exists
-- **Tests Written First** – TDD approach followed
-- **Tests Pass** – All tests green
-- **Refactor Complete** – Code quality improvements documented
-- **Docs Updated** – Documentation reflects changes
-- **Build Passes** – CI/CD pipeline succeeds
-- **Committed** – Changes committed to source control
-- **Retro Complete** – Retrospective analysis documented
-
-#### Evidence-Based Validation (v2.15.0+)
-When marking DoR/DoD items as complete, **evidence is required** to prove the work was done. This prevents claims without proof and creates an audit trail.
-
-```python
-# Without evidence - FAILS
-gcp_mark_dor(work_item_id="GCP-0001", item="userStory")
-# Error: "Missing evidence for 'userStory'. Expected: file path to User Story markdown"
-
-# With evidence - SUCCEEDS
-gcp_mark_dor(work_item_id="GCP-0001", item="userStory", evidence="WorkItems/GCP-0001/GCP-0001-User-Story.md")
+For example, the `project-owner-assistant` role requires:
+```
+## Required Outputs
+- file: WorkItems/{id}/{id}-User-Story.md
+- file: WorkItems/{id}/RoleDecisionNotes/{id}-project-owner-assistant.md
 ```
 
-**Evidence types by item:**
+When you call `gcp_transition`, the system:
+1. Reads the current role's `## Required Outputs` section
+2. Checks that each listed file/directory exists in the workspace
+3. Blocks the transition if any output is missing, with a clear error message listing what's needed
+4. Allows bypass via `gcp_consent` + `force=True` when justified
 
-| Item | Evidence Type | Example |
-|------|---------------|---------|
-| userStory | File path | `WorkItems/GCP-0001/GCP-0001-User-Story.md` |
-| designDoc | File path | `WorkItems/GCP-0001/Design/GCP-0001-design-doc.md` |
-| reviewComments | File path | `WorkItems/GCP-0001/Design/GCP-0001-Review-Comments.md` |
-| testCases | File path | `WorkItems/GCP-0001/Design/GCP-0001-Test-Cases.md` |
-| branchCreated | Git branch name | `feature/GCP-0001` |
-| testsWrittenFirst | File path(s) | `tests/test_feature.py` |
-| testsPass | Command output | `pytest output: 29 passed` |
-| refactorComplete | File path | `WorkItems/GCP-0001/Design/GCP-0001-Refactoring-Plan.md` |
-| docsUpdated | File path(s) | `README.md` |
-| buildPasses | Command output | `Build successful` |
-| committed | Git commit SHA | `abc1234` |
-| retroComplete | File path | `WorkItems/GCP-0001/Design/GCP-0001-Retro-Plan.md` |
-
-Evidence is validated before the state is updated:
-- **File paths** – Must exist in the workspace
-- **Git branches** – Must exist (`git branch --list`)
-- **Git commits** – Must be valid SHA (`git rev-parse`)
-- **Command output** – Must be non-empty string
+This replaces manual checklist marking with automated, file-based validation.
 
 #### Multi-Session Support
 Work on multiple features simultaneously. Each work item has independent state, allowing you to:
@@ -100,23 +64,16 @@ Work on multiple features simultaneously. Each work item has independent state, 
 #### Workflow Profiles
 Choose the right level of process for the task:
 
-**Complete** – Full workflow with all gates enforced
-- All 9 roles in sequence
-- Full DoR required: userStory, designDoc, reviewComments, testCases
-- Full DoD tracked: branchCreated, testsWrittenFirst, testsPass, buildPasses, docsUpdated, refactorComplete, committed
+| Profile | Roles | Use Case |
+|---------|-------|----------|
+| **Complete** | All 9 roles in sequence | Production features, complex changes |
+| **Express** | Streamlined subset of roles | Small bug fixes, minor enhancements |
+| **Spike** | Minimal roles | Prototypes, research, proof-of-concept |
 
-**Express** – Reduced gates for faster iteration
-- Streamlined roles: Project Owner → Architect → Developer → Builder
-- Reduced DoR: userStory, designDoc, testCases (reviewComments optional)
-- Reduced DoD: testsPass, buildPasses, committed
-
-**Spike** – Minimal process for exploration
-- Minimal roles: Developer → Builder
-- No DoR gate (start coding immediately)
-- Minimal DoD: buildPasses only
+All profiles use the same output validation mechanism—role files define what's required, and the system enforces it on transition.
 
 #### Deviation Recording
-When you need to bypass a gate (e.g., skip DoR to explore a spike), the system:
+When you need to bypass a gate (e.g., force a transition when outputs are missing), the system:
 1. Requires explicit consent via `gcp_consent` tool
 2. Records the action, reason, timestamp, and current role
 3. Stores deviations in the work item's `state.json`
@@ -125,11 +82,20 @@ When you need to bypass a gate (e.g., skip DoR to explore a spike), the system:
 #### Role Notes Enforcement
 The Golazo workflow requires every role to produce a decision notes document. The system enforces this by:
 1. **Blocking on transition** – When you transition away from a role, `gcp_transition` checks if decision notes exist for that role. If missing, the transition **fails** with an error indicating the expected file path.
-2. **Force with consent** – If you need to bypass, use `gcp_consent(action='skip_role')` first, then `gcp_transition(..., force_without_notes=True)`.
+2. **Force with consent** – If you need to bypass, use `gcp_consent(action='skip_role')` first, then `gcp_transition(..., force=True)`.
 3. **Status visibility** – `gcp_status` includes a `missing_notes` list showing which completed roles lack decision notes.
 4. **Expected file naming** – Notes should be at `WorkItems/<id>/RoleDecisionNotes/<id>-<role>.md`
 
 This ensures an audit trail of decisions made at each workflow stage.
+
+#### Version Sync Warning
+When you call `gcp_status`, the system compares the running MCP server version against the version comment in your workspace's `.github/copilot-instructions.md`. If they differ, a warning is displayed so you know to re-bootstrap or update the package.
+
+#### Role Progress Display
+`gcp_status` shows how many of the 9 workflow roles have been completed for a work item (e.g., "Role Progress: 4/9 complete"), giving visibility into overall progress.
+
+#### TechBestPractices Reference
+When bootstrapping a workspace, a `.github/roles/TechBestPractices.md` file is deployed alongside the role files. This shared reference document is referenced by the Architect, Developer, and Refactor Expert roles to ensure consistent technical standards.
 
 ## Prerequisites
 
@@ -208,10 +174,8 @@ In GitHub Copilot Chat, ask: *"What MCP tools do you have?"*
 
 You should see the Golazo Copilot tools listed:
 - `gcp_create_workitem` – Initialize a new work item
-- `gcp_status` – Check workflow status  
+- `gcp_status` – Check workflow status
 - `gcp_transition` – Move between roles
-- `gcp_mark_dor` – Mark Definition of Ready items complete
-- `gcp_mark_dod` – Mark Definition of Done items complete
 - `gcp_consent` – Record consent for bypassing workflow gates
 - `gcp_bootstrap` – Bootstrap Golazo instructions in a workspace
 
@@ -222,7 +186,7 @@ In GitHub Copilot Chat, say: *"Please bootstrap GCP"*
 This will create the Golazo Copilot directory structure and instruction files in your workspace:
 - `WorkItems/` – Directory for work item artifacts
 - `.github/copilot-instructions.md` – Workflow enforcement rules for Copilot
-- `.github/roles/` – Role-specific instruction files
+- `.github/roles/` – Role-specific instruction files (including `TechBestPractices.md`)
 
 ## Troubleshooting
 
@@ -263,10 +227,8 @@ If it starts without errors (no output, waiting for input), the server is workin
 | Tool | Description |
 |------|-------------|
 | `gcp_create_workitem` | Initialize a new work item with persistent state tracking |
-| `gcp_status` | Get comprehensive workflow status, including missing role notes |
-| `gcp_transition` | Move between workflow roles (enforces DoR gate, warns on missing notes) |
-| `gcp_mark_dor` | Mark Definition of Ready items as complete |
-| `gcp_mark_dod` | Mark Definition of Done items as complete |
+| `gcp_status` | Get workflow status: current role, required outputs, role progress, version sync |
+| `gcp_transition` | Move between workflow roles (validates required outputs and role notes) |
 | `gcp_consent` | Record consent for bypassing workflow gates |
 | `gcp_bootstrap` | Bootstrap Golazo instructions and directories in a workspace |
 
@@ -281,19 +243,22 @@ If it starts without errors (no output, waiting for input), the server is workin
 ### Example Session
 
 1. **Create a work item:**
-   > "Create work item GCP-0015 using complete profile"
+   > "Create work item GCP-0042 using complete profile"
 
 2. **Check status:**
-   > "What's the status of GCP-0015?"
+   > "What's the status of GCP-0042?"
 
-3. **Mark DoR progress:**
-   > "Mark userStory and designDoc complete for GCP-0015"
+3. **Work through roles — Copilot follows role instructions to create required outputs:**
+   > "Transition GCP-0042 to program-manager"
 
-4. **Transition to next role:**
-   > "Transition GCP-0015 to program-manager"
+4. **If outputs are missing, the transition fails with a clear message:**
+   > `[FAIL] Missing required outputs for 'project-owner-assistant': WorkItems/GCP-0042/GCP-0042-User-Story.md`
 
-5. **When all DoR items are complete, move to development:**
-   > "Transition GCP-0015 to developer"
+5. **Continue through all roles to completion:**
+   > "Transition GCP-0042 to quality-assurance"
+   > "Transition GCP-0042 to architect"
+   > "Transition GCP-0042 to developer"
+   > ... and so on through retrospective
 
 ## Updating
 
@@ -303,7 +268,8 @@ To update to the latest version:
 pip install --upgrade golazo-copilot --index-url https://msazure.pkgs.visualstudio.com/One/_packaging/azinsights_accia_pkgs/pypi/simple/
 ```
 
-Then reload VS Code to pick up the new version.
+Then reload VS Code and re-bootstrap your workspace to pick up the new version:
+> "Please bootstrap GCP with force"
 
 ## License
 
