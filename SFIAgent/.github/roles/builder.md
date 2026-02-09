@@ -37,9 +37,9 @@ Verify the system builds successfully, manage git operations, and ensure the wor
 - Do not modify source code to fix build issues without creating a User Story
 - Do not skip failing builds
 
-## Required outputs
-- Build verification results
-- `WorkItems/<workitem-id>/RoleDecisionNotes/<workitem-id>-builder.md`
+## Required Outputs
+<!-- Build verification results are expected but not validated by path -->
+- file: WorkItems/{id}/RoleDecisionNotes/{id}-builder.md
 
 ## Decision rules
 - Use repository-standard build commands
