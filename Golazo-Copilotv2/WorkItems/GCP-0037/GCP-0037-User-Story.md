@@ -1,6 +1,6 @@
 # GCP-0037: Per-File Stale Version Reporting
 
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 ---
 

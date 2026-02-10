@@ -1,6 +1,7 @@
 """gcp_status tool - Get comprehensive workflow status."""
 
 import re
+from importlib import resources
 from pathlib import Path
 
 from .. import __version__
@@ -12,22 +13,67 @@ from .gcp_transition import get_role_notes_path
 
 _VERSION_PATTERN = re.compile(r'<!-- Last Updated in Golazo Copilot Version: ([\d.]+) -->')
 
+# Mapping: (deployed relative path, source package resource info)
+# Each entry: (deployed_rel_path, package_name, resource_filename)
+_DEPLOYED_TO_SOURCE: list[tuple[str, str, str]] = [
+    (".github/copilot-instructions.md", "golazo_copilot", "bootstrap-instructions.md"),
+    (".github/roles/project-owner-assistant.md", "golazo_copilot.roles.defaults", "project-owner-assistant.md"),
+    (".github/roles/program-manager.md", "golazo_copilot.roles.defaults", "program-manager.md"),
+    (".github/roles/quality-assurance.md", "golazo_copilot.roles.defaults", "quality-assurance.md"),
+    (".github/roles/architect.md", "golazo_copilot.roles.defaults", "architect.md"),
+    (".github/roles/developer.md", "golazo_copilot.roles.defaults", "developer.md"),
+    (".github/roles/refactor-expert.md", "golazo_copilot.roles.defaults", "refactor-expert.md"),
+    (".github/roles/builder.md", "golazo_copilot.roles.defaults", "builder.md"),
+    (".github/roles/documentor.md", "golazo_copilot.roles.defaults", "documentor.md"),
+    (".github/roles/retrospective.md", "golazo_copilot.roles.defaults", "retrospective.md"),
+    (".github/roles/TechBestPractices.md", "golazo_copilot.roles.defaults", "TechBestPractices.md"),
+]
 
-def _get_deployed_version(workspace_root: Path) -> str | None:
-    """Extract the version from the deployed .github/copilot-instructions.md.
-    
-    Returns the version string if found, or None if file is missing
-    or has no version comment.
-    """
+
+def _extract_version(content: str) -> str | None:
+    """Extract version from a version comment in content."""
+    match = _VERSION_PATTERN.search(content)
+    return match.group(1) if match else None
+
+
+def _get_source_version(package_name: str, resource_filename: str) -> str | None:
+    """Read a source file from the installed package and extract its version."""
     try:
-        instructions_file = workspace_root / ".github" / "copilot-instructions.md"
-        if not instructions_file.exists():
-            return None
-        content = instructions_file.read_text(encoding="utf-8")
-        match = _VERSION_PATTERN.search(content)
-        return match.group(1) if match else None
+        files = resources.files(package_name)
+        content = files.joinpath(resource_filename).read_text(encoding="utf-8")
+        return _extract_version(content)
     except Exception:
         return None
+
+
+def _get_stale_files(workspace_root: Path) -> list[dict]:
+    """Compare each deployed file's version against its source counterpart.
+    
+    Returns list of {"file": str, "deployed": str, "source": str} for stale files.
+    Files that are missing, unreadable, or have no version comment are skipped.
+    """
+    stale = []
+    for deployed_rel, pkg_name, res_name in _DEPLOYED_TO_SOURCE:
+        deployed_path = workspace_root / deployed_rel
+        if not deployed_path.exists():
+            continue
+        try:
+            deployed_content = deployed_path.read_text(encoding="utf-8")
+        except Exception:
+            continue
+        deployed_ver = _extract_version(deployed_content)
+        if deployed_ver is None:
+            continue
+        source_ver = _get_source_version(pkg_name, res_name)
+        if source_ver is None:
+            continue
+        if deployed_ver != source_ver:
+            stale.append({
+                "file": deployed_rel.split("/")[-1],
+                "deployed": deployed_ver,
+                "source": source_ver,
+            })
+    return stale
 
 
 def _compute_role_progress(state) -> dict:
@@ -137,12 +183,15 @@ async def gcp_status(
                     missing_notes.append(entry.role)
                 seen_roles.add(entry.role)
     
-    # GCP-0032: Check deployed version vs package version
-    deployed_version = _get_deployed_version(workspace_root)
+    # GCP-0037: Per-file stale version reporting
+    stale_files = _get_stale_files(workspace_root)
     version_warning = None
-    if deployed_version is not None and deployed_version != __version__:
+    if stale_files:
+        details = ", ".join(
+            f"{s['file']} (v{s['deployed']} → v{s['source']})" for s in stale_files
+        )
         version_warning = (
-            f"Workspace instructions are stale (v{deployed_version} != v{__version__}). "
+            f"{len(stale_files)} file(s) are stale: {details}. "
             f"Run gcp_bootstrap to update."
         )
     
