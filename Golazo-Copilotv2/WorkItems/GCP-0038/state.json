@@ -3,9 +3,9 @@
   "work_item_id": "GCP-0038",
   "profile": "complete",
   "current_phase": "completion",
-  "current_role": "builder",
+  "current_role": "retrospective",
   "created_at": "2026-02-10T00:02:07.410605Z",
-  "updated_at": "2026-02-10T04:00:53.587348Z",
+  "updated_at": "2026-02-10T04:01:51.370215Z",
   "role_history": [
     {
       "role": "project-owner-assistant",
@@ -45,6 +45,11 @@
     {
       "role": "builder",
       "entered_at": "2026-02-10T04:00:53.587348Z",
+      "exited_at": "2026-02-10T04:01:51.370215Z"
+    },
+    {
+      "role": "retrospective",
+      "entered_at": "2026-02-10T04:01:51.370215Z",
       "exited_at": null
     }
   ],
