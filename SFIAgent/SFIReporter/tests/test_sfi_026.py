@@ -555,3 +555,73 @@ class TestBackwardCompatibility:
 
         assert "Direct" in result
         assert "Skip" not in result
+
+
+# ---------------------------------------------------------------------------
+# 7. Cache Serialization Round-Trip
+# ---------------------------------------------------------------------------
+
+class TestCacheSerializationRoundTrip:
+    """Verify OrgAncestry and tuple-keyed level2_stats survive JSON cache."""
+
+    def test_org_mapping_round_trip(self):
+        from sfi_reporter.tk_app import (
+            OrgAncestry, _serialize_org_data_for_cache, _deserialize_org_data_from_cache,
+        )
+        data = {
+            'org_mapping': {
+                'brentj': OrgAncestry(level1='Muralic Name', level2='Brent Jensen'),
+                'kehsieh': OrgAncestry(level1='Muralic Name', level2=None),
+            },
+            'level2_stats': {},
+        }
+        serialized = _serialize_org_data_for_cache(data)
+        # Must be JSON-serializable
+        json_str = json.dumps(serialized)
+        deserialized = json.loads(json_str)
+        _deserialize_org_data_from_cache(deserialized)
+        assert isinstance(deserialized['org_mapping']['brentj'], OrgAncestry)
+        assert deserialized['org_mapping']['brentj'].level1 == 'Muralic Name'
+        assert deserialized['org_mapping']['brentj'].level2 == 'Brent Jensen'
+        assert deserialized['org_mapping']['kehsieh'].level2 is None
+
+    def test_level2_stats_round_trip(self):
+        from sfi_reporter.tk_app import (
+            OrgAncestry, _serialize_org_data_for_cache, _deserialize_org_data_from_cache,
+        )
+        data = {
+            'org_mapping': {},
+            'level2_stats': {
+                ('Muralic Name', 'Brent Jensen'): {'count': 5, 'sla': 1, 'invalid_eta': 0},
+                ('Ze Li', 'Ken Hsieh'): {'count': 3, 'sla': 0, 'invalid_eta': 1},
+            },
+        }
+        serialized = _serialize_org_data_for_cache(data)
+        json_str = json.dumps(serialized)
+        deserialized = json.loads(json_str)
+        _deserialize_org_data_from_cache(deserialized)
+        key = ('Muralic Name', 'Brent Jensen')
+        assert key in deserialized['level2_stats']
+        assert deserialized['level2_stats'][key]['count'] == 5
+
+    def test_empty_data_round_trip(self):
+        from sfi_reporter.tk_app import (
+            _serialize_org_data_for_cache, _deserialize_org_data_from_cache,
+        )
+        data = {'org_mapping': {}, 'level2_stats': {}}
+        serialized = _serialize_org_data_for_cache(data)
+        json_str = json.dumps(serialized)
+        deserialized = json.loads(json_str)
+        _deserialize_org_data_from_cache(deserialized)
+        assert deserialized['org_mapping'] == {}
+        assert deserialized['level2_stats'] == {}
+
+    def test_legacy_string_org_mapping_preserved(self):
+        """Legacy string org_mapping (from older caches) is not corrupted."""
+        from sfi_reporter.tk_app import _deserialize_org_data_from_cache
+        data = {
+            'org_mapping': {'brentj': 'Muralic Name'},
+            'level2_stats': {},
+        }
+        _deserialize_org_data_from_cache(data)
+        assert data['org_mapping']['brentj'] == 'Muralic Name'
