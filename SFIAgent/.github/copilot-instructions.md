@@ -1,4 +1,4 @@
-<!-- Golazo Copilot Version: 2.100.8 -->
+<!-- Last Updated in Golazo Copilot Version: 2.102.0 -->
 # Golazo Copilot v2
 
 This workspace uses Golazo Copilot MCP server for workflow management.
@@ -76,3 +76,11 @@ If these files don't exist, transition will fail with a clear error message list
 ## Gate Enforcement
 - **Output Validation Gate**: Cannot transition until all Required Outputs for the current role exist
 - If `gcp_transition` fails, check the error message for the missing file path and create it
+
+---
+
+## Capability Registry (optional)
+
+If a `capabilities.yaml` exists in the project root, use `gcp_capabilities` for impact analysis:
+- `gcp_capabilities(action="list")` — summary of all capabilities
+- `gcp_capabilities(action="impact", files=["path/to/file.py"])` — check which capabilities are affected by a change

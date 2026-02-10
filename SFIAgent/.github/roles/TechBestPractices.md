@@ -1,3 +1,4 @@
+<!-- Last Updated in Golazo Copilot Version: 2.102.0 -->
 # Technical Best Practices
 
 This file contains accumulated technical knowledge to prevent redesigns and common pitfalls.
@@ -65,18 +66,6 @@ df = handler.GetDataFrameFromKustoQuery(
 ```
 
 **Reason:** The `accia-datacollection` package handles caching, retries, and error handling consistently across all ACCIA projects. Using `AlternateAADCredentialsList` with explicit credentials avoids the unpredictable behavior of default credential chains.
-
----
-
-## Git & Version Control
-
-*(Add Git best practices here)*
-
----
-
-## Testing
-
-*(Add testing best practices here)*
 
 ---
 
