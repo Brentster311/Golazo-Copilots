@@ -126,6 +126,21 @@ async def gcp_bootstrap(
     if not gitkeep_path.exists():
         gitkeep_path.write_text("", encoding="utf-8")
         files_created.append("WorkItems/.gitkeep")
+
+    # Create capabilities.yaml from template
+    capabilities_path = workspace_path / "capabilities.yaml"
+    if capabilities_path.exists() and not force:
+        files_skipped.append("capabilities.yaml")
+    else:
+        try:
+            files_pkg = resources.files("golazo_copilot")
+            template = files_pkg.joinpath("capabilities-template.yaml")
+            capabilities_path.write_text(
+                template.read_text(encoding="utf-8"), encoding="utf-8"
+            )
+            files_created.append("capabilities.yaml")
+        except (FileNotFoundError, TypeError):
+            pass  # Graceful degradation if resource missing
     
     # Optionally copy role files
     if include_roles:
