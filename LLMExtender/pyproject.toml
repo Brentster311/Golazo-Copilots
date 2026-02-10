@@ -17,6 +17,11 @@ browser = [
     "playwright>=1.40",
     "msal>=1.20",
 ]
+azure-discover = [
+    "azure-identity>=1.14",
+    "azure-mgmt-cognitiveservices>=13.5",
+    "azure-mgmt-subscription>=3.0",
+]
 
 [build-system]
 requires = ["setuptools>=68.0"]
