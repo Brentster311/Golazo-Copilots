@@ -1,0 +1,276 @@
+# Golazo Copilot — Capability Registry
+#
+# Maps project capabilities to their key files, contracts, and dependencies.
+# The Golazo workflow uses it for impact analysis.
+#
+# Usage:
+#   gcp_capabilities(action="list")       — summary of all capabilities
+#   gcp_capabilities(action="show", capability="<name>")  — full card
+#   gcp_capabilities(action="impact", files=["path/to/file.py"])
+#   gcp_capabilities(action="validate")   — check key_files exist
+
+capabilities:
+
+  # ── Core Client & Config ────────────────────────────────────────────
+  - name: llm-client
+    description: >
+      Provider-agnostic LLM client with sync/async support, context
+      manager protocol, and provider registry dispatch.
+    key_files:
+      - llm_extender/client.py
+      - llm_extender/__init__.py
+    contracts:
+      - "LLMClient.__init__(config: LLMConfig, auth: AuthStrategy | None) -> None"
+      - "LLMClient.complete(prompt: str) -> str"
+      - "LLMClient.acomplete(prompt: str) -> str"
+      - "LLMClient.complete_with_context(prompt, content, source_url) -> str"
+      - "LLMClient.acomplete_with_context(prompt, content, source_url) -> str"
+      - "LLMClient.complete_with_url(prompt, url, ...) -> str"
+      - "LLMClient.acomplete_with_url(prompt, url, ...) -> str"
+      - "LLMClient.discover(**kwargs) -> list[LLMConfig]"
+      - "PROVIDER_REGISTRY: dict[str, type[LLMProvider]]"
+    depends_on:
+      - config
+      - provider-base
+      - auth-base
+      - url-fetcher
+
+  - name: config
+    description: >
+      LLMConfig dataclass holding provider, model, credentials, and
+      connection settings. Security artifacts excluded from repr.
+    key_files:
+      - llm_extender/config.py
+    contracts:
+      - "LLMConfig(provider, model, api_key, base_url, timeout, deployment, api_version)"
+    depends_on: []
+
+  - name: exceptions
+    description: >
+      Exception hierarchy — LLMExtenderError base, plus
+      UnsupportedProviderError, ProviderError, AuthenticationError.
+    key_files:
+      - llm_extender/exceptions.py
+    contracts:
+      - "LLMExtenderError (base)"
+      - "UnsupportedProviderError(LLMExtenderError)"
+      - "ProviderError(LLMExtenderError)"
+      - "AuthenticationError(LLMExtenderError)"
+    depends_on: []
+
+  # ── Provider Layer ──────────────────────────────────────────────────
+  - name: provider-base
+    description: >
+      Abstract LLMProvider base class defining complete/acomplete/close/aclose.
+    key_files:
+      - llm_extender/providers/base.py
+      - llm_extender/providers/__init__.py
+    contracts:
+      - "LLMProvider.complete(prompt: str) -> str  (abstract)"
+      - "LLMProvider.acomplete(prompt: str) -> str  (abstract)"
+      - "LLMProvider.close() -> None  (abstract)"
+      - "LLMProvider.aclose() -> None  (abstract)"
+    depends_on:
+      - exceptions
+
+  - name: provider-openai
+    description: >
+      OpenAI-compatible provider (OpenAI, Together, Groq, LM Studio, etc.)
+      using httpx for sync/async HTTP to /v1/chat/completions.
+    key_files:
+      - llm_extender/providers/openai.py
+    contracts:
+      - "OpenAIProvider(config: LLMConfig)"
+      - "OpenAIProvider.complete(prompt) -> str"
+      - "OpenAIProvider.acomplete(prompt) -> str"
+    depends_on:
+      - provider-base
+      - config
+      - exceptions
+
+  - name: provider-azure-openai
+    description: >
+      Azure OpenAI provider using deployment-based URL format and
+      Bearer token auth via httpx.
+    key_files:
+      - llm_extender/providers/azure_openai.py
+    contracts:
+      - "AzureOpenAIProvider(config: LLMConfig)"
+      - "AzureOpenAIProvider.complete(prompt) -> str"
+      - "AzureOpenAIProvider.acomplete(prompt) -> str"
+    depends_on:
+      - provider-base
+      - config
+      - exceptions
+
+  # ── Auth Layer ──────────────────────────────────────────────────────
+  - name: auth-base
+    description: >
+      Abstract AuthStrategy base class with resolve()/aresolve() contract
+      and repr/str redaction for credential safety.
+    key_files:
+      - llm_extender/auth/base.py
+      - llm_extender/auth/__init__.py
+    contracts:
+      - "AuthStrategy.resolve() -> str  (abstract)"
+      - "AuthStrategy.aresolve() -> str  (abstract)"
+    depends_on:
+      - exceptions
+
+  - name: auth-env-var
+    description: >
+      EnvVarAuth — resolves credentials from a named environment variable.
+    key_files:
+      - llm_extender/auth/env_var.py
+    contracts:
+      - "EnvVarAuth(env_var: str)"
+      - "EnvVarAuth.resolve() -> str"
+    depends_on:
+      - auth-base
+
+  - name: auth-callback
+    description: >
+      CallbackAuth — resolves credentials from a user-supplied sync or
+      async callable.
+    key_files:
+      - llm_extender/auth/callback.py
+    contracts:
+      - "CallbackAuth(callback, async_callback=None)"
+      - "CallbackAuth.resolve() -> str"
+      - "CallbackAuth.aresolve() -> str"
+    depends_on:
+      - auth-base
+
+  - name: auth-msi
+    description: >
+      ManagedIdentityAuth — acquires an Azure AD token via Managed
+      Identity (azure-identity). Sync and async support.
+    key_files:
+      - llm_extender/auth/msi.py
+    contracts:
+      - "ManagedIdentityAuth(scope: str)"
+      - "ManagedIdentityAuth.resolve() -> str"
+      - "ManagedIdentityAuth.aresolve() -> str"
+    depends_on:
+      - auth-base
+
+  - name: auth-azure-chained
+    description: >
+      AzureChainedAuth — tries Azure CLI → Managed Identity → static
+      API key, with explicit failure. Configurable scope for different
+      Azure resources.
+    key_files:
+      - llm_extender/auth/azure_chained.py
+    contracts:
+      - "AzureChainedAuth(scope: str, api_key: str)"
+      - "AzureChainedAuth.resolve() -> str"
+      - "AzureChainedAuth.aresolve() -> str"
+    depends_on:
+      - auth-base
+
+  - name: auth-aad-browser
+    description: >
+      AAD browser authentication helpers — device-code flow via MSAL,
+      AAD redirect detection, JWT claims decoding, and login-wait
+      utilities for headless browsers.
+    key_files:
+      - llm_extender/auth/aad_browser.py
+    contracts:
+      - "is_user_credential(auth: AuthStrategy) -> bool"
+      - "decode_jwt_claims(token: str) -> dict"
+      - "detect_aad_redirect(url: str) -> bool"
+      - "parse_aad_authorize_url(url: str) -> dict"
+      - "run_device_code_flow(tenant_id, scopes, client_id, timeout) -> dict"
+      - "wait_for_aad_login(page, timeout) -> None"
+      - "await_for_aad_login(page, timeout) -> None"
+    depends_on:
+      - auth-base
+      - exceptions
+
+  # ── URL Fetching & Context ──────────────────────────────────────────
+  - name: url-fetcher
+    description: >
+      Sync/async URL content fetcher with HTML-to-text conversion,
+      redirect handling, optional Playwright JS rendering, and
+      browser_auth modes (aad, cdp).
+    key_files:
+      - llm_extender/url_fetcher.py
+    contracts:
+      - "fetch_url(url, auth, timeout, max_length, render_js, browser_auth) -> str"
+      - "afetch_url(url, auth, timeout, max_length, render_js, browser_auth) -> str"
+      - "build_context_prompt(url, content, user_prompt) -> str"
+    depends_on:
+      - auth-base
+      - auth-aad-browser
+      - exceptions
+      - cdp-browser
+
+  - name: cdp-browser
+    description: >
+      CDP browser integration — connects Playwright to the user's real
+      Edge browser via Chrome DevTools Protocol for Conditional Access–
+      protected sites. Windows-only. Sync and async fetch.
+    key_files:
+      - llm_extender/cdp_browser.py
+    contracts:
+      - "_fetch_with_cdp_browser(url, timeout, max_length, cdp_port, login_timeout) -> str"
+      - "_afetch_with_cdp_browser(url, timeout, max_length, cdp_port, login_timeout) -> str"
+      - "_find_edge_executable() -> Path"
+      - "_launch_edge_with_cdp(port, url) -> Popen"
+    depends_on:
+      - auth-aad-browser
+      - exceptions
+
+  # ── Azure Discovery ─────────────────────────────────────────────────
+  - name: azure-discovery
+    description: >
+      Auto-discover Azure OpenAI resources and deployments from Azure
+      CLI credentials. Returns ready-to-use LLMConfig objects.
+    key_files:
+      - llm_extender/discovery.py
+    contracts:
+      - "discover_azure_configs(subscription_id, api_version) -> list[LLMConfig]"
+    depends_on:
+      - config
+
+  # ── Test Suite ──────────────────────────────────────────────────────
+  - name: test-suite
+    description: >
+      Comprehensive pytest test suite covering all capabilities — unit
+      tests, integration tests, and live tests.
+    key_files:
+      - tests/conftest.py
+      - tests/test_client.py
+      - tests/test_url_fetcher.py
+      - tests/test_cdp_browser.py
+      - tests/test_auth_base.py
+      - tests/test_auth_env_var.py
+      - tests/test_auth_callback.py
+      - tests/test_auth_msi.py
+      - tests/test_auth_azure_chained.py
+      - tests/test_auth_security.py
+      - tests/test_auth_client_integration.py
+      - tests/test_browser_aad.py
+      - tests/test_aad_login_wait.py
+      - tests/test_render_js.py
+      - tests/test_discovery.py
+      - tests/test_context_api.py
+      - tests/test_azure_openai_provider.py
+      - tests/test_openai_provider.py
+      - tests/test_live_urls.py
+    contracts: []
+    depends_on:
+      - llm-client
+      - config
+      - exceptions
+      - provider-openai
+      - provider-azure-openai
+      - auth-base
+      - auth-env-var
+      - auth-callback
+      - auth-msi
+      - auth-azure-chained
+      - auth-aad-browser
+      - url-fetcher
+      - cdp-browser
+      - azure-discovery
