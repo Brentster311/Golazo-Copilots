@@ -283,6 +283,11 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
                     out_lines.append(f"  {icon} {o['path']}")
                 outputs_section = f"\n- Required Outputs: {out_status}\n" + "\n".join(out_lines)
             
+            # GCP-0042: Format registry hint
+            registry_section = ""
+            if result.get("registry_hint"):
+                registry_section = f"\n- {result['registry_hint']}"
+
             next_steps = "\n".join(f"- {step}" for step in result["next_steps"])
             
             # Format deviations
@@ -297,7 +302,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             content = f"""**Golazo Status** (v{result['version']}){version_warning}
 - Work Item: {result['work_item_id']}
 - Current Role: **{result['current_role']}**
-- Phase: {result['current_phase']}{progress_section}{outputs_section}{deviations_section}
+- Phase: {result['current_phase']}{progress_section}{outputs_section}{registry_section}{deviations_section}
 
 **Next Steps:**
 {next_steps}

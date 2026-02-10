@@ -4,6 +4,8 @@ import re
 from importlib import resources
 from pathlib import Path
 
+import yaml
+
 from .. import __version__
 from ..core.persistence import load_state, work_item_exists, DEFAULT_WORKITEMS_DIR
 from ..core.output_validator import parse_required_outputs, validate_all_outputs
@@ -74,6 +76,32 @@ def _get_stale_files(workspace_root: Path) -> list[dict]:
                 "source": source_ver,
             })
     return stale
+
+
+def _get_registry_hint(workspace_root: Path) -> str | None:
+    """Return a capability registry hint, or None if no capabilities.yaml.
+
+    - File absent → None (silent)
+    - Malformed YAML → warning string
+    - Missing 'capabilities' key → warning string
+    - Valid → count string with usage hint
+    """
+    yaml_path = workspace_root / "capabilities.yaml"
+    if not yaml_path.exists():
+        return None
+    try:
+        content = yaml_path.read_text(encoding="utf-8")
+        data = yaml.safe_load(content)
+    except Exception as e:
+        return f"Capability Registry: capabilities.yaml exists but failed to parse: {e}"
+    if not isinstance(data, dict) or "capabilities" not in data:
+        return "Capability Registry: capabilities.yaml missing 'capabilities' key"
+    caps = data["capabilities"]
+    count = len(caps) if isinstance(caps, list) else 0
+    return (
+        f"Capability Registry: {count} capability(ies) found. "
+        f"Use `gcp_capabilities(action='impact', files=[...])` to check affected features."
+    )
 
 
 def _compute_role_progress(state) -> dict:
@@ -197,6 +225,9 @@ async def gcp_status(
     
     # GCP-0033: Compute role progress
     role_progress = _compute_role_progress(state)
+
+    # GCP-0042: Capability registry hint
+    registry_hint = _get_registry_hint(workspace_root)
     
     return {
         "active": True,
@@ -213,6 +244,7 @@ async def gcp_status(
         "deviations": deviations,
         "missing_notes": missing_notes,
         "version_warning": version_warning,
+        "registry_hint": registry_hint,
         "role_instructions": role_instructions,
         "next_steps": next_steps,
     }
