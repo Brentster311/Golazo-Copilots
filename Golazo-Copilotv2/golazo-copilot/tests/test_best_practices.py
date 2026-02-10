@@ -154,3 +154,31 @@ class TestBestPracticesFileExists:
                 compile(code, f"<code_block_{i}>", "exec")
             except SyntaxError as e:
                 pytest.fail(f"Code block {i} has invalid Python syntax: {e}\n\nCode:\n{code}")
+
+
+class TestCapabilityRegistryInRoles:
+    """GCP-0039: Verify capability registry sections in role files."""
+
+    ROLES_WITH_REGISTRY = [
+        "quality-assurance",
+        "architect",
+        "developer",
+        "refactor-expert",
+        "retrospective",
+    ]
+
+    @pytest.mark.parametrize("role", ROLES_WITH_REGISTRY)
+    def test_role_contains_capability_registry_section(self, role):
+        """Each role file must contain a Capability Registry section."""
+        from importlib import resources
+        role_files = resources.files("golazo_copilot.roles.defaults")
+        content = role_files.joinpath(f"{role}.md").read_text(encoding="utf-8")
+        assert "### Capability Registry" in content, f"{role}.md missing Capability Registry section"
+
+    @pytest.mark.parametrize("role", ROLES_WITH_REGISTRY)
+    def test_role_uses_conditional_phrasing(self, role):
+        """Each role's registry section must be conditional on capabilities.yaml."""
+        from importlib import resources
+        role_files = resources.files("golazo_copilot.roles.defaults")
+        content = role_files.joinpath(f"{role}.md").read_text(encoding="utf-8")
+        assert "capabilities.yaml" in content, f"{role}.md missing conditional capabilities.yaml reference"

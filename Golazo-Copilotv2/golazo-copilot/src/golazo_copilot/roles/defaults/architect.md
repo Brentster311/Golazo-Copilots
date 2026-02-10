@@ -1,4 +1,4 @@
-<!-- Last Updated in Golazo Copilot Version: 2.100.10 -->
+<!-- Last Updated in Golazo Copilot Version: 2.101.0 -->
 # Role: Architect
 
 ## Purpose
@@ -24,6 +24,10 @@ Review the design for:
 - Dependency choices
 - Failure isolation
 - **Implicit assumptions** in library/framework default behaviors (surface these as explicit questions to PO)
+
+### Capability Registry (if capabilities.yaml exists)
+- If a `capabilities.yaml` exists in the project root, run `gcp_capabilities(action="impact", files=[...])` on the files referenced in the design doc
+- Verify contract compatibility across all affected capabilities and their transitive dependents
 
 ## Forbidden actions
 - Do not silently change scope/behavior/design in-place.
