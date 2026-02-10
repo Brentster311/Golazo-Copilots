@@ -1,0 +1,72 @@
+{
+  "schema_version": "1.0",
+  "work_item_id": "LLM-0012",
+  "profile": "complete",
+  "current_phase": "completion",
+  "current_role": "builder",
+  "created_at": "2026-02-10T00:38:45.798117Z",
+  "updated_at": "2026-02-10T01:13:47.503942Z",
+  "role_history": [
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-02-10T00:38:45.798117Z",
+      "exited_at": "2026-02-10T00:41:19.228745Z"
+    },
+    {
+      "role": "program-manager",
+      "entered_at": "2026-02-10T00:41:19.228745Z",
+      "exited_at": "2026-02-10T00:42:19.259893Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-02-10T00:42:19.259893Z",
+      "exited_at": "2026-02-10T00:43:05.505563Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-02-10T00:43:05.505563Z",
+      "exited_at": "2026-02-10T00:43:42.296083Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-02-10T00:43:42.296083Z",
+      "exited_at": "2026-02-10T01:12:25.174226Z"
+    },
+    {
+      "role": "program-manager",
+      "entered_at": "2026-02-10T01:12:25.174226Z",
+      "exited_at": "2026-02-10T01:12:28.707418Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-02-10T01:12:28.707418Z",
+      "exited_at": "2026-02-10T01:12:32.537570Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-02-10T01:12:32.537570Z",
+      "exited_at": "2026-02-10T01:12:35.669893Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-02-10T01:12:35.669893Z",
+      "exited_at": "2026-02-10T01:12:42.797967Z"
+    },
+    {
+      "role": "refactor-expert",
+      "entered_at": "2026-02-10T01:12:42.797967Z",
+      "exited_at": "2026-02-10T01:12:57.374663Z"
+    },
+    {
+      "role": "documentor",
+      "entered_at": "2026-02-10T01:12:57.374663Z",
+      "exited_at": "2026-02-10T01:13:47.503942Z"
+    },
+    {
+      "role": "builder",
+      "entered_at": "2026-02-10T01:13:47.503942Z",
+      "exited_at": null
+    }
+  ],
+  "deviations": []
+}

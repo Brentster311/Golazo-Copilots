@@ -14,6 +14,7 @@
 | LLM-0002 | Config Persistence (JSON/YAML) | ❌ Cancelled |
 | LLM-0003 | Pluggable Auth Manager | ✅ Implemented |
 | LLM-0004 | Azure OpenAI Provider | ✅ Implemented |
+| LLM-0012 | Auto-Discover Azure OpenAI Configs | ✅ Implemented |
 
 ---
 
@@ -66,6 +67,7 @@ EnvVarAuth  MSIAuth  Callback  OpenAIProvider   AzureOpenAIProvider
 | `llm_extender/auth/env_var.py` | `EnvVarAuth` — reads from `os.environ` | LLM-0003 |
 | `llm_extender/auth/msi.py` | `ManagedIdentityAuth` — Azure MSI via `azure-identity` | LLM-0003 |
 | `llm_extender/auth/callback.py` | `CallbackAuth` — user-supplied `() → str` callable | LLM-0003 |
+| `llm_extender/discovery.py` | `discover_azure_configs()` — auto-discover Azure OpenAI from CLI creds | LLM-0012 |
 
 ---
 
@@ -87,6 +89,8 @@ EnvVarAuth  MSIAuth  Callback  OpenAIProvider   AzureOpenAIProvider
 llm-extender
 ├── httpx >=0.24              (required — sync+async HTTP)
 ├── azure-identity            (optional — only for ManagedIdentityAuth)
+├── azure-mgmt-cognitiveservices (optional — azure-discover extra)
+├── azure-mgmt-subscription     (optional — azure-discover extra)
 └── dev:
     ├── pytest >=7.0
     ├── pytest-asyncio >=0.21
@@ -116,6 +120,18 @@ LLM-0004 introduced an `AzureOpenAIProvider` that:
 
 ---
 
+## What LLM-0012 Added
+
+LLM-0012 introduced auto-discovery of Azure OpenAI configurations:
+
+- **`discover_azure_configs()`**: Scans all accessible subscriptions via `AzureCliCredential`, lists Cognitive Services accounts with `kind='OpenAI'`, enumerates deployments, returns `LLMConfig` objects ready to use with `LLMClient`
+- **`LLMClient.discover()`**: Static method that delegates to `discover_azure_configs()`
+- **Lazy SDK imports**: Azure management packages are imported only when `discover_azure_configs()` is actually called — keeps the base install lightweight
+- **Optional dependency group**: `pip install llm-extender[azure-discover]` pulls in `azure-identity`, `azure-mgmt-cognitiveservices`, `azure-mgmt-subscription`
+- **Graceful degradation**: 403 errors on individual subscriptions/resources are logged and skipped; the caller gets configs for everything they have RBAC access to
+
+---
+
 ## Test Coverage
 
 Tests live in `tests/` and cover:
@@ -131,4 +147,5 @@ Tests live in `tests/` and cover:
 | `test_auth_client_integration.py` | Client + auth strategies end-to-end |
 | `test_auth_security.py` | No secrets in repr/str/logs |
 | `test_azure_openai_provider.py` | Azure OpenAI URL, auth, sync/async, errors |
+| `test_discovery.py` | Auto-discovery: happy path, errors, mocking, subscription filtering |
 | `conftest.py` | Shared fixtures |
