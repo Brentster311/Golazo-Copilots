@@ -49,17 +49,18 @@ Consider SLA impact, compliance implications, and downstream effects.
 
 @dataclass
 class LLMConfig:
-    """Configuration for Azure OpenAI LLM calls."""
+    """Configuration for Azure OpenAI LLM calls.
+
+    Authentication uses Azure CLI credential (``az login``) — no API keys.
+    """
     endpoint: str
-    api_key: str
     deployment: str = "gpt-4o"
     api_version: str = "2024-10-21"
-    timeout: int = 30
+    timeout: int = 90
 
     def __repr__(self) -> str:
         return (
             f"LLMConfig(endpoint='{self.endpoint}', "
-            f"api_key='****', "
             f"deployment='{self.deployment}', "
             f"api_version='{self.api_version}', "
             f"timeout={self.timeout})"
@@ -73,7 +74,6 @@ class LLMConfig:
 
         Required:
             AZURE_OPENAI_ENDPOINT: Azure OpenAI resource endpoint
-            AZURE_OPENAI_API_KEY: API key
 
         Optional:
             AZURE_OPENAI_DEPLOYMENT: Model deployment name (default: gpt-4o)
@@ -83,26 +83,19 @@ class LLMConfig:
             LLMConfigError: If required environment variables are missing.
         """
         endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT", "").strip()
-        api_key = os.environ.get("AZURE_OPENAI_API_KEY", "").strip()
 
-        missing = []
         if not endpoint:
-            missing.append("AZURE_OPENAI_ENDPOINT")
-        if not api_key:
-            missing.append("AZURE_OPENAI_API_KEY")
-
-        if missing:
             raise LLMConfigError(
-                f"Missing required environment variable(s): {', '.join(missing)}.\n\n"
-                "To use the LLM analysis feature, set these environment variables:\n"
+                "Missing required environment variable: AZURE_OPENAI_ENDPOINT.\n\n"
+                "To use the LLM analysis feature, set this environment variable:\n"
                 "  AZURE_OPENAI_ENDPOINT = https://your-resource.openai.azure.com/\n"
-                "  AZURE_OPENAI_API_KEY = your-api-key\n"
-                "  AZURE_OPENAI_DEPLOYMENT = gpt-4o  (optional)\n"
+                "  AZURE_OPENAI_DEPLOYMENT = gpt-4o  (optional)\n\n"
+                "Or use ⚙️ Configure LLM to save settings.\n"
+                "Authentication uses Azure CLI — run `az login` first.\n"
             )
 
         return cls(
             endpoint=endpoint,
-            api_key=api_key,
             deployment=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o").strip(),
             api_version=os.environ.get("AZURE_OPENAI_API_VERSION", "2024-10-21").strip(),
         )
@@ -363,13 +356,27 @@ def analyze_item(item: dict, config: LLMConfig, url_content: dict[str, str] | No
             "Install it with: pip install openai>=1.0.0"
         ) from e
 
+    try:
+        from azure.identity import AzureCliCredential, get_bearer_token_provider
+    except ImportError as e:
+        raise LLMError(
+            "The 'azure-identity' package is not installed. "
+            "Install it with: pip install azure-identity"
+        ) from e
+
     messages = build_prompt(item, url_content=url_content)
 
     try:
+        token_provider = get_bearer_token_provider(
+            AzureCliCredential(),
+            "https://cognitiveservices.azure.com/.default",
+        )
         client = AzureOpenAI(
             azure_endpoint=config.endpoint,
-            api_key=config.api_key,
+            azure_ad_token_provider=token_provider,
             api_version=config.api_version,
+            timeout=config.timeout,
+            max_retries=0,
         )
 
         logger.info("Calling Azure OpenAI (deployment=%s)...", config.deployment)
@@ -377,8 +384,7 @@ def analyze_item(item: dict, config: LLMConfig, url_content: dict[str, str] | No
             model=config.deployment,
             messages=messages,
             temperature=0.3,
-            max_tokens=2000,
-            timeout=config.timeout,
+            max_completion_tokens=2000,
         )
 
         choice = response.choices[0]

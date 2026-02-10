@@ -57,6 +57,7 @@ COLUMN_DISPLAY_NAMES = {
     'closedDate': 'Closed Date',
     'Remediation': 'Remediation',
     '_service_owner': 'Service Owner',
+    'myExceptionStatus': 'My Exception Status',
 }
 
 # Curated filter fields (order matters for UI)
@@ -67,6 +68,7 @@ FILTER_FIELDS = [
     'ActionOwnerName',              # Action Owner
     'dueDate',                      # Due Date
     'EtaDate',                      # ETA Date
+    'myExceptionStatus',            # My Exception Status
 ]
 
 # Additional field shown only for managers
