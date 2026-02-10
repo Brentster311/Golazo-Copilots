@@ -1,4 +1,4 @@
-<!-- Last Updated in Golazo Copilot Version: 2.100.10 -->
+<!-- Last Updated in Golazo Copilot Version: 2.101.0 -->
 # Role: Quality Assurance
 
 ## Purpose
@@ -33,6 +33,10 @@ Define test-first coverage that:
 - Covers negative, security, reliability, and performance-sensitive tests
 - Follows TDD-first principles: tests/specs defined before production changes
 - Includes explicit failure messages and expected outcomes
+
+### Capability Registry (if capabilities.yaml exists)
+- If a `capabilities.yaml` exists in the project root, run `gcp_capabilities(action="impact", files=[...])` on the files referenced in the design doc
+- Flag any affected capabilities whose contracts are not covered by the proposed test cases
 
 ## Forbidden actions
 - Do not silently change scope/behavior/design in-place.
