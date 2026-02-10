@@ -227,3 +227,89 @@ class TestBootstrapVersionConsistency:
         
         content = load_default_role("developer")
         assert "Last Updated in Golazo Copilot Version:" in content
+
+
+class TestBootstrapCapabilitiesTemplate:
+    """Tests for capabilities.yaml template scaffolding."""
+
+    @pytest.mark.asyncio
+    async def test_creates_capabilities_yaml(self):
+        """TC1: Bootstrap creates capabilities.yaml when absent."""
+        result = await gcp_bootstrap(workspace_path=TEST_WORKSPACE_DIR)
+
+        assert result["success"] is True
+        cap_path = TEST_WORKSPACE_DIR / "capabilities.yaml"
+        assert cap_path.exists()
+        assert "capabilities.yaml" in result["files_created"]
+
+    @pytest.mark.asyncio
+    async def test_skips_capabilities_yaml_when_exists(self):
+        """TC2: Bootstrap skips capabilities.yaml when exists and force=False."""
+        cap_path = TEST_WORKSPACE_DIR / "capabilities.yaml"
+        cap_path.write_text("custom: content\n", encoding="utf-8")
+
+        result = await gcp_bootstrap(workspace_path=TEST_WORKSPACE_DIR, force=False)
+
+        assert "capabilities.yaml" in result["files_skipped"]
+        assert cap_path.read_text(encoding="utf-8") == "custom: content\n"
+
+    @pytest.mark.asyncio
+    async def test_overwrites_capabilities_yaml_when_force(self):
+        """TC3: Bootstrap overwrites capabilities.yaml when force=True."""
+        cap_path = TEST_WORKSPACE_DIR / "capabilities.yaml"
+        cap_path.write_text("custom: content\n", encoding="utf-8")
+
+        result = await gcp_bootstrap(workspace_path=TEST_WORKSPACE_DIR, force=True)
+
+        assert "capabilities.yaml" in result["files_created"]
+        content = cap_path.read_text(encoding="utf-8")
+        assert "capabilities:" in content
+        assert content != "custom: content\n"
+
+    def test_template_is_valid_yaml(self):
+        """TC4: Template is valid YAML with capabilities key."""
+        import yaml
+        from importlib import resources as res
+
+        files_pkg = res.files("golazo_copilot")
+        raw = files_pkg.joinpath("capabilities-template.yaml").read_text(encoding="utf-8")
+        data = yaml.safe_load(raw)
+
+        assert isinstance(data, dict)
+        assert "capabilities" in data
+        assert isinstance(data["capabilities"], list)
+        assert len(data["capabilities"]) >= 1
+
+    def test_template_example_has_expected_fields(self):
+        """TC5: Template example capability has all expected fields."""
+        import yaml
+        from importlib import resources as res
+
+        files_pkg = res.files("golazo_copilot")
+        raw = files_pkg.joinpath("capabilities-template.yaml").read_text(encoding="utf-8")
+        data = yaml.safe_load(raw)
+        cap = data["capabilities"][0]
+
+        assert "name" in cap and isinstance(cap["name"], str) and cap["name"]
+        assert "description" in cap
+        assert "key_files" in cap
+
+    def test_template_starts_with_comment(self):
+        """TC6: Template contains YAML comment header."""
+        from importlib import resources as res
+
+        files_pkg = res.files("golazo_copilot")
+        raw = files_pkg.joinpath("capabilities-template.yaml").read_text(encoding="utf-8")
+
+        assert raw.startswith("#")
+
+    @pytest.mark.asyncio
+    async def test_creates_capabilities_without_roles(self):
+        """TC7: Bootstrap with include_roles=False still creates capabilities.yaml."""
+        result = await gcp_bootstrap(
+            workspace_path=TEST_WORKSPACE_DIR, include_roles=False
+        )
+
+        assert result["success"] is True
+        assert "capabilities.yaml" in result["files_created"]
+        assert (TEST_WORKSPACE_DIR / "capabilities.yaml").exists()
