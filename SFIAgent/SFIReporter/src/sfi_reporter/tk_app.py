@@ -26,6 +26,52 @@ from sfi_reporter.cache import (
     clear_cache,
     get_cache_dir,
 )
+def _serialize_org_data_for_cache(data: dict) -> dict:
+    """Convert OrgAncestry values and tuple keys to JSON-safe primitives."""
+    out = dict(data)
+    # org_mapping: {owner: OrgAncestry} → {owner: [level1, level2]}
+    om = out.get('org_mapping')
+    if om and isinstance(om, dict):
+        out['org_mapping'] = {
+            k: (list(v) if isinstance(v, (tuple, OrgAncestry)) else v)
+            for k, v in om.items()
+        }
+    # level2_stats: {(l1, l2): stats} → {"l1||l2": stats}
+    l2 = out.get('level2_stats')
+    if l2 and isinstance(l2, dict):
+        out['level2_stats'] = {
+            f"{k[0]}||{k[1]}" if isinstance(k, tuple) else k: v
+            for k, v in l2.items()
+        }
+    return out
+
+
+def _deserialize_org_data_from_cache(data: dict) -> dict:
+    """Restore OrgAncestry values and tuple keys from JSON-safe primitives."""
+    om = data.get('org_mapping')
+    if om and isinstance(om, dict):
+        restored = {}
+        for k, v in om.items():
+            if isinstance(v, (list, tuple)) and len(v) == 2:
+                restored[k] = OrgAncestry(level1=v[0], level2=v[1])
+            elif isinstance(v, str):
+                restored[k] = v  # legacy string mapping
+            else:
+                restored[k] = v
+        data['org_mapping'] = restored
+    l2 = data.get('level2_stats')
+    if l2 and isinstance(l2, dict):
+        restored = {}
+        for k, v in l2.items():
+            if isinstance(k, str) and '||' in k:
+                parts = k.split('||', 1)
+                restored[(parts[0], parts[1])] = v
+            else:
+                restored[k] = v
+        data['level2_stats'] = restored
+    return data
+
+
 from sfi_reporter.data import get_current_user_alias
 from sfi_reporter.llm_client import LLMConfig, LLMConfigError, LLMError, analyze_item, fetch_action_item_urls, AnalysisResult
 from sfi_reporter.llm_storage import save_analysis, load_analysis, analysis_exists
@@ -899,7 +945,7 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
             'timestamp': datetime.now().isoformat(),
         }
         
-        write_cache(user_alias, data)
+        write_cache(user_alias, _serialize_org_data_for_cache(data))
         return data
     except Exception as e:
         logger.exception("Error fetching data for user")
@@ -2864,6 +2910,7 @@ class SFIReporterApp:
         if alias:
             cached = read_cache(alias)
             if cached and is_cache_valid(cached):
+                cached = _deserialize_org_data_from_cache(cached)
                 self._update_tables(cached)
                 age = get_cache_age_minutes(cached)
                 if age is not None:
@@ -3371,7 +3418,7 @@ class SFIReporterApp:
             alias = self.alias_var.get().strip()
             if alias:
                 data['timestamp'] = datetime.now().isoformat()
-                write_cache(alias, data)
+                write_cache(alias, _serialize_org_data_for_cache(data))
 
         n = len(saved)
         self._update_status(
@@ -3494,6 +3541,8 @@ class SFIReporterApp:
         
         # Read current cache and merge in the new rows
         cached = read_cache(alias)
+        if cached:
+            cached = _deserialize_org_data_from_cache(cached)
         if not cached:
             self._update_status("❌ Cache missing — do a full refresh", "red")
             return
@@ -3521,7 +3570,7 @@ class SFIReporterApp:
         cached['failed_kpis'] = still_failed
         cached['timestamp'] = datetime.now().isoformat()
         
-        write_cache(alias, cached)
+        write_cache(alias, _serialize_org_data_for_cache(cached))
         self._update_tables(cached)
         
         self._failed_kpis = still_failed
