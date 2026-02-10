@@ -192,11 +192,17 @@ capabilities:
   # ══════════════════════════════════════════════════════════════════════
 
   - name: reporter-tk-app
-    description: "Tkinter desktop UI — service drill-down, column toggle, filter, ETA editing, detail modals"
+    description: "Tkinter desktop UI — service drill-down, column toggle, filter, ETA editing, detail modals, multi-level owner grouping"
     key_files:
       - SFIReporter/src/sfi_reporter/tk_app.py
     contracts:
       - "main() — Tkinter entry point (sfi-reporter CLI)"
+      - "OrgAncestry(level1: str, level2: Optional[str]) — NamedTuple for multi-level org mapping"
+      - "get_org_mapping(owner_names, manager_alias) -> dict[str, OrgAncestry]"
+      - "aggregate_by_owner(items, service_owners, org_mapping?, allowed_owners?) -> dict"
+      - "aggregate_by_level2(items, service_owners, org_mapping) -> dict[(level1, level2), stats]"
+      - "collect_services_for_owner(owner_name, level, service_owners, org_mapping) -> set[str]"
+      - "get_service_owners(service_names, on_status?) -> dict[str, list[str]]"
     depends_on:
       - reporter-data
       - reporter-cache
@@ -309,6 +315,7 @@ capabilities:
       - SFIReporter/tests/test_llm_storage.py
       - SFIReporter/tests/test_query_builder.py
       - SFIReporter/tests/test_tk_app.py
+      - SFIReporter/tests/test_sfi_026.py
       - SFIReporter/tests/test_detail_modal_colors.py
     contracts: []
     depends_on:
