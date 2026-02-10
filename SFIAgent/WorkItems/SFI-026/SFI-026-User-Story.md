@@ -1,6 +1,6 @@
 # SFI-026 — Multi-Level Owner Grouping in Services Table
 
-**Status**: IMPLEMENTED
+**Status**: BACKLOG — Implementation reverted (2026-02-10). Root cause fix for multi-team manager_alias extraction did not hold in production. Will restart.
 
 ## User Story
 
