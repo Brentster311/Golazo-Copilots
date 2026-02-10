@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from golazo_copilot.tools.gcp_create_workitem import gcp_create_workitem
 from golazo_copilot.tools.gcp_transition import gcp_transition, ROLE_SUFFIX_MAP
-from golazo_copilot.tools.gcp_status import gcp_status, _get_stale_files, _extract_version, _compute_role_progress
+from golazo_copilot.tools.gcp_status import gcp_status, _get_stale_files, _extract_version, _compute_role_progress, _get_registry_hint
 
 
 TEST_WORKITEMS_DIR = Path(__file__).parent / "test-workitems"
@@ -485,3 +485,77 @@ class TestRoleProgress:
         assert len(role_names) == 9
         assert "project-owner-assistant" in role_names
         assert "retrospective" in role_names
+
+
+class TestRegistryHint:
+    """GCP-0042: Capability registry hint in status output."""
+
+    def test_no_capabilities_yaml_returns_none(self, tmp_path):
+        """TC1: No capabilities.yaml → returns None."""
+        assert _get_registry_hint(tmp_path) is None
+
+    def test_valid_yaml_returns_count_hint(self, tmp_path):
+        """TC2: Valid capabilities.yaml → returns count hint."""
+        (tmp_path / "capabilities.yaml").write_text(
+            "capabilities:\n  - name: a\n  - name: b\n",
+            encoding="utf-8",
+        )
+        hint = _get_registry_hint(tmp_path)
+        assert hint is not None
+        assert "2" in hint
+        assert "gcp_capabilities" in hint
+
+    def test_malformed_yaml_returns_warning(self, tmp_path):
+        """TC3: Malformed YAML → returns warning (no crash)."""
+        (tmp_path / "capabilities.yaml").write_text(
+            "{{not: valid: yaml::",
+            encoding="utf-8",
+        )
+        hint = _get_registry_hint(tmp_path)
+        assert hint is not None
+        assert "failed to parse" in hint
+
+    def test_missing_capabilities_key_returns_warning(self, tmp_path):
+        """TC4: Valid YAML but no capabilities key → returns warning."""
+        (tmp_path / "capabilities.yaml").write_text(
+            "other: stuff\n",
+            encoding="utf-8",
+        )
+        hint = _get_registry_hint(tmp_path)
+        assert hint is not None
+        assert "missing" in hint.lower()
+
+    def test_empty_capabilities_list_returns_zero(self, tmp_path):
+        """TC5: Empty capabilities list → returns '0'."""
+        (tmp_path / "capabilities.yaml").write_text(
+            "capabilities: []\n",
+            encoding="utf-8",
+        )
+        hint = _get_registry_hint(tmp_path)
+        assert hint is not None
+        assert "0" in hint
+
+    @pytest.mark.asyncio
+    async def test_status_includes_registry_hint_key(self):
+        """TC6: gcp_status includes registry_hint key when capabilities.yaml exists."""
+        wi_id = "reg-hint-1"
+        await gcp_create_workitem(work_item_id=wi_id, work_items_dir=TEST_WORKITEMS_DIR)
+        # Create capabilities.yaml in workspace root (parent of WorkItems)
+        workspace_root = TEST_WORKITEMS_DIR.parent
+        cap_path = workspace_root / "capabilities.yaml"
+        cap_path.write_text("capabilities:\n  - name: test\n", encoding="utf-8")
+        try:
+            result = await gcp_status(work_item_id=wi_id, work_items_dir=TEST_WORKITEMS_DIR)
+            assert "registry_hint" in result
+            assert result["registry_hint"] is not None
+            assert "1" in result["registry_hint"]
+        finally:
+            cap_path.unlink(missing_ok=True)
+
+    @pytest.mark.asyncio
+    async def test_status_registry_hint_none_when_absent(self):
+        """TC7: gcp_status registry_hint is None when no capabilities.yaml."""
+        wi_id = "reg-hint-2"
+        await gcp_create_workitem(work_item_id=wi_id, work_items_dir=TEST_WORKITEMS_DIR)
+        result = await gcp_status(work_item_id=wi_id, work_items_dir=TEST_WORKITEMS_DIR)
+        assert result.get("registry_hint") is None
