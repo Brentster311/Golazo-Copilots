@@ -4,11 +4,6 @@ from pathlib import Path
 from importlib import resources
 
 
-def _update_version_comment(content: str) -> str:
-    """Pass through role content unchanged. Version comments are static."""
-    return content
-
-
 def load_role_instructions(role: str, project_root: Path | None = None) -> str:
     """
     Load role instructions for a given role.
@@ -30,8 +25,7 @@ def load_role_instructions(role: str, project_root: Path | None = None) -> str:
     # Try local first
     local_path = project_root / ".github" / "roles" / f"{role}.md"
     if local_path.exists():
-        content = local_path.read_text(encoding='utf-8')
-        return _update_version_comment(content)
+        return local_path.read_text(encoding='utf-8')
     
     # Fall back to package defaults
     return load_default_role(role)
@@ -43,8 +37,7 @@ def load_default_role(role: str) -> str:
         # Try to load from package resources
         files = resources.files("golazo_copilot.roles.defaults")
         role_file = files.joinpath(f"{role}.md")
-        content = role_file.read_text(encoding='utf-8')
-        return _update_version_comment(content)
+        return role_file.read_text(encoding='utf-8')
     except (FileNotFoundError, TypeError):
         # Return placeholder if not found
         return f"# {role}\n\nRole instructions not found. Please create .github/roles/{role}.md"
