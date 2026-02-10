@@ -5,8 +5,18 @@ import re
 import threading
 import tkinter as tk
 from tkinter import ttk, messagebox
-from typing import Optional
+from typing import NamedTuple, Optional
 import webbrowser
+
+
+class OrgAncestry(NamedTuple):
+    """Mapping of a service owner to their hierarchical ancestors.
+    
+    level1: The viewer's direct report ancestor (or "Unknown Owner", or self-name)
+    level2: The sub-report under level1, or None if the owner IS the level1 direct
+    """
+    level1: str
+    level2: Optional[str]
 
 from sfi_reporter.cache import (
     read_cache,
@@ -14,6 +24,7 @@ from sfi_reporter.cache import (
     is_cache_valid,
     get_cache_age_minutes,
     clear_cache,
+    get_cache_dir,
 )
 from sfi_reporter.data import get_current_user_alias
 from sfi_reporter.llm_client import LLMConfig, LLMConfigError, LLMError, analyze_item, fetch_action_item_urls, AnalysisResult
@@ -22,12 +33,42 @@ from sfi_reporter.logging_config import setup_logging, get_log_path, patch_subpr
 
 logger = logging.getLogger(__name__)
 
+SETTINGS_FILENAME = 'settings.json'
+
+def _load_setting(key: str, default=None):
+    """Load a single setting from the shared settings.json in the cache dir."""
+    path = get_cache_dir() / SETTINGS_FILENAME
+    if not path.exists():
+        return default
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f).get(key, default)
+    except (json.JSONDecodeError, IOError):
+        return default
+
+def _save_setting(key: str, value) -> None:
+    """Persist a single setting to the shared settings.json in the cache dir."""
+    path = get_cache_dir() / SETTINGS_FILENAME
+    data = {}
+    if path.exists():
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, IOError):
+            pass
+    data[key] = value
+    try:
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2)
+    except IOError as e:
+        logger.error('Error saving setting %s: %s', key, e)
+
 
 # Regex patterns for URL extraction
 # Allow single quotes in URLs (common in query params) but not at the very end
 # Also allow parentheses which are common in S360 lens URLs
 URL_PATTERN = re.compile(r'https?://[^\s<>"]+(?<![\'"])')
-HTML_ANCHOR_PATTERN = re.compile(r'<a[^>]+href=["\']([^"\']+)["\'][^>]*>([^<]*)</a>', re.IGNORECASE)
+HTML_ANCHOR_PATTERN = re.compile(r'<a[^>]+href=["\']([^"\']*)["\'][^>]*>([^<]*)</a>', re.IGNORECASE)
 
 
 # Column toggle constants
@@ -59,6 +100,26 @@ COLUMN_DISPLAY_NAMES = {
 
 # SLA status value mapping (used in treeview display)
 SLA_STATUS_MAP = {0: "In SLA", 1: "Approaching", 2: "Out of SLA"}
+
+# Extended SLA map: handles int keys, string-numeric keys, and API string variants
+_SLA_DISPLAY_MAP = {
+    0: "In SLA", 1: "Approaching", 2: "Out of SLA",
+    "0": "In SLA", "1": "Approaching", "2": "Out of SLA",
+    "InSla": "In SLA", "Approaching": "Approaching", "OutOfSla": "Out of SLA",
+}
+
+
+def _resolve_sla_display(sla_type) -> str:
+    """Map any SlaType value (int, str, None) to a human-readable label."""
+    if sla_type is None:
+        return ""
+    return _SLA_DISPLAY_MAP.get(sla_type, "")
+
+
+def _resolve_eta_status(eta_status) -> str:
+    """Return ETA Status string, defaulting to '' for None."""
+    return eta_status if eta_status else ""
+
 
 # Map API column names to tree column identifiers
 COLUMN_ID_MAP = {
@@ -229,21 +290,23 @@ def parse_owners_field(owners_json: str | None) -> list[str]:
         return []
 
 
-def get_org_mapping(owner_names: list[str], manager_alias: str, on_status: Optional[callable] = None) -> dict[str, str]:
-    """Get mapping from each owner to their direct-report-level ancestor.
+def get_org_mapping(owner_names: list[str], manager_alias: str, on_status: Optional[callable] = None) -> dict[str, OrgAncestry]:
+    """Get mapping from each owner to their hierarchical ancestors (up to 2 levels).
     
     For each owner, queries S360 to get their manager chain and finds:
-    - If owner reports directly to manager_alias → maps to themselves
-    - If owner reports to someone who reports to manager_alias → maps to that direct
-    - If owner is not in manager's org → maps to "Unknown Owner"
+    - If owner IS the manager → OrgAncestry(self, None)
+    - If owner reports directly to manager_alias → OrgAncestry(self, None)
+    - If owner is 1 hop below a direct → OrgAncestry(direct_name, owner_name)
+    - If owner is 2+ hops below a direct → OrgAncestry(direct_name, sub_report_name)
+    - If owner is not in manager's org → OrgAncestry("Unknown Owner", None)
     
     Args:
         owner_names: List of unique owner names to look up
-        manager_alias: The manager's alias (e.g., "muralic")
+        manager_alias: The manager's alias (e.g., "alexhowells")
         on_status: Optional callback for status updates
         
     Returns:
-        Dict mapping owner_name -> direct_report_name (or self if they ARE a direct)
+        Dict mapping owner_name → OrgAncestry(level1, level2)
     """
     from concurrent.futures import ThreadPoolExecutor, as_completed
     from sfi_reporter.data import get_client
@@ -252,32 +315,39 @@ def get_org_mapping(owner_names: list[str], manager_alias: str, on_status: Optio
     if not owner_names:
         return {}
     
-    org_mapping: dict[str, str] = {}
+    org_mapping: dict[str, OrgAncestry] = {}
     lock = threading.Lock()
     completed = [0]
     total = len(owner_names)
     
-    def lookup_owner(owner_name: str) -> tuple[str, str]:
-        """Look up an owner and find their direct-report-level manager.
+    def _resolve_display_name(client, alias: str) -> str:
+        """Look up a person's display name by alias."""
+        try:
+            results = client.search(alias)
+            for r in results:
+                if r.get('Group') == 'Org' and r.get('Id', '').lower() == alias.lower():
+                    return r.get('Owners', alias)
+        except Exception:
+            pass
+        return alias
+    
+    def lookup_owner(owner_name: str) -> tuple[str, OrgAncestry]:
+        """Look up an owner and find their hierarchical ancestors.
         
         Algorithm:
         1. Search S360 for the owner name to get their alias and Managers chain
         2. For each exact name match, check if manager_alias is in their chain
         3. Use the FIRST match that has manager_alias in their chain
-        4. If found → find the direct: the alias immediately AFTER manager_alias in the chain
-        5. If none found → this owner is NOT in the manager's org → return Unknown Owner
+        4. Determine hierarchy depth and return OrgAncestry tuple
         """
         try:
             client = get_client()
             results = client.search(owner_name)
             
-            # Find all exact name matches and check each for manager_alias in chain
-            # This handles the case where multiple people have the same name
             for r in results:
                 if r.get('Group') != 'Org':
                     continue
                 
-                # Check if this result EXACTLY matches the owner we're looking for
                 result_owners = r.get('Owners', '')
                 if result_owners.lower() != owner_name.lower():
                     continue
@@ -285,8 +355,7 @@ def get_org_mapping(owner_names: list[str], manager_alias: str, on_status: Optio
                 # Check if this owner IS the manager (their chain won't include themselves)
                 result_alias = r.get('Id', '')
                 if result_alias.lower() == manager_alias.lower():
-                    # The owner is the manager - map to themselves
-                    return owner_name, owner_name
+                    return owner_name, OrgAncestry(level1=owner_name, level2=None)
                 
                 # Get this person's Managers chain
                 managers_json = r.get('Managers', '[]')
@@ -301,36 +370,34 @@ def get_org_mapping(owner_names: list[str], manager_alias: str, on_status: Optio
                 # KEY CHECK: Is manager_alias in their chain?
                 managers_lower = [m.lower() for m in managers]
                 if manager_alias.lower() not in managers_lower:
-                    continue  # Not in manager's org - try next match
+                    continue
                 
-                # Found! This person IS in the manager's org.
-                # Find their direct-report-level ancestor.
                 manager_idx = managers_lower.index(manager_alias.lower())
+                remaining = len(managers) - 1 - manager_idx  # entries after manager_alias
                 
-                # Chain is ordered top-down: [CEO, ..., manager_alias, direct_alias, ..., this_person]
-                # If manager_alias is the LAST entry, this person reports directly to manager
-                if manager_idx == len(managers) - 1:
-                    # This person IS a direct report
-                    return owner_name, owner_name
+                # Chain: [CEO, ..., manager_alias, level1_alias, level2_alias, ..., immediate_mgr]
                 
-                # Otherwise, the alias immediately after manager_alias is the direct
-                direct_alias = managers[manager_idx + 1]
+                if remaining == 0:
+                    # This person reports directly to the viewer
+                    return owner_name, OrgAncestry(level1=owner_name, level2=None)
                 
-                # Look up the direct's display name
-                direct_results = client.search(direct_alias)
-                for dr in direct_results:
-                    if dr.get('Group') == 'Org' and dr.get('Id', '').lower() == direct_alias.lower():
-                        direct_name = dr.get('Owners', direct_alias)
-                        return owner_name, direct_name
+                # Level 1: the viewer's direct report
+                level1_alias = managers[manager_idx + 1]
+                level1_name = _resolve_display_name(client, level1_alias)
                 
-                # Fallback to alias if we can't find display name
-                return owner_name, direct_alias
+                if remaining == 1:
+                    # This person reports to a direct → they ARE the level2
+                    return owner_name, OrgAncestry(level1=level1_name, level2=owner_name)
+                
+                # remaining >= 2: two or more levels deep → cap at level2
+                level2_alias = managers[manager_idx + 2]
+                level2_name = _resolve_display_name(client, level2_alias)
+                return owner_name, OrgAncestry(level1=level1_name, level2=level2_name)
             
-            # No matching person found in manager's org
-            return owner_name, 'Unknown Owner'
+            return owner_name, OrgAncestry(level1='Unknown Owner', level2=None)
             
         except Exception:
-            return owner_name, 'Unknown Owner'
+            return owner_name, OrgAncestry(level1='Unknown Owner', level2=None)
     
     if on_status:
         on_status(f"Looking up {total} service owners...")
@@ -339,9 +406,9 @@ def get_org_mapping(owner_names: list[str], manager_alias: str, on_status: Optio
         futures = {executor.submit(lookup_owner, name): name for name in owner_names}
         
         for future in as_completed(futures):
-            owner_name, direct = future.result()
+            owner_name, ancestry = future.result()
             with lock:
-                org_mapping[owner_name] = direct
+                org_mapping[owner_name] = ancestry
                 completed[0] += 1
                 if on_status and completed[0] % 5 == 0:
                     on_status(f"Looking up owners: {completed[0]}/{total}")
@@ -378,12 +445,12 @@ def extract_direct_reports(service_owners: dict[str, list[str]], manager_name: O
 
 
 def aggregate_by_owner(items: list[dict], service_owners: dict[str, list[str]], 
-                       org_mapping: Optional[dict[str, str]] = None,
+                       org_mapping: Optional[dict] = None,
                        allowed_owners: Optional[set[str]] = None) -> dict:
-    """Aggregate action item stats by service owner.
+    """Aggregate action item stats by service owner (level-1 rollup).
     
-    When org_mapping is provided, each owner is mapped to their direct-report-level
-    ancestor. This allows skip-level rollup (Ken Hsieh → Ze Li if Ken reports to Ze Li).
+    When org_mapping is provided, each owner is mapped to their level-1 ancestor.
+    Supports both legacy string mappings and OrgAncestry tuple mappings.
     
     When allowed_owners is specified without org_mapping, uses the old behavior:
     - The first owner in the list that's in allowed_owners
@@ -392,13 +459,19 @@ def aggregate_by_owner(items: list[dict], service_owners: dict[str, list[str]],
     Args:
         items: List of detailed action items
         service_owners: Dict mapping service_id to list of owner names
-        org_mapping: Optional dict mapping owner_name -> direct_report_name
+        org_mapping: Optional dict mapping owner_name -> OrgAncestry or string
         allowed_owners: Optional set of owner names to include (legacy, for manager view)
         
     Returns:
         Dict mapping owner name to stats: {owner: {count, sla, invalid_eta}}
     """
     from sfi_reporter.data import is_invalid_eta
+    
+    def _get_level1(mapped) -> str:
+        """Extract level1 from either OrgAncestry or legacy string mapping."""
+        if isinstance(mapped, OrgAncestry):
+            return mapped.level1
+        return mapped  # Legacy string
     
     owner_stats: dict[str, dict] = {}
     
@@ -414,14 +487,15 @@ def aggregate_by_owner(items: list[dict], service_owners: dict[str, list[str]],
         
         # Determine the target owner for this item
         if org_mapping is not None:
-            # Use org_mapping to find the direct-report-level owner
-            # Find the first owner that maps to a known direct (not Unknown Owner)
+            # Use org_mapping to find the level-1 owner
             target_owner = None
             for owner in owners:
                 mapped = org_mapping.get(owner)
-                if mapped and mapped != 'Unknown Owner':
-                    target_owner = mapped
-                    break
+                if mapped:
+                    level1 = _get_level1(mapped)
+                    if level1 and level1 != 'Unknown Owner':
+                        target_owner = level1
+                        break
             
             if target_owner is None:
                 target_owners = ['Unknown Owner']
@@ -459,6 +533,104 @@ def aggregate_by_owner(items: list[dict], service_owners: dict[str, list[str]],
                 owner_stats[owner]['invalid_eta'] += 1
     
     return owner_stats
+
+
+def aggregate_by_level2(items: list[dict], service_owners: dict[str, list[str]],
+                        org_mapping: dict[str, OrgAncestry]) -> dict[tuple[str, str], dict]:
+    """Aggregate action item stats by (level1, level2) pairs.
+    
+    Only includes entries where level2 is not None (i.e., actual sub-reports).
+    Items whose owners map to level2=None (direct reports) or Unknown Owner are excluded.
+    
+    Args:
+        items: List of detailed action items
+        service_owners: Dict mapping service_name to list of owner names
+        org_mapping: Dict mapping owner_name → OrgAncestry
+        
+    Returns:
+        Dict mapping (level1_name, level2_name) → {count, sla, invalid_eta}
+    """
+    from sfi_reporter.data import is_invalid_eta
+    
+    level2_stats: dict[tuple[str, str], dict] = {}
+    
+    for item in items:
+        service_name = item.get('S360_ServiceTreeServiceName', '')
+        owners = service_owners.get(service_name, None)
+        
+        if owners is None or len(owners) == 0:
+            continue
+        
+        # Find the first owner with a valid level2 mapping
+        target_key = None
+        for owner in owners:
+            mapped = org_mapping.get(owner)
+            if isinstance(mapped, OrgAncestry) and mapped.level2 is not None and mapped.level1 != 'Unknown Owner':
+                target_key = (mapped.level1, mapped.level2)
+                break
+        
+        if target_key is None:
+            continue
+        
+        is_out_of_sla = item.get('SlaType') == 'OutOfSla'
+        has_invalid_eta = is_invalid_eta(item.get('EtaDate'))
+        
+        if target_key not in level2_stats:
+            level2_stats[target_key] = {'count': 0, 'sla': 0, 'invalid_eta': 0}
+        
+        level2_stats[target_key]['count'] += 1
+        if is_out_of_sla:
+            level2_stats[target_key]['sla'] += 1
+        if has_invalid_eta:
+            level2_stats[target_key]['invalid_eta'] += 1
+    
+    return level2_stats
+
+
+def collect_services_for_owner(owner_name: str, level: str,
+                               service_owners: dict[str, list[str]],
+                               org_mapping: dict) -> set[str]:
+    """Collect all service names belonging to an owner's subtree.
+    
+    For level1 drill-down: collects all services where any owner maps to this
+    level1 ancestor (includes all level2 sub-reports under them).
+    
+    For level2 drill-down: collects all services where any owner maps to this
+    specific level2 sub-report.
+    
+    Args:
+        owner_name: The owner name to drill into
+        level: "level1" or "level2"
+        service_owners: Dict mapping service_name → list of owner names
+        org_mapping: Dict mapping owner_name → OrgAncestry or string
+        
+    Returns:
+        Set of service names belonging to the owner's subtree
+    """
+    # Build set of raw owner names that belong to this subtree
+    matching_owners: set[str] = set()
+    
+    for raw_owner, mapped in org_mapping.items():
+        if isinstance(mapped, OrgAncestry):
+            if level == "level1" and mapped.level1 == owner_name:
+                matching_owners.add(raw_owner)
+            elif level == "level2" and mapped.level2 == owner_name:
+                matching_owners.add(raw_owner)
+        else:
+            # Legacy string mapping — treat as level1
+            if level == "level1" and mapped == owner_name:
+                matching_owners.add(raw_owner)
+    
+    # Also include the owner_name itself for direct ownership
+    matching_owners.add(owner_name)
+    
+    # Collect services owned by any matching owner
+    result: set[str] = set()
+    for svc_name, owners in service_owners.items():
+        if any(o in matching_owners for o in owners):
+            result.add(svc_name)
+    
+    return result
 
 
 def get_service_owners(service_names: list[str], on_status: Optional[callable] = None) -> dict[str, list[str]]:
@@ -660,8 +832,9 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
         
         # If manager view, fetch service owners and aggregate stats by owner
         owner_stats = {}
+        level2_stats = {}
         service_owners = {}
-        org_mapping = {}  # Maps each owner to their direct-report-level ancestor
+        org_mapping = {}  # Maps each owner to OrgAncestry(level1, level2)
         if is_manager and service_stats:
             # Get manager alias from TeamGroup name (e.g., "Azure Core Insights (MURALIC)" -> "muralic")
             manager_alias = None
@@ -696,10 +869,14 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
                 if manager_alias and all_owners:
                     org_mapping = get_org_mapping(list(all_owners), manager_alias, on_status)
                 
-                # Aggregate using org_mapping to roll up to directs
+                # Aggregate using org_mapping to roll up to directs (level-1)
                 # Note: service_owners is keyed by service NAME which matches S360_ServiceTreeServiceName
                 owner_stats = aggregate_by_owner(detailed_items, service_owners, 
                                                  org_mapping=org_mapping if org_mapping else None)
+                
+                # Compute level-2 stats for 2-level hierarchy
+                if org_mapping:
+                    level2_stats = aggregate_by_level2(detailed_items, service_owners, org_mapping)
         
         if on_status:
             on_status("Saving to cache...")
@@ -711,9 +888,10 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
             'program_stats': program_stats,
             'kpi_stats': kpi_stats,
             'owner_stats': owner_stats,
+            'level2_stats': level2_stats,
             'is_manager': is_manager,
             'service_owners': service_owners,
-            'org_mapping': org_mapping,  # Maps owner -> direct-report-level ancestor
+            'org_mapping': org_mapping,  # Maps owner -> OrgAncestry(level1, level2)
             'programs_lookup': program_names,  # Save program name lookup for cache reload
             'failed_kpis': failed_kpis,  # KPIs that failed during fetch
             'audience_ids': audience_ids,  # Needed for retry
@@ -787,35 +965,30 @@ def format_field_value(value) -> str:
 
 
 def extract_urls_from_text(text: str) -> list:
-    """Extract URLs from text, handling both plain URLs and HTML anchors.
-    
+    """Extract URLs from text, handling both HTML anchors and plain URLs.
+
+    Simple two-branch logic:
+    1. If the text contains <a> tags, extract (href, display_text) from each.
+    2. Otherwise, find raw http(s):// URLs and use them as both link and label.
+
     Returns list of (url, display_text, start_pos, end_pos) tuples.
     """
     if not text or not isinstance(text, str):
         return []
-    
-    results = []
-    
-    # First, extract HTML anchors and remove them from the search text
-    for match in HTML_ANCHOR_PATTERN.finditer(text):
-        url = match.group(1)
-        display = match.group(2) or url
-        # Store with the actual matched positions in original text
-        results.append((url, display, match.start(), match.end()))
-    
-    # Also find plain URLs that aren't inside anchor tags
-    # Create a "cleaned" version to avoid finding URLs inside anchors
-    html_spans = [(m.start(), m.end()) for m in HTML_ANCHOR_PATTERN.finditer(text)]
-    
-    for match in URL_PATTERN.finditer(text):
-        start, end = match.start(), match.end()
-        # Skip if this URL is inside an HTML anchor
-        in_anchor = any(hs <= start < he for hs, he in html_spans)
-        if not in_anchor:
-            url = match.group(0)
-            results.append((url, url, start, end))
-    
-    return results
+
+    # Branch 1: HTML anchors present
+    anchors = list(HTML_ANCHOR_PATTERN.finditer(text))
+    if anchors:
+        return [
+            (m.group(1), m.group(2) or m.group(1), m.start(), m.end())
+            for m in anchors
+        ]
+
+    # Branch 2: plain URLs
+    return [
+        (m.group(0), m.group(0), m.start(), m.end())
+        for m in URL_PATTERN.finditer(text)
+    ]
 
 
 def clean_html_from_title(title: str) -> str:
@@ -1068,22 +1241,26 @@ class ColumnSelectorDialog(tk.Toplevel):
 
 class DetailModal(tk.Toplevel):
     """Modal dialog showing drill-down details for action items."""
-    
-    def __init__(self, parent, title: str, items: list, service_names: dict = None):
+
+    COLUMNS = ("title", "service", "sla", "due_date", "eta_date", "eta_status", "assigned_to", "action_owner")
+
+    def __init__(self, parent, title: str, items: list, service_names: dict = None, on_eta_complete=None):
         super().__init__(parent)
         self.title(title)
-        self.geometry("900x500")
+        self.geometry("1000x500")
         self.transient(parent)  # Associate with parent
         self.grab_set()  # Make modal
         
         # Center on parent
         self.update_idletasks()
-        x = parent.winfo_x() + (parent.winfo_width() - 900) // 2
+        x = parent.winfo_x() + (parent.winfo_width() - 1000) // 2
         y = parent.winfo_y() + (parent.winfo_height() - 500) // 2
         self.geometry(f"+{x}+{y}")
         
         self.service_names = service_names or {}
+        self._items = items  # keep reference for refresh
         self._item_map = {}  # Store item dict by treeview iid
+        self._on_eta_complete = on_eta_complete
         self._create_widgets(items)
         
         # Bind Escape to close
@@ -1095,74 +1272,167 @@ class DetailModal(tk.Toplevel):
         main_frame = ttk.Frame(self, padding=10)
         main_frame.pack(fill=tk.BOTH, expand=True)
         
+        self._main_frame = main_frame
         if not items:
             ttk.Label(main_frame, text="No items found.", font=("Segoe UI", 12)).pack(pady=20)
         else:
-            # Create sortable treeview for items (fixed columns)
-            columns = ("title", "service", "sla", "due_date", "eta_date", "assigned_to", "action_owner")
-            self.tree = SortableTreeview(main_frame, columns=columns, show="headings", height=15)
-            tree = self.tree
-            
-            tree.heading("title", text="Title")
-            tree.heading("service", text="Service")
-            tree.heading("sla", text="SLA Status")
-            tree.heading("due_date", text="Due Date")
-            tree.heading("eta_date", text="ETA Date")
-            tree.heading("assigned_to", text="Assigned To")
-            tree.heading("action_owner", text="Action Owner")
-            
-            tree.column("title", width=250, anchor=tk.W)
-            tree.column("service", width=150, anchor=tk.W)
-            tree.column("sla", width=80, anchor=tk.CENTER)
-            tree.column("due_date", width=90, anchor=tk.CENTER)
-            tree.column("eta_date", width=90, anchor=tk.CENTER)
-            tree.column("assigned_to", width=90, anchor=tk.W)
-            tree.column("action_owner", width=120, anchor=tk.W)
-            
-            # Scrollbars
-            y_scroll = ttk.Scrollbar(main_frame, orient=tk.VERTICAL, command=tree.yview)
-            x_scroll = ttk.Scrollbar(main_frame, orient=tk.HORIZONTAL, command=tree.xview)
-            tree.configure(yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
-            
-            # Pack with scrollbar on right
-            y_scroll.pack(side=tk.RIGHT, fill=tk.Y)
-            x_scroll.pack(side=tk.BOTTOM, fill=tk.X)
-            tree.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-            
-            # Populate and store item references
-            sla_map = {0: "In SLA", 1: "Approaching", 2: "Out of SLA"}
-            for item in items:
-                svc_id = item.get('serviceTreeId', '')
-                svc_name = self.service_names.get(svc_id, svc_id[:20] + '...' if len(svc_id) > 20 else svc_id)
-                raw_title = item.get('title', '')
-                clean_title = clean_html_from_title(raw_title)
-                iid = tree.insert('', tk.END, values=(
-                    clean_title[:60],
-                    svc_name,
-                    sla_map.get(item.get('SlaType'), ''),
-                    (item.get('DueDate') or item.get('dueDate', ''))[:10],
-                    (item.get('EtaDate') or '')[:10],
-                    item.get('S360_AssignedTo') or item.get('assignedTo', ''),
-                    item.get('ActionOwnerName') or item.get('ActionOwnerAlias', ''),
-                ))
-                self._item_map[iid] = item
-            
-            # Apply default sorting: by due date ascending
-            self.tree.sort_by_columns([('due_date', False)])
-            
-            # Bind double-click to open item details
-            tree.bind('<Double-1>', self._on_item_double_click)
-            # Bind right-click for LLM analysis context menu
-            tree.bind('<Button-3>', self._on_item_right_click)
+            self._build_tree(main_frame, items)
         
-        # Close button
+        # Button bar
         btn_frame = ttk.Frame(main_frame)
         btn_frame.pack(fill=tk.X, pady=(10, 0))
         ttk.Button(btn_frame, text="Close", command=self.destroy).pack(side=tk.RIGHT)
         
+        # ETA button (enabled only when items exist)
+        self.eta_btn = ttk.Button(
+            btn_frame, text="\U0001f4cb Update ETAs",
+            command=self._on_detail_update_etas,
+        )
+        self.eta_btn.pack(side=tk.RIGHT, padx=(0, 5))
+        if not items:
+            self.eta_btn.configure(state="disabled")
+        
+        # Selected-items ETA button (updates dynamically with selection count)
+        self.selected_eta_btn = ttk.Button(
+            btn_frame, text="\U0001f4cb Update ETAs for selected",
+            command=self._on_selected_eta_update,
+            state="disabled",
+        )
+        self.selected_eta_btn.pack(side=tk.RIGHT, padx=(0, 5))
+        
         # Item count
-        ttk.Label(btn_frame, text=f"{len(items)} item(s)").pack(side=tk.LEFT)
+        self._count_label = ttk.Label(btn_frame, text=f"{len(items)} item(s)")
+        self._count_label.pack(side=tk.LEFT)
+
+    def _build_tree(self, parent_frame, items: list):
+        """Create and populate the sortable treeview."""
+        columns = self.COLUMNS
+        self.tree = SortableTreeview(parent_frame, columns=columns, show="headings", height=15)
+        tree = self.tree
+        
+        tree.heading("title", text="Title")
+        tree.heading("service", text="Service")
+        tree.heading("sla", text="SLA Status")
+        tree.heading("due_date", text="Due Date")
+        tree.heading("eta_date", text="ETA Date")
+        tree.heading("eta_status", text="ETA Status")
+        tree.heading("assigned_to", text="Assigned To")
+        tree.heading("action_owner", text="Action Owner")
+        
+        tree.column("title", width=220, anchor=tk.W)
+        tree.column("service", width=130, anchor=tk.W)
+        tree.column("sla", width=80, anchor=tk.CENTER)
+        tree.column("due_date", width=85, anchor=tk.CENTER)
+        tree.column("eta_date", width=85, anchor=tk.CENTER)
+        tree.column("eta_status", width=100, anchor=tk.W)
+        tree.column("assigned_to", width=90, anchor=tk.W)
+        tree.column("action_owner", width=110, anchor=tk.W)
+        
+        # Scrollbars
+        y_scroll = ttk.Scrollbar(parent_frame, orient=tk.VERTICAL, command=tree.yview)
+        x_scroll = ttk.Scrollbar(parent_frame, orient=tk.HORIZONTAL, command=tree.xview)
+        tree.configure(yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
+        
+        # Pack with scrollbar on right
+        y_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        x_scroll.pack(side=tk.BOTTOM, fill=tk.X)
+        tree.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        
+        # Populate and store item references
+        self._item_map.clear()
+        self._populate_rows(items)
+        
+        # Apply default sorting: by due date ascending
+        self.tree.sort_by_columns([('due_date', False)])
+        
+        # Bind double-click to open item details
+        tree.bind('<Double-1>', self._on_item_double_click)
+        # Bind right-click for LLM analysis context menu
+        tree.bind('<Button-3>', self._on_item_right_click)
+        # Bind selection change to update selected-items ETA button
+        tree.bind('<<TreeviewSelect>>', self._on_tree_select)
     
+    def _on_tree_select(self, event=None):
+        """Update selected-items ETA button when tree selection changes."""
+        selection = self.tree.selection()
+        count = len(selection)
+        if count > 0:
+            self.selected_eta_btn.configure(
+                text=f"\U0001f4cb Update ETAs for {count} selected",
+                state="normal",
+            )
+        else:
+            self.selected_eta_btn.configure(
+                text="\U0001f4cb Update ETAs for selected",
+                state="disabled",
+            )
+
+    def _on_selected_eta_update(self):
+        """Open ManualEtaReviewDialog for only the selected items."""
+        selection = self.tree.selection()
+        if not selection:
+            return
+        selected_items = [self._item_map[iid] for iid in selection if iid in self._item_map]
+        if not selected_items:
+            return
+        ManualEtaReviewDialog(
+            self, selected_items,
+            on_complete=self._on_detail_eta_complete,
+        )
+
+    def _on_detail_update_etas(self):
+        """Open ManualEtaReviewDialog for items shown in this drill-down."""
+        items = self._items
+        if not items:
+            return
+        ManualEtaReviewDialog(
+            self, items,
+            on_complete=self._on_detail_eta_complete,
+        )
+
+    def _on_detail_eta_complete(self, saved, skipped, failed):
+        """Refresh the detail tree after ETA edits."""
+        if not saved:
+            return
+        # Mutate in-memory items
+        for item, eta_str, notes in saved:
+            item['EtaDate'] = eta_str
+            if notes:
+                item['EtaStatus'] = notes
+        # Refresh the tree view
+        self._refresh_items()
+        # Notify parent so home screen refreshes too
+        if self._on_eta_complete:
+            self._on_eta_complete(saved, skipped, failed)
+
+    def _refresh_items(self):
+        """Repopulate the tree with current item data."""
+        if hasattr(self, 'tree'):
+            for child in self.tree.get_children():
+                self.tree.delete(child)
+            self._item_map.clear()
+            self._populate_rows(self._items)
+            self.tree.sort_by_columns([('due_date', False)])
+
+    def _populate_rows(self, items: list):
+        """Insert rows into the tree for each item."""
+        for item in items:
+            svc_id = item.get('serviceTreeId', '')
+            svc_name = self.service_names.get(svc_id, svc_id[:20] + '...' if len(svc_id) > 20 else svc_id)
+            raw_title = item.get('title', '')
+            clean_title = clean_html_from_title(raw_title)
+            iid = self.tree.insert('', tk.END, values=(
+                clean_title[:60],
+                svc_name,
+                _resolve_sla_display(item.get('SlaType')),
+                (item.get('DueDate') or item.get('dueDate', ''))[:10],
+                (item.get('EtaDate') or '')[:10],
+                _resolve_eta_status(item.get('EtaStatus')),
+                item.get('S360_AssignedTo') or item.get('assignedTo', ''),
+                item.get('ActionOwnerName') or item.get('ActionOwnerAlias', ''),
+            ))
+            self._item_map[iid] = item
+
     def _on_item_double_click(self, event):
         """Handle double-click on item row to show full details."""
         selection = self.tree.selection()
@@ -1255,66 +1525,63 @@ class ItemDetailsModal(tk.Toplevel):
     
     def _open_url(self, url: str):
         """Open URL in system default browser."""
-        webbrowser.open(url)
+        import html
+        webbrowser.open(html.unescape(url))
     
     def _insert_text_with_links(self, text_widget: tk.Text, content: str, base_tag: str = 'value'):
         """Insert text content, making URLs clickable.
-        
-        Parses content for URLs and HTML anchors, rendering them as clickable blue links.
+
+        Uses extract_urls_from_text which picks anchors if present, else raw URLs.
+        If the entire value starts with http(s):// and has no anchor tags,
+        treat the whole value as a single link (handles URLs with spaces).
         """
         if not content:
             return
-        
-        # For special handling of ResourceURIs (JSON list of URLs)
-        urls = extract_urls_from_text(content)
-        
-        if not urls:
-            # No URLs, just insert plain text
-            text_widget.insert(tk.END, content, base_tag)
-            return
-        
-        # Sort by position to process in order
-        urls.sort(key=lambda x: x[2])
-        
-        last_end = 0
-        for url, display_text, start, end in urls:
-            # Insert text before this URL
-            if start > last_end:
-                text_widget.insert(tk.END, content[last_end:start], base_tag)
-            
-            # Create unique tag for this link
+
+        stripped = content.strip()
+
+        # If the whole value is a URL (no anchor tags), link it as one piece
+        # This handles URLs with spaces in query params like "Past SLA"
+        if (stripped.startswith(('http://', 'https://'))
+                and '<a ' not in content.lower()):
             self._link_counter += 1
             link_tag = f'link_{self._link_counter}'
-            
-            # Insert the link
-            text_widget.insert(tk.END, display_text, (link_tag, 'hyperlink'))
-            
-            # Configure tag for this specific link
-            text_widget.tag_bind(link_tag, '<Button-1>', lambda e, u=url: self._open_url(u))
+            text_widget.insert(tk.END, stripped, (link_tag, 'hyperlink'))
+            text_widget.tag_bind(link_tag, '<Button-1>', lambda e, u=stripped: self._open_url(u))
             text_widget.tag_bind(link_tag, '<Enter>', lambda e: text_widget.configure(cursor='hand2'))
             text_widget.tag_bind(link_tag, '<Leave>', lambda e: text_widget.configure(cursor=''))
-            
+            return
+
+        urls = extract_urls_from_text(content)
+
+        if not urls:
+            text_widget.insert(tk.END, content, base_tag)
+            return
+
+        last_end = 0
+        for url, display_text, start, end in urls:
+            # Insert plain text before this link
+            if start > last_end:
+                text_widget.insert(tk.END, content[last_end:start], base_tag)
+
+            if not url:
+                # Empty href anchor — render display text as plain text (skip link)
+                if display_text.strip():
+                    text_widget.insert(tk.END, display_text, base_tag)
+            else:
+                # Clickable link
+                self._link_counter += 1
+                link_tag = f'link_{self._link_counter}'
+                text_widget.insert(tk.END, display_text, (link_tag, 'hyperlink'))
+                text_widget.tag_bind(link_tag, '<Button-1>', lambda e, u=url: self._open_url(u))
+                text_widget.tag_bind(link_tag, '<Enter>', lambda e: text_widget.configure(cursor='hand2'))
+                text_widget.tag_bind(link_tag, '<Leave>', lambda e: text_widget.configure(cursor=''))
+
             last_end = end
-        
-        # Insert remaining text after last URL
+
+        # Trailing text after last link
         if last_end < len(content):
             text_widget.insert(tk.END, content[last_end:], base_tag)
-    
-    def _insert_single_link(self, text_widget: tk.Text, url: str):
-        """Insert a single URL as a clickable link.
-        
-        Used for fields where the entire value is a URL (like the 'url' field),
-        which may contain unencoded characters that would confuse URL extraction.
-        """
-        self._link_counter += 1
-        link_tag = f'link_{self._link_counter}'
-        
-        text_widget.insert(tk.END, url, (link_tag, 'hyperlink'))
-        
-        # Configure tag for this specific link
-        text_widget.tag_bind(link_tag, '<Button-1>', lambda e, u=url: self._open_url(u))
-        text_widget.tag_bind(link_tag, '<Enter>', lambda e: text_widget.configure(cursor='hand2'))
-        text_widget.tag_bind(link_tag, '<Leave>', lambda e: text_widget.configure(cursor=''))
     
     def _insert_resource_uris(self, text_widget: tk.Text, value):
         """Insert ResourceURIs as a list of clickable links."""
@@ -1416,13 +1683,8 @@ class ItemDetailsModal(tk.Toplevel):
                     # Get the raw value for proper parsing
                     raw_value = item.get('ResourceURIs', formatted_value)
                     self._insert_resource_uris(text, raw_value)
-                elif field_name == 'url':
-                    # The url field is the entire URL - make it clickable directly
-                    # (S360 URLs may have unencoded spaces in OData query params)
-                    self._insert_single_link(text, formatted_value)
-                    text.insert(tk.END, "\n", 'value')
-                elif field_name in ('title', 'Details') or 'http' in formatted_value.lower():
-                    # Check for URLs and make them clickable
+                elif 'http' in formatted_value.lower() or '<a ' in formatted_value.lower():
+                    # Contains a URL or anchor tag — auto-linkify
                     self._insert_text_with_links(text, formatted_value)
                     text.insert(tk.END, "\n", 'value')
                 else:
@@ -1657,38 +1919,44 @@ class SingleEtaEditDialog(tk.Toplevel):
 class EtaModeDialog(tk.Toplevel):
     """Ask user to choose Manual or Bulk mode (AC-1)."""
 
-    def __init__(self, parent, invalid_count: int, on_choice=None):
+    def __init__(self, parent, total_count: int, invalid_count: int, on_choice=None):
         super().__init__(parent)
-        self.title("Update Invalid ETAs")
-        self.geometry("360x200")
+        self.title("Update ETAs")
+        self.geometry("400x220")
         self.transient(parent)
         self.grab_set()
 
         self.update_idletasks()
-        x = parent.winfo_x() + (parent.winfo_width() - 360) // 2
-        y = parent.winfo_y() + (parent.winfo_height() - 200) // 2
+        x = parent.winfo_x() + (parent.winfo_width() - 400) // 2
+        y = parent.winfo_y() + (parent.winfo_height() - 220) // 2
         self.geometry(f"+{x}+{y}")
 
         self._on_choice = on_choice
-        self._create_widgets(invalid_count)
+        self._create_widgets(total_count, invalid_count)
         self.bind('<Escape>', lambda e: self.destroy())
         self.focus_set()
 
-    def _create_widgets(self, count: int):
+    def _create_widgets(self, total_count: int, invalid_count: int):
         frame = ttk.Frame(self, padding=20)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        ttk.Label(frame, text=f"📅 {count} item(s) with invalid ETAs",
+        ttk.Label(frame, text=f"\U0001f4c5 {total_count} total item(s), {invalid_count} with invalid ETAs",
                   font=("Segoe UI", 11, "bold")).pack(pady=(0, 15))
 
         ttk.Button(
-            frame, text="📝 Manual — review each item",
+            frame, text=f"\U0001f4dd Manual \u2014 review all {total_count} item(s)",
             command=lambda: self._choose("manual"),
         ).pack(fill=tk.X, pady=3)
-        ttk.Button(
-            frame, text="⚡ Bulk — auto-apply proposed dates",
+
+        bulk_btn = ttk.Button(
+            frame,
+            text=f"\u26a1 Bulk \u2014 auto-fix {invalid_count} invalid ETA(s)" if invalid_count else "\u26a1 Bulk \u2014 no invalid ETAs to fix",
             command=lambda: self._choose("bulk"),
-        ).pack(fill=tk.X, pady=3)
+        )
+        bulk_btn.pack(fill=tk.X, pady=3)
+        if not invalid_count:
+            bulk_btn.configure(state="disabled")
+
         ttk.Button(frame, text="Cancel",
                    command=self.destroy).pack(fill=tk.X, pady=(10, 0))
 
@@ -1786,8 +2054,17 @@ class ManualEtaReviewDialog(tk.Toplevel):
         self._accept_btn.pack(side=tk.LEFT, padx=(0, 5))
         ttk.Button(btn_f, text="⏭️ Skip",
                    command=self._skip).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_f, text="🔍 View Details",
+                   command=self._view_details).pack(side=tk.LEFT, padx=5)
         ttk.Button(btn_f, text="❌ Cancel",
                    command=self._cancel).pack(side=tk.RIGHT)
+
+    # ---- view details -------------------------------------------------------
+    def _view_details(self):
+        """Open ItemDetailsModal for the current item."""
+        if self._index < len(self._items):
+            item = self._items[self._index]
+            ItemDetailsModal(self, item)
 
     # ---- accept / skip / cancel -------------------------------------------
     def _accept(self):
@@ -2002,6 +2279,367 @@ class BulkEtaProgressDialog(tk.Toplevel):
         self.destroy()
 
 
+class SubscriptionPickerDialog(tk.Toplevel):
+    """Modal dialog to pick one Azure subscription from a list."""
+
+    def __init__(self, parent, choices: list[str]):
+        super().__init__(parent)
+        self.title("Select Subscription")
+        self.transient(parent)
+        self.grab_set()
+        self.resizable(True, True)
+        self.result: str | None = None
+
+        # Parse "display_name  (sub_id)" into (name, sub_id, original)
+        rows: list[tuple[str, str, str]] = []
+        for c in choices:
+            # Split on last '(' to separate name from id
+            if "(" in c:
+                idx = c.rfind("(")
+                name = c[:idx].strip()
+                sub_id = c[idx + 1:].rstrip(")")
+            else:
+                name = c
+                sub_id = ""
+            rows.append((name, sub_id, c))
+
+        # Sort by subscription name (case-insensitive)
+        rows.sort(key=lambda r: r[0].lower())
+
+        frm = ttk.Frame(self, padding=15)
+        frm.pack(fill=tk.BOTH, expand=True)
+
+        ttk.Label(frm, text="Choose a subscription to scan:").pack(anchor=tk.W, pady=(0, 8))
+
+        # Two-column treeview
+        tree_frame = ttk.Frame(frm)
+        tree_frame.pack(fill=tk.BOTH, expand=True)
+
+        self._tree = ttk.Treeview(
+            tree_frame,
+            columns=("name", "sub_id"),
+            show="headings",
+            selectmode="browse",
+            height=min(len(rows), 15),
+        )
+        self._tree.heading("name", text="Subscription Name")
+        self._tree.heading("sub_id", text="Subscription ID")
+        self._tree.column("name", width=280, minwidth=150)
+        self._tree.column("sub_id", width=300, minwidth=200)
+
+        scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=self._tree.yview)
+        self._tree.configure(yscrollcommand=scrollbar.set)
+        self._tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Store original choice string as iid tag for retrieval
+        self._iid_to_choice: dict[str, str] = {}
+        for i, (name, sub_id, original) in enumerate(rows):
+            iid = str(i)
+            self._tree.insert("", tk.END, iid=iid, values=(name, sub_id))
+            self._iid_to_choice[iid] = original
+
+        # Select first row
+        if rows:
+            self._tree.selection_set("0")
+            self._tree.focus("0")
+
+        self._tree.bind("<Double-Button-1>", lambda _: self._on_ok())
+
+        btn_frame = ttk.Frame(frm)
+        btn_frame.pack(pady=(10, 0))
+        ttk.Button(btn_frame, text="OK", command=self._on_ok).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Cancel", command=self._on_cancel).pack(side=tk.LEFT, padx=5)
+
+        # Center on parent
+        self.update_idletasks()
+        pw = parent.winfo_width()
+        ph = parent.winfo_height()
+        px = parent.winfo_rootx()
+        py = parent.winfo_rooty()
+        w = self.winfo_reqwidth()
+        h = self.winfo_reqheight()
+        x = px + (pw - w) // 2
+        y = py + (ph - h) // 2
+        self.geometry(f"+{x}+{y}")
+
+        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
+        self.wait_window()
+
+    def _on_ok(self):
+        sel = self._tree.selection()
+        if sel:
+            self.result = self._iid_to_choice[sel[0]]
+        self.destroy()
+
+    def _on_cancel(self):
+        self.result = None
+        self.destroy()
+
+
+class ConfigureLLMDialog(tk.Toplevel):
+    """Modal dialog for configuring Azure OpenAI LLM settings.
+
+    Allows manual entry of endpoint, deployment, and API version,
+    or auto-detection via ``llm_extender.discover_azure_configs()``.
+    """
+
+    _DEFAULT_DEPLOYMENT = "gpt-4o"
+    _DEFAULT_API_VERSION = "2024-10-21"
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.title("Configure LLM")
+        self.transient(parent)
+        self.grab_set()
+        self.resizable(False, False)
+
+        self._discovered_configs: list = []
+
+        # --- Field variables ---
+        self._endpoint_var = tk.StringVar(
+            value=_load_setting("llm_endpoint", "") or ""
+        )
+        self._deployment_var = tk.StringVar(
+            value=_load_setting("llm_deployment", self._DEFAULT_DEPLOYMENT) or self._DEFAULT_DEPLOYMENT
+        )
+        self._api_version_var = tk.StringVar(
+            value=_load_setting("llm_api_version", self._DEFAULT_API_VERSION) or self._DEFAULT_API_VERSION
+        )
+
+        self._build_ui()
+
+        # Center on parent after UI is built
+        self.update_idletasks()
+        pw = parent.winfo_width()
+        ph = parent.winfo_height()
+        px = parent.winfo_rootx()
+        py = parent.winfo_rooty()
+        w = self.winfo_reqwidth()
+        h = self.winfo_reqheight()
+        x = px + (pw - w) // 2
+        y = py + (ph - h) // 2
+        self.geometry(f"+{x}+{y}")
+
+    def _build_ui(self):
+        pad = dict(padx=10, pady=4)
+        frm = ttk.Frame(self, padding=15)
+        frm.pack(fill=tk.BOTH, expand=True)
+
+        # Endpoint
+        ttk.Label(frm, text="Endpoint:").grid(row=0, column=0, sticky=tk.W, **pad)
+        ttk.Entry(frm, textvariable=self._endpoint_var, width=55).grid(
+            row=0, column=1, columnspan=2, sticky=tk.EW, **pad
+        )
+
+        # Deployment
+        ttk.Label(frm, text="Deployment:").grid(row=1, column=0, sticky=tk.W, **pad)
+        ttk.Entry(frm, textvariable=self._deployment_var, width=30).grid(
+            row=1, column=1, columnspan=2, sticky=tk.EW, **pad
+        )
+
+        # API Version
+        ttk.Label(frm, text="API Version:").grid(row=2, column=0, sticky=tk.W, **pad)
+        ttk.Entry(frm, textvariable=self._api_version_var, width=30).grid(
+            row=2, column=1, columnspan=2, sticky=tk.EW, **pad
+        )
+
+        # Detect section
+        detect_frame = ttk.LabelFrame(frm, text="Detect from Azure CLI", padding=8)
+        detect_frame.grid(row=3, column=0, columnspan=3, sticky=tk.EW, pady=(10, 4), padx=10)
+
+        self._detect_btn = ttk.Button(
+            detect_frame, text="\U0001f50d Detect", command=self._on_auto_detect
+        )
+        self._detect_btn.pack(side=tk.LEFT, padx=(0, 10))
+
+        self._config_combo = ttk.Combobox(
+            detect_frame, state="readonly", width=60
+        )
+        self._config_combo.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self._config_combo.bind("<<ComboboxSelected>>", self._on_config_selected)
+
+        # Buttons row
+        btn_frame = ttk.Frame(frm)
+        btn_frame.grid(row=4, column=0, columnspan=3, pady=(15, 0))
+
+        ttk.Button(btn_frame, text="Save", command=self._on_save).pack(
+            side=tk.LEFT, padx=5
+        )
+        ttk.Button(btn_frame, text="Clear", command=self._on_clear).pack(
+            side=tk.LEFT, padx=5
+        )
+        ttk.Button(btn_frame, text="Cancel", command=self.destroy).pack(
+            side=tk.LEFT, padx=5
+        )
+
+    # --- Detect --------------------------------------------------------------
+
+    def _on_auto_detect(self):
+        """Phase 1: enumerate subscriptions, then show picker."""
+        self._detect_btn.configure(text="Loading subs...", state="disabled")
+        root = self.winfo_toplevel()
+
+        def _list_subs():
+            try:
+                import logging
+                for _az in ("azure.core", "azure.identity", "azure.mgmt"):
+                    logging.getLogger(_az).setLevel(logging.WARNING)
+                from llm_extender.discovery import _ensure_azure_sdk, SubscriptionClient, AzureCliCredential
+                _ensure_azure_sdk()
+                # Re-import after _ensure_azure_sdk populates the module globals
+                import llm_extender.discovery as disc
+                cred = disc.AzureCliCredential()
+                sub_client = disc.SubscriptionClient(cred)
+                subs = list(sub_client.subscriptions.list())
+                root.after(0, lambda: self._on_subs_loaded(subs))
+            except Exception as exc:
+                root.after(0, lambda e=exc: self._on_detect_error(e))
+
+        threading.Thread(target=_list_subs, daemon=True).start()
+
+    def _on_subs_loaded(self, subs: list):
+        """Phase 1 complete: show subscription picker."""
+        self._detect_btn.configure(text="\U0001f50d Detect", state="normal")
+        if not subs:
+            messagebox.showinfo(
+                "No Subscriptions",
+                "No Azure subscriptions found.\n\n"
+                "Ensure you are logged in with `az login`.",
+                parent=self,
+            )
+            return
+
+        # Build label → sub_id mapping
+        choices = {f"{s.display_name}  ({s.subscription_id})": s.subscription_id for s in subs}
+
+        picked = SubscriptionPickerDialog(self, list(choices.keys()))
+        if not picked.result:
+            return  # user cancelled
+
+        selected_sub_id = choices[picked.result]
+        self._scan_subscription(selected_sub_id)
+
+    def _scan_subscription(self, subscription_id: str):
+        """Phase 2: scan the chosen subscription for OpenAI deployments."""
+        self._detect_btn.configure(text="Scanning...", state="disabled")
+        root = self.winfo_toplevel()
+
+        def _do_scan():
+            try:
+                import logging
+                for _az in ("azure.core", "azure.identity", "azure.mgmt"):
+                    logging.getLogger(_az).setLevel(logging.WARNING)
+                from llm_extender import discover_azure_configs
+                configs = discover_azure_configs(subscription_id=subscription_id)
+                root.after(0, lambda: self._on_detect_complete(configs))
+            except Exception as exc:
+                root.after(0, lambda e=exc: self._on_detect_error(e))
+
+        threading.Thread(target=_do_scan, daemon=True).start()
+
+    def _on_detect_complete(self, configs: list):
+        """Handle successful discovery (main thread)."""
+        self._detect_btn.configure(text="\U0001f50d Detect", state="normal")
+        self._discovered_configs = configs
+        if not configs:
+            self._config_combo["values"] = []
+            messagebox.showinfo(
+                "No Results",
+                "No Azure OpenAI deployments found in the selected subscription.",
+                parent=self,
+            )
+            return
+        labels = [
+            f"{c.base_url}  \u2014  {c.deployment} ({c.model})"
+            for c in configs
+        ]
+        self._config_combo["values"] = labels
+        self._config_combo.current(0)
+        self._on_config_selected(None)
+
+    def _on_detect_error(self, error: Exception):
+        """Handle discovery failure (main thread)."""
+        self._detect_btn.configure(text="\U0001f50d Detect", state="normal")
+        if isinstance(error, ImportError):
+            messagebox.showerror(
+                "Azure SDK Not Installed",
+                "Azure discovery SDK is not available.\n\n"
+                "Install with:\n  pip install llm-extender[azure-discover]",
+                parent=self,
+            )
+        else:
+            messagebox.showerror(
+                "Detection Failed",
+                f"Discovery error: {error}",
+                parent=self,
+            )
+
+    def _on_config_selected(self, _event):
+        """Populate fields from the selected discovered config."""
+        idx = self._config_combo.current()
+        if idx < 0 or idx >= len(self._discovered_configs):
+            return
+        cfg = self._discovered_configs[idx]
+        self._endpoint_var.set(cfg.base_url)
+        self._deployment_var.set(cfg.deployment)
+        self._api_version_var.set(cfg.api_version)
+
+    # --- Save / Clear / Cancel -----------------------------------------------
+
+    def _on_save(self):
+        """Validate and persist the config."""
+        endpoint = self._endpoint_var.get().strip()
+        deploy = self._deployment_var.get().strip()
+        api_ver = self._api_version_var.get().strip()
+
+        if not endpoint.startswith("https://"):
+            messagebox.showerror(
+                "Invalid Endpoint",
+                "Endpoint must start with https://",
+                parent=self,
+            )
+            return
+
+        _save_setting("llm_endpoint", endpoint)
+        _save_setting("llm_deployment", deploy or self._DEFAULT_DEPLOYMENT)
+        _save_setting("llm_api_version", api_ver or self._DEFAULT_API_VERSION)
+        logger.info("LLM config saved: endpoint=%s deployment=%s api_version=%s",
+                    endpoint, deploy, api_ver)
+        self.destroy()
+
+    def _on_clear(self):
+        """Remove saved LLM config and reset fields to defaults."""
+        _save_setting("llm_endpoint", "")
+        _save_setting("llm_deployment", "")
+        _save_setting("llm_api_version", "")
+        self._endpoint_var.set("")
+        self._deployment_var.set(self._DEFAULT_DEPLOYMENT)
+        self._api_version_var.set(self._DEFAULT_API_VERSION)
+        logger.info("LLM config cleared.")
+
+
+def _load_llm_config() -> LLMConfig:
+    """Load LLM config: saved settings first, then env vars.
+
+    Returns:
+        A configured LLMConfig instance.
+
+    Raises:
+        LLMConfigError: If no config source is available.
+    """
+    endpoint = _load_setting("llm_endpoint", "") or ""
+    if endpoint.strip():
+        # Saved config exists — use it.
+        return LLMConfig(
+            endpoint=endpoint.strip(),
+            deployment=(_load_setting("llm_deployment", "") or "gpt-4o").strip(),
+            api_version=(_load_setting("llm_api_version", "") or "2024-10-21").strip(),
+        )
+    # No saved config — fall back to env vars.
+    return LLMConfig.from_env()
+
+
 class SFIReporterApp:
     """Main application class."""
     
@@ -2020,6 +2658,9 @@ class SFIReporterApp:
         self._program_id_map: dict = {}  # row iid -> program ID
         self._kpi_id_map: dict = {}  # row iid -> KPI ID
         
+        self._last_filter_clauses: list = []   # last applied QueryClause list
+        self._last_filter_ussec: bool = False       # last USSec toggle state
+
         self._build_ui()
         self._load_cached_data()
     
@@ -2071,6 +2712,28 @@ class SFIReporterApp:
         self.eta_btn = ttk.Button(controls_frame, text="📋 Update ETAs",
                                    command=self._on_update_etas, state="disabled")
         self.eta_btn.pack(side=tk.LEFT, padx=5)
+
+        self.llm_config_btn = ttk.Button(
+            controls_frame, text="⚙️ Configure LLM",
+            command=lambda: ConfigureLLMDialog(self.root),
+        )
+        self.llm_config_btn.pack(side=tk.LEFT, padx=5)
+
+        # "Re-apply filter after refresh" checkbox — persisted across sessions
+        self._reapply_filter_var = tk.BooleanVar(
+            value=_load_setting('reapply_filter_after_refresh', False)
+        )
+        self._reapply_filter_var.trace_add(
+            'write',
+            lambda *_: _save_setting('reapply_filter_after_refresh',
+                                     self._reapply_filter_var.get()),
+        )
+        self._reapply_cb = ttk.Checkbutton(
+            controls_frame,
+            text="Re-apply filter after refresh",
+            variable=self._reapply_filter_var,
+        )
+        self._reapply_cb.pack(side=tk.LEFT, padx=(10, 0))
         
         # State for retry
         self._failed_kpis: list[dict] = []
@@ -2118,7 +2781,8 @@ class SFIReporterApp:
         self.services_tree.column("invalid_eta", width=80, anchor=tk.CENTER)
         
         # Store owner ID mapping for drill-down
-        self._owner_id_map = {}
+        self._owner_id_map = {}   # iid -> owner_name (level1)
+        self._owner_l2_map = {}   # iid -> owner_name (level2)
         
         services_scroll = ttk.Scrollbar(services_frame, orient=tk.VERTICAL, command=self.services_tree.yview)
         self.services_tree.configure(yscrollcommand=services_scroll.set)
@@ -2239,6 +2903,7 @@ class SFIReporterApp:
         self._program_id_map.clear()
         self._kpi_id_map.clear()
         self._owner_id_map.clear()
+        self._owner_l2_map.clear()
         
         # Get pre-computed stats if available
         service_stats = data.get('service_stats', {})
@@ -2265,41 +2930,54 @@ class SFIReporterApp:
         
         if is_manager and owner_stats and service_stats:
             # Manager view: Group services by owner (pivot table style)
-            # Build owner -> service mapping using same filtering as aggregate_by_owner
-            owner_services: dict[str, list[tuple[str, str, dict]]] = {}  # owner -> [(svc_id, svc_name, stats)]
-            
-            # Get org_mapping from cached data (maps owner -> direct-report-level ancestor)
+            # Get org_mapping from cached data
             org_mapping = data.get('org_mapping', {})
+            level2_stats = data.get('level2_stats', {})
+            
+            # Detect if this is a 2-level hierarchy
+            has_level2 = any(
+                isinstance(m, OrgAncestry) and m.level2 is not None
+                for m in org_mapping.values()
+            )
+            
+            # Build service mapping: for each service, determine (level1, level2)
+            # Structure: {level1: {level2_or_None: [(svc_id, svc_name, stats)]}}
+            hierarchy: dict[str, dict[Optional[str], list[tuple[str, str, dict]]]] = {}
             
             for svc_id, stats in service_stats.items():
                 svc_name = stats.get('name', svc_id)
                 owners = service_owners.get(svc_name, None)
                 
                 if owners is None:
-                    target_owner = 'Unknown Owner'
+                    level1, level2 = 'Unknown Owner', None
                 elif len(owners) == 0:
-                    target_owner = 'No Owner'
+                    level1, level2 = 'No Owner', None
                 elif org_mapping:
-                    # Use org_mapping to find the direct-report-level owner
-                    target_owner = None
+                    level1, level2 = None, None
                     for owner in owners:
                         mapped = org_mapping.get(owner)
-                        if mapped and mapped != 'Unknown Owner':
-                            target_owner = mapped
+                        if isinstance(mapped, OrgAncestry):
+                            if mapped.level1 and mapped.level1 != 'Unknown Owner':
+                                level1 = mapped.level1
+                                level2 = mapped.level2
+                                break
+                        elif mapped and mapped != 'Unknown Owner':
+                            level1 = mapped
                             break
-                    if target_owner is None:
-                        target_owner = 'Unknown Owner'
+                    if level1 is None:
+                        level1 = 'Unknown Owner'
                 else:
-                    # No filtering - use first owner
-                    target_owner = owners[0]
+                    level1, level2 = owners[0], None
                 
-                if target_owner not in owner_services:
-                    owner_services[target_owner] = []
-                owner_services[target_owner].append((svc_id, svc_name, stats))
+                if level1 not in hierarchy:
+                    hierarchy[level1] = {}
+                if level2 not in hierarchy[level1]:
+                    hierarchy[level1][level2] = []
+                hierarchy[level1][level2].append((svc_id, svc_name, stats))
             
-            # Insert owners as parent rows, services as children
+            # Insert treeview rows
             for owner_name, owner_stat in sorted(owner_stats.items(), key=lambda x: x[1].get('count', 0), reverse=True):
-                # Insert owner parent row
+                # Insert Level-1 parent row
                 owner_iid = self.services_tree.insert("", tk.END, values=(
                     f"👤 {owner_name}",
                     owner_stat.get('count', 0),
@@ -2308,17 +2986,62 @@ class SFIReporterApp:
                 ), open=True)
                 self._owner_id_map[owner_iid] = owner_name
                 
-                # Insert service children under this owner
-                svc_list = owner_services.get(owner_name, [])
-                for svc_id, svc_name, stats in sorted(svc_list, key=lambda x: x[2].get('count', 0), reverse=True):
-                    child_iid = self.services_tree.insert(owner_iid, tk.END, values=(
-                        svc_name,
-                        stats.get('count', 0),
-                        stats.get('sla', 0),
-                        stats.get('invalid_eta', 0),
-                    ))
-                    self._service_id_map[child_iid] = svc_id
-                    self._service_name_map[svc_id] = svc_name
+                l2_dict = hierarchy.get(owner_name, {})
+                
+                if has_level2 and any(k is not None for k in l2_dict.keys()):
+                    # 2-level mode: insert Level-2 sub-rows, then services under each
+                    
+                    # First, insert services with level2=None directly under level1
+                    direct_svcs = l2_dict.get(None, [])
+                    for svc_id, svc_name, stats in sorted(direct_svcs, key=lambda x: x[2].get('count', 0), reverse=True):
+                        child_iid = self.services_tree.insert(owner_iid, tk.END, values=(
+                            svc_name,
+                            stats.get('count', 0),
+                            stats.get('sla', 0),
+                            stats.get('invalid_eta', 0),
+                        ))
+                        self._service_id_map[child_iid] = svc_id
+                        self._service_name_map[svc_id] = svc_name
+                    
+                    # Then, insert Level-2 sub-rows with their services
+                    for l2_name in sorted(
+                        (k for k in l2_dict if k is not None),
+                        key=lambda n: level2_stats.get((owner_name, n), {}).get('count', 0),
+                        reverse=True
+                    ):
+                        l2_stat = level2_stats.get((owner_name, l2_name), {})
+                        l2_iid = self.services_tree.insert(owner_iid, tk.END, values=(
+                            f"👤 {l2_name}",
+                            l2_stat.get('count', 0),
+                            l2_stat.get('sla', 0),
+                            l2_stat.get('invalid_eta', 0),
+                        ), open=True)
+                        self._owner_l2_map[l2_iid] = l2_name
+                        
+                        svc_list = l2_dict[l2_name]
+                        for svc_id, svc_name, stats in sorted(svc_list, key=lambda x: x[2].get('count', 0), reverse=True):
+                            child_iid = self.services_tree.insert(l2_iid, tk.END, values=(
+                                svc_name,
+                                stats.get('count', 0),
+                                stats.get('sla', 0),
+                                stats.get('invalid_eta', 0),
+                            ))
+                            self._service_id_map[child_iid] = svc_id
+                            self._service_name_map[svc_id] = svc_name
+                else:
+                    # 1-level mode: services directly under level1 (existing behavior)
+                    all_svcs = []
+                    for svc_list in l2_dict.values():
+                        all_svcs.extend(svc_list)
+                    for svc_id, svc_name, stats in sorted(all_svcs, key=lambda x: x[2].get('count', 0), reverse=True):
+                        child_iid = self.services_tree.insert(owner_iid, tk.END, values=(
+                            svc_name,
+                            stats.get('count', 0),
+                            stats.get('sla', 0),
+                            stats.get('invalid_eta', 0),
+                        ))
+                        self._service_id_map[child_iid] = svc_id
+                        self._service_name_map[svc_id] = svc_name
         elif services:
             # IC view: User owns services - show them flat
             for s in services:
@@ -2378,40 +3101,64 @@ class SFIReporterApp:
         
         iid = selection[0]
         
-        # Check if this is an owner row (parent) or service row (child)
+        # Check Level-2 owner rows first (takes precedence over Level-1)
+        l2_owner_name = self._owner_l2_map.get(iid)
+        if l2_owner_name:
+            service_owners_data = self.current_data.get('service_owners', {})
+            org_mapping = self.current_data.get('org_mapping', {})
+            
+            matching_svcs = collect_services_for_owner(
+                l2_owner_name, "level2", service_owners_data, org_mapping
+            )
+            items = [
+                item for item in self.current_data.get('detailed_items', [])
+                if item.get('S360_ServiceTreeServiceName') in matching_svcs
+            ]
+            
+            DetailModal(
+                self.root,
+                f"Action Items for {l2_owner_name}",
+                items,
+                self._service_name_map,
+                on_eta_complete=self._on_eta_update_complete,
+            )
+            return
+        
+        # Check Level-1 owner rows
         owner_name = self._owner_id_map.get(iid)
         if owner_name:
-            # Owner row - show all items for this owner's services
-            service_owners = self.current_data.get('service_owners', {})
+            service_owners_data = self.current_data.get('service_owners', {})
+            org_mapping = self.current_data.get('org_mapping', {})
             
-            # Find services owned by this owner
+            # Special cases for Unknown/No Owner
             if owner_name == 'Unknown Owner':
-                # Services not in service_owners lookup
-                known_services = set(service_owners.keys())
+                known_services = set(service_owners_data.keys())
                 items = [
                     item for item in self.current_data.get('detailed_items', [])
                     if item.get('S360_ServiceTreeServiceName') not in known_services
                 ]
             elif owner_name == 'No Owner':
-                # Services with empty owners list
-                empty_owner_services = {svc for svc, owners in service_owners.items() if not owners}
+                empty_owner_services = {svc for svc, owners in service_owners_data.items() if not owners}
                 items = [
                     item for item in self.current_data.get('detailed_items', [])
                     if item.get('S360_ServiceTreeServiceName') in empty_owner_services
                 ]
             else:
-                # Normal owner - filter by services they own
-                owner_services = {svc for svc, owners in service_owners.items() if owner_name in owners}
+                # Use collect_services_for_owner to get entire subtree
+                matching_svcs = collect_services_for_owner(
+                    owner_name, "level1", service_owners_data, org_mapping
+                )
                 items = [
                     item for item in self.current_data.get('detailed_items', [])
-                    if item.get('S360_ServiceTreeServiceName') in owner_services
+                    if item.get('S360_ServiceTreeServiceName') in matching_svcs
                 ]
             
             DetailModal(
                 self.root,
                 f"Action Items for {owner_name}",
                 items,
-                self._service_name_map
+                self._service_name_map,
+                on_eta_complete=self._on_eta_update_complete,
             )
             return
         
@@ -2430,7 +3177,8 @@ class SFIReporterApp:
             self.root,
             f"Action Items for {service_name}",
             items,
-            self._service_name_map
+            self._service_name_map,
+            on_eta_complete=self._on_eta_update_complete,
         )
     
     def _on_program_double_click(self, event):
@@ -2464,7 +3212,8 @@ class SFIReporterApp:
             self.root,
             f"Action Items for {program_name}",
             items,
-            self._service_name_map
+            self._service_name_map,
+            on_eta_complete=self._on_eta_update_complete,
         )
     
     def _on_action_double_click(self, event):
@@ -2492,7 +3241,8 @@ class SFIReporterApp:
             self.root,
             f"Action Items: {kpi_name}",
             items,
-            self._service_name_map
+            self._service_name_map,
+            on_eta_complete=self._on_eta_update_complete,
         )
 
     def _on_kpi_right_click(self, event):
@@ -2533,32 +3283,36 @@ class SFIReporterApp:
         self.status_label.configure(foreground=color)
     
     def _on_update_etas(self):
-        """Handle 'Update ETAs' button click (AC-1).
+        """Handle 'Update ETAs' button click.
 
-        Filters the current data for items with invalid ETAs, then opens
-        a mode-selection dialog (Manual / Bulk).
+        Shows a mode-selection dialog. Manual mode passes ALL items
+        (sorted invalid-first). Bulk mode passes only invalid items.
         """
         from sfi_reporter.eta_logic import get_items_needing_eta_update
+        from sfi_reporter.data import is_invalid_eta
 
         items = (self.current_data or {}).get('detailed_items', [])
+        if not items:
+            return
+
         invalid = get_items_needing_eta_update(items)
 
-        if not invalid:
-            messagebox.showinfo("All ETAs Current",
-                                "No items with invalid ETAs found.")
-            return
+        # Sort all items: invalid ETAs first
+        sorted_all = sorted(items, key=lambda it: (
+            0 if is_invalid_eta(it.get('EtaDate')) else 1
+        ))
 
         def on_mode(mode: str):
             if mode == "manual":
                 ManualEtaReviewDialog(
-                    self.root, invalid,
+                    self.root, sorted_all,
                     on_complete=self._on_eta_update_complete)
             else:
                 BulkEtaProgressDialog(
                     self.root, invalid,
                     on_complete=self._on_eta_update_complete)
 
-        EtaModeDialog(self.root, len(invalid), on_choice=on_mode)
+        EtaModeDialog(self.root, len(items), len(invalid), on_choice=on_mode)
 
     def _on_eta_update_complete(self, saved, skipped, failed):
         """Post-save callback — mutate cache and re-render tables (AC-5)."""
@@ -2653,7 +3407,12 @@ class SFIReporterApp:
         
         if data:
             self._update_tables(data)
-            
+
+            # Re-apply last filter if checkbox is checked
+            if (self._reapply_filter_var.get()
+                    and self._last_filter_clauses):
+                self._reapply_last_filter()
+
             # Track failed KPIs for retry
             failed = data.get('failed_kpis', [])
             self._failed_kpis = failed
@@ -2821,8 +3580,28 @@ class SFIReporterApp:
             on_apply=self._on_filter_applied,
         )
 
+    def _reapply_last_filter(self):
+        """Re-evaluate the last filter clauses against current (refreshed) data."""
+        from sfi_reporter.query_builder import evaluate_clauses
+        source = self._unfiltered_data or self.current_data
+        items = source.get('detailed_items', [])
+        if not items:
+            return
+        filtered = evaluate_clauses(
+            items, self._last_filter_clauses,
+            include_ussec=self._last_filter_ussec,
+        )
+        self._on_filter_applied(filtered, self._last_filter_clauses)
+
     def _on_filter_applied(self, filtered_items: list, clauses: list):
         """Handle filter applied from QueryBuilder — rebuild tables with filtered data."""
+        # Remember clauses for re-apply-after-refresh
+        self._last_filter_clauses = clauses
+        # Grab USSec toggle from the clause cache (saved just before this callback)
+        from sfi_reporter.query_builder import load_clause_cache
+        _, ussec = load_clause_cache()
+        self._last_filter_ussec = ussec
+
         # No active clauses — restore original unfiltered view
         if not clauses:
             original = self._unfiltered_data or self.current_data
@@ -3055,7 +3834,7 @@ def _launch_llm_analysis(parent, item: dict):
     """
     # Validate config before spawning thread
     try:
-        config = LLMConfig.from_env()
+        config = _load_llm_config()
     except LLMConfigError as e:
         messagebox.showerror("LLM Configuration Required", str(e), parent=parent)
         return
@@ -3082,10 +3861,12 @@ def _launch_llm_analysis(parent, item: dict):
             root.after(0, lambda: _on_analysis_complete(root, progress, result))
 
         except LLMError as e:
-            root.after(0, lambda: _on_analysis_error(root, progress, str(e)))
+            msg = str(e)
+            root.after(0, lambda m=msg: _on_analysis_error(root, progress, m))
         except Exception as e:
+            msg = f"Unexpected error: {e}"
             logger.error("Unexpected error during LLM analysis: %s", e)
-            root.after(0, lambda: _on_analysis_error(root, progress, f"Unexpected error: {e}"))
+            root.after(0, lambda m=msg: _on_analysis_error(root, progress, m))
 
     threading.Thread(target=do_analysis, daemon=True).start()
 
