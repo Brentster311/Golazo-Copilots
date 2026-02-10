@@ -182,3 +182,40 @@ class TestCapabilityRegistryInRoles:
         role_files = resources.files("golazo_copilot.roles.defaults")
         content = role_files.joinpath(f"{role}.md").read_text(encoding="utf-8")
         assert "capabilities.yaml" in content, f"{role}.md missing conditional capabilities.yaml reference"
+
+
+class TestSpineCapabilityRegistryMention:
+    """GCP-0041: Verify bootstrap-instructions.md (spine) mentions capability registry."""
+
+    @staticmethod
+    def _read_spine() -> str:
+        from importlib import resources
+        files_pkg = resources.files("golazo_copilot")
+        return files_pkg.joinpath("bootstrap-instructions.md").read_text(encoding="utf-8")
+
+    def test_spine_mentions_gcp_capabilities(self):
+        """TC1: Spine contains gcp_capabilities mention."""
+        content = self._read_spine()
+        assert "gcp_capabilities" in content, "Spine missing gcp_capabilities mention"
+
+    def test_spine_uses_conditional_phrasing(self):
+        """TC2: Spine mention uses conditional phrasing about capabilities.yaml."""
+        content = self._read_spine()
+        assert "capabilities.yaml" in content, "Spine missing conditional capabilities.yaml reference"
+
+    def test_spine_capability_section_is_brief(self):
+        """TC3: Capability Registry section is <= 10 lines."""
+        content = self._read_spine()
+        in_section = False
+        section_lines = []
+        for line in content.splitlines():
+            if "Capability Registry" in line and line.startswith("#"):
+                in_section = True
+                section_lines.append(line)
+                continue
+            if in_section:
+                if line.startswith("#"):
+                    break
+                section_lines.append(line)
+        assert len(section_lines) > 0, "Spine missing Capability Registry section heading"
+        assert len(section_lines) <= 10, f"Section is {len(section_lines)} lines, expected <= 10"
