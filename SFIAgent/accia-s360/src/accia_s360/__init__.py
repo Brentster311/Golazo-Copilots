@@ -23,6 +23,8 @@ from accia_s360.models import (
     EtaUpdate,
     SaveResult,
     EndpointInfo,
+    OrgPerson,
+    OrgTree,
 )
 from accia_s360 import auth
 
@@ -40,5 +42,7 @@ __all__ = [
     "EtaUpdate",
     "SaveResult",
     "EndpointInfo",
+    "OrgPerson",
+    "OrgTree",
     "auth",
 ]
