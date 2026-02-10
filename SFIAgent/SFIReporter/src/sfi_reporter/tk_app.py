@@ -18,48 +18,6 @@ class OrgAncestry(NamedTuple):
     level1: str
     level2: Optional[str]
 
-
-def _serialize_org_data_for_cache(data: dict) -> dict:
-    """Convert OrgAncestry and tuple keys to JSON-serializable format for caching."""
-    result = dict(data)
-    # org_mapping: {name: OrgAncestry(l1, l2)} → {name: [l1, l2]}
-    if result.get('org_mapping'):
-        result['org_mapping'] = {
-            k: [v.level1, v.level2] if isinstance(v, OrgAncestry) else v
-            for k, v in result['org_mapping'].items()
-        }
-    # level2_stats: {(l1, l2): stats} → {"l1||l2": stats}
-    if result.get('level2_stats'):
-        result['level2_stats'] = {
-            f"{k[0]}||{k[1]}": v
-            for k, v in result['level2_stats'].items()
-        }
-    return result
-
-
-def _deserialize_org_data_from_cache(data: dict) -> dict:
-    """Restore OrgAncestry and tuple keys from JSON-deserialized cache data."""
-    # org_mapping: {name: [l1, l2]} → {name: OrgAncestry(l1, l2)}
-    if data.get('org_mapping'):
-        restored = {}
-        for k, v in data['org_mapping'].items():
-            if isinstance(v, list) and len(v) == 2:
-                restored[k] = OrgAncestry(level1=v[0], level2=v[1])
-            else:
-                restored[k] = v  # Legacy string mapping
-        data['org_mapping'] = restored
-    # level2_stats: {"l1||l2": stats} → {(l1, l2): stats}
-    if data.get('level2_stats'):
-        restored = {}
-        for k, v in data['level2_stats'].items():
-            if isinstance(k, str) and '||' in k:
-                parts = k.split('||', 1)
-                restored[(parts[0], parts[1])] = v
-            else:
-                restored[k] = v
-        data['level2_stats'] = restored
-    return data
-
 from sfi_reporter.cache import (
     read_cache,
     write_cache,
@@ -350,40 +308,30 @@ def get_org_mapping(owner_names: list[str], manager_alias: str, on_status: Optio
     Returns:
         Dict mapping owner_name → OrgAncestry(level1, level2)
     """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     from sfi_reporter.data import get_client
-    import time
+    import threading
     
     if not owner_names:
         return {}
     
     org_mapping: dict[str, OrgAncestry] = {}
+    lock = threading.Lock()
+    completed = [0]
     total = len(owner_names)
     
-    # Shared cache for alias → display name resolution
-    _name_cache: dict[str, str] = {}
-    
     def _resolve_display_name(client, alias: str) -> str:
-        """Look up a person's display name by alias, with caching and retry."""
-        alias_lower = alias.lower()
-        if alias_lower in _name_cache:
-            return _name_cache[alias_lower]
-        
-        for attempt in range(2):
-            try:
-                results = client.search(alias)
-                for r in results:
-                    if r.get('Group') == 'Org' and r.get('Id', '').lower() == alias_lower:
-                        display_name = r.get('Owners', alias)
-                        _name_cache[alias_lower] = display_name
-                        return display_name
-            except Exception:
-                if attempt == 0:
-                    time.sleep(1)
-        
-        # Fallback: return alias as-is (don't cache failures so we can retry later)
+        """Look up a person's display name by alias."""
+        try:
+            results = client.search(alias)
+            for r in results:
+                if r.get('Group') == 'Org' and r.get('Id', '').lower() == alias.lower():
+                    return r.get('Owners', alias)
+        except Exception:
+            pass
         return alias
     
-    def lookup_owner(owner_name: str, client=None) -> tuple[str, OrgAncestry]:
+    def lookup_owner(owner_name: str) -> tuple[str, OrgAncestry]:
         """Look up an owner and find their hierarchical ancestors.
         
         Algorithm:
@@ -392,88 +340,78 @@ def get_org_mapping(owner_names: list[str], manager_alias: str, on_status: Optio
         3. Use the FIRST match that has manager_alias in their chain
         4. Determine hierarchy depth and return OrgAncestry tuple
         """
-        if client is None:
+        try:
             client = get_client()
-        for attempt in range(3):
-            try:
-                results = client.search(owner_name)
+            results = client.search(owner_name)
+            
+            for r in results:
+                if r.get('Group') != 'Org':
+                    continue
                 
-                for r in results:
-                    if r.get('Group') != 'Org':
-                        continue
-                    
-                    result_owners = r.get('Owners', '')
-                    if result_owners.lower() != owner_name.lower():
-                        continue
-                    
-                    # Check if this owner IS the manager (their chain won't include themselves)
-                    result_alias = r.get('Id', '')
-                    if result_alias.lower() == manager_alias.lower():
-                        return owner_name, OrgAncestry(level1=owner_name, level2=None)
-                    
-                    # Get this person's Managers chain
-                    managers_json = r.get('Managers', '[]')
-                    try:
-                        managers = json.loads(managers_json) if isinstance(managers_json, str) else managers_json
-                    except (json.JSONDecodeError, TypeError):
-                        managers = []
-                    
-                    if not managers:
-                        continue
-                    
-                    # KEY CHECK: Is manager_alias in their chain?
-                    managers_lower = [m.lower() for m in managers]
-                    if manager_alias.lower() not in managers_lower:
-                        continue
-                    
-                    manager_idx = managers_lower.index(manager_alias.lower())
-                    remaining = len(managers) - 1 - manager_idx  # entries after manager_alias
-                    
-                    # Chain: [CEO, ..., manager_alias, level1_alias, level2_alias, ..., immediate_mgr]
-                    
-                    if remaining == 0:
-                        # This person reports directly to the viewer
-                        return owner_name, OrgAncestry(level1=owner_name, level2=None)
-                    
-                    # Level 1: the viewer's direct report
-                    level1_alias = managers[manager_idx + 1]
-                    level1_name = _resolve_display_name(client, level1_alias)
-                    
-                    if remaining == 1:
-                        # This person reports to a direct → they ARE the level2
-                        return owner_name, OrgAncestry(level1=level1_name, level2=owner_name)
-                    
-                    # remaining >= 2: two or more levels deep → cap at level2
-                    level2_alias = managers[manager_idx + 2]
-                    level2_name = _resolve_display_name(client, level2_alias)
-                    return owner_name, OrgAncestry(level1=level1_name, level2=level2_name)
+                result_owners = r.get('Owners', '')
+                if result_owners.lower() != owner_name.lower():
+                    continue
                 
-                # No chain match found — this is definitive, no need to retry
-                logger.debug("get_org_mapping: '%s' has no chain match for '%s'", owner_name, manager_alias)
-                return owner_name, OrgAncestry(level1='Unknown Owner', level2=None)
+                # Check if this owner IS the manager (their chain won't include themselves)
+                result_alias = r.get('Id', '')
+                if result_alias.lower() == manager_alias.lower():
+                    return owner_name, OrgAncestry(level1=owner_name, level2=None)
                 
-            except Exception as exc:
-                if attempt < 2:
-                    backoff = (attempt + 1) * 2  # 2s, 4s
-                    logger.debug("get_org_mapping: transient error for '%s' (attempt %d), retrying in %ds: %s", owner_name, attempt + 1, backoff, exc)
-                    time.sleep(backoff)
-                else:
-                    logger.warning("get_org_mapping: error looking up '%s' after 3 attempts: %s", owner_name, exc)
-                    return owner_name, OrgAncestry(level1='Unknown Owner', level2=None)
-        
-        return owner_name, OrgAncestry(level1='Unknown Owner', level2=None)
+                # Get this person's Managers chain
+                managers_json = r.get('Managers', '[]')
+                try:
+                    managers = json.loads(managers_json) if isinstance(managers_json, str) else managers_json
+                except (json.JSONDecodeError, TypeError):
+                    managers = []
+                
+                if not managers:
+                    continue
+                
+                # KEY CHECK: Is manager_alias in their chain?
+                managers_lower = [m.lower() for m in managers]
+                if manager_alias.lower() not in managers_lower:
+                    continue
+                
+                manager_idx = managers_lower.index(manager_alias.lower())
+                remaining = len(managers) - 1 - manager_idx  # entries after manager_alias
+                
+                # Chain: [CEO, ..., manager_alias, level1_alias, level2_alias, ..., immediate_mgr]
+                
+                if remaining == 0:
+                    # This person reports directly to the viewer
+                    return owner_name, OrgAncestry(level1=owner_name, level2=None)
+                
+                # Level 1: the viewer's direct report
+                level1_alias = managers[manager_idx + 1]
+                level1_name = _resolve_display_name(client, level1_alias)
+                
+                if remaining == 1:
+                    # This person reports to a direct → they ARE the level2
+                    return owner_name, OrgAncestry(level1=level1_name, level2=owner_name)
+                
+                # remaining >= 2: two or more levels deep → cap at level2
+                level2_alias = managers[manager_idx + 2]
+                level2_name = _resolve_display_name(client, level2_alias)
+                return owner_name, OrgAncestry(level1=level1_name, level2=level2_name)
+            
+            return owner_name, OrgAncestry(level1='Unknown Owner', level2=None)
+            
+        except Exception:
+            return owner_name, OrgAncestry(level1='Unknown Owner', level2=None)
     
     if on_status:
         on_status(f"Looking up {total} service owners...")
     
-    # Use a single shared client for all lookups to avoid connection pool issues.
-    shared_client = get_client()
-    
-    for i, name in enumerate(owner_names):
-        owner_name, ancestry = lookup_owner(name, shared_client)
-        org_mapping[owner_name] = ancestry
-        if on_status and (i + 1) % 5 == 0:
-            on_status(f"Looking up owners: {i + 1}/{total}")
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = {executor.submit(lookup_owner, name): name for name in owner_names}
+        
+        for future in as_completed(futures):
+            owner_name, ancestry = future.result()
+            with lock:
+                org_mapping[owner_name] = ancestry
+                completed[0] += 1
+                if on_status and completed[0] % 5 == 0:
+                    on_status(f"Looking up owners: {completed[0]}/{total}")
     
     return org_mapping
 
@@ -898,25 +836,22 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
         service_owners = {}
         org_mapping = {}  # Maps each owner to OrgAncestry(level1, level2)
         if is_manager and service_stats:
-            # The manager alias is the user themselves — use it directly.
-            # (Previous approach of extracting from the first TeamGroup name was wrong
-            # for multi-team managers where the first TeamGroup is a different person.)
-            manager_alias = user_alias.lower()
+            # Get manager alias from TeamGroup name (e.g., "Azure Core Insights (MURALIC)" -> "muralic")
+            manager_alias = None
             manager_name = None
-            # Try to get display name from the TeamGroup that matches the user
             for item in landing_view:
                 if item.get('Group') == 'TeamGroup':
+                    # Extract alias from team name - usually in format "Team Name (ALIAS)"
                     team_name = item.get('Name', '')
-                    # Check if this TeamGroup matches the user alias
                     if '(' in team_name and ')' in team_name:
-                        tg_alias = team_name.split('(')[-1].replace(')', '').strip().lower()
-                        if tg_alias == manager_alias:
-                            owners_json = item.get('Owners')
-                            if owners_json:
-                                manager_names = parse_owners_field(owners_json)
-                                if manager_names:
-                                    manager_name = manager_names[0]
-                            break
+                        manager_alias = team_name.split('(')[-1].replace(')', '').strip().lower()
+                    # Also try to get display name from Owners field
+                    owners_json = item.get('Owners')
+                    if owners_json:
+                        manager_names = parse_owners_field(owners_json)
+                        if manager_names:
+                            manager_name = manager_names[0]
+                    break
             
             # Get unique service names
             service_names = [stats.get('name') for stats in service_stats.values() if stats.get('name')]
@@ -930,7 +865,7 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
                 for owners in service_owners.values():
                     all_owners.update(owners)
                 
-                # Build org mapping
+                # Get org mapping: for each owner, find their direct-report-level ancestor
                 if manager_alias and all_owners:
                     org_mapping = get_org_mapping(list(all_owners), manager_alias, on_status)
                 
@@ -964,7 +899,7 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
             'timestamp': datetime.now().isoformat(),
         }
         
-        write_cache(user_alias, _serialize_org_data_for_cache(data))
+        write_cache(user_alias, data)
         return data
     except Exception as e:
         logger.exception("Error fetching data for user")
@@ -2929,7 +2864,6 @@ class SFIReporterApp:
         if alias:
             cached = read_cache(alias)
             if cached and is_cache_valid(cached):
-                _deserialize_org_data_from_cache(cached)
                 self._update_tables(cached)
                 age = get_cache_age_minutes(cached)
                 if age is not None:
@@ -3563,7 +3497,6 @@ class SFIReporterApp:
         if not cached:
             self._update_status("❌ Cache missing — do a full refresh", "red")
             return
-        _deserialize_org_data_from_cache(cached)
         
         existing_items = cached.get('detailed_items', [])
         existing_items.extend(new_rows)
@@ -3588,7 +3521,7 @@ class SFIReporterApp:
         cached['failed_kpis'] = still_failed
         cached['timestamp'] = datetime.now().isoformat()
         
-        write_cache(alias, _serialize_org_data_for_cache(cached))
+        write_cache(alias, cached)
         self._update_tables(cached)
         
         self._failed_kpis = still_failed
