@@ -166,7 +166,7 @@ class SFIReporterApp:
         self.services_tree.heading("count", text="Total")
         self.services_tree.heading("sla", text="Out of SLA")
         self.services_tree.heading("invalid_eta", text="Invalid ETA")
-        self.services_tree.column("#0", width=20, stretch=False)
+        self.services_tree.column("#0", width=40, stretch=False)
         self.services_tree.column("name", width=180, anchor=tk.W)
         self.services_tree.column("count", width=60, anchor=tk.CENTER)
         self.services_tree.column("sla", width=80, anchor=tk.CENTER)
@@ -391,12 +391,48 @@ class SFIReporterApp:
                     self._service_id_map[child_iid] = svc_id
                     self._service_name_map[svc_id] = svc_name
 
+            # Build a wrapper root node so the logged-in manager appears as
+            # a single collapsible row containing all direct-report groups.
+            if root_name:
+                # Compute aggregate stats across all groups (excluding Unknown/No Owner)
+                root_stats = {'count': 0, 'sla': 0, 'invalid_eta': 0}
+                for n, g in root_groups.items():
+                    gs = g.get('_stats', {'count': 0, 'sla': 0, 'invalid_eta': 0})
+                    root_stats['count'] += gs['count']
+                    root_stats['sla'] += gs['sla']
+                    root_stats['invalid_eta'] += gs['invalid_eta']
+
+                root_iid = self.services_tree.insert("", tk.END, values=(
+                    f"\U0001f464 {root_name}", root_stats['count'], root_stats['sla'], root_stats['invalid_eta'],
+                ), open=True)
+                self._group_path_map[root_iid] = (root_name,)
+            else:
+                root_iid = ""
+
             for name in sorted(root_groups, key=lambda n: root_groups[n].get('_stats', {}).get('count', 0), reverse=True):
+                if root_name and name == root_name:
+                    # Fold root-name bucket directly into the root node
+                    # instead of creating a duplicate child group.
+                    group = root_groups[name]
+                    for child_name in sorted(
+                        group['children'],
+                        key=lambda n: group['children'][n].get('_stats', {}).get('count', 0),
+                        reverse=True
+                    ):
+                        child_full_path = (root_name, child_name)
+                        _insert_group(root_iid, child_name, group['children'][child_name], 0, child_full_path)
+                    for svc_id, svc_name, s in sorted(group['services'], key=lambda x: x[2].get('count', 0), reverse=True):
+                        child_iid = self.services_tree.insert(root_iid, tk.END, values=(
+                            svc_name, s.get('count', 0), s.get('sla', 0), s.get('invalid_eta', 0),
+                        ))
+                        self._service_id_map[child_iid] = svc_id
+                        self._service_name_map[svc_id] = svc_name
+                    continue
                 if root_name and name != 'Unknown Owner' and name != 'No Owner':
                     full_path = (root_name, name)
                 else:
                     full_path = (name,)
-                _insert_group("", name, root_groups[name], 0, full_path)
+                _insert_group(root_iid, name, root_groups[name], 0, full_path)
         elif services:
             for s in services:
                 svc_id = s.get('Id', '')
@@ -951,6 +987,7 @@ def main():
         style.theme_use("vista")
     elif "clam" in style.theme_names():
         style.theme_use("clam")
+    style.configure('Treeview', indent=10)
 
     app = SFIReporterApp(root)
     root.mainloop()
