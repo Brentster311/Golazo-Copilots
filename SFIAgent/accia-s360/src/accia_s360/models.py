@@ -132,3 +132,50 @@ class EndpointInfo:
     description: str = ""
     parameters: list[str] = field(default_factory=list)
     discovered: bool = False  # True if discovered via probing, False if known
+
+
+@dataclass
+class OrgPerson:
+    """A person in the Microsoft org hierarchy (from MS Graph API)."""
+
+    alias: str
+    display_name: str
+    job_title: str | None = None
+    department: str | None = None
+    object_id: str = ""
+
+    @classmethod
+    def from_graph_response(cls, data: dict[str, Any]) -> "OrgPerson":
+        """Create OrgPerson from Microsoft Graph API response.
+
+        Expected fields (via $select): displayName, mailNickname,
+        jobTitle, department, id.
+        """
+        alias = data.get("mailNickname", "")
+        if not alias:
+            # Fallback: extract from userPrincipalName
+            upn = data.get("userPrincipalName", "")
+            alias = upn.split("@")[0] if "@" in upn else upn
+        return cls(
+            alias=alias,
+            display_name=data.get("displayName", "Unknown"),
+            job_title=data.get("jobTitle"),
+            department=data.get("department"),
+            object_id=str(data.get("id", "")),
+        )
+
+    def is_sc_alt(self) -> bool:
+        """Check if this person is a non-EA SC ALT account."""
+        if self.alias.lower().startswith("sc-"):
+            return True
+        if self.display_name and "NON EA SC ALT" in self.display_name.upper():
+            return True
+        return False
+
+
+@dataclass
+class OrgTree:
+    """A recursive org tree node: a person and their direct reports."""
+
+    person: OrgPerson
+    direct_reports: list["OrgTree"] = field(default_factory=list)

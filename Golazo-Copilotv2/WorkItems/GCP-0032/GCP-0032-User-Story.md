@@ -1,6 +1,6 @@
 # GCP-0032: Bootstrap Version Sync Check
 
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 ## User Story
 

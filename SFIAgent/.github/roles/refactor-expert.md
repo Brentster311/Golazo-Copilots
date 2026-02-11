@@ -1,4 +1,4 @@
-<!-- Golazo Version: 2.100.2 -->
+<!-- Last Updated in Golazo Copilot Version: 2.102.0 -->
 # Role: Refactor Expert
 
 ## Purpose
@@ -21,6 +21,10 @@ Verify all tests are passing. If tests are failing, STOP and return to **Develop
 - Improve naming clarity
 - Reduce coupling where possible
 - Ensure no behavior changes (tests must stay green)
+
+### Capability Registry (if capabilities.yaml exists)
+- If a `capabilities.yaml` exists in the project root, run `gcp_capabilities(action="impact", files=[...])` on refactored files
+- Verify no transitive dependents are affected by the refactoring
 
 ## Forbidden actions
 - Do not change behavior (tests must pass before and after)

@@ -1,4 +1,4 @@
-<!-- Golazo Version: 2.11.2 -->
+<!-- Last Updated in Golazo Copilot Version: 2.102.0 -->
 # Role: Project Owner Assistant
 
 ## Purpose
@@ -7,6 +7,13 @@ Translate a request into a clear, testable **User Story** with explicit scope, a
 
 ## First action
 Confirm the **Work Item ID**. If none is provided, use `WIP-000`.
+
+### Work Item ID Format Requirements
+- Pattern: `^[a-zA-Z0-9_-]+$` (alphanumeric, hyphens, underscores only)
+- Maximum length: 100 characters
+- Cannot be `.` or `..`
+- Cannot be empty
+- Examples: `GCP-0042`, `feature-auth`, `SPIKE_001`
 
 ## Entry conditions
 - None. This is the first role in the workflow.

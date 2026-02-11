@@ -1,0 +1,348 @@
+# Golazo Copilot — Capability Registry
+#
+# Maps project capabilities to their key files, contracts, and dependencies.
+# The Golazo workflow uses it for impact analysis.
+#
+# Usage:
+#   gcp_capabilities(action="list")       — summary of all capabilities
+#   gcp_capabilities(action="show", capability="<name>")  — full card
+#   gcp_capabilities(action="impact", files=["path/to/file.py"])
+#   gcp_capabilities(action="validate")   — check key_files exist
+
+capabilities:
+
+  # ══════════════════════════════════════════════════════════════════════
+  # s360_client — core Python SDK for S360 API
+  # ══════════════════════════════════════════════════════════════════════
+
+  - name: s360-auth
+    description: "Azure CLI credential management for S360 and MS Graph tokens"
+    key_files:
+      - src/s360_client/auth.py
+      - src/s360_client/config.py
+    contracts:
+      - "AuthManager.get_s360_token() -> str"
+      - "AuthManager.get_graph_token() -> str"
+      - "AuthManager.get_current_user() -> UserInfo"
+    depends_on: []
+
+  - name: s360-client-facade
+    description: "Main S360Client entry point — orchestrates auth, cache, and endpoints"
+    key_files:
+      - src/s360_client/client.py
+      - src/s360_client/__init__.py
+    contracts:
+      - "S360Client(config?) -> client"
+      - "S360Client.get_current_user() -> UserInfo"
+      - "S360Client.get_eta_history(kpi_id, action_item_id) -> list[EtaHistoryItem]"
+      - "S360Client.save_eta(kpi_id, service_id, action_item_id, new_eta, notes) -> SaveResult"
+      - "S360Client.search(query) -> list[dict]"
+      - "S360Client.get_action_items_summary(audience) -> dict"
+      - "S360Client.discover_endpoints() -> list[EndpointInfo]"
+    depends_on:
+      - s360-auth
+      - s360-cache
+      - s360-action-items
+      - s360-discovery
+      - s360-extended-endpoints
+
+  - name: s360-models
+    description: "Typed dataclass models (UserInfo, EtaHistoryItem, EtaUpdate, SaveResult, EndpointInfo)"
+    key_files:
+      - src/s360_client/models.py
+    contracts:
+      - "UserInfo.from_graph_response(dict) -> UserInfo"
+      - "EtaHistoryItem.from_api_response(dict) -> EtaHistoryItem"
+      - "EtaUpdate dataclass"
+      - "SaveResult dataclass"
+      - "EndpointInfo dataclass"
+    depends_on: []
+
+  - name: s360-exceptions
+    description: "Exception hierarchy: S360Error → S360AuthError, S360ApiError, S360CacheError"
+    key_files:
+      - src/s360_client/exceptions.py
+    contracts:
+      - "S360Error(message)"
+      - "S360AuthError(message, scope?, suggestion?)"
+      - "S360ApiError(message, endpoint?, status_code?, response_body?)"
+      - "S360CacheError(message)"
+    depends_on: []
+
+  - name: s360-cache
+    description: "Local JSON file caching with SHA-256 key hashing and TTL expiry"
+    key_files:
+      - src/s360_client/cache.py
+      - src/s360_client/config.py
+    contracts:
+      - "CacheManager.get(endpoint, params?) -> Any | None"
+      - "CacheManager.set(endpoint, data, params?) -> None"
+      - "CacheManager.clear() -> int"
+    depends_on:
+      - s360-exceptions
+
+  - name: s360-action-items
+    description: "Action items endpoint — ETA history, save ETAs, retry with backoff"
+    key_files:
+      - src/s360_client/endpoints/action_items.py
+    contracts:
+      - "ActionItemsEndpoint.get_eta_history(kpi_id, action_item_id) -> list[EtaHistoryItem]"
+      - "ActionItemsEndpoint.save_etas(updates: list[EtaUpdate]) -> list[SaveResult]"
+    depends_on:
+      - s360-auth
+      - s360-models
+      - s360-exceptions
+
+  - name: s360-discovery
+    description: "Probe and discover available S360 API endpoints"
+    key_files:
+      - src/s360_client/endpoints/discovery.py
+    contracts:
+      - "DiscoveryEndpoint.discover_endpoints() -> list[EndpointInfo]"
+    depends_on:
+      - s360-auth
+      - s360-models
+
+  - name: s360-extended-endpoints
+    description: "40+ S360 v1/v2 endpoints discovered from HAR analysis (action items, KPIs, services, forums, etc.)"
+    key_files:
+      - src/s360_client/endpoints/extended.py
+    contracts:
+      - "ExtendedEndpoints.get_action_owner_history(...) -> dict"
+      - "ExtendedEndpoints.get_action_items_summary(audience) -> dict"
+      - "ExtendedEndpoints.get_action_items_grid(kpi_id, audience) -> dict"
+      - "ExtendedEndpoints.search(query) -> list[dict]"
+      - "ExtendedEndpoints.get_forums() -> dict"
+      - "ExtendedEndpoints.get_domains() -> dict"
+      - "ExtendedEndpoints.get_kpi_costs(kpi_ids) -> dict"
+      - "ExtendedEndpoints.get_reliability_kpi_values(audience) -> dict"
+    depends_on:
+      - s360-auth
+      - s360-models
+      - s360-exceptions
+
+  - name: s360-client-tests
+    description: "Pytest suite for s360_client (auth, cache, client, discovery, endpoints)"
+    key_files:
+      - tests/conftest.py
+      - tests/test_auth.py
+      - tests/test_cache.py
+      - tests/test_client.py
+      - tests/test_discovery.py
+      - tests/test_endpoints.py
+    contracts: []
+    depends_on:
+      - s360-client-facade
+
+  # ══════════════════════════════════════════════════════════════════════
+  # accia-s360 — redistributable S360 client package (browser auth chain)
+  # ══════════════════════════════════════════════════════════════════════
+
+  - name: accia-s360-auth
+    description: "Two-step auth chain: AzureCliCredential → InteractiveBrowserCredential"
+    key_files:
+      - accia-s360/src/accia_s360/auth.py
+      - accia-s360/src/accia_s360/config.py
+    contracts:
+      - "AuthManager.get_s360_token() -> str"
+      - "AuthManager.get_graph_token() -> str"
+      - "S360Auth.get_token() -> str"
+      - "S360Auth.get_current_user() -> UserInfo"
+    depends_on: []
+
+  - name: accia-s360-client
+    description: "Redistributable S360Client with browser-fallback auth (published to Azure Artifacts)"
+    key_files:
+      - accia-s360/src/accia_s360/client.py
+      - accia-s360/src/accia_s360/__init__.py
+      - accia-s360/pyproject.toml
+    contracts:
+      - "S360Client(config?) -> client"
+      - "S360Client.get_current_user() -> UserInfo"
+      - "S360Client.get_action_items(params) -> list[dict]"
+      - "S360Client.get_action_items_grid(kpi_id, audience) -> dict"
+      - "S360Client.get_kpi(kpi_id) -> dict"
+      - "S360Client.get_all_action_item_metadata() -> dict"
+    depends_on:
+      - accia-s360-auth
+
+  - name: accia-s360-endpoints
+    description: "Action items, discovery, and extended endpoints for accia-s360"
+    key_files:
+      - accia-s360/src/accia_s360/endpoints/action_items.py
+      - accia-s360/src/accia_s360/endpoints/discovery.py
+      - accia-s360/src/accia_s360/endpoints/extended.py
+    contracts: []
+    depends_on:
+      - accia-s360-auth
+
+  - name: accia-s360-tests
+    description: "Pytest suite for accia-s360 (auth chain, ETA payload, build, package)"
+    key_files:
+      - accia-s360/tests/test_auth_chain.py
+      - accia-s360/tests/test_build.py
+      - accia-s360/tests/test_eta_payload.py
+      - accia-s360/tests/test_package.py
+    contracts: []
+    depends_on:
+      - accia-s360-client
+
+  # ══════════════════════════════════════════════════════════════════════
+  # SFIReporter — desktop + web app for SFI/QEI action item management
+  # ══════════════════════════════════════════════════════════════════════
+
+  - name: reporter-tk-app
+    description: "Tkinter desktop UI — service drill-down, column toggle, filter, ETA editing, detail modals, multi-level owner grouping"
+    key_files:
+      - SFIReporter/src/sfi_reporter/tk_app.py
+    contracts:
+      - "main() — Tkinter entry point (sfi-reporter CLI)"
+      - "OrgAncestry(level1: str, level2: Optional[str]) — NamedTuple for multi-level org mapping"
+      - "get_org_mapping(owner_names, manager_alias) -> dict[str, OrgAncestry]"
+      - "aggregate_by_owner(items, service_owners, org_mapping?, allowed_owners?) -> dict"
+      - "aggregate_by_level2(items, service_owners, org_mapping) -> dict[(level1, level2), stats]"
+      - "collect_services_for_owner(owner_name, level, service_owners, org_mapping) -> set[str]"
+      - "get_service_owners(service_names, on_status?) -> dict[str, list[str]]"
+    depends_on:
+      - reporter-data
+      - reporter-cache
+      - reporter-eta-logic
+      - reporter-llm
+      - reporter-query-builder
+      - reporter-logging
+
+  - name: reporter-web-app
+    description: "Streamlit web UI for SFI Reporter"
+    key_files:
+      - SFIReporter/src/sfi_reporter/app.py
+    contracts:
+      - "main() — Streamlit entry point (sfi-reporter-web CLI)"
+    depends_on:
+      - reporter-data
+      - reporter-cache
+
+  - name: reporter-data
+    description: "Data layer — fetches action items from S360 via accia-s360, parallel KPI grid loading"
+    key_files:
+      - SFIReporter/src/sfi_reporter/data.py
+    contracts:
+      - "get_current_user_alias() -> str | None"
+      - "fetch_full_data(user_alias) -> dict"
+      - "is_invalid_eta(eta_str) -> bool"
+      - "get_cached_columns(kpi_id) -> list[str] | None"
+    depends_on:
+      - accia-s360-client
+
+  - name: reporter-cache
+    description: "JSON file-based caching with 1-hour TTL for SFI Reporter"
+    key_files:
+      - SFIReporter/src/sfi_reporter/cache.py
+    contracts:
+      - "write_cache(user_alias, data) -> None"
+      - "read_cache(user_alias) -> dict | None"
+      - "is_cache_valid(data) -> bool"
+      - "get_cache_age_minutes(data) -> int | None"
+      - "clear_cache(user_alias) -> None"
+      - "get_cache_dir() -> Path"
+    depends_on: []
+
+  - name: reporter-eta-logic
+    description: "Pure ETA logic — propose dates, validate user input, filter items needing updates"
+    key_files:
+      - SFIReporter/src/sfi_reporter/eta_logic.py
+    contracts:
+      - "propose_eta(due_date_str?) -> str"
+      - "get_items_needing_eta_update(items) -> list[dict]"
+      - "validate_eta_date(date_str) -> tuple[bool, str]"
+    depends_on:
+      - reporter-data
+
+  - name: reporter-llm
+    description: "Azure OpenAI integration — SFI item analysis (Mission, Steps, Resources, Risk)"
+    key_files:
+      - SFIReporter/src/sfi_reporter/llm_client.py
+      - SFIReporter/src/sfi_reporter/llm_storage.py
+    contracts:
+      - "LLMConfig.from_env() -> LLMConfig"
+      - "analyze_item(config, item_data) -> AnalysisResult"
+      - "fetch_action_item_urls(item_data) -> list[str]"
+      - "save_analysis(result) -> Path"
+      - "load_analysis(action_item_id) -> AnalysisResult | None"
+      - "analysis_exists(action_item_id) -> bool"
+    depends_on:
+      - accia-s360-client
+
+  - name: reporter-query-builder
+    description: "Clause-based filter builder UI — field/operator/value clauses that persist across sessions"
+    key_files:
+      - SFIReporter/src/sfi_reporter/query_builder.py
+    contracts:
+      - "QueryBuilderDialog — Tkinter dialog for building filter clauses"
+      - "apply_clauses(items, clauses) -> list[dict]"
+    depends_on:
+      - reporter-cache
+      - reporter-data
+
+  - name: reporter-logging
+    description: "Rotating file + console logging, subprocess window suppression for PyInstaller"
+    key_files:
+      - SFIReporter/src/sfi_reporter/logging_config.py
+    contracts:
+      - "setup_logging(level?) -> None"
+      - "get_log_path() -> Path"
+      - "patch_subprocess_windows() -> None"
+    depends_on: []
+
+  - name: reporter-build
+    description: "PyInstaller packaging for SFIReporter.exe standalone distribution"
+    key_files:
+      - SFIReporter/SFIReporter.spec
+      - SFIReporter/BUILD_MANIFEST.md
+      - SFIReporter/pyproject.toml
+    contracts:
+      - "pyinstaller SFIReporter.spec -> dist/SFIReporter/"
+    depends_on:
+      - reporter-tk-app
+
+  - name: reporter-tests
+    description: "Pytest suite for SFI Reporter (cache, data, ETA, LLM, query builder, UI)"
+    key_files:
+      - SFIReporter/tests/test_cache.py
+      - SFIReporter/tests/test_data.py
+      - SFIReporter/tests/test_eta_logic.py
+      - SFIReporter/tests/test_eta_ui.py
+      - SFIReporter/tests/test_llm_client.py
+      - SFIReporter/tests/test_llm_storage.py
+      - SFIReporter/tests/test_query_builder.py
+      - SFIReporter/tests/test_tk_app.py
+      - SFIReporter/tests/test_sfi_026.py
+      - SFIReporter/tests/test_detail_modal_colors.py
+    contracts: []
+    depends_on:
+      - reporter-tk-app
+
+  # ══════════════════════════════════════════════════════════════════════
+  # Standalone scripts & docs
+  # ══════════════════════════════════════════════════════════════════════
+
+  - name: standalone-scripts
+    description: "Ad-hoc CLI scripts for SFI analysis, Watson/ATS doc fetching, HAR parsing"
+    key_files:
+      - analyze_sfi_risk.py
+      - fetch_watson_docs.py
+      - search_ats_docs.py
+      - get_kpi_details.py
+      - parse_har3.py
+      - examples/find_my_sfi_items.py
+      - examples/get_sfi_details.py
+    contracts: []
+    depends_on:
+      - s360-client-facade
+
+  - name: remediation-docs
+    description: "Azure remediation guides (tenant security, Watson AKS)"
+    key_files:
+      - docs/azure-tenant-security-remediation.md
+      - docs/azure-watson-aks-remediation.md
+    contracts: []
+    depends_on: []

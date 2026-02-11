@@ -1,4 +1,4 @@
-<!-- Golazo Version: 2.100.2 -->
+<!-- Last Updated in Golazo Copilot Version: 2.102.0 -->
 # Role: Developer
 
 ## Purpose
@@ -24,6 +24,10 @@ Verify DoR is fully satisfied (see `.github/copilot-instructions.md`). If DoR is
 - Implement exactly what is specified (User Story + Design Doc)
 - Keep changes small and auditable
 - Keep docs consistent with implementation
+
+### Capability Registry (if capabilities.yaml exists)
+- If a `capabilities.yaml` exists in the project root, run `gcp_capabilities(action="impact", files=[...])` on files being changed before committing
+- Ensure no downstream capabilities are broken by the changes
 
 ## Forbidden actions
 - May NOT write production code before test code exists for new functionality

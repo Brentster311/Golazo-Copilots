@@ -1,4 +1,4 @@
-<!-- Golazo Version: 1.2.0 -->
+<!-- Last Updated in Golazo Copilot Version: 2.102.0 -->
 # Role: Builder
 
 ## Purpose
@@ -27,6 +27,14 @@ Verify the system builds successfully, manage git operations, and ensure the wor
 - Document build commands used
 - Report any build warnings or errors
 
+### Capability Registry Validation (before final commit)
+- Run `gcp_capabilities(action="validate")` to confirm all `key_files` still exist
+- If new public functions, contracts, or test files were introduced by this work item:
+  - Update `capabilities.yaml` — add new contracts, key_files, and dependency edges
+  - Stage the updated `capabilities.yaml` with the commit
+- If no `capabilities.yaml` exists in the project, skip this section
+- Document validation results in builder notes under a **Capability Registry** heading
+
 ### Git Operations (Commit - after Documentor)
 - Stage all changes: `git add .`
 - Commit with message: `<workitem-id>: <User Story title>`
@@ -37,9 +45,9 @@ Verify the system builds successfully, manage git operations, and ensure the wor
 - Do not modify source code to fix build issues without creating a User Story
 - Do not skip failing builds
 
-## Required outputs
-- Build verification results
-- `WorkItems/<workitem-id>/RoleDecisionNotes/<workitem-id>-builder.md`
+## Required Outputs
+<!-- Build verification results are expected but not validated by path -->
+- file: WorkItems/{id}/RoleDecisionNotes/{id}-builder.md
 
 ## Decision rules
 - Use repository-standard build commands

@@ -1,28 +1,27 @@
-# GCP-0034: Add WorkItems/ as Valid Workspace Marker in Bootstrap
+# GCP-0034: Fix Workspace Markers in Bootstrap — Remove .git, Add WorkItems
 
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 ## User Story
 
-- **Title**: Add WorkItems/ as Valid Workspace Marker in Bootstrap
+- **Title**: Fix Workspace Markers in Bootstrap — Remove .git, Add WorkItems
 - **As a**: Golazo Copilot user
-- **I want**: `gcp_bootstrap` to recognize a `WorkItems/` directory as a valid workspace marker
-- **So that**: Bootstrap deploys to my project workspace (which has WorkItems/) instead of falling back to the repo root
+- **I want**: `gcp_bootstrap` to recognize `WorkItems/` as a valid workspace marker and NOT recognize `.git`
+- **So that**: Bootstrap deploys to my project workspace (which has WorkItems/) instead of matching a parent repo root that has `.git`
 
 ## Out of Scope
-- Changing any other workspace detection logic beyond adding the new marker
 - Auto-creating WorkItems/ if it doesn't exist
 
 ## Assumptions
-- **Assumption (explicit)**: The existing markers (`.git`, `pyproject.toml`, `package.json`, `Cargo.toml`, `.hg`) remain valid — this adds `WorkItems/` to the list
-- **Assumption (explicit)**: `WorkItems/` is a directory marker, checked via directory existence (not file)
+- **Assumption (explicit)**: `.git` is removed because it causes bootstrap to match parent directories, deploying to the wrong location
+- **Assumption (explicit)**: Remaining markers: `pyproject.toml`, `package.json`, `Cargo.toml`, `.hg`, `WorkItems`
 
 ## Acceptance Criteria
 
-1. [ ] `gcp_bootstrap` succeeds when `WorkItems/` exists in the target directory, even if no other markers are present
-2. [ ] Existing markers (`.git`, `pyproject.toml`, etc.) continue to work
-3. [ ] Bootstrap deploys `.github/` files to the directory containing `WorkItems/`, not to a parent
-4. [ ] All existing tests pass
+1. [ ] `gcp_bootstrap` succeeds when `WorkItems/` exists in the target directory
+2. [ ] `.git` is NOT a valid workspace marker
+3. [ ] Remaining markers (`pyproject.toml`, `package.json`, `Cargo.toml`, `.hg`) continue to work
+4. [ ] All existing tests pass (updated as needed)
 5. [ ] New test verifies `WorkItems/` is recognized as a valid workspace marker
 
 ## Non-Functional Requirements

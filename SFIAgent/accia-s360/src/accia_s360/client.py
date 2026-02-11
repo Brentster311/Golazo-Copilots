@@ -11,10 +11,13 @@ from accia_s360.config import S360Config
 from accia_s360.endpoints.action_items import ActionItemsEndpoint
 from accia_s360.endpoints.discovery import DiscoveryEndpoint
 from accia_s360.endpoints.extended import ExtendedEndpoints
+from accia_s360.endpoints.graph import GraphEndpoint
 from accia_s360.models import (
     EndpointInfo,
     EtaHistoryItem,
     EtaUpdate,
+    OrgPerson,
+    OrgTree,
     SaveResult,
     UserInfo,
 )
@@ -50,6 +53,7 @@ class S360Client:
         self._action_items = ActionItemsEndpoint(self.config, self._auth.get_s360_token)
         self._discovery = DiscoveryEndpoint(self.config, self._auth.get_s360_token)
         self._extended = ExtendedEndpoints(self.config, self._auth.get_s360_token)
+        self._graph = GraphEndpoint(self.config, self._auth.get_graph_token)
 
         # Configure logging
         logging.basicConfig(
@@ -71,6 +75,33 @@ class S360Client:
             S360AuthError: If authentication fails.
         """
         return self._auth.get_current_user(force_refresh=force_refresh)
+
+    # ========== Graph / Org Hierarchy ==========
+
+    def get_manager_chain(self, alias: str) -> list[OrgPerson]:
+        """Get the manager chain for *alias* (immediate manager → CEO).
+
+        Delegates to :class:`GraphEndpoint`.
+        """
+        return self._graph.get_manager_chain(alias)
+
+    def get_direct_reports(
+        self, alias: str, *, exclude_sc_alts: bool = True,
+    ) -> list[OrgPerson]:
+        """Get direct reports for *alias*.
+
+        Delegates to :class:`GraphEndpoint`.
+        """
+        return self._graph.get_direct_reports(alias, exclude_sc_alts=exclude_sc_alts)
+
+    def get_org_tree(self, alias: str, *, depth: int = 2) -> OrgTree:
+        """Build a nested org tree starting from *alias*.
+
+        Delegates to :class:`GraphEndpoint`.
+        """
+        return self._graph.get_org_tree(alias, depth=depth)
+
+    # ========== ETA Endpoints ==========
 
     def get_eta_history(
         self,

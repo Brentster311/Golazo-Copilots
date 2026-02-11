@@ -1,6 +1,6 @@
 # GCP-0015: Custom Roles in Workflow
 
-**Status**: BACKLOG
+**Status**: CUT — Deferred to GCP v3 as a major work item
 
 ---
 

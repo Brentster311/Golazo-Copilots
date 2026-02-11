@@ -8,7 +8,7 @@ from golazo_copilot import __version__
 
 
 # Workspace markers - at least one must exist
-WORKSPACE_MARKERS = [".git", "pyproject.toml", "package.json", "Cargo.toml", ".hg"]
+WORKSPACE_MARKERS = ["pyproject.toml", "package.json", "Cargo.toml", ".hg", "WorkItems"]
 
 # Default role files to copy
 DEFAULT_ROLES = [
@@ -39,17 +39,10 @@ def _get_default_instructions() -> str:
         # Fall back to hardcoded if not found
         bootstrap_file = files.joinpath("bootstrap-instructions.md")
         content = bootstrap_file.read_text(encoding="utf-8")
-        # Update version comment if present
-        import re
-        content = re.sub(
-            r'<!-- Golazo Copilot Version: [\d.]+ -->',
-            f'<!-- Golazo Copilot Version: {__version__} -->',
-            content
-        )
         return content
     except (FileNotFoundError, TypeError):
         # Fall back to minimal hardcoded version
-        return f'''<!-- Golazo Copilot Version: {__version__} -->
+        return f'''<!-- Last Updated in Golazo Copilot Version: {__version__} -->
 # Golazo Copilot v2
 
 This workspace uses Golazo Copilot MCP server for workflow management.
@@ -76,7 +69,7 @@ For full documentation, see the Golazo Copilot README.
 async def gcp_bootstrap(
     workspace_path: Path | str | None = None,
     force: bool = False,
-    include_roles: bool = False,
+    include_roles: bool = True,
 ) -> dict:
     """
     Bootstrap Golazo Copilot in a workspace.
@@ -84,7 +77,7 @@ async def gcp_bootstrap(
     Creates:
     - .github/copilot-instructions.md
     - WorkItems/.gitkeep
-    - Optionally: .github/roles/*.md
+    - .github/roles/*.md (default role files)
     
     Args:
         workspace_path: Workspace root path (auto-detected if not provided)
@@ -133,6 +126,21 @@ async def gcp_bootstrap(
     if not gitkeep_path.exists():
         gitkeep_path.write_text("", encoding="utf-8")
         files_created.append("WorkItems/.gitkeep")
+
+    # Create capabilities.yaml from template
+    capabilities_path = workspace_path / "capabilities.yaml"
+    if capabilities_path.exists() and not force:
+        files_skipped.append("capabilities.yaml")
+    else:
+        try:
+            files_pkg = resources.files("golazo_copilot")
+            template = files_pkg.joinpath("capabilities-template.yaml")
+            capabilities_path.write_text(
+                template.read_text(encoding="utf-8"), encoding="utf-8"
+            )
+            files_created.append("capabilities.yaml")
+        except (FileNotFoundError, TypeError):
+            pass  # Graceful degradation if resource missing
     
     # Optionally copy role files
     if include_roles:

@@ -49,17 +49,14 @@ class TestLLMConfigFromEnv:
     def test_loads_required_vars(self, monkeypatch):
         """TC-1 Step 1: Config loads from env vars."""
         monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://myresource.openai.azure.com/")
-        monkeypatch.setenv("AZURE_OPENAI_API_KEY", "test-key-123")
         monkeypatch.delenv("AZURE_OPENAI_DEPLOYMENT", raising=False)
 
         config = LLMConfig.from_env()
         assert config.endpoint == "https://myresource.openai.azure.com/"
-        assert config.api_key == "test-key-123"
 
     def test_custom_deployment(self, monkeypatch):
         """TC-1 Step 2: Custom deployment name from env."""
         monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://myresource.openai.azure.com/")
-        monkeypatch.setenv("AZURE_OPENAI_API_KEY", "test-key-123")
         monkeypatch.setenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o-mini")
 
         config = LLMConfig.from_env()
@@ -68,7 +65,6 @@ class TestLLMConfigFromEnv:
     def test_default_deployment(self, monkeypatch):
         """TC-1 Step 3: Default deployment when env var not set."""
         monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://myresource.openai.azure.com/")
-        monkeypatch.setenv("AZURE_OPENAI_API_KEY", "test-key-123")
         monkeypatch.delenv("AZURE_OPENAI_DEPLOYMENT", raising=False)
 
         config = LLMConfig.from_env()
@@ -81,23 +77,13 @@ class TestLLMConfigErrors:
     def test_missing_endpoint(self, monkeypatch):
         """TC-2 Step 1: Missing endpoint raises LLMConfigError."""
         monkeypatch.delenv("AZURE_OPENAI_ENDPOINT", raising=False)
-        monkeypatch.setenv("AZURE_OPENAI_API_KEY", "test-key")
 
         with pytest.raises(LLMConfigError, match="AZURE_OPENAI_ENDPOINT"):
             LLMConfig.from_env()
 
-    def test_missing_api_key(self, monkeypatch):
-        """TC-2 Step 2: Missing API key raises LLMConfigError."""
-        monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://myresource.openai.azure.com/")
-        monkeypatch.delenv("AZURE_OPENAI_API_KEY", raising=False)
-
-        with pytest.raises(LLMConfigError, match="AZURE_OPENAI_API_KEY"):
-            LLMConfig.from_env()
-
     def test_missing_both(self, monkeypatch):
-        """Both missing gives a combined error."""
+        """Missing endpoint gives error."""
         monkeypatch.delenv("AZURE_OPENAI_ENDPOINT", raising=False)
-        monkeypatch.delenv("AZURE_OPENAI_API_KEY", raising=False)
 
         with pytest.raises(LLMConfigError, match="AZURE_OPENAI_ENDPOINT"):
             LLMConfig.from_env()
@@ -160,7 +146,6 @@ class TestAnalyzeItem:
     def _make_config(self):
         return LLMConfig(
             endpoint="https://test.openai.azure.com/",
-            api_key="test-key",
             deployment="gpt-4o",
         )
 
@@ -180,7 +165,10 @@ class TestAnalyzeItem:
 
         mock_client_cls = mocker.patch("sfi_reporter.llm_client.AzureOpenAI", create=True)
         # The import inside analyze_item does `from openai import AzureOpenAI`
-        mocker.patch.dict("sys.modules", {"openai": MagicMock(AzureOpenAI=mock_client_cls)})
+        mocker.patch.dict("sys.modules", {
+            "openai": MagicMock(AzureOpenAI=mock_client_cls),
+            "azure.identity": MagicMock(),
+        })
         mock_client = MagicMock()
         mock_client.chat.completions.create.return_value = mock_response
         mock_client_cls.return_value = mock_client
@@ -205,7 +193,6 @@ class TestAnalyzeItemErrors:
     def _make_config(self):
         return LLMConfig(
             endpoint="https://test.openai.azure.com/",
-            api_key="test-key",
         )
 
     def test_api_connection_error(self, mocker):
@@ -214,7 +201,10 @@ class TestAnalyzeItemErrors:
         mock_client = MagicMock()
         mock_client.chat.completions.create.side_effect = ConnectionError("refused")
         mock_openai.AzureOpenAI.return_value = mock_client
-        mocker.patch.dict("sys.modules", {"openai": mock_openai})
+        mocker.patch.dict("sys.modules", {
+            "openai": mock_openai,
+            "azure.identity": MagicMock(),
+        })
 
         with pytest.raises(LLMError, match="ConnectionError"):
             analyze_item(SAMPLE_ITEM, self._make_config())
@@ -225,7 +215,10 @@ class TestAnalyzeItemErrors:
         mock_client = MagicMock()
         mock_client.chat.completions.create.side_effect = RuntimeError("something broke")
         mock_openai.AzureOpenAI.return_value = mock_client
-        mocker.patch.dict("sys.modules", {"openai": mock_openai})
+        mocker.patch.dict("sys.modules", {
+            "openai": mock_openai,
+            "azure.identity": MagicMock(),
+        })
 
         with pytest.raises(LLMError, match="RuntimeError"):
             analyze_item(SAMPLE_ITEM, self._make_config())
@@ -234,23 +227,14 @@ class TestAnalyzeItemErrors:
 # ── TC-17: LLM Config Repr Masks API Key ─────────────────────────────
 
 class TestLLMConfigRepr:
-    def test_repr_masks_key(self):
-        """TC-17 Step 1: repr() masks the API key."""
+    def test_repr_format(self):
+        """TC-17 Step 1: repr() has expected fields."""
         config = LLMConfig(
             endpoint="https://test.openai.azure.com/",
-            api_key="sk-secret123",
         )
         r = repr(config)
-        assert "sk-secret123" not in r
-        assert "****" in r
-
-    def test_str_masks_key(self):
-        """TC-17 Step 2: str() also masks."""
-        config = LLMConfig(
-            endpoint="https://test.openai.azure.com/",
-            api_key="sk-secret123",
-        )
-        assert "sk-secret123" not in str(config)
+        assert "test.openai.azure.com" in r
+        assert "gpt-4o" in r
 
 
 # ── Section parser tests ──────────────────────────────────────────────
@@ -464,7 +448,6 @@ class TestAnalyzeItemURLContent:
         """TC-21-10: url_content is passed through to the prompt."""
         config = LLMConfig(
             endpoint="https://test.openai.azure.com/",
-            api_key="test-key",
             deployment="gpt-4o",
         )
 
@@ -481,7 +464,10 @@ class TestAnalyzeItemURLContent:
         mock_response.usage.completion_tokens = 200
 
         mock_client_cls = mocker.patch("sfi_reporter.llm_client.AzureOpenAI", create=True)
-        mocker.patch.dict("sys.modules", {"openai": MagicMock(AzureOpenAI=mock_client_cls)})
+        mocker.patch.dict("sys.modules", {
+            "openai": MagicMock(AzureOpenAI=mock_client_cls),
+            "azure.identity": MagicMock(),
+        })
         mock_client = MagicMock()
         mock_client.chat.completions.create.return_value = mock_response
         mock_client_cls.return_value = mock_client
