@@ -171,7 +171,7 @@ class TestGetOrgMappingMultiLevel:
         ancestry = result["Brent Jensen"]
         assert isinstance(ancestry, OrgAncestry), "Return value must be OrgAncestry"
         assert ancestry.level1 == "Muralic Name"
-        assert ancestry.level2 == "Brent Jensen"
+        assert ancestry.level2 is None  # hops==1: IC rolls up to level1 directly
 
     @patch("sfi_reporter.data.get_client")
     def test_tc_1_2_owner_is_direct_report(self, mock_get_client):

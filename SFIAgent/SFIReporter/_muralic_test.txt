@@ -1,0 +1,78 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.14.3, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\brentj\AppData\Local\Python\pythoncore-3.14-64\python.exe
+cachedir: .pytest_cache
+rootdir: C:\repos\Golazo-Copilots\SFIAgent\SFIReporter
+configfile: pyproject.toml
+plugins: anyio-4.12.1, mock-3.15.1
+collecting ... collected 10 items
+
+tests/test_sfi_026_live.py::TestMuralic1LevelManager::test_refresh_succeeds   [muralic] Connecting to S360...
+  [muralic] Found team data. Fetching programs...
+  [muralic] Fetching programs metadata...
+  [muralic] Fetching action items summary...
+  [muralic] Fetching 36 KPIs in parallel...
+  [muralic] Fetching KPIs: 1/36 complete
+  [muralic] Fetching KPIs: 2/36 complete
+  [muralic] Fetching KPIs: 3/36 complete
+  [muralic] Fetching KPIs: 4/36 complete
+  [muralic] Fetching KPIs: 5/36 complete
+  [muralic] Fetching KPIs: 6/36 complete
+  [muralic] Fetching KPIs: 7/36 complete
+  [muralic] Fetching KPIs: 8/36 complete
+  [muralic] Fetching KPIs: 9/36 complete
+  [muralic] Fetching KPIs: 10/36 complete
+  [muralic] Fetching KPIs: 11/36 complete
+  [muralic] Fetching KPIs: 12/36 complete
+  [muralic] Fetching KPIs: 13/36 complete
+  [muralic] Fetching KPIs: 14/36 complete
+  [muralic] Fetching KPIs: 15/36 complete
+  [muralic] Fetching KPIs: 16/36 complete
+  [muralic] Fetching KPIs: 17/36 complete
+  [muralic] Fetching KPIs: 18/36 complete
+  [muralic] Fetching KPIs: 19/36 complete
+  [muralic] Fetching KPIs: 20/36 complete
+  [muralic] Fetching KPIs: 21/36 complete
+  [muralic] Fetching KPIs: 22/36 complete
+  [muralic] Fetching KPIs: 23/36 complete
+  [muralic] Fetching KPIs: 24/36 complete
+  [muralic] Fetching KPIs: 25/36 complete
+  [muralic] Fetching KPIs: 26/36 complete
+  [muralic] Fetching KPIs: 27/36 complete
+  [muralic] Fetching KPIs: 28/36 complete
+  [muralic] Fetching KPIs: 29/36 complete
+  [muralic] Fetching KPIs: 30/36 complete
+  [muralic] Fetching KPIs: 31/36 complete
+  [muralic] Fetching KPIs: 32/36 complete
+  [muralic] Fetching KPIs: 33/36 complete
+  [muralic] Fetching KPIs: 34/36 complete
+  [muralic] Fetching KPIs: 35/36 complete
+  [muralic] Fetching KPIs: 36/36 complete
+  [muralic] Processing 344 action items...
+  [muralic] Fetching owners for 14 services...
+  [muralic] Resolving aliases for 29 owners...
+  [muralic] Looking up 29 service owners...
+  [muralic] Looking up owners: 5/29
+  [muralic] Looking up owners: 10/29
+  [muralic] Looking up owners: 15/29
+  [muralic] Looking up owners: 20/29
+  [muralic] Looking up owners: 25/29
+  [muralic] Saving to cache...
+PASSED
+tests/test_sfi_026_live.py::TestMuralic1LevelManager::test_is_manager PASSED
+tests/test_sfi_026_live.py::TestMuralic1LevelManager::test_has_owner_stats PASSED
+tests/test_sfi_026_live.py::TestMuralic1LevelManager::test_has_org_mapping PASSED
+tests/test_sfi_026_live.py::TestMuralic1LevelManager::test_org_mapping_contains_org_ancestry PASSED
+tests/test_sfi_026_live.py::TestMuralic1LevelManager::test_directs_have_level2_none PASSED
+tests/test_sfi_026_live.py::TestMuralic1LevelManager::test_no_unknown_owner_for_known_directs PASSED
+tests/test_sfi_026_live.py::TestMuralic1LevelManager::test_brentj_appears_as_direct PASSED
+tests/test_sfi_026_live.py::TestMuralic1LevelManager::test_cache_serialization PASSED
+tests/test_sfi_026_live.py::TestMuralic1LevelManager::test_cache_round_trip_preserves_types PASSED
+
+============================== warnings summary ===============================
+tests\test_sfi_026_live.py:17
+  C:\repos\Golazo-Copilots\SFIAgent\SFIReporter\tests\test_sfi_026_live.py:17: PytestUnknownMarkWarning: Unknown pytest.mark.live - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.live
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================== 10 passed, 1 warning in 138.21s (0:02:18) ==================
+
