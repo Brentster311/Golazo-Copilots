@@ -84,7 +84,10 @@ def _build_search_side_effect(people: dict[str, dict]) -> callable:
 # ---------------------------------------------------------------------------
 
 class TestGetOrgMappingMultiLevel:
-    """Tests for get_org_mapping returning OrgAncestry tuples."""
+    """Tests for get_org_mapping returning OrgAncestry tuples.
+    
+    Updated for SFI-028: now mocks get_manager_chain (Graph API) instead of search.
+    """
 
     def _people_registry(self):
         """Build a test org: alexhowells → muralic → brentj → deepPerson."""
@@ -116,16 +119,53 @@ class TestGetOrgMappingMultiLevel:
             },
         }
 
+    def _owner_aliases(self):
+        """Map display_name → alias for the test org."""
+        return {
+            "Alex Howells": "alexhowells",
+            "Muralic Name": "muralic",
+            "Brent Jensen": "brentj",
+            "Deep Person": "deepperson",
+            "External Person": "external",
+        }
+
+    def _chain_registry(self):
+        """Build get_manager_chain mock data from the people registry.
+        
+        get_manager_chain returns [immediate_mgr, ..., CEO].
+        """
+        from accia_s360.models import OrgPerson
+
+        _p = lambda alias, name: OrgPerson(alias=alias, display_name=name)
+        return {
+            "alexhowells": [_p("vp", "VP Person"), _p("ceo", "CEO Person")],
+            "muralic": [_p("alexhowells", "Alex Howells"), _p("vp", "VP Person"), _p("ceo", "CEO Person")],
+            "brentj": [_p("muralic", "Muralic Name"), _p("alexhowells", "Alex Howells"), _p("vp", "VP Person"), _p("ceo", "CEO Person")],
+            "deepperson": [_p("brentj", "Brent Jensen"), _p("muralic", "Muralic Name"), _p("alexhowells", "Alex Howells"), _p("vp", "VP Person"), _p("ceo", "CEO Person")],
+            "external": [_p("otherdir", "Other Director"), _p("othervp", "Other VP"), _p("ceo", "CEO Person")],
+        }
+
+    def _build_chain_side_effect(self):
+        """Build side_effect for get_manager_chain."""
+        registry = self._chain_registry()
+        def get_manager_chain(alias):
+            key = alias.lower()
+            if key in registry:
+                return registry[key]
+            return []
+        return get_manager_chain
+
     @patch("sfi_reporter.data.get_client")
     def test_tc_1_1_owner_two_levels_deep(self, mock_get_client):
         """TC-1.1: Owner 2 levels below manager → (direct, sub-report)."""
         from sfi_reporter.tk_app import get_org_mapping, OrgAncestry
 
         mock_client = MagicMock()
-        mock_client.search.side_effect = _build_search_side_effect(self._people_registry())
+        mock_client.get_manager_chain.side_effect = self._build_chain_side_effect()
         mock_get_client.return_value = mock_client
 
-        result = get_org_mapping(["Brent Jensen"], "alexhowells")
+        result = get_org_mapping(["Brent Jensen"], "alexhowells",
+                                 owner_aliases=self._owner_aliases())
 
         assert "Brent Jensen" in result
         ancestry = result["Brent Jensen"]
@@ -139,10 +179,11 @@ class TestGetOrgMappingMultiLevel:
         from sfi_reporter.tk_app import get_org_mapping, OrgAncestry
 
         mock_client = MagicMock()
-        mock_client.search.side_effect = _build_search_side_effect(self._people_registry())
+        mock_client.get_manager_chain.side_effect = self._build_chain_side_effect()
         mock_get_client.return_value = mock_client
 
-        result = get_org_mapping(["Muralic Name"], "alexhowells")
+        result = get_org_mapping(["Muralic Name"], "alexhowells",
+                                 owner_aliases=self._owner_aliases())
 
         assert "Muralic Name" in result
         ancestry = result["Muralic Name"]
@@ -155,10 +196,11 @@ class TestGetOrgMappingMultiLevel:
         from sfi_reporter.tk_app import get_org_mapping, OrgAncestry
 
         mock_client = MagicMock()
-        mock_client.search.side_effect = _build_search_side_effect(self._people_registry())
+        mock_client.get_manager_chain.side_effect = self._build_chain_side_effect()
         mock_get_client.return_value = mock_client
 
-        result = get_org_mapping(["Brent Jensen"], "muralic")
+        result = get_org_mapping(["Brent Jensen"], "muralic",
+                                 owner_aliases=self._owner_aliases())
 
         assert "Brent Jensen" in result
         ancestry = result["Brent Jensen"]
@@ -171,10 +213,11 @@ class TestGetOrgMappingMultiLevel:
         from sfi_reporter.tk_app import get_org_mapping, OrgAncestry
 
         mock_client = MagicMock()
-        mock_client.search.side_effect = _build_search_side_effect(self._people_registry())
+        mock_client.get_manager_chain.side_effect = self._build_chain_side_effect()
         mock_get_client.return_value = mock_client
 
-        result = get_org_mapping(["External Person"], "alexhowells")
+        result = get_org_mapping(["External Person"], "alexhowells",
+                                 owner_aliases=self._owner_aliases())
 
         assert "External Person" in result
         ancestry = result["External Person"]
@@ -187,10 +230,11 @@ class TestGetOrgMappingMultiLevel:
         from sfi_reporter.tk_app import get_org_mapping, OrgAncestry
 
         mock_client = MagicMock()
-        mock_client.search.side_effect = _build_search_side_effect(self._people_registry())
+        mock_client.get_manager_chain.side_effect = self._build_chain_side_effect()
         mock_get_client.return_value = mock_client
 
-        result = get_org_mapping(["Alex Howells"], "alexhowells")
+        result = get_org_mapping(["Alex Howells"], "alexhowells",
+                                 owner_aliases=self._owner_aliases())
 
         assert "Alex Howells" in result
         ancestry = result["Alex Howells"]
@@ -203,10 +247,11 @@ class TestGetOrgMappingMultiLevel:
         from sfi_reporter.tk_app import get_org_mapping, OrgAncestry
 
         mock_client = MagicMock()
-        mock_client.search.side_effect = _build_search_side_effect(self._people_registry())
+        mock_client.get_manager_chain.side_effect = self._build_chain_side_effect()
         mock_get_client.return_value = mock_client
 
-        result = get_org_mapping(["Deep Person"], "alexhowells")
+        result = get_org_mapping(["Deep Person"], "alexhowells",
+                                 owner_aliases=self._owner_aliases())
 
         assert "Deep Person" in result
         ancestry = result["Deep Person"]
@@ -228,11 +273,12 @@ class TestGetOrgMappingMultiLevel:
         from sfi_reporter.tk_app import get_org_mapping, OrgAncestry
 
         mock_client = MagicMock()
-        mock_client.search.side_effect = _build_search_side_effect(self._people_registry())
+        mock_client.get_manager_chain.side_effect = self._build_chain_side_effect()
         mock_get_client.return_value = mock_client
 
         owners = ["Muralic Name", "Brent Jensen", "Deep Person", "External Person"]
-        result = get_org_mapping(owners, "alexhowells")
+        result = get_org_mapping(owners, "alexhowells",
+                                 owner_aliases=self._owner_aliases())
 
         assert len(result) == 4
         for name in owners:

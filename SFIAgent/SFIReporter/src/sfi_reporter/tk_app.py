@@ -336,10 +336,18 @@ def parse_owners_field(owners_json: str | None) -> list[str]:
         return []
 
 
-def get_org_mapping(owner_names: list[str], manager_alias: str, on_status: Optional[callable] = None) -> dict[str, OrgAncestry]:
+def get_org_mapping(
+    owner_names: list[str],
+    manager_alias: str,
+    on_status: Optional[callable] = None,
+    *,
+    owner_aliases: Optional[dict[str, str]] = None,
+) -> dict[str, OrgAncestry]:
     """Get mapping from each owner to their hierarchical ancestors (up to 2 levels).
     
-    For each owner, queries S360 to get their manager chain and finds:
+    Uses MS Graph ``get_manager_chain()`` to walk the org hierarchy reliably.
+    
+    For each owner, calls ``get_manager_chain(owner_alias)`` and finds:
     - If owner IS the manager → OrgAncestry(self, None)
     - If owner reports directly to manager_alias → OrgAncestry(self, None)
     - If owner is 1 hop below a direct → OrgAncestry(direct_name, owner_name)
@@ -347,9 +355,12 @@ def get_org_mapping(owner_names: list[str], manager_alias: str, on_status: Optio
     - If owner is not in manager's org → OrgAncestry("Unknown Owner", None)
     
     Args:
-        owner_names: List of unique owner names to look up
+        owner_names: List of unique owner display names to look up
         manager_alias: The manager's alias (e.g., "alexhowells")
         on_status: Optional callback for status updates
+        owner_aliases: Mapping of display_name → alias for each owner.
+            Required for Graph API lookups; owners without an alias
+            map to "Unknown Owner".
         
     Returns:
         Dict mapping owner_name → OrgAncestry(level1, level2)
@@ -361,86 +372,57 @@ def get_org_mapping(owner_names: list[str], manager_alias: str, on_status: Optio
     if not owner_names:
         return {}
     
+    if owner_aliases is None:
+        owner_aliases = {}
+    
     org_mapping: dict[str, OrgAncestry] = {}
     lock = threading.Lock()
     completed = [0]
     total = len(owner_names)
     
-    def _resolve_display_name(client, alias: str) -> str:
-        """Look up a person's display name by alias."""
-        try:
-            results = client.search(alias)
-            for r in results:
-                if r.get('Group') == 'Org' and r.get('Id', '').lower() == alias.lower():
-                    return r.get('Owners', alias)
-        except Exception:
-            pass
-        return alias
-    
     def lookup_owner(owner_name: str) -> tuple[str, OrgAncestry]:
-        """Look up an owner and find their hierarchical ancestors.
+        """Look up an owner via MS Graph and find their hierarchical ancestors.
         
         Algorithm:
-        1. Search S360 for the owner name to get their alias and Managers chain
-        2. For each exact name match, check if manager_alias is in their chain
-        3. Use the FIRST match that has manager_alias in their chain
+        1. Resolve owner display_name → alias via owner_aliases map
+        2. Call get_manager_chain(alias) → [immediate_mgr, ..., CEO]
+        3. Find manager_alias in the chain
         4. Determine hierarchy depth and return OrgAncestry tuple
         """
         try:
+            # Resolve alias from owner_aliases map
+            owner_alias = owner_aliases.get(owner_name)
+            if not owner_alias:
+                return owner_name, OrgAncestry(level1='Unknown Owner', level2=None)
+            
+            # Self-mapping: owner IS the manager
+            if owner_alias.lower() == manager_alias.lower():
+                return owner_name, OrgAncestry(level1=owner_name, level2=None)
+            
             client = get_client()
-            results = client.search(owner_name)
+            chain = client.get_manager_chain(owner_alias)
+            chain_aliases = [p.alias.lower() for p in chain]
             
-            for r in results:
-                if r.get('Group') != 'Org':
-                    continue
-                
-                result_owners = r.get('Owners', '')
-                if result_owners.lower() != owner_name.lower():
-                    continue
-                
-                # Check if this owner IS the manager (their chain won't include themselves)
-                result_alias = r.get('Id', '')
-                if result_alias.lower() == manager_alias.lower():
-                    return owner_name, OrgAncestry(level1=owner_name, level2=None)
-                
-                # Get this person's Managers chain
-                managers_json = r.get('Managers', '[]')
-                try:
-                    managers = json.loads(managers_json) if isinstance(managers_json, str) else managers_json
-                except (json.JSONDecodeError, TypeError):
-                    managers = []
-                
-                if not managers:
-                    continue
-                
-                # KEY CHECK: Is manager_alias in their chain?
-                managers_lower = [m.lower() for m in managers]
-                if manager_alias.lower() not in managers_lower:
-                    continue
-                
-                manager_idx = managers_lower.index(manager_alias.lower())
-                remaining = len(managers) - 1 - manager_idx  # entries after manager_alias
-                
-                # Chain: [CEO, ..., manager_alias, level1_alias, level2_alias, ..., immediate_mgr]
-                
-                if remaining == 0:
-                    # This person reports directly to the viewer
-                    return owner_name, OrgAncestry(level1=owner_name, level2=None)
-                
-                # Level 1: the viewer's direct report
-                level1_alias = managers[manager_idx + 1]
-                level1_name = _resolve_display_name(client, level1_alias)
-                
-                if remaining == 1:
-                    # This person reports to a direct → they ARE the level2
-                    return owner_name, OrgAncestry(level1=level1_name, level2=owner_name)
-                
-                # remaining >= 2: two or more levels deep → cap at level2
-                level2_alias = managers[manager_idx + 2]
-                level2_name = _resolve_display_name(client, level2_alias)
+            if manager_alias.lower() not in chain_aliases:
+                return owner_name, OrgAncestry(level1='Unknown Owner', level2=None)
+            
+            mgr_idx = chain_aliases.index(manager_alias.lower())
+            # hops = number of entries BEFORE manager_alias in chain
+            # (entries between owner and manager)
+            hops = mgr_idx
+            
+            if hops == 0:
+                # Owner's immediate manager IS manager_alias → direct report
+                return owner_name, OrgAncestry(level1=owner_name, level2=None)
+            elif hops == 1:
+                # 1 hop → owner reports to a direct report of manager
+                level1_name = chain[0].display_name  # immediate mgr = viewer's direct
+                return owner_name, OrgAncestry(level1=level1_name, level2=owner_name)
+            else:
+                # 2+ hops → cap at 2 levels
+                level1_name = chain[mgr_idx - 1].display_name  # viewer's direct
+                level2_name = chain[mgr_idx - 2].display_name  # one below direct
                 return owner_name, OrgAncestry(level1=level1_name, level2=level2_name)
-            
-            return owner_name, OrgAncestry(level1='Unknown Owner', level2=None)
             
         except Exception:
             return owner_name, OrgAncestry(level1='Unknown Owner', level2=None)
@@ -679,21 +661,26 @@ def collect_services_for_owner(owner_name: str, level: str,
     return result
 
 
-def get_service_owners(service_names: list[str], on_status: Optional[callable] = None) -> dict[str, list[str]]:
+def get_service_owners(service_names: list[str], on_status: Optional[callable] = None) -> tuple[dict[str, list[str]], dict[str, str]]:
     """Fetch owners for each service using S360 search API in parallel.
+    
+    Also resolves owner aliases by searching S360 for each unique owner name
+    and extracting the ``Id`` field from Org results.
     
     Args:
         service_names: List of service names to look up
         on_status: Optional callback for status updates
         
     Returns:
-        Dict mapping service_name to list of owner names
+        Tuple of (service_owners, owner_aliases) where:
+        - service_owners: Dict mapping service_name → list of owner names
+        - owner_aliases: Dict mapping owner display_name → alias
     """
     from concurrent.futures import ThreadPoolExecutor, as_completed
     from sfi_reporter.data import get_client
     
     if not service_names:
-        return {}
+        return {}, {}
     
     service_owners: dict[str, list[str]] = {}
     
@@ -737,7 +724,45 @@ def get_service_owners(service_names: list[str], on_status: Optional[callable] =
             name, owners = future.result()
             service_owners[name] = owners
     
-    return service_owners
+    # Resolve owner aliases: search S360 for each unique owner name
+    all_owner_names: set[str] = set()
+    for owners in service_owners.values():
+        all_owner_names.update(owners)
+    
+    owner_aliases: dict[str, str] = {}
+    
+    def resolve_alias(owner_name: str) -> tuple[str, str | None]:
+        """Resolve an owner display name to their alias via S360 search."""
+        try:
+            client = get_client()
+            results = client.search(owner_name)
+            for r in results:
+                if r.get('Group') != 'Org':
+                    continue
+                # Match on Owners (display name) or Name field
+                owners_val = r.get('Owners', '')
+                name_val = r.get('Name', '')
+                if (owners_val.lower() == owner_name.lower()
+                        or name_val.lower() == owner_name.lower()):
+                    alias = r.get('Id', '')
+                    if alias:
+                        return owner_name, alias.lower()
+        except Exception:
+            pass
+        return owner_name, None
+    
+    if all_owner_names:
+        if on_status:
+            on_status(f"Resolving aliases for {len(all_owner_names)} owners...")
+        
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            futures = {executor.submit(resolve_alias, name): name for name in all_owner_names}
+            for future in as_completed(futures):
+                name, alias = future.result()
+                if alias:
+                    owner_aliases[name] = alias
+    
+    return service_owners, owner_aliases
 
 
 def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optional[dict]:
@@ -904,7 +929,7 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
             unique_names = list(set(service_names))
             
             if unique_names:
-                service_owners = get_service_owners(unique_names, on_status)
+                service_owners, owner_aliases = get_service_owners(unique_names, on_status)
                 
                 # Get all unique owner names across all services
                 all_owners = set()
@@ -913,7 +938,10 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
                 
                 # Get org mapping: for each owner, find their direct-report-level ancestor
                 if manager_alias and all_owners:
-                    org_mapping = get_org_mapping(list(all_owners), manager_alias, on_status)
+                    org_mapping = get_org_mapping(
+                        list(all_owners), manager_alias, on_status,
+                        owner_aliases=owner_aliases,
+                    )
                 
                 # Aggregate using org_mapping to roll up to directs (level-1)
                 # Note: service_owners is keyed by service NAME which matches S360_ServiceTreeServiceName
