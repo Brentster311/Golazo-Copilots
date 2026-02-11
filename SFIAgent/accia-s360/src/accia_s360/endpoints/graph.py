@@ -5,8 +5,12 @@ Provides org tree traversal: manager chain upward, direct reports downward.
 Uses MS Graph v1.0 /users endpoints.
 """
 
+import json
 import logging
+import os
+import tempfile
 import time
+from datetime import datetime, timedelta
 from typing import Callable
 
 import requests
@@ -23,6 +27,7 @@ GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0"
 _SELECT_FIELDS = "displayName,mailNickname,jobTitle,department,id"
 _MAX_CHAIN_DEPTH = 10
 _MAX_RETRIES = 3
+_ORG_TREE_CACHE_TTL_HOURS = 24
 
 
 class GraphEndpoint:
@@ -250,13 +255,118 @@ class GraphEndpoint:
         return self._build_subtree(person, depth)
 
     def _build_subtree(self, person: OrgPerson, remaining_depth: int | None) -> OrgTree:
-        """Recursively build an OrgTree node."""
+        """Recursively build an OrgTree node, with per-alias caching."""
         if remaining_depth is not None and remaining_depth <= 0:
             return OrgTree(person=person)
 
+        # Check cache first
+        if self.config.cache_enabled:
+            cached = self._read_subtree_cache(person.alias)
+            if cached is not None:
+                return cached
+
         reports = self.get_direct_reports(person.alias)
+        # do not consider aliases with dashes in them as part of the org tree, so we won't recurse into them
+        reports = [r for r in reports if '-' not in r.alias]
+        #reports = [r for r in reports if not r.is_sc_alt()]
         children = [
             self._build_subtree(r, None if remaining_depth is None else remaining_depth - 1)
-            for r in reports
+            for r in reports 
         ]
+        tree = OrgTree(person=person, direct_reports=children)
+
+        # Write to cache
+        if self.config.cache_enabled:
+            self._write_subtree_cache(person.alias, tree)
+
+        return tree
+
+    # ------------------------------------------------------------------
+    # Subtree cache helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _serialize_tree(tree: OrgTree) -> dict:
+        """Convert OrgTree to a JSON-safe nested dict."""
+        person = tree.person
+        return {
+            'person': {
+                'alias': person.alias,
+                'display_name': person.display_name,
+                'job_title': person.job_title,
+                'department': person.department,
+                'object_id': person.object_id,
+            },
+            'direct_reports': [GraphEndpoint._serialize_tree(c) for c in tree.direct_reports],
+        }
+
+    @staticmethod
+    def _deserialize_tree(data: dict) -> OrgTree:
+        """Reconstruct OrgTree from a nested dict."""
+        p = data['person']
+        person = OrgPerson(
+            alias=p['alias'],
+            display_name=p['display_name'],
+            job_title=p.get('job_title'),
+            department=p.get('department'),
+            object_id=p.get('object_id', ''),
+        )
+        children = [GraphEndpoint._deserialize_tree(c) for c in data.get('direct_reports', [])]
         return OrgTree(person=person, direct_reports=children)
+
+    def _cache_path(self, alias: str) -> 'os.PathLike':
+        return self.config.get_cache_dir() / f'org_tree_{alias}.json'
+
+    def _read_subtree_cache(self, alias: str) -> OrgTree | None:
+        """Read cached subtree for *alias*. Returns None on miss/stale/corrupt."""
+        path = self._cache_path(alias)
+        if not path.exists():
+            logger.debug('Subtree cache MISS for %s — file not found', alias)
+            return None
+        try:
+            content = path.read_text(encoding='utf-8')
+            if not content.strip():
+                logger.debug('Subtree cache MISS for %s — empty file', alias)
+                return None
+            data = json.loads(content)
+        except (json.JSONDecodeError, IOError):
+            logger.debug('Subtree cache MISS for %s — corrupt file', alias)
+            return None
+        try:
+            ts = datetime.fromisoformat(data['timestamp'])
+            age = datetime.now() - ts
+            if age >= timedelta(hours=_ORG_TREE_CACHE_TTL_HOURS):
+                logger.debug('Subtree cache MISS for %s — stale (%d hrs)', alias, age.total_seconds() / 3600)
+                return None
+        except (KeyError, ValueError):
+            return None
+        try:
+            tree = self._deserialize_tree(data['tree'])
+            logger.debug('Subtree cache HIT for %s (age: %d min)', alias, int(age.total_seconds() / 60))
+            return tree
+        except (KeyError, TypeError):
+            logger.debug('Subtree cache MISS for %s — deserialization failed', alias)
+            return None
+
+    def _write_subtree_cache(self, alias: str, tree: OrgTree) -> None:
+        """Atomically write *tree* to the subtree cache file."""
+        cache_dir = self.config.get_cache_dir()
+        cache_path = cache_dir / f'org_tree_{alias}.json'
+        payload = {
+            'timestamp': datetime.now().isoformat(),
+            'tree': self._serialize_tree(tree),
+        }
+        try:
+            fd, tmp_name = tempfile.mkstemp(dir=str(cache_dir), suffix='.tmp')
+            try:
+                with os.fdopen(fd, 'w', encoding='utf-8') as f:
+                    json.dump(payload, f, indent=2)
+                os.replace(tmp_name, str(cache_path))
+            except BaseException:
+                try:
+                    os.unlink(tmp_name)
+                except OSError:
+                    pass
+                raise
+        except Exception:
+            logger.warning('Failed to write subtree cache for %s', alias, exc_info=True)
