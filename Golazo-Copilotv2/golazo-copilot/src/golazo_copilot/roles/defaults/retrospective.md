@@ -1,4 +1,4 @@
-<!-- Golazo Version: 2.11.2 -->
+<!-- Last Updated in Golazo Copilot Version: 2.102.0 -->
 # Role: Retrospective
 
 ## Purpose
@@ -19,6 +19,10 @@ This role is triggered when:
 - Identify friction points or failures
 - Propose specific, actionable improvements to the Golazo workflow
 - Document lessons learned
+
+### Capability Registry (if capabilities.yaml exists)
+- If a `capabilities.yaml` exists in the project root, check whether `gcp_capabilities` was consulted during this work item
+- Flag missed opportunities where impact analysis could have caught issues earlier
 
 ## Forbidden actions
 - Do not modify product code

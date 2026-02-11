@@ -1,0 +1,37 @@
+# Golazo Copilot — Capability Registry Template
+#
+# This file maps project capabilities to their key files, contracts,
+# and dependencies. The Golazo workflow uses it for impact analysis.
+#
+# Usage:
+#   gcp_capabilities(action="list")       — summary of all capabilities
+#   gcp_capabilities(action="show", capability="<name>")  — full card
+#   gcp_capabilities(action="impact", files=["path/to/file.py"])
+#   gcp_capabilities(action="validate")   — check key_files exist
+#
+# Schema:
+#   capabilities:          (required) list of capability objects
+#     - name:              (required) unique identifier, e.g. "user-auth"
+#       description:       (optional) what this capability does
+#       key_files:         (optional) list of file paths that define it
+#       contracts:         (optional) list of API/data contracts it exposes
+#       depends_on:        (optional) list of capability names it depends on
+
+capabilities:
+  # ── Example capability (replace with your own) ──────────────────────
+  - name: example-capability
+    description: "A placeholder capability — replace with a real one"
+    key_files:
+      - src/example.py
+    contracts:
+      - "ExampleClass.run() -> dict"
+    depends_on: []
+
+  # ── Add more capabilities below ─────────────────────────────────────
+  # - name: another-capability
+  #   description: "..."
+  #   key_files:
+  #     - src/another.py
+  #   contracts: []
+  #   depends_on:
+  #     - example-capability

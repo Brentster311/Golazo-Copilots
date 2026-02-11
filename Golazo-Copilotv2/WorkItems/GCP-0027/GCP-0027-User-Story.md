@@ -1,6 +1,6 @@
 # GCP-0027: Remove DoR/DoD Marking Tools and Dead Code Cleanup
 
-**Status**: IN PROGRESS
+**Status**: IMPLEMENTED
 
 ## User Story
 

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "golazo-copilot"
-version = "2.100.9"
+version = "2.103.1"
 description = "MCP server for Golazo Copilot workflow management"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -13,6 +13,7 @@ keywords = ["mcp", "github-copilot", "workflow", "golazo"]
 dependencies = [
     "mcp>=1.0.0",
     "pydantic>=2.0.0",
+    "PyYAML>=6.0",
 ]
 
 [project.optional-dependencies]

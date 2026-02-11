@@ -23,6 +23,7 @@ from llm_extender.exceptions import (
 from llm_extender.providers.azure_openai import AzureOpenAIProvider
 from llm_extender.providers.base import LLMProvider
 from llm_extender.url_fetcher import afetch_url, build_context_prompt, fetch_url
+from llm_extender.discovery import discover_azure_configs
 
 __all__ = [
     "AuthStrategy",
@@ -40,5 +41,6 @@ __all__ = [
     "UnsupportedProviderError",
     "afetch_url",
     "build_context_prompt",
+    "discover_azure_configs",
     "fetch_url",
 ]

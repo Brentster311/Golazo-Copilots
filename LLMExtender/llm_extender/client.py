@@ -42,12 +42,33 @@ class LLMClient:
         async with LLMClient(config) as client:
             result = await client.acomplete("Hello")
 
+    Use :meth:`discover` to auto-detect Azure OpenAI configurations
+    from your Azure CLI credentials.
+
     Args:
         config: An LLMConfig specifying provider, model, and credentials.
 
     Raises:
         UnsupportedProviderError: If the provider name is not in the registry.
     """
+
+    @staticmethod
+    def discover(**kwargs) -> list[LLMConfig]:
+        """Auto-discover Azure OpenAI configurations from CLI credentials.
+
+        Delegates to :func:`llm_extender.discovery.discover_azure_configs`.
+        See that function for full parameter documentation.
+
+        Returns:
+            A list of :class:`LLMConfig` objects, one per accessible
+            deployment.  Pass any of them to ``LLMClient(config, auth=...)``.
+
+        Raises:
+            ImportError: If the required Azure SDK packages are not installed.
+        """
+        from llm_extender.discovery import discover_azure_configs
+
+        return discover_azure_configs(**kwargs)
 
     def __init__(self, config: LLMConfig, auth: AuthStrategy | None = None) -> None:
         if auth is not None:
