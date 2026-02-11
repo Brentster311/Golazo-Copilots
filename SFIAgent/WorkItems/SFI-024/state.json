@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "work_item_id": "SFI-024",
+  "profile": "express",
+  "current_phase": "development",
+  "current_role": "developer",
+  "created_at": "2026-02-09T23:28:57.095417Z",
+  "updated_at": "2026-02-09T23:44:36.588765Z",
+  "role_history": [
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-02-09T23:28:57.095417Z",
+      "exited_at": "2026-02-09T23:30:45.451883Z"
+    },
+    {
+      "role": "program-manager",
+      "entered_at": "2026-02-09T23:30:45.451883Z",
+      "exited_at": "2026-02-09T23:40:44.579360Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-02-09T23:40:44.579360Z",
+      "exited_at": "2026-02-09T23:44:28.278539Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-02-09T23:44:28.278539Z",
+      "exited_at": "2026-02-09T23:44:36.588765Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-02-09T23:44:36.588765Z",
+      "exited_at": null
+    }
+  ],
+  "deviations": [
+    {
+      "id": "dev-001",
+      "action": "skip_role",
+      "reason": "Express profile: skipping PM/QA/Architect for small UX enhancements on existing SFI-023 code",
+      "role": "project-owner-assistant",
+      "timestamp": "2026-02-09T23:30:38.736748Z",
+      "consumed": false,
+      "consumed_at": null
+    }
+  ]
+}
