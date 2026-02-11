@@ -94,7 +94,7 @@ class S360Client:
         """
         return self._graph.get_direct_reports(alias, exclude_sc_alts=exclude_sc_alts)
 
-    def get_org_tree(self, alias: str, *, depth: int = 2) -> OrgTree:
+    def get_org_tree(self, alias: str, *, depth: int | None = None) -> OrgTree:
         """Build a nested org tree starting from *alias*.
 
         Delegates to :class:`GraphEndpoint`.

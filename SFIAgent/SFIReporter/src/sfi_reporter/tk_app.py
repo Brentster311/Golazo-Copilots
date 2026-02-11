@@ -10,13 +10,15 @@ import webbrowser
 
 
 class OrgAncestry(NamedTuple):
-    """Mapping of a service owner to their hierarchical ancestors.
-    
-    level1: The viewer's direct report ancestor (or "Unknown Owner", or self-name)
-    level2: The sub-report under level1, or None if the owner IS the level1 direct
+    """Mapping of a service owner to their hierarchical ancestry path.
+
+    path: Tuple of manager display names from root down.
+        - Root (viewer) IS always path[0]
+        - Path is NEVER empty for found owners
+        - IC names never appear in path — only managers
+        - ("Unknown Owner",) for owners not found in tree
     """
-    level1: str
-    level2: Optional[str]
+    path: tuple[str, ...]
 
 from sfi_reporter.cache import (
     read_cache,
@@ -29,20 +31,16 @@ from sfi_reporter.cache import (
 def _serialize_org_data_for_cache(data: dict) -> dict:
     """Convert OrgAncestry values and tuple keys to JSON-safe primitives."""
     out = dict(data)
-    # org_mapping: {owner: OrgAncestry} → {owner: [level1, level2]}
+    # org_mapping: {owner: OrgAncestry(path=...)} → {owner: [path_elements...]}
     om = out.get('org_mapping')
     if om and isinstance(om, dict):
         out['org_mapping'] = {
-            k: (list(v) if isinstance(v, (tuple, OrgAncestry)) else v)
+            k: (list(v.path) if isinstance(v, OrgAncestry) else
+                list(v) if isinstance(v, tuple) else v)
             for k, v in om.items()
         }
-    # level2_stats: {(l1, l2): stats} → {"l1||l2": stats}
-    l2 = out.get('level2_stats')
-    if l2 and isinstance(l2, dict):
-        out['level2_stats'] = {
-            f"{k[0]}||{k[1]}" if isinstance(k, tuple) else k: v
-            for k, v in l2.items()
-        }
+    # Remove deprecated level2_stats key if present
+    out.pop('level2_stats', None)
     return out
 
 
@@ -52,23 +50,15 @@ def _deserialize_org_data_from_cache(data: dict) -> dict:
     if om and isinstance(om, dict):
         restored = {}
         for k, v in om.items():
-            if isinstance(v, (list, tuple)) and len(v) == 2:
-                restored[k] = OrgAncestry(level1=v[0], level2=v[1])
+            if isinstance(v, (list, tuple)):
+                restored[k] = OrgAncestry(path=tuple(v))
             elif isinstance(v, str):
                 restored[k] = v  # legacy string mapping
             else:
                 restored[k] = v
         data['org_mapping'] = restored
-    l2 = data.get('level2_stats')
-    if l2 and isinstance(l2, dict):
-        restored = {}
-        for k, v in l2.items():
-            if isinstance(k, str) and '||' in k:
-                parts = k.split('||', 1)
-                restored[(parts[0], parts[1])] = v
-            else:
-                restored[k] = v
-        data['level2_stats'] = restored
+    # Remove deprecated level2_stats from old caches
+    data.pop('level2_stats', None)
     return data
 
 
@@ -340,119 +330,78 @@ def get_org_mapping(
     owner_names: list[str],
     manager_alias: str,
     on_status: Optional[callable] = None,
-    *,
-    owner_aliases: Optional[dict[str, str | list[str]]] = None,
 ) -> dict[str, OrgAncestry]:
-    """Get mapping from each owner to their hierarchical ancestors (up to 2 levels).
-    
-    Uses MS Graph ``get_manager_chain()`` to walk the org hierarchy reliably.
-    
-    For each owner, calls ``get_manager_chain(owner_alias)`` and finds:
-    - If owner IS the manager → OrgAncestry(self, None)
-    - If owner reports directly to manager_alias → OrgAncestry(self, None)
-    - If owner is 1 hop below a direct → OrgAncestry(direct_name, owner_name)
-    - If owner is 2+ hops below a direct → OrgAncestry(direct_name, sub_report_name)
-    - If owner is not in manager's org → OrgAncestry("Unknown Owner", None)
-    
+    """Map service owners to their hierarchical ancestry path via org tree.
+
+    Uses a single ``get_org_tree(manager_alias)`` call and walks the tree to
+    find each owner by display name (case-insensitive).
+
+    Path semantics:
+    - Root (viewer) IS always path[0]
+    - Path is NEVER empty for found owners
+    - IC names never appear — only managers (persons with direct_reports)
+    - ("Unknown Owner",) for owners not found in tree
+
     Args:
         owner_names: List of unique owner display names to look up
-        manager_alias: The manager's alias (e.g., "alexhowells")
+        manager_alias: The manager's alias (e.g., "muralic")
         on_status: Optional callback for status updates
-        owner_aliases: Mapping of display_name → alias for each owner.
-            Required for Graph API lookups; owners without an alias
-            map to "Unknown Owner".
-        
+
     Returns:
-        Dict mapping owner_name → OrgAncestry(level1, level2)
+        Dict mapping owner_name → OrgAncestry(path=(...))
     """
-    from concurrent.futures import ThreadPoolExecutor, as_completed
     from sfi_reporter.data import get_client
-    import threading
-    
+
     if not owner_names:
         return {}
-    
-    if owner_aliases is None:
-        owner_aliases = {}
-    
-    org_mapping: dict[str, OrgAncestry] = {}
-    lock = threading.Lock()
-    completed = [0]
-    total = len(owner_names)
-    
-    def lookup_owner(owner_name: str) -> tuple[str, OrgAncestry]:
-        """Look up an owner via MS Graph and find their hierarchical ancestors.
-        
-        Algorithm:
-        1. Resolve owner display_name → alias via owner_aliases map
-        2. Call get_manager_chain(alias) → [immediate_mgr, ..., CEO]
-        3. Find manager_alias in the chain
-        4. Determine hierarchy depth and return OrgAncestry tuple
-        """
-        def _try_alias(alias: str, client):
-            """Try a single alias and return OrgAncestry or None."""
-            # Self-mapping: owner IS the manager
-            if alias.lower() == manager_alias.lower():
-                return OrgAncestry(level1=owner_name, level2=None)
-            
-            chain = client.get_manager_chain(alias)
-            chain_aliases = [p.alias.lower() for p in chain]
-            
-            if manager_alias.lower() not in chain_aliases:
-                return None  # Not in manager's org — try next candidate
-            
-            mgr_idx = chain_aliases.index(manager_alias.lower())
-            hops = mgr_idx
-            
-            if hops == 0:
-                return OrgAncestry(level1=owner_name, level2=None)
-            elif hops == 1:
-                level1_name = chain[0].display_name
-                return OrgAncestry(level1=level1_name, level2=None)
-            else:
-                level1_name = chain[mgr_idx - 1].display_name
-                level2_name = chain[mgr_idx - 2].display_name
-                return OrgAncestry(level1=level1_name, level2=level2_name)
-        
-        try:
-            # Resolve alias(es) from owner_aliases map
-            raw = owner_aliases.get(owner_name)
-            if not raw:
-                return owner_name, OrgAncestry(level1='Unknown Owner', level2=None)
-            
-            # Normalise to list of candidate aliases
-            candidates = raw if isinstance(raw, list) else [raw]
-            
-            client = get_client()
-            for alias in candidates:
-                try:
-                    result = _try_alias(alias, client)
-                    if result is not None:
-                        return owner_name, result
-                except Exception:
-                    continue  # Try next candidate on error
-            
-            # None of the candidates were in the manager's org
-            return owner_name, OrgAncestry(level1='Unknown Owner', level2=None)
-            
-        except Exception:
-            return owner_name, OrgAncestry(level1='Unknown Owner', level2=None)
-    
+
     if on_status:
-        on_status(f"Looking up {total} service owners...")
-    
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        futures = {executor.submit(lookup_owner, name): name for name in owner_names}
-        
-        for future in as_completed(futures):
-            owner_name, ancestry = future.result()
-            with lock:
-                org_mapping[owner_name] = ancestry
-                completed[0] += 1
-                if on_status and completed[0] % 5 == 0:
-                    on_status(f"Looking up owners: {completed[0]}/{total}")
-    
-    return org_mapping
+        on_status(f"Fetching org tree for {manager_alias}...")
+
+    client = get_client()
+    try:
+        tree = client.get_org_tree(manager_alias)
+    except Exception:
+        # If tree fetch fails, all owners are unknown
+        return {name: OrgAncestry(path=('Unknown Owner',)) for name in owner_names}
+
+    # Flatten the org tree into a lookup: display_name_lower → manager path
+    name_lookup: dict[str, tuple[str, ...]] = {}
+
+    def _walk(node, parent_path: tuple[str, ...]):
+        """Recursively walk tree, building name → path mapping.
+
+        A person is a "manager" if they have direct_reports.
+        Managers extend the path; ICs inherit their parent's path.
+        """
+        person = node.person
+        is_manager_node = bool(node.direct_reports)
+
+        if is_manager_node:
+            current_path = parent_path + (person.display_name,)
+        else:
+            current_path = parent_path  # ICs inherit parent path
+
+        name_lookup[person.display_name.lower()] = current_path
+
+        for child in node.direct_reports:
+            _walk(child, current_path)
+
+    _walk(tree, ())
+
+    if on_status:
+        on_status(f"Mapping {len(owner_names)} owners...")
+
+    # Build result mapping
+    result: dict[str, OrgAncestry] = {}
+    for owner_name in owner_names:
+        path = name_lookup.get(owner_name.lower())
+        if path:
+            result[owner_name] = OrgAncestry(path=path)
+        else:
+            result[owner_name] = OrgAncestry(path=('Unknown Owner',))
+
+    return result
 
 
 def extract_direct_reports(service_owners: dict[str, list[str]], manager_name: Optional[str] = None) -> set[str]:
@@ -507,9 +456,12 @@ def aggregate_by_owner(items: list[dict], service_owners: dict[str, list[str]],
     from sfi_reporter.data import is_invalid_eta
     
     def _get_level1(mapped) -> str:
-        """Extract level1 from either OrgAncestry or legacy string mapping."""
+        """Extract top-level group name from OrgAncestry or legacy string."""
         if isinstance(mapped, OrgAncestry):
-            return mapped.level1
+            path = mapped.path
+            if len(path) > 1:
+                return path[1]  # Direct report of root
+            return path[0]  # Root itself or unknown
         return mapped  # Legacy string
     
     owner_stats: dict[str, dict] = {}
@@ -574,127 +526,59 @@ def aggregate_by_owner(items: list[dict], service_owners: dict[str, list[str]],
     return owner_stats
 
 
-def aggregate_by_level2(items: list[dict], service_owners: dict[str, list[str]],
-                        org_mapping: dict[str, OrgAncestry]) -> dict[tuple[str, str], dict]:
-    """Aggregate action item stats by (level1, level2) pairs.
-    
-    Only includes entries where level2 is not None (i.e., actual sub-reports).
-    Items whose owners map to level2=None (direct reports) or Unknown Owner are excluded.
-    
-    Args:
-        items: List of detailed action items
-        service_owners: Dict mapping service_name to list of owner names
-        org_mapping: Dict mapping owner_name → OrgAncestry
-        
-    Returns:
-        Dict mapping (level1_name, level2_name) → {count, sla, invalid_eta}
-    """
-    from sfi_reporter.data import is_invalid_eta
-    
-    level2_stats: dict[tuple[str, str], dict] = {}
-    
-    for item in items:
-        service_name = item.get('S360_ServiceTreeServiceName', '')
-        owners = service_owners.get(service_name, None)
-        
-        if owners is None or len(owners) == 0:
-            continue
-        
-        # Find the first owner with a valid level2 mapping
-        target_key = None
-        for owner in owners:
-            mapped = org_mapping.get(owner)
-            if isinstance(mapped, OrgAncestry) and mapped.level2 is not None and mapped.level1 != 'Unknown Owner':
-                target_key = (mapped.level1, mapped.level2)
-                break
-        
-        if target_key is None:
-            continue
-        
-        is_out_of_sla = item.get('SlaType') == 'OutOfSla'
-        has_invalid_eta = is_invalid_eta(item.get('EtaDate'))
-        
-        if target_key not in level2_stats:
-            level2_stats[target_key] = {'count': 0, 'sla': 0, 'invalid_eta': 0}
-        
-        level2_stats[target_key]['count'] += 1
-        if is_out_of_sla:
-            level2_stats[target_key]['sla'] += 1
-        if has_invalid_eta:
-            level2_stats[target_key]['invalid_eta'] += 1
-    
-    return level2_stats
-
-
-def collect_services_for_owner(owner_name: str, level: str,
+def collect_services_for_owner(path_prefix: tuple[str, ...],
                                service_owners: dict[str, list[str]],
                                org_mapping: dict) -> set[str]:
-    """Collect all service names belonging to an owner's subtree.
-    
-    For level1 drill-down: collects all services where any owner maps to this
-    level1 ancestor (includes all level2 sub-reports under them).
-    
-    For level2 drill-down: collects all services where any owner maps to this
-    specific level2 sub-report.
-    
+    """Collect all service names whose owner's ancestry path starts with path_prefix.
+
+    Used for drill-down: clicking a group node collects all services in its subtree.
+
     Args:
-        owner_name: The owner name to drill into
-        level: "level1" or "level2"
+        path_prefix: The ancestry path prefix to match (e.g., ("Murali",) or ("Murali", "Brent"))
         service_owners: Dict mapping service_name → list of owner names
         org_mapping: Dict mapping owner_name → OrgAncestry or string
-        
+
     Returns:
-        Set of service names belonging to the owner's subtree
+        Set of service names belonging to the path_prefix subtree
     """
-    # Build set of raw owner names that belong to this subtree
     matching_owners: set[str] = set()
-    
+
     for raw_owner, mapped in org_mapping.items():
         if isinstance(mapped, OrgAncestry):
-            if level == "level1" and mapped.level1 == owner_name:
-                matching_owners.add(raw_owner)
-            elif level == "level2" and mapped.level2 == owner_name:
+            if mapped.path[:len(path_prefix)] == path_prefix:
                 matching_owners.add(raw_owner)
         else:
-            # Legacy string mapping — treat as level1
-            if level == "level1" and mapped == owner_name:
+            # Legacy string mapping — match if string equals last element of prefix
+            if len(path_prefix) == 1 and mapped == path_prefix[0]:
                 matching_owners.add(raw_owner)
-    
-    # Also include the owner_name itself for direct ownership
-    matching_owners.add(owner_name)
-    
+
     # Collect services owned by any matching owner
     result: set[str] = set()
     for svc_name, owners in service_owners.items():
         if any(o in matching_owners for o in owners):
             result.add(svc_name)
-    
+
     return result
 
 
-def get_service_owners(service_names: list[str], on_status: Optional[callable] = None) -> tuple[dict[str, list[str]], dict[str, str]]:
+def get_service_owners(service_names: list[str], on_status: Optional[callable] = None) -> dict[str, list[str]]:
     """Fetch owners for each service using S360 search API in parallel.
-    
-    Also resolves owner aliases by searching S360 for each unique owner name
-    and extracting the ``Id`` field from Org results.
-    
+
     Args:
         service_names: List of service names to look up
         on_status: Optional callback for status updates
-        
+
     Returns:
-        Tuple of (service_owners, owner_aliases) where:
-        - service_owners: Dict mapping service_name → list of owner names
-        - owner_aliases: Dict mapping owner display_name → alias
+        Dict mapping service_name → list of owner display names
     """
     from concurrent.futures import ThreadPoolExecutor, as_completed
     from sfi_reporter.data import get_client
-    
+
     if not service_names:
-        return {}, {}
-    
+        return {}
+
     service_owners: dict[str, list[str]] = {}
-    
+
     def fetch_owner(service_name: str) -> tuple[str, list[str]]:
         """Fetch owner for a single service."""
         try:
@@ -705,14 +589,14 @@ def get_service_owners(service_names: list[str], on_status: Optional[callable] =
                 if result.get('Group') == 'Service' and result.get('Name') == service_name:
                     owners_json = result.get('Owners')
                     owners = parse_owners_field(owners_json)
-                    
+
                     # Special case: if service is "X's Team" and has no owners, use "X"
                     if not owners and "'s Team" in service_name:
                         team_owner = service_name.replace("'s Team", "")
                         owners = [team_owner]
-                    
+
                     return service_name, owners
-            
+
             # Service not found - check if it's a team pattern
             if "'s Team" in service_name:
                 team_owner = service_name.replace("'s Team", "")
@@ -724,64 +608,18 @@ def get_service_owners(service_names: list[str], on_status: Optional[callable] =
                 team_owner = service_name.replace("'s Team", "")
                 return service_name, [team_owner]
             return service_name, []
-    
+
     if on_status:
         on_status(f"Fetching owners for {len(service_names)} services...")
-    
+
     # Use ThreadPoolExecutor for parallel fetching
     with ThreadPoolExecutor(max_workers=10) as executor:
         futures = {executor.submit(fetch_owner, name): name for name in service_names}
         for future in as_completed(futures):
             name, owners = future.result()
             service_owners[name] = owners
-    
-    # Resolve owner aliases: search S360 for each unique owner name
-    all_owner_names: set[str] = set()
-    for owners in service_owners.values():
-        all_owner_names.update(owners)
-    
-    owner_aliases: dict[str, str | list[str]] = {}
-    
-    def resolve_alias(owner_name: str) -> tuple[str, list[str]]:
-        """Resolve an owner display name to their alias(es) via S360 search.
-        
-        When multiple people share the same display name (e.g., two
-        "Rohit Pandey" entries in the address book), all matching
-        aliases are returned so the caller can disambiguate using
-        the org hierarchy.
-        """
-        candidates: list[str] = []
-        try:
-            client = get_client()
-            results = client.search(owner_name)
-            for r in results:
-                if r.get('Group') != 'Org':
-                    continue
-                # Match on Owners (display name) or Name field
-                owners_val = r.get('Owners', '')
-                name_val = r.get('Name', '')
-                if (owners_val.lower() == owner_name.lower()
-                        or name_val.lower() == owner_name.lower()):
-                    alias = r.get('Id', '')
-                    if alias and alias.lower() not in candidates:
-                        candidates.append(alias.lower())
-        except Exception:
-            pass
-        return owner_name, candidates
-    
-    if all_owner_names:
-        if on_status:
-            on_status(f"Resolving aliases for {len(all_owner_names)} owners...")
-        
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            futures = {executor.submit(resolve_alias, name): name for name in all_owner_names}
-            for future in as_completed(futures):
-                name, aliases = future.result()
-                if aliases:
-                    # Single match → store as string; multiple → store as list
-                    owner_aliases[name] = aliases[0] if len(aliases) == 1 else aliases
-    
-    return service_owners, owner_aliases
+
+    return service_owners
 
 
 def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optional[dict]:
@@ -922,9 +760,8 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
         
         # If manager view, fetch service owners and aggregate stats by owner
         owner_stats = {}
-        level2_stats = {}
         service_owners = {}
-        org_mapping = {}  # Maps each owner to OrgAncestry(level1, level2)
+        org_mapping = {}  # Maps each owner to OrgAncestry(path=(...))
         if is_manager and service_stats:
             # Get manager alias from TeamGroup name (e.g., "Azure Core Insights (MURALIC)" -> "muralic")
             manager_alias = None
@@ -948,28 +785,22 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
             unique_names = list(set(service_names))
             
             if unique_names:
-                service_owners, owner_aliases = get_service_owners(unique_names, on_status)
+                service_owners = get_service_owners(unique_names, on_status)
                 
                 # Get all unique owner names across all services
                 all_owners = set()
                 for owners in service_owners.values():
                     all_owners.update(owners)
                 
-                # Get org mapping: for each owner, find their direct-report-level ancestor
+                # Get org mapping via org tree
                 if manager_alias and all_owners:
                     org_mapping = get_org_mapping(
                         list(all_owners), manager_alias, on_status,
-                        owner_aliases=owner_aliases,
                     )
                 
-                # Aggregate using org_mapping to roll up to directs (level-1)
-                # Note: service_owners is keyed by service NAME which matches S360_ServiceTreeServiceName
+                # Aggregate using org_mapping to roll up to directs
                 owner_stats = aggregate_by_owner(detailed_items, service_owners, 
                                                  org_mapping=org_mapping if org_mapping else None)
-                
-                # Compute level-2 stats for 2-level hierarchy
-                if org_mapping:
-                    level2_stats = aggregate_by_level2(detailed_items, service_owners, org_mapping)
         
         if on_status:
             on_status("Saving to cache...")
@@ -981,10 +812,9 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
             'program_stats': program_stats,
             'kpi_stats': kpi_stats,
             'owner_stats': owner_stats,
-            'level2_stats': level2_stats,
             'is_manager': is_manager,
             'service_owners': service_owners,
-            'org_mapping': org_mapping,  # Maps owner -> OrgAncestry(level1, level2)
+            'org_mapping': org_mapping,  # Maps owner -> OrgAncestry(path=(...))
             'programs_lookup': program_names,  # Save program name lookup for cache reload
             'failed_kpis': failed_kpis,  # KPIs that failed during fetch
             'audience_ids': audience_ids,  # Needed for retry
@@ -2873,9 +2703,8 @@ class SFIReporterApp:
         self.services_tree.column("sla", width=80, anchor=tk.CENTER)
         self.services_tree.column("invalid_eta", width=80, anchor=tk.CENTER)
         
-        # Store owner ID mapping for drill-down
-        self._owner_id_map = {}   # iid -> owner_name (level1)
-        self._owner_l2_map = {}   # iid -> owner_name (level2)
+        # Store group path mapping for drill-down
+        self._group_path_map = {}   # iid -> path tuple
         
         services_scroll = ttk.Scrollbar(services_frame, orient=tk.VERTICAL, command=self.services_tree.yview)
         self.services_tree.configure(yscrollcommand=services_scroll.set)
@@ -2996,8 +2825,7 @@ class SFIReporterApp:
         self._service_name_map.clear()
         self._program_id_map.clear()
         self._kpi_id_map.clear()
-        self._owner_id_map.clear()
-        self._owner_l2_map.clear()
+        self._group_path_map.clear()
         
         # Get pre-computed stats if available
         service_stats = data.get('service_stats', {})
@@ -3026,116 +2854,118 @@ class SFIReporterApp:
             # Manager view: Group services by owner (pivot table style)
             # Get org_mapping from cached data
             org_mapping = data.get('org_mapping', {})
-            level2_stats = data.get('level2_stats', {})
             
-            # Detect if this is a 2-level hierarchy
-            has_level2 = any(
-                isinstance(m, OrgAncestry) and m.level2 is not None
-                for m in org_mapping.values()
-            )
-            
-            # Build service mapping: for each service, determine (level1, level2)
-            # Structure: {level1: {level2_or_None: [(svc_id, svc_name, stats)]}}
-            hierarchy: dict[str, dict[Optional[str], list[tuple[str, str, dict]]]] = {}
-            
+            # Build service → path mapping
+            svc_path_map: dict[str, tuple[str, ...]] = {}
             for svc_id, stats in service_stats.items():
                 svc_name = stats.get('name', svc_id)
                 owners = service_owners.get(svc_name, None)
-                
+                path = ('Unknown Owner',)
                 if owners is None:
-                    level1, level2 = 'Unknown Owner', None
+                    path = ('Unknown Owner',)
                 elif len(owners) == 0:
-                    level1, level2 = 'No Owner', None
+                    path = ('No Owner',)
                 elif org_mapping:
-                    level1, level2 = None, None
                     for owner in owners:
                         mapped = org_mapping.get(owner)
-                        if isinstance(mapped, OrgAncestry):
-                            if mapped.level1 and mapped.level1 != 'Unknown Owner':
-                                level1 = mapped.level1
-                                level2 = mapped.level2
-                                break
-                        elif mapped and mapped != 'Unknown Owner':
-                            level1 = mapped
+                        if isinstance(mapped, OrgAncestry) and mapped.path and mapped.path[0] != 'Unknown Owner':
+                            path = mapped.path
                             break
-                    if level1 is None:
-                        level1 = 'Unknown Owner'
                 else:
-                    level1, level2 = owners[0], None
-                
-                if level1 not in hierarchy:
-                    hierarchy[level1] = {}
-                if level2 not in hierarchy[level1]:
-                    hierarchy[level1][level2] = []
-                hierarchy[level1][level2].append((svc_id, svc_name, stats))
+                    path = (owners[0],)
+                svc_path_map[svc_id] = path
             
-            # Insert treeview rows
-            for owner_name, owner_stat in sorted(owner_stats.items(), key=lambda x: x[1].get('count', 0), reverse=True):
-                # Insert Level-1 parent row
-                owner_iid = self.services_tree.insert("", tk.END, values=(
-                    f"👤 {owner_name}",
-                    owner_stat.get('count', 0),
-                    owner_stat.get('sla', 0),
-                    owner_stat.get('invalid_eta', 0),
-                ), open=True)
-                self._owner_id_map[owner_iid] = owner_name
+            # Build nested hierarchy from paths
+            # root_groups[name] = {'children': {name: {...recursive}}, 'services': [(svc_id, svc_name, stats)]}
+            root_groups: dict[str, dict] = {}
+            
+            for svc_id, path in svc_path_map.items():
+                stats = service_stats[svc_id]
+                svc_name = stats.get('name', svc_id)
                 
-                l2_dict = hierarchy.get(owner_name, {})
-                
-                if has_level2 and any(k is not None for k in l2_dict.keys()):
-                    # 2-level mode: insert Level-2 sub-rows, then services under each
-                    
-                    # First, insert services with level2=None directly under level1
-                    direct_svcs = l2_dict.get(None, [])
-                    for svc_id, svc_name, stats in sorted(direct_svcs, key=lambda x: x[2].get('count', 0), reverse=True):
-                        child_iid = self.services_tree.insert(owner_iid, tk.END, values=(
-                            svc_name,
-                            stats.get('count', 0),
-                            stats.get('sla', 0),
-                            stats.get('invalid_eta', 0),
-                        ))
-                        self._service_id_map[child_iid] = svc_id
-                        self._service_name_map[svc_id] = svc_name
-                    
-                    # Then, insert Level-2 sub-rows with their services
-                    for l2_name in sorted(
-                        (k for k in l2_dict if k is not None),
-                        key=lambda n: level2_stats.get((owner_name, n), {}).get('count', 0),
-                        reverse=True
-                    ):
-                        l2_stat = level2_stats.get((owner_name, l2_name), {})
-                        l2_iid = self.services_tree.insert(owner_iid, tk.END, values=(
-                            f"👤 {l2_name}",
-                            l2_stat.get('count', 0),
-                            l2_stat.get('sla', 0),
-                            l2_stat.get('invalid_eta', 0),
-                        ), open=True)
-                        self._owner_l2_map[l2_iid] = l2_name
-                        
-                        svc_list = l2_dict[l2_name]
-                        for svc_id, svc_name, stats in sorted(svc_list, key=lambda x: x[2].get('count', 0), reverse=True):
-                            child_iid = self.services_tree.insert(l2_iid, tk.END, values=(
-                                svc_name,
-                                stats.get('count', 0),
-                                stats.get('sla', 0),
-                                stats.get('invalid_eta', 0),
-                            ))
-                            self._service_id_map[child_iid] = svc_id
-                            self._service_name_map[svc_id] = svc_name
+                if len(path) <= 1:
+                    # Root-owned or IC directly under root
+                    group_name = path[0]
+                    if group_name not in root_groups:
+                        root_groups[group_name] = {'children': {}, 'services': []}
+                    root_groups[group_name]['services'].append((svc_id, svc_name, stats))
                 else:
-                    # 1-level mode: services directly under level1 (existing behavior)
-                    all_svcs = []
-                    for svc_list in l2_dict.values():
-                        all_svcs.extend(svc_list)
-                    for svc_id, svc_name, stats in sorted(all_svcs, key=lambda x: x[2].get('count', 0), reverse=True):
-                        child_iid = self.services_tree.insert(owner_iid, tk.END, values=(
-                            svc_name,
-                            stats.get('count', 0),
-                            stats.get('sla', 0),
-                            stats.get('invalid_eta', 0),
-                        ))
-                        self._service_id_map[child_iid] = svc_id
-                        self._service_name_map[svc_id] = svc_name
+                    # Walk from path[1] onwards building nested groups
+                    group_name = path[1]
+                    if group_name not in root_groups:
+                        root_groups[group_name] = {'children': {}, 'services': []}
+                    
+                    current = root_groups[group_name]
+                    for depth in range(2, len(path)):
+                        child_name = path[depth]
+                        if child_name not in current['children']:
+                            current['children'][child_name] = {'children': {}, 'services': []}
+                        current = current['children'][child_name]
+                    
+                    current['services'].append((svc_id, svc_name, stats))
+            
+            # Compute aggregate stats for each group recursively
+            def _compute_group_stats(group: dict) -> dict:
+                total = {'count': 0, 'sla': 0, 'invalid_eta': 0}
+                for _, _, s in group['services']:
+                    total['count'] += s.get('count', 0)
+                    total['sla'] += s.get('sla', 0)
+                    total['invalid_eta'] += s.get('invalid_eta', 0)
+                for child in group['children'].values():
+                    child_stats = _compute_group_stats(child)
+                    total['count'] += child_stats['count']
+                    total['sla'] += child_stats['sla']
+                    total['invalid_eta'] += child_stats['invalid_eta']
+                group['_stats'] = total
+                return total
+            
+            for g in root_groups.values():
+                _compute_group_stats(g)
+            
+            # Determine root_name for full-path storage
+            root_name = None
+            for mapped in org_mapping.values():
+                if isinstance(mapped, OrgAncestry) and mapped.path and mapped.path[0] != 'Unknown Owner':
+                    root_name = mapped.path[0]
+                    break
+            
+            # Insert treeview rows recursively
+            def _insert_group(parent_iid, name, group, depth, full_path):
+                grp_stats = group.get('_stats', {'count': 0, 'sla': 0, 'invalid_eta': 0})
+                iid = self.services_tree.insert(parent_iid, tk.END, values=(
+                    f"👤 {name}",
+                    grp_stats['count'],
+                    grp_stats['sla'],
+                    grp_stats['invalid_eta'],
+                ), open=(depth == 0))  # Only top-level groups expanded
+                self._group_path_map[iid] = full_path
+                
+                # Insert child groups sorted by count descending
+                for child_name in sorted(
+                    group['children'],
+                    key=lambda n: group['children'][n].get('_stats', {}).get('count', 0),
+                    reverse=True
+                ):
+                    child_full_path = full_path + (child_name,)
+                    _insert_group(iid, child_name, group['children'][child_name], depth + 1, child_full_path)
+                
+                # Insert services sorted by count descending
+                for svc_id, svc_name, s in sorted(group['services'], key=lambda x: x[2].get('count', 0), reverse=True):
+                    child_iid = self.services_tree.insert(iid, tk.END, values=(
+                        svc_name,
+                        s.get('count', 0),
+                        s.get('sla', 0),
+                        s.get('invalid_eta', 0),
+                    ))
+                    self._service_id_map[child_iid] = svc_id
+                    self._service_name_map[svc_id] = svc_name
+            
+            for name in sorted(root_groups, key=lambda n: root_groups[n].get('_stats', {}).get('count', 0), reverse=True):
+                if root_name and name != 'Unknown Owner' and name != 'No Owner':
+                    full_path = (root_name, name)
+                else:
+                    full_path = (name,)
+                _insert_group("", name, root_groups[name], 0, full_path)
         elif services:
             # IC view: User owns services - show them flat
             for s in services:
@@ -3188,59 +3018,39 @@ class SFIReporterApp:
             self.cache_age_var.set("")
     
     def _on_service_double_click(self, event):
-        """Handle double-click on service or owner row."""
+        """Handle double-click on service or owner group row."""
         selection = self.services_tree.selection()
         if not selection:
             return
         
         iid = selection[0]
         
-        # Check Level-2 owner rows first (takes precedence over Level-1)
-        l2_owner_name = self._owner_l2_map.get(iid)
-        if l2_owner_name:
+        # Check if this is a group row (manager path)
+        group_path = self._group_path_map.get(iid)
+        if group_path:
             service_owners_data = self.current_data.get('service_owners', {})
             org_mapping = self.current_data.get('org_mapping', {})
             
-            matching_svcs = collect_services_for_owner(
-                l2_owner_name, "level2", service_owners_data, org_mapping
-            )
-            items = [
-                item for item in self.current_data.get('detailed_items', [])
-                if item.get('S360_ServiceTreeServiceName') in matching_svcs
-            ]
-            
-            DetailModal(
-                self.root,
-                f"Action Items for {l2_owner_name}",
-                items,
-                self._service_name_map,
-                on_eta_complete=self._on_eta_update_complete,
-            )
-            return
-        
-        # Check Level-1 owner rows
-        owner_name = self._owner_id_map.get(iid)
-        if owner_name:
-            service_owners_data = self.current_data.get('service_owners', {})
-            org_mapping = self.current_data.get('org_mapping', {})
+            # Get the display name (last element of path)
+            display_name = group_path[-1]
             
             # Special cases for Unknown/No Owner
-            if owner_name == 'Unknown Owner':
+            if display_name == 'Unknown Owner':
                 known_services = set(service_owners_data.keys())
                 items = [
                     item for item in self.current_data.get('detailed_items', [])
                     if item.get('S360_ServiceTreeServiceName') not in known_services
                 ]
-            elif owner_name == 'No Owner':
+            elif display_name == 'No Owner':
                 empty_owner_services = {svc for svc, owners in service_owners_data.items() if not owners}
                 items = [
                     item for item in self.current_data.get('detailed_items', [])
                     if item.get('S360_ServiceTreeServiceName') in empty_owner_services
                 ]
             else:
-                # Use collect_services_for_owner to get entire subtree
+                # Use collect_services_for_owner with path prefix
                 matching_svcs = collect_services_for_owner(
-                    owner_name, "level1", service_owners_data, org_mapping
+                    group_path, service_owners_data, org_mapping
                 )
                 items = [
                     item for item in self.current_data.get('detailed_items', [])
@@ -3249,7 +3059,7 @@ class SFIReporterApp:
             
             DetailModal(
                 self.root,
-                f"Action Items for {owner_name}",
+                f"Action Items for {display_name}",
                 items,
                 self._service_name_map,
                 on_eta_complete=self._on_eta_update_complete,

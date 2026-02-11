@@ -212,13 +212,14 @@ class GraphEndpoint:
 
         return people
 
-    def get_org_tree(self, alias: str, *, depth: int = 2) -> OrgTree:
+    def get_org_tree(self, alias: str, *, depth: int | None = None) -> OrgTree:
         """Build a nested org tree starting from *alias*.
 
         Args:
             alias: Microsoft alias (e.g. ``"muralic"``).
-            depth: How many levels of reports to fetch (default 2).
-                   ``depth=0`` returns only the target person.
+            depth: How many levels of reports to fetch.  ``None`` (default)
+                   fetches the entire tree.  ``depth=0`` returns only the
+                   target person.
 
         Returns:
             ``OrgTree`` with the target person and nested direct reports.
@@ -227,7 +228,7 @@ class GraphEndpoint:
             S360ApiError: If the user does not exist or a Graph error occurs.
             S360AuthError: If authentication fails.
         """
-        logger.info("Building org tree for %s (depth=%d)", alias, depth)
+        logger.info("Building org tree for %s (depth=%s)", alias, depth)
         # Fetch the target person's info
         url = self._user_url(alias)
         resp = self._graph_get(url)
@@ -248,14 +249,14 @@ class GraphEndpoint:
         person = OrgPerson.from_graph_response(resp.json())
         return self._build_subtree(person, depth)
 
-    def _build_subtree(self, person: OrgPerson, remaining_depth: int) -> OrgTree:
+    def _build_subtree(self, person: OrgPerson, remaining_depth: int | None) -> OrgTree:
         """Recursively build an OrgTree node."""
-        if remaining_depth <= 0:
+        if remaining_depth is not None and remaining_depth <= 0:
             return OrgTree(person=person)
 
         reports = self.get_direct_reports(person.alias)
         children = [
-            self._build_subtree(r, remaining_depth - 1)
+            self._build_subtree(r, None if remaining_depth is None else remaining_depth - 1)
             for r in reports
         ]
         return OrgTree(person=person, direct_reports=children)
