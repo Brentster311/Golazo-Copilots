@@ -148,7 +148,12 @@ def get_client() -> Any:
     if S360Client is None:
         raise ImportError("accia-s360 package is not installed")
     if _client_instance is None:
-        _client_instance = S360Client()
+        from accia_s360.config import S360Config
+        from sfi_reporter.cache import get_cache_dir
+        orgchart_dir = get_cache_dir() / 'orgchart'
+        orgchart_dir.mkdir(parents=True, exist_ok=True)
+        config = S360Config(cache_directory=orgchart_dir)
+        _client_instance = S360Client(config)
     return _client_instance
 
 

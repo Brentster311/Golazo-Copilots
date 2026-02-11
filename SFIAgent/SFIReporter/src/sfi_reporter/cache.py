@@ -37,7 +37,8 @@ def get_cache_path(user_alias: str, cache_dir: Optional[Path] = None) -> Path:
         Path to cache file.
     """
     if cache_dir is None:
-        cache_dir = get_cache_dir()
+        cache_dir = get_cache_dir() / 'kpis'
+        cache_dir.mkdir(parents=True, exist_ok=True)
     return cache_dir / f'{user_alias}_cache.json'
 
 
