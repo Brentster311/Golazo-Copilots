@@ -341,7 +341,7 @@ def get_org_mapping(
     manager_alias: str,
     on_status: Optional[callable] = None,
     *,
-    owner_aliases: Optional[dict[str, str]] = None,
+    owner_aliases: Optional[dict[str, str | list[str]]] = None,
 ) -> dict[str, OrgAncestry]:
     """Get mapping from each owner to their hierarchical ancestors (up to 2 levels).
     
@@ -389,40 +389,51 @@ def get_org_mapping(
         3. Find manager_alias in the chain
         4. Determine hierarchy depth and return OrgAncestry tuple
         """
-        try:
-            # Resolve alias from owner_aliases map
-            owner_alias = owner_aliases.get(owner_name)
-            if not owner_alias:
-                return owner_name, OrgAncestry(level1='Unknown Owner', level2=None)
-            
+        def _try_alias(alias: str, client):
+            """Try a single alias and return OrgAncestry or None."""
             # Self-mapping: owner IS the manager
-            if owner_alias.lower() == manager_alias.lower():
-                return owner_name, OrgAncestry(level1=owner_name, level2=None)
+            if alias.lower() == manager_alias.lower():
+                return OrgAncestry(level1=owner_name, level2=None)
             
-            client = get_client()
-            chain = client.get_manager_chain(owner_alias)
+            chain = client.get_manager_chain(alias)
             chain_aliases = [p.alias.lower() for p in chain]
             
             if manager_alias.lower() not in chain_aliases:
-                return owner_name, OrgAncestry(level1='Unknown Owner', level2=None)
+                return None  # Not in manager's org — try next candidate
             
             mgr_idx = chain_aliases.index(manager_alias.lower())
-            # hops = number of entries BEFORE manager_alias in chain
-            # (entries between owner and manager)
             hops = mgr_idx
             
             if hops == 0:
-                # Owner's immediate manager IS manager_alias → direct report
-                return owner_name, OrgAncestry(level1=owner_name, level2=None)
+                return OrgAncestry(level1=owner_name, level2=None)
             elif hops == 1:
-                # 1 hop → owner reports to a direct report of manager
-                level1_name = chain[0].display_name  # immediate mgr = viewer's direct
-                return owner_name, OrgAncestry(level1=level1_name, level2=owner_name)
+                level1_name = chain[0].display_name
+                return OrgAncestry(level1=level1_name, level2=None)
             else:
-                # 2+ hops → cap at 2 levels
-                level1_name = chain[mgr_idx - 1].display_name  # viewer's direct
-                level2_name = chain[mgr_idx - 2].display_name  # one below direct
-                return owner_name, OrgAncestry(level1=level1_name, level2=level2_name)
+                level1_name = chain[mgr_idx - 1].display_name
+                level2_name = chain[mgr_idx - 2].display_name
+                return OrgAncestry(level1=level1_name, level2=level2_name)
+        
+        try:
+            # Resolve alias(es) from owner_aliases map
+            raw = owner_aliases.get(owner_name)
+            if not raw:
+                return owner_name, OrgAncestry(level1='Unknown Owner', level2=None)
+            
+            # Normalise to list of candidate aliases
+            candidates = raw if isinstance(raw, list) else [raw]
+            
+            client = get_client()
+            for alias in candidates:
+                try:
+                    result = _try_alias(alias, client)
+                    if result is not None:
+                        return owner_name, result
+                except Exception:
+                    continue  # Try next candidate on error
+            
+            # None of the candidates were in the manager's org
+            return owner_name, OrgAncestry(level1='Unknown Owner', level2=None)
             
         except Exception:
             return owner_name, OrgAncestry(level1='Unknown Owner', level2=None)
@@ -729,10 +740,17 @@ def get_service_owners(service_names: list[str], on_status: Optional[callable] =
     for owners in service_owners.values():
         all_owner_names.update(owners)
     
-    owner_aliases: dict[str, str] = {}
+    owner_aliases: dict[str, str | list[str]] = {}
     
-    def resolve_alias(owner_name: str) -> tuple[str, str | None]:
-        """Resolve an owner display name to their alias via S360 search."""
+    def resolve_alias(owner_name: str) -> tuple[str, list[str]]:
+        """Resolve an owner display name to their alias(es) via S360 search.
+        
+        When multiple people share the same display name (e.g., two
+        "Rohit Pandey" entries in the address book), all matching
+        aliases are returned so the caller can disambiguate using
+        the org hierarchy.
+        """
+        candidates: list[str] = []
         try:
             client = get_client()
             results = client.search(owner_name)
@@ -745,11 +763,11 @@ def get_service_owners(service_names: list[str], on_status: Optional[callable] =
                 if (owners_val.lower() == owner_name.lower()
                         or name_val.lower() == owner_name.lower()):
                     alias = r.get('Id', '')
-                    if alias:
-                        return owner_name, alias.lower()
+                    if alias and alias.lower() not in candidates:
+                        candidates.append(alias.lower())
         except Exception:
             pass
-        return owner_name, None
+        return owner_name, candidates
     
     if all_owner_names:
         if on_status:
@@ -758,9 +776,10 @@ def get_service_owners(service_names: list[str], on_status: Optional[callable] =
         with ThreadPoolExecutor(max_workers=10) as executor:
             futures = {executor.submit(resolve_alias, name): name for name in all_owner_names}
             for future in as_completed(futures):
-                name, alias = future.result()
-                if alias:
-                    owner_aliases[name] = alias
+                name, aliases = future.result()
+                if aliases:
+                    # Single match → store as string; multiple → store as list
+                    owner_aliases[name] = aliases[0] if len(aliases) == 1 else aliases
     
     return service_owners, owner_aliases
 

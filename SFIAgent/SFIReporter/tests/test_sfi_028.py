@@ -137,8 +137,8 @@ class TestGetOrgMappingGraphAPI:
         # brentj chain = [muralic, alexhowells, vp, ceo]
         # alexhowells at index 1 → hops=1
         # level1 = chain[0].display_name = "Muralic Name" (immediate mgr = viewer's direct)
-        # level2 = owner_name = "Brent Jensen"
-        assert ancestry == OrgAncestry(level1="Muralic Name", level2="Brent Jensen")
+        # level2 = None (hops==1 → IC, not a sub-manager)
+        assert ancestry == OrgAncestry(level1="Muralic Name", level2=None)
 
     @patch("sfi_reporter.data.get_client")
     def test_t4_three_plus_hops_capped(self, mock_get_client):
@@ -324,4 +324,193 @@ class TestGetServiceOwnersWithAliases:
 
         service_owners, owner_aliases = get_service_owners(["My Service"])
 
+        assert owner_aliases.get("Brent Jensen") == "brentj"
+
+
+class TestDuplicateDisplayNames:
+    """Tests for handling multiple people with the same display name."""
+
+    def _chain_registry(self):
+        """Org where two "Rohit Pandey" exist — one in org, one not.
+
+        rohitpandey1 reports to muralic → in org.
+        rohitpandey2 reports to otherdir → NOT in org.
+        """
+        return {
+            "muralic": [
+                _make_person("alexhowells", "Alex Howells"),
+                _make_person("vp", "VP Person"),
+            ],
+            "rohitpandey1": [
+                _make_person("muralic", "Murali Chintalapati"),
+                _make_person("alexhowells", "Alex Howells"),
+                _make_person("vp", "VP Person"),
+            ],
+            "rohitpandey2": [
+                _make_person("otherdir", "Other Director"),
+                _make_person("othervp", "Other VP"),
+                _make_person("ceo", "CEO Person"),
+            ],
+        }
+
+    @patch("sfi_reporter.data.get_client")
+    def test_ambiguous_name_picks_correct_alias(self, mock_get_client):
+        """When two people share a name, get_org_mapping picks the one in the org."""
+        from sfi_reporter.tk_app import get_org_mapping, OrgAncestry
+
+        mock_client = MagicMock()
+        mock_client.get_manager_chain.side_effect = _build_chain_side_effect(
+            self._chain_registry()
+        )
+        mock_get_client.return_value = mock_client
+
+        # owner_aliases has a LIST of candidates for "Rohit Pandey"
+        result = get_org_mapping(
+            ["Rohit Pandey"], "alexhowells",
+            owner_aliases={"Rohit Pandey": ["rohitpandey2", "rohitpandey1"]},
+        )
+
+        ancestry = result["Rohit Pandey"]
+        # rohitpandey2 is NOT in alexhowells' org, so it should be skipped.
+        # rohitpandey1 IS in alexhowells' org (chain: muralic → alexhowells).
+        assert ancestry.level1 == "Murali Chintalapati"
+        assert ancestry.level2 is None
+
+    @patch("sfi_reporter.data.get_client")
+    def test_ambiguous_name_correct_alias_first(self, mock_get_client):
+        """When the correct alias is first in the list, it's used directly."""
+        from sfi_reporter.tk_app import get_org_mapping, OrgAncestry
+
+        mock_client = MagicMock()
+        mock_client.get_manager_chain.side_effect = _build_chain_side_effect(
+            self._chain_registry()
+        )
+        mock_get_client.return_value = mock_client
+
+        result = get_org_mapping(
+            ["Rohit Pandey"], "alexhowells",
+            owner_aliases={"Rohit Pandey": ["rohitpandey1", "rohitpandey2"]},
+        )
+
+        ancestry = result["Rohit Pandey"]
+        assert ancestry.level1 == "Murali Chintalapati"
+
+    @patch("sfi_reporter.data.get_client")
+    def test_ambiguous_name_neither_in_org(self, mock_get_client):
+        """When no candidate is in the org, maps to Unknown Owner."""
+        from sfi_reporter.tk_app import get_org_mapping, OrgAncestry
+
+        mock_client = MagicMock()
+        mock_client.get_manager_chain.side_effect = _build_chain_side_effect(
+            self._chain_registry()
+        )
+        mock_get_client.return_value = mock_client
+
+        # Both aliases are NOT under "someotheralias"
+        result = get_org_mapping(
+            ["Rohit Pandey"], "someotheralias",
+            owner_aliases={"Rohit Pandey": ["rohitpandey1", "rohitpandey2"]},
+        )
+
+        ancestry = result["Rohit Pandey"]
+        assert ancestry == OrgAncestry(level1="Unknown Owner", level2=None)
+
+    @patch("sfi_reporter.data.get_client")
+    def test_single_alias_str_still_works(self, mock_get_client):
+        """Single alias stored as str (not list) still works fine."""
+        from sfi_reporter.tk_app import get_org_mapping, OrgAncestry
+
+        mock_client = MagicMock()
+        mock_client.get_manager_chain.side_effect = _build_chain_side_effect(
+            self._chain_registry()
+        )
+        mock_get_client.return_value = mock_client
+
+        result = get_org_mapping(
+            ["Rohit Pandey"], "alexhowells",
+            owner_aliases={"Rohit Pandey": "rohitpandey1"},
+        )
+
+        ancestry = result["Rohit Pandey"]
+        assert ancestry.level1 == "Murali Chintalapati"
+
+
+class TestGetServiceOwnersAmbiguousAliases:
+    """Test that get_service_owners handles duplicate display names."""
+
+    @patch("sfi_reporter.data.get_client")
+    def test_multiple_org_matches_returns_list(self, mock_get_client):
+        """When S360 returns two Org matches for the same name, owner_aliases stores a list."""
+        from sfi_reporter.tk_app import get_service_owners
+
+        def search_side_effect(query):
+            if query == "My Service":
+                return [
+                    {
+                        "Group": "Service",
+                        "Name": "My Service",
+                        "Owners": '["Rohit Pandey"]',
+                    }
+                ]
+            if query == "Rohit Pandey":
+                return [
+                    {
+                        "Group": "Org",
+                        "Id": "rohitpandey1",
+                        "Owners": "Rohit Pandey",
+                        "Name": "Rohit Pandey",
+                    },
+                    {
+                        "Group": "Org",
+                        "Id": "rohitpandey2",
+                        "Owners": "Rohit Pandey",
+                        "Name": "Rohit Pandey",
+                    },
+                ]
+            return []
+
+        mock_client = MagicMock()
+        mock_client.search.side_effect = search_side_effect
+        mock_get_client.return_value = mock_client
+
+        service_owners, owner_aliases = get_service_owners(["My Service"])
+
+        # Should store as list since there are multiple candidates
+        aliases = owner_aliases.get("Rohit Pandey")
+        assert isinstance(aliases, list), f"Expected list, got {type(aliases)}"
+        assert "rohitpandey1" in aliases
+        assert "rohitpandey2" in aliases
+
+    @patch("sfi_reporter.data.get_client")
+    def test_single_org_match_returns_string(self, mock_get_client):
+        """When S360 returns exactly one match, owner_aliases stores a string."""
+        from sfi_reporter.tk_app import get_service_owners
+
+        def search_side_effect(query):
+            if query == "My Service":
+                return [
+                    {
+                        "Group": "Service",
+                        "Name": "My Service",
+                        "Owners": '["Brent Jensen"]',
+                    }
+                ]
+            if query == "Brent Jensen":
+                return [
+                    {
+                        "Group": "Org",
+                        "Id": "brentj",
+                        "Owners": "Brent Jensen",
+                        "Name": "Brent Jensen",
+                    },
+                ]
+            return []
+
+        mock_client = MagicMock()
+        mock_client.search.side_effect = search_side_effect
+        mock_get_client.return_value = mock_client
+
+        service_owners, owner_aliases = get_service_owners(["My Service"])
+
+        # Single match → string, not list
         assert owner_aliases.get("Brent Jensen") == "brentj"
