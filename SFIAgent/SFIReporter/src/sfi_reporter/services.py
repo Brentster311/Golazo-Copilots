@@ -1,6 +1,10 @@
 """Business logic: serialization, settings, org mapping, aggregation, data refresh, and filters."""
 import json
 import logging
+import os
+import tempfile
+from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Optional
 
 from sfi_reporter.cache import (
@@ -124,6 +128,108 @@ def parse_owners_field(owners_json: str | None) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
+# Org tree cache helpers
+# ---------------------------------------------------------------------------
+
+ORG_TREE_CACHE_TTL_HOURS = 24
+
+
+def _serialize_org_tree(tree) -> dict:
+    """Convert an OrgTree (recursive dataclass) to a JSON-safe nested dict."""
+    person = tree.person
+    return {
+        'person': {
+            'alias': person.alias,
+            'display_name': person.display_name,
+            'job_title': person.job_title,
+            'department': person.department,
+            'object_id': person.object_id,
+        },
+        'direct_reports': [_serialize_org_tree(child) for child in tree.direct_reports],
+    }
+
+
+def _deserialize_org_tree(data: dict):
+    """Reconstruct an OrgTree from a nested dict (inverse of _serialize_org_tree)."""
+    from accia_s360.models import OrgPerson, OrgTree
+
+    p = data['person']
+    person = OrgPerson(
+        alias=p['alias'],
+        display_name=p['display_name'],
+        job_title=p.get('job_title'),
+        department=p.get('department'),
+        object_id=p.get('object_id', ''),
+    )
+    children = [_deserialize_org_tree(child) for child in data.get('direct_reports', [])]
+    return OrgTree(person=person, direct_reports=children)
+
+
+def _read_org_tree_cache(manager_alias: str) -> 'OrgTree | None':
+    """Read cached org tree for *manager_alias*. Returns None on miss/stale/corrupt."""
+    cache_path = get_cache_dir() / f'{manager_alias}_org_tree.json'
+    if not cache_path.exists():
+        logger.debug('Org-tree cache MISS for %s — file not found', manager_alias)
+        return None
+    try:
+        content = cache_path.read_text(encoding='utf-8')
+        if not content.strip():
+            logger.debug('Org-tree cache MISS for %s — empty file', manager_alias)
+            return None
+        data = json.loads(content)
+    except (json.JSONDecodeError, IOError):
+        logger.debug('Org-tree cache MISS for %s — corrupt file', manager_alias)
+        return None
+
+    # Check TTL
+    try:
+        ts = datetime.fromisoformat(data['timestamp'])
+        age = datetime.now() - ts
+        if age >= timedelta(hours=ORG_TREE_CACHE_TTL_HOURS):
+            logger.debug('Org-tree cache MISS for %s — stale (%d hrs)', manager_alias, age.total_seconds() / 3600)
+            return None
+    except (KeyError, ValueError):
+        return None
+
+    try:
+        tree = _deserialize_org_tree(data['tree'])
+        logger.debug(
+            'Org-tree cache HIT for %s (age: %d min)',
+            manager_alias, int(age.total_seconds() / 60),
+        )
+        return tree
+    except (KeyError, TypeError):
+        logger.debug('Org-tree cache MISS for %s — deserialization failed', manager_alias)
+        return None
+
+
+def _write_org_tree_cache(manager_alias: str, tree) -> None:
+    """Atomically write *tree* to the org-tree cache file."""
+    cache_dir = get_cache_dir()
+    cache_path = cache_dir / f'{manager_alias}_org_tree.json'
+    payload = {
+        'timestamp': datetime.now().isoformat(),
+        'manager_alias': manager_alias,
+        'tree': _serialize_org_tree(tree),
+    }
+    try:
+        fd, tmp_name = tempfile.mkstemp(dir=str(cache_dir), suffix='.tmp')
+        try:
+            with os.fdopen(fd, 'w', encoding='utf-8') as f:
+                json.dump(payload, f, indent=2)
+            os.replace(tmp_name, str(cache_path))
+        except BaseException:
+            # Clean up temp file on failure
+            try:
+                os.unlink(tmp_name)
+            except OSError:
+                pass
+            raise
+    except Exception:
+        logger.warning('Failed to write org-tree cache for %s', manager_alias, exc_info=True)
+
+
+# ---------------------------------------------------------------------------
 # Org tree mapping
 # ---------------------------------------------------------------------------
 
@@ -148,15 +254,24 @@ def get_org_mapping(
     if not owner_names:
         return {}
 
-    if on_status:
-        on_status(f"Fetching org tree for {manager_alias}...")
+    # Normalize alias for cache key consistency
+    cache_key = manager_alias.lower()
 
-    client = get_client()
-    try:
-        tree = client.get_org_tree(manager_alias)
-    except Exception:
-        # If tree fetch fails, all owners are unknown
-        return {name: OrgAncestry(path=('Unknown Owner',)) for name in owner_names}
+    # Check org-tree cache first
+    tree = _read_org_tree_cache(cache_key)
+
+    if tree is None:
+        if on_status:
+            on_status(f"Fetching org tree for {manager_alias}...")
+
+        client = get_client()
+        try:
+            tree = client.get_org_tree(cache_key)
+        except Exception:
+            # If tree fetch fails, all owners are unknown
+            return {name: OrgAncestry(path=('Unknown Owner',)) for name in owner_names}
+
+        _write_org_tree_cache(cache_key, tree)
 
     # Flatten the org tree into a lookup: display_name_lower → manager path
     name_lookup: dict[str, tuple[str, ...]] = {}
@@ -416,11 +531,15 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
         if on_status:
             on_status("Connecting to S360...")
 
-        # Get landing view to detect if user is a manager
+        # Detect manager status via Graph API (has direct reports?)
         client = get_client()
-        landing_response = client.get_default_landing_view(user_alias)
-        landing_view = landing_response.get('SearchDataList', []) if landing_response else []
-        is_manager = is_manager_view(landing_view)
+        try:
+            direct_reports = client.get_direct_reports(user_alias)
+            is_manager = len(direct_reports) > 0
+        except Exception:
+            logger.warning("Graph direct-reports lookup failed for %s; assuming IC", user_alias)
+            direct_reports = []
+            is_manager = False
 
         # Get services and audience IDs (supports both service owners and team views)
         services, audience_ids = get_user_team_info(user_alias)
@@ -540,24 +659,14 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
         service_owners_map = {}
         org_mapping = {}
         if is_manager and service_stats:
-            manager_alias_val = None
-            manager_name = None
-            for item in landing_view:
-                if item.get('Group') == 'TeamGroup':
-                    team_name = item.get('Name', '')
-                    if '(' in team_name and ')' in team_name:
-                        manager_alias_val = team_name.split('(')[-1].replace(')', '').strip().lower()
-                    owners_json = item.get('Owners')
-                    if owners_json:
-                        manager_names = parse_owners_field(owners_json)
-                        if manager_names:
-                            manager_name = manager_names[0]
-                    break
+            # The viewer IS the manager — alias is already known
+            manager_alias_val = user_alias.lower()
 
             service_names_list = [stats.get('name') for stats in service_stats.values() if stats.get('name')]
             unique_names = list(set(service_names_list))
 
             if unique_names:
+                #retrieve service owners for all services in parallel
                 service_owners_map = get_service_owners(unique_names, on_status)
 
                 all_owners = set()
@@ -667,6 +776,12 @@ __all__ = [
     'aggregate_by_owner',
     'collect_services_for_owner',
     'get_service_owners',
+    # Org tree cache
+    'ORG_TREE_CACHE_TTL_HOURS',
+    '_serialize_org_tree',
+    '_deserialize_org_tree',
+    '_read_org_tree_cache',
+    '_write_org_tree_cache',
     # Refresh
     'do_refresh',
     # Filters
