@@ -273,20 +273,6 @@ class CopilotPanel(tk.Frame):
         if not prompt or self._is_sending or self._is_connecting:
             return
 
-        # Check SDK availability before first send
-        if self._client is None:
-            try:
-                import importlib
-                importlib.import_module("copilot")
-            except ImportError:
-                self._append_message(
-                    "error",
-                    "GitHub Copilot SDK is not installed.\n"
-                    "Install with:  pip install github-copilot-sdk\n"
-                    "Then authenticate:  copilot auth login\n",
-                )
-                return
-
         self._input_entry.delete(0, tk.END)
         self._append_message("user", prompt)
         self._is_sending = True

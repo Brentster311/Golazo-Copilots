@@ -254,20 +254,11 @@ class TestCopilotPanel:
         after_content = panel._chat_display.get("1.0", "end-1c")
         assert after_content == initial_content
 
-    def test_copilot_panel_missing_sdk_shows_instructions(self):
-        """When copilot SDK is not installed, panel should show instructions."""
-        from sfi_reporter.copilot_panel import CopilotPanel
-
-        panel = CopilotPanel(self.root, on_close=lambda: None)
-        # Simulate send with SDK missing
-        with patch.dict(sys.modules, {"copilot": None}):
-            with patch("importlib.import_module", side_effect=ImportError("No module named 'copilot'")):
-                panel._input_entry.delete(0, "end")
-                panel._input_entry.insert(0, "Hello")
-                panel._on_send()
-                # Should show instructions in chat rather than crash
-                content = panel._chat_display.get("1.0", "end-1c")
-                assert "install" in content.lower() or "copilot" in content.lower() or "not" in content.lower()
+    def test_copilot_sdk_is_bundled_dependency(self):
+        """github-copilot-sdk must be listed as a dependency in pyproject.toml."""
+        toml_path = Path(__file__).resolve().parent.parent / "pyproject.toml"
+        content = toml_path.read_text(encoding="utf-8")
+        assert "github-copilot-sdk" in content
 
 
 # -----------------------------------------------------------------------
