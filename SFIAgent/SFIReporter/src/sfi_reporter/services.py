@@ -1,6 +1,7 @@
 """Business logic: serialization, settings, org mapping, aggregation, data refresh, and filters."""
 import json
 import logging
+from datetime import datetime
 from typing import Optional
 
 from sfi_reporter.cache import (
@@ -151,9 +152,10 @@ def get_org_mapping(
     if on_status:
         on_status(f"Fetching org tree for {manager_alias}...")
 
+    cache_key = manager_alias.lower()
     client = get_client()
     try:
-        tree = client.get_org_tree(manager_alias)
+        tree = client.get_org_tree(cache_key)
     except Exception:
         # If tree fetch fails, all owners are unknown
         return {name: OrgAncestry(path=('Unknown Owner',)) for name in owner_names}
@@ -250,10 +252,8 @@ def aggregate_by_owner(
         owners = service_owners.get(service_name, None)
 
         # Handle missing or empty owners
-        if owners is None:
-            owners = ['Unknown Owner']
-        elif len(owners) == 0:
-            owners = ['No Owner']
+        if owners is None or len(owners) == 0:
+            owners = ['No Owner in ST']
 
         # Determine the target owner for this item
         if org_mapping is not None:
@@ -416,11 +416,15 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
         if on_status:
             on_status("Connecting to S360...")
 
-        # Get landing view to detect if user is a manager
+        # Detect manager status via Graph API (has direct reports?)
         client = get_client()
-        landing_response = client.get_default_landing_view(user_alias)
-        landing_view = landing_response.get('SearchDataList', []) if landing_response else []
-        is_manager = is_manager_view(landing_view)
+        try:
+            direct_reports = client.get_direct_reports(user_alias)
+            is_manager = len(direct_reports) > 0
+        except Exception:
+            logger.warning("Graph direct-reports lookup failed for %s; assuming IC", user_alias)
+            direct_reports = []
+            is_manager = False
 
         # Get services and audience IDs (supports both service owners and team views)
         services, audience_ids = get_user_team_info(user_alias)
@@ -540,24 +544,14 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
         service_owners_map = {}
         org_mapping = {}
         if is_manager and service_stats:
-            manager_alias_val = None
-            manager_name = None
-            for item in landing_view:
-                if item.get('Group') == 'TeamGroup':
-                    team_name = item.get('Name', '')
-                    if '(' in team_name and ')' in team_name:
-                        manager_alias_val = team_name.split('(')[-1].replace(')', '').strip().lower()
-                    owners_json = item.get('Owners')
-                    if owners_json:
-                        manager_names = parse_owners_field(owners_json)
-                        if manager_names:
-                            manager_name = manager_names[0]
-                    break
+            # The viewer IS the manager — alias is already known
+            manager_alias_val = user_alias.lower()
 
             service_names_list = [stats.get('name') for stats in service_stats.values() if stats.get('name')]
             unique_names = list(set(service_names_list))
 
             if unique_names:
+                #retrieve service owners for all services in parallel
                 service_owners_map = get_service_owners(unique_names, on_status)
 
                 all_owners = set()

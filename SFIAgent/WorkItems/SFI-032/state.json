@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0",
+  "work_item_id": "SFI-032",
+  "profile": "complete",
+  "current_phase": "completion",
+  "current_role": "retrospective",
+  "created_at": "2026-02-11T21:03:10.154420Z",
+  "updated_at": "2026-02-11T21:20:39.871695Z",
+  "role_history": [
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-02-11T21:03:10.154420Z",
+      "exited_at": "2026-02-11T21:04:13.991277Z"
+    },
+    {
+      "role": "program-manager",
+      "entered_at": "2026-02-11T21:04:13.991277Z",
+      "exited_at": "2026-02-11T21:04:42.016413Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-02-11T21:04:42.016413Z",
+      "exited_at": "2026-02-11T21:05:08.102193Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-02-11T21:05:08.102193Z",
+      "exited_at": "2026-02-11T21:05:19.507268Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-02-11T21:05:19.507268Z",
+      "exited_at": "2026-02-11T21:19:55.018456Z"
+    },
+    {
+      "role": "refactor-expert",
+      "entered_at": "2026-02-11T21:19:55.018456Z",
+      "exited_at": "2026-02-11T21:20:08.946438Z"
+    },
+    {
+      "role": "documentor",
+      "entered_at": "2026-02-11T21:20:08.946438Z",
+      "exited_at": "2026-02-11T21:20:17.536742Z"
+    },
+    {
+      "role": "builder",
+      "entered_at": "2026-02-11T21:20:17.536742Z",
+      "exited_at": "2026-02-11T21:20:39.871695Z"
+    },
+    {
+      "role": "retrospective",
+      "entered_at": "2026-02-11T21:20:39.871695Z",
+      "exited_at": null
+    }
+  ],
+  "deviations": []
+}
