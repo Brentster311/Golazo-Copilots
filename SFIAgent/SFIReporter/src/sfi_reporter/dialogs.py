@@ -1163,17 +1163,80 @@ class SubscriptionPickerDialog(tk.Toplevel):
 
 
 # ---------------------------------------------------------------------------
-# LLM Analysis stub (SFI-033: replaced with "not yet implemented")
+# LLM Analysis (SFI-034: Analyze KPI with Copilot Chat)
 # ---------------------------------------------------------------------------
 
 def _launch_llm_analysis(parent, item: dict):
-    """Stub — LLM analysis not yet implemented via Copilot SDK."""
-    messagebox.showinfo(
-        "Not Yet Implemented",
-        "LLM analysis is not yet implemented.\n\n"
-        "This feature will use GitHub Copilot in a future update.",
-        parent=parent,
-    )
+    """Analyze a KPI's action items using the Copilot Chat panel.
+
+    Gathers all items for the KPI, fetches documentation URLs, builds
+    a structured analysis prompt, and sends it to the Copilot Chat panel.
+    """
+    import threading
+
+    kpi_id = item.get("_kpi_id", "")
+    if not kpi_id:
+        messagebox.showwarning(
+            "No KPI",
+            "Cannot determine the KPI for this item.",
+            parent=parent,
+        )
+        return
+
+    # Find the app instance via the root window
+    app = _find_app(parent)
+    if app is None:
+        messagebox.showerror(
+            "Error",
+            "Cannot find the app instance to access data.",
+            parent=parent,
+        )
+        return
+
+    # Ensure Copilot panel is open
+    if hasattr(app, '_toggle_copilot_panel'):
+        if app._copilot_panel is None or not app._copilot_panel.winfo_ismapped():
+            app._toggle_copilot_panel()
+
+    panel = getattr(app, '_copilot_panel', None)
+    if panel is None:
+        messagebox.showerror(
+            "Error",
+            "Copilot Chat panel is not available.",
+            parent=parent,
+        )
+        return
+
+    # Show status while fetching docs
+    panel._set_status("\u25cf Fetching KPI docs\u2026", "#b5651d")
+
+    def _bg_analyze():
+        from sfi_reporter.kpi_analyzer import analyze_kpi
+        try:
+            prompt = analyze_kpi(app, kpi_id)
+            # Send to panel on Tk main thread
+            panel.send_analysis_prompt(prompt)
+        except Exception as exc:
+            logger.error("KPI analysis failed: %s", exc)
+            app.root.after(0, lambda: messagebox.showerror(
+                "Analysis Error",
+                f"KPI analysis failed:\n{exc}",
+                parent=parent,
+            ))
+            app.root.after(0, lambda: panel._set_status(
+                "\u25cf Connected", panel.ASSISTANT_COLOR))
+
+    threading.Thread(target=_bg_analyze, daemon=True).start()
+
+
+def _find_app(widget):
+    """Find the SFIReporterApp instance via the root window's _sfi_app attr."""
+    try:
+        # widget may be a Tk root, Toplevel, or any child widget
+        root = widget.winfo_toplevel() if hasattr(widget, 'winfo_toplevel') else widget
+        return getattr(root, '_sfi_app', None)
+    except Exception:
+        return None
 
 
 __all__ = [
@@ -1188,6 +1251,6 @@ __all__ = [
     'ManualEtaReviewDialog',
     'BulkEtaProgressDialog',
     'SubscriptionPickerDialog',
-    # LLM Analysis (stub)
+    # LLM Analysis
     '_launch_llm_analysis',
 ]

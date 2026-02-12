@@ -113,27 +113,23 @@ class TestAppLLMCleanup:
 
 
 # -----------------------------------------------------------------------
-# Phase 0 — _launch_llm_analysis stub
+# Phase 0 — _launch_llm_analysis (SFI-034: now real implementation)
 # -----------------------------------------------------------------------
 
 class TestLLMAnalysisStub:
-    """_launch_llm_analysis should be a messagebox stub with no LLM imports."""
+    """_launch_llm_analysis should use Copilot Chat, not old LLM modules."""
 
-    def test_analyze_with_llm_shows_not_implemented(self):
-        """Calling _launch_llm_analysis should show 'not yet implemented'."""
+    def test_analyze_with_llm_no_kpi_id_shows_warning(self):
+        """Calling with item missing _kpi_id should warn."""
         with patch("sfi_reporter.dialogs.messagebox") as mock_mb:
             from sfi_reporter.dialogs import _launch_llm_analysis
             parent = MagicMock()
-            item = {"id": "AI-123", "title": "Test item"}
+            item = {"id": "AI-123", "title": "Test item"}  # no _kpi_id
             _launch_llm_analysis(parent, item)
-            mock_mb.showinfo.assert_called_once()
-            call_args = mock_mb.showinfo.call_args
-            # Message should contain "not yet implemented" (case-insensitive)
-            msg = str(call_args).lower()
-            assert "not yet implemented" in msg
+            mock_mb.showwarning.assert_called_once()
 
     def test_stub_has_no_llm_imports(self):
-        """The stub function body must not import llm_client or llm_storage."""
+        """The function body must not import llm_client or llm_storage."""
         import inspect
         from sfi_reporter.dialogs import _launch_llm_analysis
         src = inspect.getsource(_launch_llm_analysis)

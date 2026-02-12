@@ -57,6 +57,7 @@ class CopilotPanel(tk.Frame):
 
     Args:
         parent: The parent Tk widget.
+        app: The SFIReporterApp instance (provides live data access).
         on_close: Callback invoked when the user clicks the X close button.
     """
 
@@ -71,9 +72,10 @@ class CopilotPanel(tk.Frame):
     SYSTEM_COLOR = "#656d76"
     HEADER_BG = "#e1e4e8"
 
-    def __init__(self, parent, *, on_close):
+    def __init__(self, parent, *, app=None, on_close):
         super().__init__(parent, bg=self.BG_COLOR, width=350)
         self._on_close = on_close
+        self._app = app
 
         # Async plumbing
         self._bridge = AsyncBridge()
@@ -84,6 +86,7 @@ class CopilotPanel(tk.Frame):
         self._session = None
         self._is_connecting = False
         self._is_sending = False
+        self._got_content = False
 
         self._build_ui()
 
@@ -230,10 +233,17 @@ class CopilotPanel(tk.Frame):
             self._client = CopilotClient()
             await self._client.start()
 
-            self._session = await self._client.create_session({
+            # Build session config with tools + system message when app is available
+            session_cfg: dict = {
                 "model": self._model_var.get(),
                 "streaming": True,
-            })
+            }
+            if self._app is not None:
+                from sfi_reporter.copilot_tools import build_tools, SYSTEM_MESSAGE
+                session_cfg["tools"] = build_tools(self._app)
+                session_cfg["system_message"] = SYSTEM_MESSAGE
+
+            self._session = await self._client.create_session(session_cfg)
             self._session.on(self._on_session_event)
 
             self.after(0, self._set_status, "\u25cf Connected", self.ASSISTANT_COLOR)
@@ -249,19 +259,58 @@ class CopilotPanel(tk.Frame):
     def _on_session_event(self, event):
         """Handle SDK session events (called from async thread)."""
         etype = event.type.value if hasattr(event.type, "value") else str(event.type)
+        logger.debug("Copilot event: type=%s", etype)
 
-        if etype == "assistant.message_delta":
-            delta = event.data.delta_content or ""
+        if etype == "assistant.turn_start":
+            self.after(0, self._set_status, "\u25cf Thinking\u2026", "#b5651d")
+        elif etype == "assistant.message_delta":
+            delta = getattr(event.data, "delta_content", None) or ""
             if delta:
+                if not self._got_content:
+                    self.after(0, self._set_status, "\u25cf Responding\u2026", self.ASSISTANT_COLOR)
+                self._got_content = True
                 self.after(0, self._append_delta, delta)
         elif etype == "assistant.message":
-            self.after(0, self._finish_assistant_message)
+            # Full message — if streaming didn't deliver content, show it now
+            content = getattr(event.data, "content", None) or ""
+            if content and not self._got_content:
+                self._got_content = True
+                self.after(0, self._append_delta, content)
+            # Only close the message block if we actually wrote text;
+            # tool-call messages have no content and more turns follow.
+            if self._got_content:
+                self.after(0, self._finish_assistant_message)
+        elif etype == "tool.execution_start":
+            tool_name = getattr(event.data, "tool_name", None) or ""
+            self.after(0, self._set_status, f"\u25cf Running tool: {tool_name}\u2026", "#b5651d")
+        elif etype == "tool.execution_complete":
+            self.after(0, self._set_status, "\u25cf Thinking\u2026", "#b5651d")
+        elif etype == "assistant.turn_end":
+            # Don't finalize here — with tool calls there are multiple
+            # turns before the model is done.  Wait for session.idle.
+            pass
         elif etype == "session.idle":
             self.after(0, self._on_response_complete)
+        elif etype == "session.error":
+            msg = getattr(event.data, "message", None) or "Unknown session error"
+            logger.error("Copilot session error: %s", msg)
+            self.after(0, self._finish_assistant_message)
+            self.after(0, self._append_message, "error", msg)
+            self.after(0, self._on_response_complete)
+        else:
+            logger.debug("Unhandled Copilot event type: %s", etype)
 
     def _on_response_complete(self):
         """Re-enable input after a response completes."""
+        if not self._is_sending:
+            return
+        if not self._got_content:
+            # No content was received — clean up the dangling "Copilot: " prefix
+            self._append_delta("(no response)")
+            self._finish_assistant_message()
         self._is_sending = False
+        self._got_content = False
+        self._set_status("\u25cf Connected", self.ASSISTANT_COLOR)
         self._set_input_enabled(True)
         self._input_entry.focus_set()
 
@@ -276,7 +325,9 @@ class CopilotPanel(tk.Frame):
         self._input_entry.delete(0, tk.END)
         self._append_message("user", prompt)
         self._is_sending = True
+        self._got_content = False
         self._set_input_enabled(False)
+        self._set_status("\u25cf Thinking\u2026", "#b5651d")
 
         # Show prefix before deltas
         self._chat_display.configure(state=tk.NORMAL)
@@ -289,11 +340,44 @@ class CopilotPanel(tk.Frame):
         """Send a prompt to the Copilot session."""
         try:
             await self._ensure_connected()
+            logger.debug("Sending prompt to Copilot session (model=%s)", self._model_var.get())
             await self._session.send({"prompt": prompt})
+            logger.debug("Prompt sent, awaiting events")
         except Exception as exc:
+            logger.error("Error sending prompt: %s", exc)
+            self._got_content = True  # prevent "(no response)" on top of error
             self.after(0, self._finish_assistant_message)
             self.after(0, self._append_message, "error", str(exc))
             self.after(0, self._on_response_complete)
+
+    def send_analysis_prompt(self, prompt: str):
+        """Programmatically send a pre-built analysis prompt.
+
+        Handles connection lifecycle and thread marshaling.  Safe to call
+        from any thread — internally marshals to the Tk main thread.
+        """
+        # Marshal to Tk main thread
+        self.after(0, self._do_send_analysis, prompt)
+
+    def _do_send_analysis(self, prompt: str):
+        """Send analysis prompt on the Tk main thread."""
+        if self._is_sending or self._is_connecting:
+            self._append_message("system", "Please wait — a request is already in progress.")
+            return
+
+        # Show analysis label instead of echoing the full prompt
+        self._append_message("user", "\U0001f916 Analyze KPI")
+        self._is_sending = True
+        self._got_content = False
+        self._set_input_enabled(False)
+        self._set_status("\u25cf Analyzing\u2026", "#b5651d")
+
+        # Show prefix before deltas
+        self._chat_display.configure(state=tk.NORMAL)
+        self._chat_display.insert(tk.END, "Copilot: ", "assistant")
+        self._chat_display.configure(state=tk.DISABLED)
+
+        self._bridge.run_coroutine(self._send_prompt(prompt))
 
     # -- Cleanup -------------------------------------------------------------
 

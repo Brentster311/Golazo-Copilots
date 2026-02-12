@@ -43,6 +43,7 @@ class SFIReporterApp:
 
     def __init__(self, root: tk.Tk):
         self.root = root
+        self.root._sfi_app = self  # Allow widgets to find the app instance
         self.root.title("SFI Reporter")
         self.root.geometry("1200x750")
 
@@ -697,6 +698,16 @@ class SFIReporterApp:
         n = len(saved)
         self._update_status(f"\u2705 {n} ETA(s) updated successfully!", "green")
 
+    def _refresh_tables_after_eta_update(self):
+        """Refresh UI tables after a programmatic ETA change (e.g. from Copilot tool)."""
+        data = self.current_data
+        if not data:
+            return
+        self._update_tables(data, is_filtered=bool(
+            self._unfiltered_data and
+            self._unfiltered_data is not data))
+        self._update_status("\u2705 ETA updated via Copilot", "green")
+
     def _on_refresh(self):
         alias = self.alias_var.get().strip()
         if not alias:
@@ -990,6 +1001,7 @@ class SFIReporterApp:
             from sfi_reporter.copilot_panel import CopilotPanel
             self._copilot_panel = CopilotPanel(
                 self._container,
+                app=self,
                 on_close=self._hide_copilot_panel,
             )
         if self._copilot_panel.winfo_ismapped():
