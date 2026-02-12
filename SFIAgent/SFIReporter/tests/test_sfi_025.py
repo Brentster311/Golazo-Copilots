@@ -97,7 +97,7 @@ class TestDialogDefaultFields:
         root = tk.Tk()
         root.withdraw()
         try:
-            with patch("sfi_reporter.tk_app._load_setting", return_value=None):
+            with patch("sfi_reporter.dialogs._load_setting", return_value=None):
                 dlg = ConfigureLLMDialog(root)
                 assert dlg._endpoint_var.get() == "", \
                     "Expected empty endpoint when no config saved"
@@ -129,7 +129,7 @@ class TestDialogSavedConfig:
         root = tk.Tk()
         root.withdraw()
         try:
-            with patch("sfi_reporter.tk_app._load_setting",
+            with patch("sfi_reporter.dialogs._load_setting",
                         side_effect=lambda k, d=None: saved.get(k, d)):
                 dlg = ConfigureLLMDialog(root)
                 assert dlg._endpoint_var.get() == "https://my.openai.azure.com/", \
@@ -167,7 +167,7 @@ class TestAutoDetectHappy:
         root = tk.Tk()
         root.withdraw()
         try:
-            with patch("sfi_reporter.tk_app._load_setting", return_value=None):
+            with patch("sfi_reporter.dialogs._load_setting", return_value=None):
                 dlg = ConfigureLLMDialog(root)
                 # Simulate successful detection callback (phase 2 complete)
                 dlg._on_detect_complete(configs)
@@ -201,7 +201,7 @@ class TestAutoDetectSelection:
         root = tk.Tk()
         root.withdraw()
         try:
-            with patch("sfi_reporter.tk_app._load_setting", return_value=None):
+            with patch("sfi_reporter.dialogs._load_setting", return_value=None):
                 dlg = ConfigureLLMDialog(root)
                 dlg._on_detect_complete(configs)
                 # Simulate selecting the first item
@@ -229,9 +229,9 @@ class TestAutoDetectEmpty:
         root = tk.Tk()
         root.withdraw()
         try:
-            with patch("sfi_reporter.tk_app._load_setting", return_value=None):
+            with patch("sfi_reporter.dialogs._load_setting", return_value=None):
                 dlg = ConfigureLLMDialog(root)
-                with patch("sfi_reporter.tk_app.messagebox.showinfo") as mock_info:
+                with patch("sfi_reporter.dialogs.messagebox.showinfo") as mock_info:
                     dlg._on_detect_complete([])
                     mock_info.assert_called_once()
                     assert "No Azure OpenAI" in str(mock_info.call_args), \
@@ -254,9 +254,9 @@ class TestAutoDetectImportError:
         root = tk.Tk()
         root.withdraw()
         try:
-            with patch("sfi_reporter.tk_app._load_setting", return_value=None):
+            with patch("sfi_reporter.dialogs._load_setting", return_value=None):
                 dlg = ConfigureLLMDialog(root)
-                with patch("sfi_reporter.tk_app.messagebox.showerror") as mock_err:
+                with patch("sfi_reporter.dialogs.messagebox.showerror") as mock_err:
                     dlg._on_detect_error(ImportError("pip install llm-extender[azure-discover]"))
                     mock_err.assert_called_once()
                     assert "SDK" in str(mock_err.call_args) or "pip install" in str(mock_err.call_args), \
@@ -279,9 +279,9 @@ class TestAutoDetectGenericError:
         root = tk.Tk()
         root.withdraw()
         try:
-            with patch("sfi_reporter.tk_app._load_setting", return_value=None):
+            with patch("sfi_reporter.dialogs._load_setting", return_value=None):
                 dlg = ConfigureLLMDialog(root)
-                with patch("sfi_reporter.tk_app.messagebox.showerror") as mock_err:
+                with patch("sfi_reporter.dialogs.messagebox.showerror") as mock_err:
                     dlg._on_detect_error(Exception("Connection timed out"))
                     mock_err.assert_called_once()
                     assert "Connection timed out" in str(mock_err.call_args), \
@@ -309,12 +309,12 @@ class TestSaveConfig:
         root = tk.Tk()
         root.withdraw()
         try:
-            with patch("sfi_reporter.tk_app._load_setting", return_value=None):
+            with patch("sfi_reporter.dialogs._load_setting", return_value=None):
                 dlg = ConfigureLLMDialog(root)
                 dlg._endpoint_var.set("https://test.openai.azure.com/")
                 dlg._deployment_var.set("gpt-4o")
                 dlg._api_version_var.set("2024-10-21")
-                with patch("sfi_reporter.tk_app._save_setting", side_effect=mock_save):
+                with patch("sfi_reporter.dialogs._save_setting", side_effect=mock_save):
                     dlg._on_save()
                 assert saved.get("llm_endpoint") == "https://test.openai.azure.com/", \
                     "Expected config to persist to settings.json after Save"
@@ -340,7 +340,7 @@ class TestConfigResolutionOrder:
             "llm_api_version": "2025-01-01",
         }
 
-        with patch("sfi_reporter.tk_app._load_setting",
+        with patch("sfi_reporter.services._load_setting",
                     side_effect=lambda k, d=None: saved.get(k, d)):
                 config = _load_llm_config()
                 assert config.endpoint == "https://saved.openai.azure.com/", \
@@ -357,7 +357,7 @@ class TestConfigFallback:
         """TC-11: No saved config → uses LLMConfig.from_env()."""
         from sfi_reporter.tk_app import _load_llm_config
 
-        with patch("sfi_reporter.tk_app._load_setting", return_value=None):
+        with patch("sfi_reporter.services._load_setting", return_value=None):
             with patch.dict("os.environ", {
                 "AZURE_OPENAI_ENDPOINT": "https://env.openai.azure.com/",
                 "AZURE_OPENAI_DEPLOYMENT": "gpt-env",
@@ -393,11 +393,11 @@ class TestClearConfig:
         root = tk.Tk()
         root.withdraw()
         try:
-            with patch("sfi_reporter.tk_app._load_setting",
+            with patch("sfi_reporter.dialogs._load_setting",
                         side_effect=lambda k, d=None: saved.get(k, d)):
                 dlg = ConfigureLLMDialog(root)
 
-            with patch("sfi_reporter.tk_app._save_setting", side_effect=mock_save):
+            with patch("sfi_reporter.dialogs._save_setting", side_effect=mock_save):
                 dlg._on_clear()
 
             assert dlg._endpoint_var.get() == "", \
@@ -424,11 +424,11 @@ class TestSaveValidation:
         root = tk.Tk()
         root.withdraw()
         try:
-            with patch("sfi_reporter.tk_app._load_setting", return_value=None):
+            with patch("sfi_reporter.dialogs._load_setting", return_value=None):
                 dlg = ConfigureLLMDialog(root)
                 dlg._endpoint_var.set("not-a-url")
-                with patch("sfi_reporter.tk_app._save_setting") as mock_save:
-                    with patch("sfi_reporter.tk_app.messagebox.showerror") as mock_err:
+                with patch("sfi_reporter.dialogs._save_setting") as mock_save:
+                    with patch("sfi_reporter.dialogs.messagebox.showerror") as mock_err:
                         dlg._on_save()
                         mock_err.assert_called_once()
                         mock_save.assert_not_called()
