@@ -136,7 +136,7 @@ az login
 | `get_current_user()` | GET | `https://graph.microsoft.com/v1.0/me` | Get current user info via MS Graph |
 | `get_manager_chain(alias)` | GET | `https://graph.microsoft.com/v1.0/users/{upn}/manager` | Walk manager chain upward to CEO |
 | `get_direct_reports(alias)` | GET | `https://graph.microsoft.com/v1.0/users/{upn}/directReports` | Get direct reports (filters SC ALTs) |
-| `get_org_tree(alias, depth=2)` | GET | (recursive directReports) | Build nested org tree to configurable depth |
+| `get_org_tree(alias, depth=None)` | GET | (recursive directReports) | Build nested org tree (`None` = full tree) |
 
 **Total: 43 API endpoints** (24 GET, 19 POST)
 
@@ -169,7 +169,7 @@ for mgr in chain:
     print(f"{mgr.alias} — {mgr.display_name} ({mgr.job_title})")
 
 reports = client.get_direct_reports("muralic")
-tree = client.get_org_tree("muralic", depth=2)
+tree = client.get_org_tree("muralic")  # full tree; use depth=2 to limit
 ```
 
 ### Exceptions

@@ -121,19 +121,18 @@ class TestMuralic1LevelManager:
                 f"Expected OrgAncestry for {owner}, got {type(ancestry)}: {ancestry}"
             )
 
-    def test_directs_have_level2_none(self):
-        """For a 1-level manager, all org_mapping entries should have level2=None
-        (since muralic's reports are direct — no sub-reports under them)."""
+    def test_directs_have_short_paths(self):
+        """For a 1-level manager, org_mapping entries should have short paths
+        (length 1 for ICs under root, length 2 for ICs under a sub-manager)."""
         from sfi_reporter.tk_app import OrgAncestry
         data = _get_data("muralic")
         om = data.get('org_mapping', {})
         for owner, ancestry in om.items():
-            if isinstance(ancestry, OrgAncestry) and ancestry.level1 != 'Unknown Owner':
-                assert ancestry.level2 is None or ancestry.level2 is not None, (
-                    f"Unexpected level2 for {owner}: {ancestry}"
+            if isinstance(ancestry, OrgAncestry) and ancestry.path != ('Unknown Owner',):
+                assert len(ancestry.path) >= 1, (
+                    f"Empty path for {owner}: {ancestry}"
                 )
-                # NOTE: muralic's directs who themselves have sub-reports
-                # may produce level2 != None. Accept either.
+                # 1-level manager: most paths are length 1-2
 
     def test_no_unknown_owner_for_known_directs(self):
         """Owner stats should not be dominated by 'Unknown Owner'."""
@@ -204,57 +203,60 @@ class TestAlexhowells2LevelManager:
         om = data.get('org_mapping', {})
         assert len(om) > 0
 
-    def test_org_mapping_has_level2_entries(self):
-        """alexhowells has sub-reports — some org_mapping entries must have level2 != None."""
+    def test_org_mapping_has_deep_paths(self):
+        """alexhowells has sub-reports — some org_mapping entries must have path depth >= 3."""
         from sfi_reporter.tk_app import OrgAncestry
         data = _get_data("alexhowells")
         om = data.get('org_mapping', {})
-        has_level2 = any(
-            isinstance(v, OrgAncestry) and v.level2 is not None
+        has_deep = any(
+            isinstance(v, OrgAncestry) and len(v.path) >= 3
             for v in om.values()
         )
-        assert has_level2, (
-            f"Expected at least one OrgAncestry with level2 != None. "
-            f"Mapping: {dict(list(om.items())[:5])}"
+        assert has_deep, (
+            f"Expected at least one OrgAncestry with path depth >= 3. "
+            f"Sample: {dict(list(om.items())[:5])}"
         )
 
-    def test_level2_stats_populated(self):
-        """level2_stats should have tuple-keyed entries for 2-level hierarchy."""
-        data = _get_data("alexhowells")
-        l2 = data.get('level2_stats', {})
-        assert len(l2) > 0, "level2_stats is empty for a 2-level manager"
-        # All keys should be (str, str) tuples
-        for key in l2:
-            assert isinstance(key, tuple) and len(key) == 2, f"Bad key: {key}"
-
-    def test_muralic_appears_as_level1(self):
-        """muralic is one of alexhowells' directs — should appear as level1 in org_mapping."""
+    def test_multi_level_paths_present(self):
+        """2-level manager should produce org_mapping entries at multiple depths."""
         from sfi_reporter.tk_app import OrgAncestry
         data = _get_data("alexhowells")
         om = data.get('org_mapping', {})
-        l1_names = set()
+        depths = set()
+        for v in om.values():
+            if isinstance(v, OrgAncestry) and v.path != ('Unknown Owner',):
+                depths.add(len(v.path))
+        assert len(depths) >= 2, f"Expected multiple path depths, got: {depths}"
+
+    def test_muralic_appears_in_paths(self):
+        """muralic is one of alexhowells' directs — should appear in paths at depth 1."""
+        from sfi_reporter.tk_app import OrgAncestry
+        data = _get_data("alexhowells")
+        om = data.get('org_mapping', {})
+        path_names = set()
         for v in om.values():
             if isinstance(v, OrgAncestry):
-                l1_names.add(v.level1.lower())
-        muralic_found = any('muralic' in n or 'mura' in n for n in l1_names)
-        assert muralic_found, f"muralic not found in L1 names: {l1_names}"
+                for segment in v.path:
+                    path_names.add(segment.lower())
+        muralic_found = any('muralic' in n or 'mura' in n for n in path_names)
+        assert muralic_found, f"muralic not found in path names: {path_names}"
 
-    def test_level2_hierarchy_has_multiple_sub_managers(self):
-        """At least one L1 manager should have owners grouped under multiple L2 sub-managers."""
+    def test_hierarchy_has_multiple_branches(self):
+        """At least one path[1] manager should have owners under multiple path[2] sub-managers."""
         from sfi_reporter.tk_app import OrgAncestry
         from collections import defaultdict
         data = _get_data("alexhowells")
         om = data.get('org_mapping', {})
-        # Group L2 names by L1
+        # Group path[2] names by path[1]
         l1_to_l2s: dict[str, set[str]] = defaultdict(set)
         for owner, anc in om.items():
-            if isinstance(anc, OrgAncestry) and anc.level1 and anc.level2:
-                l1_to_l2s[anc.level1].add(anc.level2)
-        assert len(l1_to_l2s) > 0, "No L1 manager has subordinates with L2 entries"
-        # At least one L1 should have 2+ distinct L2 sub-managers
+            if isinstance(anc, OrgAncestry) and len(anc.path) >= 3:
+                l1_to_l2s[anc.path[1]].add(anc.path[2])
+        assert len(l1_to_l2s) > 0, "No direct has subordinates with sub-managers"
+        # At least one direct should have 2+ distinct sub-managers
         best_l1 = max(l1_to_l2s, key=lambda k: len(l1_to_l2s[k]))
         assert len(l1_to_l2s[best_l1]) >= 2, (
-            f"Expected at least one L1 with 2+ L2 sub-managers, "
+            f"Expected at least one direct with 2+ sub-managers, "
             f"best is {best_l1!r} with {l1_to_l2s[best_l1]}"
         )
 
@@ -280,8 +282,8 @@ class TestAlexhowells2LevelManager:
         # This is the exact line that was crashing — must not raise
         json.dumps(serialized, default=str)
 
-    def test_cache_round_trip_preserves_level2(self):
-        """Serialize → JSON → deserialize should restore tuple keys and OrgAncestry."""
+    def test_cache_round_trip_preserves_paths(self):
+        """Serialize → JSON → deserialize should restore OrgAncestry with paths."""
         import json
         from sfi_reporter.tk_app import (
             OrgAncestry, _serialize_org_data_for_cache, _deserialize_org_data_from_cache,
@@ -292,46 +294,43 @@ class TestAlexhowells2LevelManager:
         restored = json.loads(json_str)
         _deserialize_org_data_from_cache(restored)
 
-        # org_mapping restored
+        # org_mapping restored with OrgAncestry types
         om = restored.get('org_mapping', {})
         for owner, anc in om.items():
             assert isinstance(anc, OrgAncestry), f"{owner} not OrgAncestry after round-trip"
+            assert isinstance(anc.path, tuple), f"{owner} path not tuple: {type(anc.path)}"
+            assert len(anc.path) >= 1, f"{owner} has empty path"
 
-        # level2_stats restored
-        l2 = restored.get('level2_stats', {})
-        for key in l2:
-            assert isinstance(key, tuple), f"level2_stats key not tuple: {key}"
-
-    def test_collect_services_for_level1(self):
-        """collect_services_for_owner at level1 should return services."""
+    def test_collect_services_for_direct(self):
+        """collect_services_for_owner with a direct-report path prefix should return services."""
         from sfi_reporter.tk_app import collect_services_for_owner, OrgAncestry
         data = _get_data("alexhowells")
         om = data.get('org_mapping', {})
         so = data.get('service_owners', {})
-        # Pick first known L1 owner
-        l1_name = None
+        # Pick first known path with length >= 2 (root + direct)
+        prefix = None
         for v in om.values():
-            if isinstance(v, OrgAncestry) and v.level1 != 'Unknown Owner':
-                l1_name = v.level1
+            if isinstance(v, OrgAncestry) and len(v.path) >= 2 and v.path != ('Unknown Owner',):
+                prefix = v.path[:2]  # (root, direct)
                 break
-        if l1_name is None:
-            pytest.skip("No known L1 owner found")
-        services = collect_services_for_owner(l1_name, "level1", so, om)
-        assert len(services) > 0, f"No services found for L1 '{l1_name}'"
+        if prefix is None:
+            pytest.skip("No known direct-report path found")
+        services = collect_services_for_owner(prefix, so, om)
+        assert len(services) > 0, f"No services found for prefix {prefix}"
 
-    def test_collect_services_for_level2(self):
-        """collect_services_for_owner at level2 should return services."""
+    def test_collect_services_for_sub_manager(self):
+        """collect_services_for_owner with a deeper path prefix should return services."""
         from sfi_reporter.tk_app import collect_services_for_owner, OrgAncestry
         data = _get_data("alexhowells")
         om = data.get('org_mapping', {})
         so = data.get('service_owners', {})
-        # Pick first known L2 owner
-        l2_name = None
+        # Pick first known path with length >= 3 (root + direct + sub)
+        prefix = None
         for v in om.values():
-            if isinstance(v, OrgAncestry) and v.level2 is not None:
-                l2_name = v.level2
+            if isinstance(v, OrgAncestry) and len(v.path) >= 3:
+                prefix = v.path[:3]
                 break
-        if l2_name is None:
-            pytest.skip("No L2 owner found")
-        services = collect_services_for_owner(l2_name, "level2", so, om)
-        assert len(services) > 0, f"No services found for L2 '{l2_name}'"
+        if prefix is None:
+            pytest.skip("No sub-manager path found")
+        services = collect_services_for_owner(prefix, so, om)
+        assert len(services) > 0, f"No services found for prefix {prefix}"

@@ -266,7 +266,7 @@ class TestGetOrgTree:
     """T15–T20: Nested org tree."""
 
     @patch("accia_s360.endpoints.graph.requests.get")
-    def test_default_depth_2(self, mock_get, graph):
+    def test_explicit_depth_2(self, mock_get, graph):
         """T15: depth=2 returns 2 levels of reports."""
         # get_user call for root
         root_resp = _ok(_person_json("root", "Root User"))
@@ -284,6 +284,25 @@ class TestGetOrgTree:
         assert len(tree.direct_reports) == 2
         assert len(tree.direct_reports[0].direct_reports) == 1
         assert len(tree.direct_reports[1].direct_reports) == 2
+
+    @patch("accia_s360.endpoints.graph.requests.get")
+    def test_default_depth_none_full_tree(self, mock_get, graph):
+        """T15b: depth=None (default) fetches the entire tree."""
+        # 3-level tree: root -> d1 -> d1a (leaf)
+        root_resp = _ok(_person_json("root", "Root User"))
+        root_reports = _ok({"value": [_person_json("d1")]})
+        d1_reports = _ok({"value": [_person_json("d1a")]})
+        d1a_reports = _ok({"value": []})  # leaf — no reports
+
+        mock_get.side_effect = [root_resp, root_reports, d1_reports, d1a_reports]
+        tree = graph.get_org_tree("root")  # no depth arg → None → full tree
+
+        assert tree.person.alias == "root"
+        assert len(tree.direct_reports) == 1
+        assert tree.direct_reports[0].person.alias == "d1"
+        assert len(tree.direct_reports[0].direct_reports) == 1
+        assert tree.direct_reports[0].direct_reports[0].person.alias == "d1a"
+        assert tree.direct_reports[0].direct_reports[0].direct_reports == []
 
     @patch("accia_s360.endpoints.graph.requests.get")
     def test_depth_0(self, mock_get, graph):
