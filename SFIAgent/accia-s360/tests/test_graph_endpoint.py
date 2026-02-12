@@ -23,7 +23,7 @@ from accia_s360.endpoints.graph import GraphEndpoint
 
 @pytest.fixture
 def config():
-    return S360Config()
+    return S360Config(cache_enabled=False)
 
 
 @pytest.fixture
@@ -499,3 +499,134 @@ class TestModels:
         assert "$select=" in url
         assert "displayName" in url
         assert "mailNickname" in url
+
+
+# ===================== SFI-032: Subtree caching ========================
+
+import json
+from datetime import datetime, timedelta
+
+
+@pytest.fixture
+def cached_graph(tmp_path):
+    """GraphEndpoint with cache_enabled=True and a temp cache dir."""
+    cfg = S360Config(cache_enabled=True, cache_directory=tmp_path)
+    return GraphEndpoint(cfg, lambda: "fake-token")
+
+
+@pytest.fixture
+def nocache_graph(tmp_path):
+    """GraphEndpoint with cache_enabled=False."""
+    cfg = S360Config(cache_enabled=False, cache_directory=tmp_path)
+    return GraphEndpoint(cfg, lambda: "fake-token")
+
+
+class TestSubtreeCache:
+    """SFI-032: _build_subtree caches OrgTree per-alias."""
+
+    @patch("accia_s360.endpoints.graph.requests.get")
+    def test_cache_miss_calls_api_and_writes_file(self, mock_get, cached_graph, tmp_path):
+        """TC-1: No cache → API called, cache file created."""
+        # Root person (already fetched by get_org_tree), then direct reports (empty → leaf)
+        mock_get.return_value = _ok({"value": []})
+
+        person = OrgPerson(alias="leaf1", display_name="Leaf One")
+        tree = cached_graph._build_subtree(person, None)
+
+        assert tree.person.alias == "leaf1"
+        assert tree.direct_reports == []
+
+        cache_file = tmp_path / "org_tree_leaf1.json"
+        assert cache_file.exists(), "Expected cache file to be written on miss"
+        data = json.loads(cache_file.read_text(encoding="utf-8"))
+        assert "timestamp" in data
+        assert "tree" in data
+        assert data["tree"]["person"]["alias"] == "leaf1"
+
+    @patch("accia_s360.endpoints.graph.requests.get")
+    def test_cache_hit_skips_api(self, mock_get, cached_graph, tmp_path):
+        """TC-2: Fresh cache → no API call."""
+        # Pre-write a valid cache
+        cache_file = tmp_path / "org_tree_cached1.json"
+        cache_data = {
+            "timestamp": datetime.now().isoformat(),
+            "tree": {
+                "person": {"alias": "cached1", "display_name": "Cached Person",
+                           "job_title": None, "department": None, "object_id": ""},
+                "direct_reports": [],
+            },
+        }
+        cache_file.write_text(json.dumps(cache_data), encoding="utf-8")
+
+        person = OrgPerson(alias="cached1", display_name="Cached Person")
+        tree = cached_graph._build_subtree(person, None)
+
+        mock_get.assert_not_called(), "Expected cache hit to skip API call"
+        assert tree.person.alias == "cached1"
+
+    @patch("accia_s360.endpoints.graph.requests.get")
+    def test_stale_cache_calls_api(self, mock_get, cached_graph, tmp_path):
+        """TC-3: Cache > 24 hrs → API called, file overwritten."""
+        cache_file = tmp_path / "org_tree_stale1.json"
+        cache_data = {
+            "timestamp": (datetime.now() - timedelta(hours=25)).isoformat(),
+            "tree": {
+                "person": {"alias": "stale1", "display_name": "Stale",
+                           "job_title": None, "department": None, "object_id": ""},
+                "direct_reports": [],
+            },
+        }
+        cache_file.write_text(json.dumps(cache_data), encoding="utf-8")
+
+        mock_get.return_value = _ok({"value": []})
+
+        person = OrgPerson(alias="stale1", display_name="Stale")
+        tree = cached_graph._build_subtree(person, None)
+
+        mock_get.assert_called_once(), "Expected stale cache to trigger API call"
+
+    @patch("accia_s360.endpoints.graph.requests.get")
+    def test_corrupt_cache_falls_back_to_api(self, mock_get, cached_graph, tmp_path):
+        """TC-4: Corrupt JSON → fallback to API."""
+        cache_file = tmp_path / "org_tree_bad1.json"
+        cache_file.write_text("{invalid json!!!", encoding="utf-8")
+
+        mock_get.return_value = _ok({"value": []})
+
+        person = OrgPerson(alias="bad1", display_name="Bad Cache")
+        tree = cached_graph._build_subtree(person, None)
+
+        mock_get.assert_called_once(), "Expected corrupt cache to trigger API fallback"
+
+    @patch("accia_s360.endpoints.graph.requests.get")
+    def test_cache_disabled_no_file_written(self, mock_get, nocache_graph, tmp_path):
+        """TC-5: cache_enabled=False → no caching."""
+        mock_get.return_value = _ok({"value": []})
+
+        person = OrgPerson(alias="nocache1", display_name="No Cache")
+        tree = nocache_graph._build_subtree(person, None)
+
+        mock_get.assert_called_once()
+        cache_file = tmp_path / "org_tree_nocache1.json"
+        assert not cache_file.exists(), "Expected no cache file when cache_enabled=False"
+
+    @patch("accia_s360.endpoints.graph.requests.get")
+    def test_cache_round_trip_preserves_tree(self, mock_get, cached_graph, tmp_path):
+        """Cache write+read produces identical tree structure."""
+        # Build tree: mgr → [emp1]
+        reports_resp = _ok({"value": [_person_json("emp1", "Employee One")]})
+        emp_reports = _ok({"value": []})
+        mock_get.side_effect = [reports_resp, emp_reports]
+
+        person = OrgPerson(alias="mgr1", display_name="Manager One")
+        tree1 = cached_graph._build_subtree(person, None)
+
+        # Second call should hit cache
+        mock_get.reset_mock()
+        tree2 = cached_graph._build_subtree(person, None)
+
+        mock_get.assert_not_called()
+        assert tree2.person.alias == "mgr1"
+        assert len(tree2.direct_reports) == 1
+        assert tree2.direct_reports[0].person.alias == "emp1"
+
