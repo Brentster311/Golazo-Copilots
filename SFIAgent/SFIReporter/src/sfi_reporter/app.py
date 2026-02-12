@@ -106,17 +106,6 @@ class SFIReporterApp:
         self.query_btn = ttk.Button(controls_frame, text="\U0001f50d Filter", command=self._on_query, state="disabled")
         self.query_btn.pack(side=tk.LEFT, padx=5)
 
-        self.eta_btn = ttk.Button(controls_frame, text="\U0001f4cb Update ETAs",
-                                  command=self._on_update_etas, state="disabled")
-        self.eta_btn.pack(side=tk.LEFT, padx=5)
-
-        self._copilot_panel = None
-        self.llm_btn = ttk.Button(
-            controls_frame, text="\U0001f916 LLM",
-            command=self._toggle_copilot_panel,
-        )
-        self.llm_btn.pack(side=tk.LEFT, padx=5)
-
         self._reapply_filter_var = tk.BooleanVar(
             value=_load_setting('reapply_filter_after_refresh', False)
         )
@@ -130,7 +119,23 @@ class SFIReporterApp:
             text="Re-apply filter after refresh",
             variable=self._reapply_filter_var,
         )
-        self._reapply_cb.pack(side=tk.LEFT, padx=(10, 0))
+        self._reapply_cb.pack(side=tk.LEFT, padx=(5, 0))
+
+        # Visual separator before ETA / LLM group
+        ttk.Separator(controls_frame, orient=tk.VERTICAL).pack(
+            side=tk.LEFT, fill=tk.Y, padx=12, pady=2,
+        )
+
+        self.eta_btn = ttk.Button(controls_frame, text="\U0001f4cb Update ETAs",
+                                  command=self._on_update_etas, state="disabled")
+        self.eta_btn.pack(side=tk.LEFT, padx=5)
+
+        self._copilot_panel = None
+        self.llm_btn = ttk.Button(
+            controls_frame, text="\U0001f916 LLM",
+            command=self._toggle_copilot_panel,
+        )
+        self.llm_btn.pack(side=tk.LEFT, padx=5)
 
         self._failed_kpis: list[dict] = []
         self._audience_ids: list[str] = []
