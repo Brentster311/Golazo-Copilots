@@ -31,18 +31,14 @@ The app will open a browser window for Microsoft login if no `az login` session 
 
 ## LLM Analysis Setup
 
-To use the "Analyze with LLM" feature:
-
-1. Sign in with `az login`
-2. Either use **⚙️ Configure LLM** in the app, or set environment variables:
+To use the "Analyze with LLM" feature, set these environment variables:
 
 ```
 AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+AZURE_OPENAI_API_KEY=your-api-key
 AZURE_OPENAI_DEPLOYMENT=gpt-4o        (optional, defaults to gpt-4o)
 AZURE_OPENAI_API_VERSION=2024-10-21   (optional)
 ```
-
-Authentication uses Azure CLI credential — no API keys needed.
 
 ## Requirements
 

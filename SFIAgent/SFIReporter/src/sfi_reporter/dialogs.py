@@ -1163,382 +1163,81 @@ class SubscriptionPickerDialog(tk.Toplevel):
 
 
 # ---------------------------------------------------------------------------
-# ConfigureLLMDialog
-# ---------------------------------------------------------------------------
-
-class ConfigureLLMDialog(tk.Toplevel):
-    """Modal dialog for configuring Azure OpenAI LLM settings."""
-
-    _DEFAULT_DEPLOYMENT = "gpt-4o"
-    _DEFAULT_API_VERSION = "2024-10-21"
-
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.title("Configure LLM")
-        self.transient(parent)
-        self.grab_set()
-        self.resizable(False, False)
-
-        self._discovered_configs: list = []
-
-        self._endpoint_var = tk.StringVar(
-            value=_load_setting("llm_endpoint", "") or ""
-        )
-        self._deployment_var = tk.StringVar(
-            value=_load_setting("llm_deployment", self._DEFAULT_DEPLOYMENT) or self._DEFAULT_DEPLOYMENT
-        )
-        self._api_version_var = tk.StringVar(
-            value=_load_setting("llm_api_version", self._DEFAULT_API_VERSION) or self._DEFAULT_API_VERSION
-        )
-
-        self._build_ui()
-
-        self.update_idletasks()
-        pw = parent.winfo_width()
-        ph = parent.winfo_height()
-        px = parent.winfo_rootx()
-        py = parent.winfo_rooty()
-        w = self.winfo_reqwidth()
-        h = self.winfo_reqheight()
-        x = px + (pw - w) // 2
-        y = py + (ph - h) // 2
-        self.geometry(f"+{x}+{y}")
-
-    def _build_ui(self):
-        pad = dict(padx=10, pady=4)
-        frm = ttk.Frame(self, padding=15)
-        frm.pack(fill=tk.BOTH, expand=True)
-
-        ttk.Label(frm, text="Endpoint:").grid(row=0, column=0, sticky=tk.W, **pad)
-        ttk.Entry(frm, textvariable=self._endpoint_var, width=55).grid(
-            row=0, column=1, columnspan=2, sticky=tk.EW, **pad)
-
-        ttk.Label(frm, text="Deployment:").grid(row=1, column=0, sticky=tk.W, **pad)
-        ttk.Entry(frm, textvariable=self._deployment_var, width=30).grid(
-            row=1, column=1, columnspan=2, sticky=tk.EW, **pad)
-
-        ttk.Label(frm, text="API Version:").grid(row=2, column=0, sticky=tk.W, **pad)
-        ttk.Entry(frm, textvariable=self._api_version_var, width=30).grid(
-            row=2, column=1, columnspan=2, sticky=tk.EW, **pad)
-
-        detect_frame = ttk.LabelFrame(frm, text="Detect from Azure CLI", padding=8)
-        detect_frame.grid(row=3, column=0, columnspan=3, sticky=tk.EW, pady=(10, 4), padx=10)
-
-        self._detect_btn = ttk.Button(
-            detect_frame, text="\U0001f50d Detect", command=self._on_auto_detect)
-        self._detect_btn.pack(side=tk.LEFT, padx=(0, 10))
-
-        self._config_combo = ttk.Combobox(detect_frame, state="readonly", width=60)
-        self._config_combo.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        self._config_combo.bind("<<ComboboxSelected>>", self._on_config_selected)
-
-        btn_frame = ttk.Frame(frm)
-        btn_frame.grid(row=4, column=0, columnspan=3, pady=(15, 0))
-
-        ttk.Button(btn_frame, text="Save", command=self._on_save).pack(side=tk.LEFT, padx=5)
-        ttk.Button(btn_frame, text="Clear", command=self._on_clear).pack(side=tk.LEFT, padx=5)
-        ttk.Button(btn_frame, text="Cancel", command=self.destroy).pack(side=tk.LEFT, padx=5)
-
-    def _on_auto_detect(self):
-        self._detect_btn.configure(text="Loading subs...", state="disabled")
-        root = self.winfo_toplevel()
-
-        def _list_subs():
-            try:
-                import logging as _log
-                for _az in ("azure.core", "azure.identity", "azure.mgmt"):
-                    _log.getLogger(_az).setLevel(_log.WARNING)
-                from llm_extender.discovery import _ensure_azure_sdk, SubscriptionClient, AzureCliCredential
-                _ensure_azure_sdk()
-                import llm_extender.discovery as disc
-                cred = disc.AzureCliCredential()
-                sub_client = disc.SubscriptionClient(cred)
-                subs = list(sub_client.subscriptions.list())
-                root.after(0, lambda: self._on_subs_loaded(subs))
-            except Exception as exc:
-                root.after(0, lambda e=exc: self._on_detect_error(e))
-
-        threading.Thread(target=_list_subs, daemon=True).start()
-
-    def _on_subs_loaded(self, subs: list):
-        self._detect_btn.configure(text="\U0001f50d Detect", state="normal")
-        if not subs:
-            messagebox.showinfo(
-                "No Subscriptions",
-                "No Azure subscriptions found.\n\nEnsure you are logged in with `az login`.",
-                parent=self,
-            )
-            return
-
-        choices = {f"{s.display_name}  ({s.subscription_id})": s.subscription_id for s in subs}
-
-        picked = SubscriptionPickerDialog(self, list(choices.keys()))
-        if not picked.result:
-            return
-
-        selected_sub_id = choices[picked.result]
-        self._scan_subscription(selected_sub_id)
-
-    def _scan_subscription(self, subscription_id: str):
-        self._detect_btn.configure(text="Scanning...", state="disabled")
-        root = self.winfo_toplevel()
-
-        def _do_scan():
-            try:
-                import logging as _log
-                for _az in ("azure.core", "azure.identity", "azure.mgmt"):
-                    _log.getLogger(_az).setLevel(_log.WARNING)
-                from llm_extender import discover_azure_configs
-                configs = discover_azure_configs(subscription_id=subscription_id)
-                root.after(0, lambda: self._on_detect_complete(configs))
-            except Exception as exc:
-                root.after(0, lambda e=exc: self._on_detect_error(e))
-
-        threading.Thread(target=_do_scan, daemon=True).start()
-
-    def _on_detect_complete(self, configs: list):
-        self._detect_btn.configure(text="\U0001f50d Detect", state="normal")
-        self._discovered_configs = configs
-        if not configs:
-            self._config_combo["values"] = []
-            messagebox.showinfo(
-                "No Results",
-                "No Azure OpenAI deployments found in the selected subscription.",
-                parent=self,
-            )
-            return
-        labels = [
-            f"{c.base_url}  \u2014  {c.deployment} ({c.model})"
-            for c in configs
-        ]
-        self._config_combo["values"] = labels
-        self._config_combo.current(0)
-        self._on_config_selected(None)
-
-    def _on_detect_error(self, error: Exception):
-        self._detect_btn.configure(text="\U0001f50d Detect", state="normal")
-        if isinstance(error, ImportError):
-            messagebox.showerror(
-                "Azure SDK Not Installed",
-                "Azure discovery SDK is not available.\n\n"
-                "Install with:\n  pip install llm-extender[azure-discover]",
-                parent=self,
-            )
-        else:
-            messagebox.showerror("Detection Failed", f"Discovery error: {error}", parent=self)
-
-    def _on_config_selected(self, _event):
-        idx = self._config_combo.current()
-        if idx < 0 or idx >= len(self._discovered_configs):
-            return
-        cfg = self._discovered_configs[idx]
-        self._endpoint_var.set(cfg.base_url)
-        self._deployment_var.set(cfg.deployment)
-        self._api_version_var.set(cfg.api_version)
-
-    def _on_save(self):
-        endpoint = self._endpoint_var.get().strip()
-        deploy = self._deployment_var.get().strip()
-        api_ver = self._api_version_var.get().strip()
-
-        if not endpoint.startswith("https://"):
-            messagebox.showerror("Invalid Endpoint", "Endpoint must start with https://", parent=self)
-            return
-
-        _save_setting("llm_endpoint", endpoint)
-        _save_setting("llm_deployment", deploy or self._DEFAULT_DEPLOYMENT)
-        _save_setting("llm_api_version", api_ver or self._DEFAULT_API_VERSION)
-        logger.info("LLM config saved: endpoint=%s deployment=%s api_version=%s",
-                    endpoint, deploy, api_ver)
-        self.destroy()
-
-    def _on_clear(self):
-        _save_setting("llm_endpoint", "")
-        _save_setting("llm_deployment", "")
-        _save_setting("llm_api_version", "")
-        self._endpoint_var.set("")
-        self._deployment_var.set(self._DEFAULT_DEPLOYMENT)
-        self._api_version_var.set(self._DEFAULT_API_VERSION)
-        logger.info("LLM config cleared.")
-
-
-# ---------------------------------------------------------------------------
-# LLM Analysis UI Components
-# ---------------------------------------------------------------------------
-
-class AnalysisProgressModal(tk.Toplevel):
-    """Modal progress dialog shown while LLM analysis is in flight."""
-
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.title("Analyzing...")
-        self.geometry("350x120")
-        self.resizable(False, False)
-        self.transient(parent)
-        self.grab_set()
-
-        self.protocol("WM_DELETE_WINDOW", lambda: None)
-
-        self.update_idletasks()
-        x = parent.winfo_x() + (parent.winfo_width() - 350) // 2
-        y = parent.winfo_y() + (parent.winfo_height() - 120) // 2
-        self.geometry(f"+{x}+{y}")
-
-        frame = ttk.Frame(self, padding=20)
-        frame.pack(fill=tk.BOTH, expand=True)
-
-        self.status_label = ttk.Label(frame, text="Preparing analysis...", font=("Segoe UI", 10))
-        self.status_label.pack(pady=(0, 10))
-
-        self.progress = ttk.Progressbar(frame, mode="indeterminate", length=280)
-        self.progress.pack()
-        self.progress.start(15)
-
-    def update_status(self, text: str):
-        self.status_label.configure(text=text)
-
-    def close(self):
-        self.progress.stop()
-        self.grab_release()
-        self.destroy()
-
-
-class AnalysisModal(tk.Toplevel):
-    """Modal dialog displaying the LLM analysis result."""
-
-    def __init__(self, parent, result):
-        super().__init__(parent)
-
-        title_text = result.title[:60] + "..." if len(result.title) > 60 else result.title
-        self.title(f"LLM Analysis: {title_text}")
-        self.geometry("800x650")
-        self.transient(parent)
-        self.grab_set()
-
-        self.update_idletasks()
-        x = parent.winfo_x() + (parent.winfo_width() - 800) // 2
-        y = parent.winfo_y() + (parent.winfo_height() - 650) // 2
-        self.geometry(f"+{x}+{y}")
-
-        self._result = result
-        self._create_widgets()
-
-        self.bind("<Escape>", lambda e: self.destroy())
-        self.focus_set()
-
-    def _create_widgets(self):
-        main_frame = ttk.Frame(self, padding=10)
-        main_frame.pack(fill=tk.BOTH, expand=True)
-
-        text_frame = ttk.Frame(main_frame)
-        text_frame.pack(fill=tk.BOTH, expand=True)
-
-        y_scroll = ttk.Scrollbar(text_frame, orient=tk.VERTICAL)
-        self.text = tk.Text(
-            text_frame, wrap=tk.WORD, font=("Segoe UI", 10),
-            yscrollcommand=y_scroll.set, padx=12, pady=8,
-        )
-        y_scroll.configure(command=self.text.yview)
-        y_scroll.pack(side=tk.RIGHT, fill=tk.Y)
-        self.text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-        self.text.tag_configure("header", font=("Segoe UI", 13, "bold"), spacing1=12, spacing3=4)
-        self.text.tag_configure("section", font=("Segoe UI", 10), lmargin1=10, lmargin2=10)
-        self.text.tag_configure("disclaimer", font=("Segoe UI", 8, "italic"), foreground="#888888")
-        self.text.tag_configure("meta", font=("Segoe UI", 8), foreground="#666666")
-
-        r = self._result
-
-        sections = [
-            ("\U0001f3af Mission", r.mission or "(No mission section parsed)"),
-            ("\u2705 Steps to Done", r.steps_to_done or "(No steps section parsed)"),
-            ("\U0001f527 Resources Needing Repair", r.resources or "(No resources section parsed)"),
-            ("\u26a0\ufe0f Risk of Delay", r.risk_of_delay or "(No risk section parsed)"),
-        ]
-
-        for heading, body in sections:
-            self.text.insert(tk.END, f"{heading}\n", "header")
-            self.text.insert(tk.END, f"{body}\n\n", "section")
-
-        self.text.insert(tk.END, "\n" + "\u2500" * 60 + "\n\n", "meta")
-
-        ts = r.timestamp[:19].replace("T", " ") if r.timestamp else "unknown"
-        meta = f"Model: {r.model}  |  Analyzed: {ts} UTC  |  Tokens: {r.prompt_tokens} in / {r.completion_tokens} out"
-        self.text.insert(tk.END, meta + "\n", "meta")
-        self.text.insert(tk.END, "\nAI-generated analysis \u2014 verify before acting.\n", "disclaimer")
-
-        self.text.configure(state=tk.DISABLED)
-
-        btn_frame = ttk.Frame(main_frame)
-        btn_frame.pack(fill=tk.X, pady=(10, 0))
-
-        ttk.Button(btn_frame, text="\U0001f4cb Copy to Clipboard",
-                   command=self._copy_to_clipboard).pack(side=tk.LEFT)
-        ttk.Button(btn_frame, text="Close", command=self.destroy).pack(side=tk.RIGHT)
-
-    def _copy_to_clipboard(self):
-        self.clipboard_clear()
-        self.clipboard_append(self._result.analysis_text)
-        original = self.title()
-        self.title("Copied to clipboard!")
-        self.after(1500, lambda: self.title(original))
-
-
-# ---------------------------------------------------------------------------
-# LLM Analysis launcher (shared by KPI tree and DrillDownModal)
+# LLM Analysis (SFI-034: Analyze KPI with Copilot Chat)
 # ---------------------------------------------------------------------------
 
 def _launch_llm_analysis(parent, item: dict):
-    """Launch LLM analysis for an action item."""
-    from sfi_reporter.llm_client import LLMConfigError, LLMError, analyze_item, fetch_action_item_urls
-    from sfi_reporter.llm_storage import save_analysis
-    from sfi_reporter.services import _load_llm_config
+    """Analyze a KPI's action items using the Copilot Chat panel.
 
-    try:
-        config = _load_llm_config()
-    except LLMConfigError as e:
-        messagebox.showerror("LLM Configuration Required", str(e), parent=parent)
+    Gathers all items for the KPI, fetches documentation URLs, builds
+    a structured analysis prompt, and sends it to the Copilot Chat panel.
+    """
+    import threading
+
+    kpi_id = item.get("_kpi_id", "")
+    kpi_name = item.get("_kpi_name", "") or kpi_id
+    if not kpi_id:
+        messagebox.showwarning(
+            "No KPI",
+            "Cannot determine the KPI for this item.",
+            parent=parent,
+        )
         return
 
-    root = parent.winfo_toplevel()
+    # Find the app instance via the root window
+    app = _find_app(parent)
+    if app is None:
+        messagebox.showerror(
+            "Error",
+            "Cannot find the app instance to access data.",
+            parent=parent,
+        )
+        return
 
-    progress = AnalysisProgressModal(parent)
+    # Ensure Copilot panel is open
+    if hasattr(app, '_toggle_copilot_panel'):
+        if app._copilot_panel is None or not app._copilot_panel.winfo_ismapped():
+            app._toggle_copilot_panel()
 
-    def do_analysis():
+    panel = getattr(app, '_copilot_panel', None)
+    if panel is None:
+        messagebox.showerror(
+            "Error",
+            "Copilot Chat panel is not available.",
+            parent=parent,
+        )
+        return
+
+    # Show status while fetching docs
+    panel._set_status("\u25cf Fetching KPI docs\u2026", "#b5651d")
+
+    def _bg_analyze():
+        from sfi_reporter.kpi_analyzer import analyze_kpi
         try:
-            root.after(0, lambda: progress.update_status("Fetching URL context..."))
-            url_content = fetch_action_item_urls(item)
+            prompt = analyze_kpi(app, kpi_id)
+            # Send to panel on Tk main thread
+            panel.send_analysis_prompt(prompt, kpi_label=kpi_name)
+        except Exception as exc:
+            logger.error("KPI analysis failed: %s", exc)
+            app.root.after(0, lambda: messagebox.showerror(
+                "Analysis Error",
+                f"KPI analysis failed:\n{exc}",
+                parent=parent,
+            ))
+            app.root.after(0, lambda: panel._set_status(
+                "\u25cf Connected", panel.ASSISTANT_COLOR))
 
-            root.after(0, lambda: progress.update_status("Calling Azure OpenAI..."))
-            result = analyze_item(item, config, url_content=url_content or None)
-
-            root.after(0, lambda: progress.update_status("Saving result..."))
-            try:
-                save_analysis(result)
-            except OSError as e:
-                logger.warning("Failed to save analysis: %s", e)
-
-            root.after(0, lambda: _on_analysis_complete(root, progress, result))
-
-        except LLMError as e:
-            msg = str(e)
-            root.after(0, lambda m=msg: _on_analysis_error(root, progress, m))
-        except Exception as e:
-            msg = f"Unexpected error: {e}"
-            logger.error("Unexpected error during LLM analysis: %s", e)
-            root.after(0, lambda m=msg: _on_analysis_error(root, progress, m))
-
-    threading.Thread(target=do_analysis, daemon=True).start()
+    threading.Thread(target=_bg_analyze, daemon=True).start()
 
 
-def _on_analysis_complete(root, progress: AnalysisProgressModal, result):
-    progress.close()
-    AnalysisModal(root, result)
-
-
-def _on_analysis_error(root, progress: AnalysisProgressModal, error_msg: str):
-    progress.close()
-    messagebox.showerror("LLM Analysis Failed", error_msg, parent=root)
+def _find_app(widget):
+    """Find the SFIReporterApp instance via the root window's _sfi_app attr."""
+    try:
+        # widget may be a Tk root, Toplevel, or any child widget
+        root = widget.winfo_toplevel() if hasattr(widget, 'winfo_toplevel') else widget
+        return getattr(root, '_sfi_app', None)
+    except Exception:
+        return None
 
 
 __all__ = [
@@ -1553,11 +1252,6 @@ __all__ = [
     'ManualEtaReviewDialog',
     'BulkEtaProgressDialog',
     'SubscriptionPickerDialog',
-    'ConfigureLLMDialog',
     # LLM Analysis
-    'AnalysisProgressModal',
-    'AnalysisModal',
     '_launch_llm_analysis',
-    '_on_analysis_complete',
-    '_on_analysis_error',
 ]

@@ -211,16 +211,6 @@ capabilities:
       - reporter-query-builder
       - reporter-logging
 
-  - name: reporter-web-app
-    description: "Streamlit web UI for SFI Reporter"
-    key_files:
-      - SFIReporter/src/sfi_reporter/app.py
-    contracts:
-      - "main() — Streamlit entry point (sfi-reporter-web CLI)"
-    depends_on:
-      - reporter-data
-      - reporter-cache
-
   - name: reporter-data
     description: "Data layer — fetches action items from S360 via accia-s360, parallel KPI grid loading"
     key_files:

@@ -28,7 +28,6 @@ from sfi_reporter.services import (
 )
 from sfi_reporter.dialogs import (
     BulkEtaProgressDialog,
-    ConfigureLLMDialog,
     DetailModal,
     EtaModeDialog,
     ManualEtaReviewDialog,
@@ -44,6 +43,7 @@ class SFIReporterApp:
 
     def __init__(self, root: tk.Tk):
         self.root = root
+        self.root._sfi_app = self  # Allow widgets to find the app instance
         self.root.title("SFI Reporter")
         self.root.geometry("1200x750")
 
@@ -64,8 +64,12 @@ class SFIReporterApp:
 
     def _build_ui(self):
         """Build the UI components."""
-        main_frame = ttk.Frame(self.root, padding="10")
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        # Container holds main content + optional copilot side panel
+        self._container = ttk.Frame(self.root)
+        self._container.pack(fill=tk.BOTH, expand=True)
+
+        main_frame = ttk.Frame(self._container, padding="10")
+        main_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         header_label = ttk.Label(main_frame, text="\U0001f4ca SFI Reporter", font=("Segoe UI", 20, "bold"))
         header_label.pack(anchor=tk.W)
@@ -103,16 +107,6 @@ class SFIReporterApp:
         self.query_btn = ttk.Button(controls_frame, text="\U0001f50d Filter", command=self._on_query, state="disabled")
         self.query_btn.pack(side=tk.LEFT, padx=5)
 
-        self.eta_btn = ttk.Button(controls_frame, text="\U0001f4cb Update ETAs",
-                                  command=self._on_update_etas, state="disabled")
-        self.eta_btn.pack(side=tk.LEFT, padx=5)
-
-        self.llm_config_btn = ttk.Button(
-            controls_frame, text="\u2699\ufe0f Configure LLM",
-            command=lambda: ConfigureLLMDialog(self.root),
-        )
-        self.llm_config_btn.pack(side=tk.LEFT, padx=5)
-
         self._reapply_filter_var = tk.BooleanVar(
             value=_load_setting('reapply_filter_after_refresh', False)
         )
@@ -126,7 +120,23 @@ class SFIReporterApp:
             text="Re-apply filter after refresh",
             variable=self._reapply_filter_var,
         )
-        self._reapply_cb.pack(side=tk.LEFT, padx=(10, 0))
+        self._reapply_cb.pack(side=tk.LEFT, padx=(5, 0))
+
+        # Visual separator before ETA / LLM group
+        ttk.Separator(controls_frame, orient=tk.VERTICAL).pack(
+            side=tk.LEFT, fill=tk.Y, padx=12, pady=2,
+        )
+
+        self.eta_btn = ttk.Button(controls_frame, text="\U0001f4cb Update ETAs",
+                                  command=self._on_update_etas, state="disabled")
+        self.eta_btn.pack(side=tk.LEFT, padx=5)
+
+        self._copilot_panel = None
+        self.llm_btn = ttk.Button(
+            controls_frame, text="\U0001f916 LLM",
+            command=self._toggle_copilot_panel,
+        )
+        self.llm_btn.pack(side=tk.LEFT, padx=5)
 
         self._failed_kpis: list[dict] = []
         self._audience_ids: list[str] = []
@@ -688,6 +698,16 @@ class SFIReporterApp:
         n = len(saved)
         self._update_status(f"\u2705 {n} ETA(s) updated successfully!", "green")
 
+    def _refresh_tables_after_eta_update(self):
+        """Refresh UI tables after a programmatic ETA change (e.g. from Copilot tool)."""
+        data = self.current_data
+        if not data:
+            return
+        self._update_tables(data, is_filtered=bool(
+            self._unfiltered_data and
+            self._unfiltered_data is not data))
+        self._update_status("\u2705 ETA updated via Copilot", "green")
+
     def _on_refresh(self):
         alias = self.alias_var.get().strip()
         if not alias:
@@ -972,6 +992,27 @@ class SFIReporterApp:
         self.query_btn.configure(text=f"\U0001f50d Filter ({n})")
 
         self._update_tables(data, is_filtered=True)
+
+    # -- Copilot panel toggle -----------------------------------------------
+
+    def _toggle_copilot_panel(self):
+        """Show or hide the Copilot chat side panel."""
+        if self._copilot_panel is None:
+            from sfi_reporter.copilot_panel import CopilotPanel
+            self._copilot_panel = CopilotPanel(
+                self._container,
+                app=self,
+                on_close=self._hide_copilot_panel,
+            )
+        if self._copilot_panel.winfo_ismapped():
+            self._hide_copilot_panel()
+        else:
+            self._copilot_panel.pack(side=tk.RIGHT, fill=tk.Y, padx=(5, 0))
+
+    def _hide_copilot_panel(self):
+        """Hide the Copilot panel if visible."""
+        if self._copilot_panel and self._copilot_panel.winfo_ismapped():
+            self._copilot_panel.pack_forget()
 
 
 def main():

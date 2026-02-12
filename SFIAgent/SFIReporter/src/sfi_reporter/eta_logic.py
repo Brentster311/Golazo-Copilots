@@ -7,7 +7,10 @@ from __future__ import annotations
 
 import logging
 from datetime import date, datetime, timedelta
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from accia_s360.models import EtaUpdate
 
 logger = logging.getLogger(__name__)
 
