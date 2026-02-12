@@ -28,7 +28,6 @@ from sfi_reporter.services import (
 )
 from sfi_reporter.dialogs import (
     BulkEtaProgressDialog,
-    ConfigureLLMDialog,
     DetailModal,
     EtaModeDialog,
     ManualEtaReviewDialog,
@@ -107,11 +106,12 @@ class SFIReporterApp:
                                   command=self._on_update_etas, state="disabled")
         self.eta_btn.pack(side=tk.LEFT, padx=5)
 
-        self.llm_config_btn = ttk.Button(
-            controls_frame, text="\u2699\ufe0f Configure LLM",
-            command=lambda: ConfigureLLMDialog(self.root),
+        self._copilot_panel = None
+        self.llm_btn = ttk.Button(
+            controls_frame, text="\U0001f916 LLM",
+            command=self._toggle_copilot_panel,
         )
-        self.llm_config_btn.pack(side=tk.LEFT, padx=5)
+        self.llm_btn.pack(side=tk.LEFT, padx=5)
 
         self._reapply_filter_var = tk.BooleanVar(
             value=_load_setting('reapply_filter_after_refresh', False)
@@ -972,6 +972,26 @@ class SFIReporterApp:
         self.query_btn.configure(text=f"\U0001f50d Filter ({n})")
 
         self._update_tables(data, is_filtered=True)
+
+    # -- Copilot panel toggle -----------------------------------------------
+
+    def _toggle_copilot_panel(self):
+        """Show or hide the Copilot chat side panel."""
+        if self._copilot_panel is None:
+            from sfi_reporter.copilot_panel import CopilotPanel
+            self._copilot_panel = CopilotPanel(
+                self.root,
+                on_close=self._hide_copilot_panel,
+            )
+        if self._copilot_panel.winfo_ismapped():
+            self._hide_copilot_panel()
+        else:
+            self._copilot_panel.pack(side=tk.RIGHT, fill=tk.Y, padx=(5, 0))
+
+    def _hide_copilot_panel(self):
+        """Hide the Copilot panel if visible."""
+        if self._copilot_panel and self._copilot_panel.winfo_ismapped():
+            self._copilot_panel.pack_forget()
 
 
 def main():

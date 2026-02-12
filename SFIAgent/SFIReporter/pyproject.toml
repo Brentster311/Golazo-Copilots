@@ -14,8 +14,6 @@ authors = [
 ]
 dependencies = [
     "accia-s360>=0.1.0",
-    "llm-extender>=0.1.0",
-    "openai>=1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -23,13 +21,8 @@ dev = [
     "pytest>=7.0.0",
     "pytest-mock>=3.10.0",
 ]
-web = [
-    "streamlit>=1.30.0",
-]
-
 [project.scripts]
 sfi-reporter = "sfi_reporter.tk_app:main"
-sfi-reporter-web = "sfi_reporter.app:main"
 
 [tool.hatch.build.targets.sdist]
 include = [
