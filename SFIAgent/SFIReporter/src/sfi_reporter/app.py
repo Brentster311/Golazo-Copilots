@@ -63,8 +63,12 @@ class SFIReporterApp:
 
     def _build_ui(self):
         """Build the UI components."""
-        main_frame = ttk.Frame(self.root, padding="10")
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        # Container holds main content + optional copilot side panel
+        self._container = ttk.Frame(self.root)
+        self._container.pack(fill=tk.BOTH, expand=True)
+
+        main_frame = ttk.Frame(self._container, padding="10")
+        main_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         header_label = ttk.Label(main_frame, text="\U0001f4ca SFI Reporter", font=("Segoe UI", 20, "bold"))
         header_label.pack(anchor=tk.W)
@@ -980,7 +984,7 @@ class SFIReporterApp:
         if self._copilot_panel is None:
             from sfi_reporter.copilot_panel import CopilotPanel
             self._copilot_panel = CopilotPanel(
-                self.root,
+                self._container,
                 on_close=self._hide_copilot_panel,
             )
         if self._copilot_panel.winfo_ismapped():
