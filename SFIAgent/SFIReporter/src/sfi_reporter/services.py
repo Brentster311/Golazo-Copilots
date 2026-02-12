@@ -619,31 +619,6 @@ def filter_items_by_id(items: list, item_id: str) -> list:
     return [item for item in items if item.get('id') == item_id]
 
 
-# ---------------------------------------------------------------------------
-# LLM config loader
-# ---------------------------------------------------------------------------
-
-def _load_llm_config():
-    """Load LLM config: saved settings first, then env vars.
-
-    Returns:
-        A configured LLMConfig instance.
-
-    Raises:
-        LLMConfigError: If no config source is available.
-    """
-    from sfi_reporter.llm_client import LLMConfig, LLMConfigError
-
-    endpoint = _load_setting("llm_endpoint", "") or ""
-    if endpoint.strip():
-        return LLMConfig(
-            endpoint=endpoint.strip(),
-            deployment=(_load_setting("llm_deployment", "") or "gpt-4o").strip(),
-            api_version=(_load_setting("llm_api_version", "") or "2024-10-21").strip(),
-        )
-    return LLMConfig.from_env()
-
-
 __all__ = [
     # Serialization
     '_serialize_org_data_for_cache',
@@ -667,6 +642,4 @@ __all__ = [
     'filter_items_by_service',
     'filter_items_by_program',
     'filter_items_by_id',
-    # LLM config
-    '_load_llm_config',
 ]
