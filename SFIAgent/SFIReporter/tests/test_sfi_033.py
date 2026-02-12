@@ -222,11 +222,11 @@ class TestCopilotPanel:
         assert hasattr(panel, "_send_btn")
 
     def test_copilot_panel_model_selector_default(self):
-        """Default model should be gpt-4.1."""
+        """Default model should be gpt-5."""
         from sfi_reporter.copilot_panel import CopilotPanel
 
         panel = CopilotPanel(self.root, on_close=lambda: None)
-        assert panel._model_var.get() == "gpt-4.1"
+        assert panel._model_var.get() == "gpt-5"
 
     def test_copilot_panel_close_button(self):
         """Close button must trigger on_close callback."""

@@ -253,6 +253,8 @@ def build_analysis_prompt(
 
     prompt = f"""Analyze the following SFI/QEI KPI and its action items in detail.
 
+IMPORTANT: All item data and documentation content has already been gathered and is provided below. Do NOT call any tools — just analyze the information given.
+
 ## KPI: {kpi_name} ({kpi_id})
 Total items: {total} | Out of SLA: {out_of_sla}
 
