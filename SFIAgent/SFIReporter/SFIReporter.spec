@@ -3,10 +3,10 @@
 
 a = Analysis(
     ['src\\sfi_reporter\\tk_app.py'],
-    pathex=['..\\..\\LLMExtender', '..\\accia-s360\\src'],
+    pathex=['..\\accia-s360\\src'],
     binaries=[],
     datas=[],
-    hiddenimports=['sfi_reporter.models', 'sfi_reporter.formatters', 'sfi_reporter.services', 'sfi_reporter.dialogs', 'sfi_reporter.app', 'sfi_reporter.query_builder', 'sfi_reporter.eta_logic', 'llm_extender', 'llm_extender.exceptions', 'llm_extender.url_fetcher', 'llm_extender.client', 'llm_extender.config', 'llm_extender.auth', 'llm_extender.providers', 'accia_s360', 'accia_s360.client', 'accia_s360.models', 'accia_s360.auth', 'accia_s360.cache', 'accia_s360.config', 'accia_s360.exceptions'],
+    hiddenimports=['sfi_reporter.models', 'sfi_reporter.formatters', 'sfi_reporter.services', 'sfi_reporter.dialogs', 'sfi_reporter.app', 'sfi_reporter.copilot_panel', 'sfi_reporter.query_builder', 'sfi_reporter.eta_logic', 'copilot', 'accia_s360', 'accia_s360.client', 'accia_s360.models', 'accia_s360.auth', 'accia_s360.cache', 'accia_s360.config', 'accia_s360.exceptions'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
