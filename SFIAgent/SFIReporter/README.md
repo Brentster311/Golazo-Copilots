@@ -27,16 +27,18 @@ The app will open a browser window for Microsoft login if no `az login` session 
 - **View Details in Manual Review**: While stepping through items in Manual ETA review, click 🔍 View Details to see the full item detail modal.
 - **SLA Status & ETA Status columns**: Drill-down views show SLA Status (In SLA / Approaching / Out of SLA) and ETA Status columns.
 - **Diagnostic logging**: Rotating log file at `%TEMP%\sfireporter\sfi_reporter.log` (DEBUG+)
-- **🤖 Analyze with LLM**: Right-click any KPI row → "Analyze with LLM" (coming soon — will use GitHub Copilot SDK)
-- **🤖 LLM button**: Opens a Copilot chat side panel for AI-assisted analysis (requires `github-copilot-sdk`)
+- **🤖 Analyze with LLM**: Right-click any KPI row → "Analyze with LLM" sends action item data to Azure OpenAI for a structured analysis (Mission, Steps to Done, Resources Needing Repair, Risk of Delay). Results are saved to `%LOCALAPPDATA%\sfireporter\analyses\`.
 
-## Copilot Chat Setup
+## LLM Analysis Setup
 
-To use the Copilot chat side panel:
+To use the "Analyze with LLM" feature, set these environment variables:
 
-1. Install the SDK: `pip install github-copilot-sdk`
-2. Authenticate: `copilot auth login`
-3. Click **🤖 LLM** in the toolbar to open the chat panel
+```
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+AZURE_OPENAI_API_KEY=your-api-key
+AZURE_OPENAI_DEPLOYMENT=gpt-4o        (optional, defaults to gpt-4o)
+AZURE_OPENAI_API_VERSION=2024-10-21   (optional)
+```
 
 ## Requirements
 

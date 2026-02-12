@@ -1175,6 +1175,7 @@ def _launch_llm_analysis(parent, item: dict):
     import threading
 
     kpi_id = item.get("_kpi_id", "")
+    kpi_name = item.get("_kpi_name", "") or kpi_id
     if not kpi_id:
         messagebox.showwarning(
             "No KPI",
@@ -1215,7 +1216,7 @@ def _launch_llm_analysis(parent, item: dict):
         try:
             prompt = analyze_kpi(app, kpi_id)
             # Send to panel on Tk main thread
-            panel.send_analysis_prompt(prompt)
+            panel.send_analysis_prompt(prompt, kpi_label=kpi_name)
         except Exception as exc:
             logger.error("KPI analysis failed: %s", exc)
             app.root.after(0, lambda: messagebox.showerror(
