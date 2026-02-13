@@ -93,6 +93,23 @@ df = handler.GetDataFrameFromKustoQuery(
 
 ---
 
+### Code Coverage with pytest-cov
+**DO NOT** run tests without measuring code coverage when working in Python.
+
+**Instead**, run `pytest-cov` during the TDD Green phase and ensure each module exceeds 70% coverage:
+
+```bash
+# ❌ Wrong - Running tests without coverage measurement
+pytest tests/
+
+# ✅ Correct - Running tests with coverage per module
+pytest --cov=your_package --cov-report=term-missing tests/
+```
+
+**Reason:** TDD is the standard workflow. During the Green phase in Python projects, `pytest-cov` must be used to verify that code coverage exceeds **70% per module**. If a module cannot meet the 70% threshold by adding tests, a strong exception case must be made to and approved by the Project Owner before proceeding.
+
+---
+
 ## How to Add New Best Practices
 
 1. Add a clear heading under the appropriate category
