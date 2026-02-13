@@ -1,6 +1,7 @@
 """Kusto (Azure Data Explorer) client for fetching incident descriptions.
 
 Queries the IncidentDescriptions table in the IcmDataWarehouse database.
+Uses accia-datacollection KustoHandler per TechBestPractices.
 No Tkinter dependency — fully testable in isolation.
 """
 from __future__ import annotations
@@ -8,9 +9,8 @@ from __future__ import annotations
 import re
 
 try:
-    from azure.kusto.data import KustoClient as _SdkClient
-    from azure.kusto.data import KustoConnectionStringBuilder
-    from azure.identity import ChainedTokenCredential, AzureCliCredential, ManagedIdentityCredential
+    from azure.identity import AzureCliCredential, ManagedIdentityCredential
+    from accia.datacollection import KustoHandler
 
     KUSTO_AVAILABLE = True
 except ImportError:  # pragma: no cover
@@ -34,19 +34,22 @@ class KustoClient:
         self._database = database
 
     def _execute_query(self, query: str):
-        """Execute a KQL query against the configured cluster/database.
+        """Execute a KQL query via accia.datacollection.KustoHandler.
 
-        Separated for easy mocking in tests.
+        Returns a pandas DataFrame. Separated for easy mocking in tests.
         """
-        credential = ChainedTokenCredential(
-            AzureCliCredential(),
-            ManagedIdentityCredential(),
+        handler = KustoHandler(
+            AlternateAADCredentialsList=[
+                AzureCliCredential(),
+                ManagedIdentityCredential(),
+            ],
+            UseDefaultCredentials=False,
         )
-        kcsb = KustoConnectionStringBuilder.with_azure_token_credential(
-            self._cluster, credential,
+        return handler.GetDataFrameFromKustoQuery(
+            Cluster=self._cluster,
+            Database=self._database,
+            Query=query,
         )
-        client = _SdkClient(kcsb)
-        return client.execute(self._database, query)
 
     def fetch_incident(self, incident_id: str) -> str:
         """Fetch incident description text from Kusto.
@@ -74,14 +77,13 @@ class KustoClient:
         query = _KQL_TEMPLATE.format(incident_id=stripped)
 
         try:
-            response = self._execute_query(query)
+            df = self._execute_query(query)
         except Exception as exc:
             raise RuntimeError(f"Kusto query failed: {exc}") from exc
 
-        rows = response.primary_results[0].rows
-        if not rows:
+        if df.empty:
             raise RuntimeError(
                 f"Incident '{stripped}' not found in IncidentDescriptions."
             )
 
-        return str(rows[0][0])
+        return str(df.iloc[0, 0])

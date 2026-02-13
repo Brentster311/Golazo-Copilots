@@ -123,7 +123,7 @@ class EESApp:
         self.fetch_kusto_btn.pack(side=tk.LEFT)
         if not KUSTO_AVAILABLE:
             ttk.Label(
-                kusto_row, text="(azure-kusto-data not installed)",
+                kusto_row, text="(accia-datacollection not installed)",
                 foreground="gray",
             ).pack(side=tk.LEFT, padx=5)
 

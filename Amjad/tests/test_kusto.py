@@ -16,12 +16,11 @@ class TestKustoClientFetch:
 
     def test_fetch_returns_description(self) -> None:
         """TC-1: Successful fetch returns description text."""
-        mock_response = MagicMock()
-        mock_table = MagicMock()
-        mock_table.rows = [["Server is down and not responding."]]
-        mock_response.primary_results = [mock_table]
+        mock_df = MagicMock()
+        mock_df.empty = False
+        mock_df.iloc.__getitem__ = MagicMock(return_value="Server is down and not responding.")
 
-        with patch("ees.gui.kusto_client.KustoClient._execute_query", return_value=mock_response):
+        with patch("ees.gui.kusto_client.KustoClient._execute_query", return_value=mock_df):
             from ees.gui.kusto_client import KustoClient
 
             client = KustoClient(
@@ -33,12 +32,10 @@ class TestKustoClientFetch:
 
     def test_fetch_not_found_raises(self) -> None:
         """TC-2: Returns RuntimeError when incident not found."""
-        mock_response = MagicMock()
-        mock_table = MagicMock()
-        mock_table.rows = []
-        mock_response.primary_results = [mock_table]
+        mock_df = MagicMock()
+        mock_df.empty = True
 
-        with patch("ees.gui.kusto_client.KustoClient._execute_query", return_value=mock_response):
+        with patch("ees.gui.kusto_client.KustoClient._execute_query", return_value=mock_df):
             from ees.gui.kusto_client import KustoClient
 
             client = KustoClient(
