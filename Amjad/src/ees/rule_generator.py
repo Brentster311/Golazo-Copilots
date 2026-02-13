@@ -1,0 +1,49 @@
+"""Rule generator — deduplication and filtering of LLM-proposed rules."""
+from __future__ import annotations
+
+from ees.models import Fact, Rule
+
+
+class RuleGenerator:
+    """Handles rule deduplication and filtering."""
+
+    def __init__(self, existing_rules: list[Rule]) -> None:
+        self._existing = list(existing_rules)
+
+    def is_duplicate(self, rule: Rule) -> bool:
+        """Check if a rule is an exact duplicate of any existing rule."""
+        for existing in self._existing:
+            if rule.is_duplicate_of(existing):
+                return True
+        return False
+
+    def filter_rules(
+        self, llm_rules: list[Rule], confirmed_facts: list[Fact]
+    ) -> list[Rule]:
+        """Filter LLM-proposed rules: remove those with no confirmed facts, and dedup.
+
+        A rule is kept only if ALL its condition facts are present in confirmed_facts.
+        Duplicate rules (matching an existing rule) are skipped.
+        """
+        if not confirmed_facts:
+            return []
+
+        confirmed_set = {f.match_key() for f in confirmed_facts}
+
+        kept: list[Rule] = []
+        for rule in llm_rules:
+            # Check all condition facts are confirmed
+            all_confirmed = all(
+                item.match_key() in confirmed_set
+                for item in rule.conditions.items
+            )
+            if not all_confirmed:
+                continue
+
+            # Dedup check
+            if self.is_duplicate(rule):
+                continue
+
+            kept.append(rule)
+
+        return kept
