@@ -9,6 +9,8 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from pathlib import Path
 
+from tkhtmlview import HTMLScrolledText
+
 from ees.fact_extractor import FactExtractor
 from ees.gap_detector import GapDetector
 from ees.gui.adapters import (
@@ -131,10 +133,9 @@ class EESApp:
         paned = ttk.PanedWindow(frame, orient=tk.HORIZONTAL)
         paned.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-        # Left: incident text
+        # Left: incident text (HTML rendered)
         left = ttk.LabelFrame(paned, text="Incident Text")
-        self.incident_text = tk.Text(left, wrap=tk.WORD, state=tk.DISABLED,
-                                     width=40)
+        self.incident_text = HTMLScrolledText(left, html="<i>No incident loaded.</i>")
         self.incident_text.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
         paned.add(left, weight=1)
 
@@ -204,10 +205,7 @@ class EESApp:
         try:
             text = Path(path).read_text(encoding="utf-8")
             self._incident_text = text
-            self.incident_text.config(state=tk.NORMAL)
-            self.incident_text.delete("1.0", tk.END)
-            self.incident_text.insert("1.0", text)
-            self.incident_text.config(state=tk.DISABLED)
+            self.incident_text.set_html(text)
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load file: {e}")
 
@@ -243,10 +241,7 @@ class EESApp:
         self.progress.stop()
         self.fetch_kusto_btn.config(state=tk.NORMAL)
         self._incident_text = text
-        self.incident_text.config(state=tk.NORMAL)
-        self.incident_text.delete("1.0", tk.END)
-        self.incident_text.insert("1.0", text)
-        self.incident_text.config(state=tk.DISABLED)
+        self.incident_text.set_html(text)
         self.status_var.set(
             f"Loaded incident {incident_id} from Kusto "
             f"({len(text)} chars)"
