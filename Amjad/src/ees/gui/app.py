@@ -747,11 +747,20 @@ class SettingsDialog:
 
 
 def _show_detail_dialog(parent: tk.Tk, title: str, text: str) -> None:
-    """Show a read-only detail dialog with the given text."""
+    """Show a read-only detail dialog centered over the parent window."""
     dlg = tk.Toplevel(parent)
     dlg.title(title)
-    dlg.geometry("600x400")
     dlg.transient(parent)
+
+    dlg_w, dlg_h = 600, 400
+    parent.update_idletasks()
+    px = parent.winfo_rootx()
+    py = parent.winfo_rooty()
+    pw = parent.winfo_width()
+    ph = parent.winfo_height()
+    x = px + (pw - dlg_w) // 2
+    y = py + (ph - dlg_h) // 2
+    dlg.geometry(f"{dlg_w}x{dlg_h}+{x}+{y}")
 
     txt = tk.Text(dlg, wrap=tk.WORD, padx=10, pady=10)
     scroll = ttk.Scrollbar(dlg, command=txt.yview)
