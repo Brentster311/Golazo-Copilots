@@ -17,3 +17,8 @@ All inherited from EES-00001:
 - This is a single vertical slice: RULEOUT rule generation during the learning loop.
 - Depends on EES-00001 being complete but is independently testable once EES-00001 exists.
 - Independent of EES-00002 (GAP rules) — can be built in parallel.
+
+## User Story Review
+- 6 acceptance criteria — within 3-7 range, no split needed.
+- All ACs are testable and map cleanly to test cases.
+- Out-of-scope items are properly delineated.

@@ -263,3 +263,65 @@ class TestFilterRulesGapExclusion:
             because="new",
         )
         assert gen.is_duplicate(new_rule)
+
+
+# ── RULEOUT Deduplication Tests (EES-00003) ──────────────────────────
+
+
+class TestRuleoutDeduplication:
+    """TC-17, TC-18, TC-19: RULEOUT rule deduplication."""
+
+    def test_ruleout_duplicate_detected(self):
+        """TC-17: Matching RULEOUT rule is detected as duplicate."""
+        existing = Rule(
+            rule_id="R-020",
+            status="CONFIRMED",
+            type="ruleout",
+            conditions=RuleConditions("AND", [Fact("Net", "*", "Latency", "==", "normal")]),
+            then=RuleThen("RULEOUT", "*", "Target", "Network Issue"),
+            because="prev",
+        )
+        gen = RuleGenerator(existing_rules=[existing])
+        new = Rule(
+            rule_id="",
+            type="ruleout",
+            conditions=RuleConditions("AND", [Fact("Net", "*", "Latency", "==", "normal")]),
+            then=RuleThen("RULEOUT", "*", "Target", "Network Issue"),
+            because="new",
+        )
+        assert gen.is_duplicate(new)
+
+    def test_ruleout_vs_positive_not_duplicate(self):
+        """TC-18: RULEOUT rule and positive rule with same conditions are NOT duplicates."""
+        positive = Rule(
+            rule_id="R-001",
+            status="CONFIRMED",
+            type="positive",
+            conditions=RuleConditions("AND", [Fact("Net", "*", "Latency", "==", "normal")]),
+            then=RuleThen("Net", "*", "Status", "OK"),
+            because="positive",
+        )
+        gen = RuleGenerator(existing_rules=[positive])
+        ruleout = Rule(
+            rule_id="",
+            type="ruleout",
+            conditions=RuleConditions("AND", [Fact("Net", "*", "Latency", "==", "normal")]),
+            then=RuleThen("RULEOUT", "*", "Target", "Network Issue"),
+            because="ruleout",
+        )
+        assert not gen.is_duplicate(ruleout)
+
+    def test_filter_rules_keeps_ruleout(self):
+        """TC-19: filter_rules passes RULEOUT rule with confirmed conditions."""
+        gen = RuleGenerator(existing_rules=[])
+        confirmed = [Fact("Net", "*", "Latency", "==", "normal")]
+        ruleout = Rule(
+            rule_id="",
+            type="ruleout",
+            conditions=RuleConditions("AND", [Fact("Net", "*", "Latency", "==", "normal")]),
+            then=RuleThen("RULEOUT", "*", "Target", "Network Issue"),
+            because="reason",
+        )
+        result = gen.filter_rules([ruleout], confirmed)
+        assert len(result) == 1
+        assert result[0].type == "ruleout"

@@ -343,3 +343,102 @@ class TestGapRefinement:
         gap = Rule(rule_id="R-011", status="GAP")
         ref = GapRefinement(gap_rule_id="R-011", action="narrowed", updated_rule=gap)
         assert ref.action == "narrowed"
+
+
+# ── RULEOUT Rule Model Tests (EES-00003) ──────────────────────────────
+
+
+class TestRuleRuleoutType:
+    """Tests for RULEOUT rule type support."""
+
+    def test_ruleout_type_accepted(self):
+        """TC-07: Rule with type='ruleout' is valid."""
+        r = Rule(
+            rule_id="R-020",
+            status="CONFIRMED",
+            type="ruleout",
+            sources=["INC-001"],
+            conditions=RuleConditions("AND", [Fact("S", "*", "Latency", "==", "normal")]),
+            then=RuleThen("RULEOUT", "*", "Target", "Network Issue"),
+            because="Normal latency rules out network issue",
+        )
+        assert r.type == "ruleout"
+        assert r.then.noun == "RULEOUT"
+        assert r.then.value == "Network Issue"
+
+    def test_ruleout_to_dict(self):
+        """TC-07: RULEOUT rule serializes with type='ruleout'."""
+        r = Rule(
+            rule_id="R-020",
+            type="ruleout",
+            conditions=RuleConditions("AND", [Fact("S", "*", "P", "==", "v")]),
+            then=RuleThen("RULEOUT", "*", "Target", "SomeRC"),
+            because="reason",
+        )
+        d = r.to_dict()
+        assert d["type"] == "ruleout"
+        assert d["then"]["noun"] == "RULEOUT"
+        assert d["then"]["value"] == "SomeRC"
+
+    def test_ruleout_roundtrip(self):
+        """TC-08: RULEOUT rule round-trips through to_dict/from_dict."""
+        r = Rule(
+            rule_id="R-020",
+            status="CONFIRMED",
+            type="ruleout",
+            sources=["INC-002"],
+            conditions=RuleConditions("AND", [Fact("Net", "*", "Latency", "==", "normal")]),
+            then=RuleThen("RULEOUT", "*", "Target", "Network Issue"),
+            because="Normal latency rules out network issue",
+        )
+        d = r.to_dict()
+        r2 = Rule.from_dict(d)
+        assert r2.type == "ruleout"
+        assert r2.then.noun == "RULEOUT"
+        assert r2.then.value == "Network Issue"
+        assert r2.because == "Normal latency rules out network issue"
+        assert r2.sources == ["INC-002"]
+
+    def test_from_dict_no_type_defaults_positive(self):
+        """TC-09: from_dict without type key defaults to 'positive'."""
+        d = {
+            "rule_id": "R-001",
+            "sources": [],
+            "conditions": {"logic": "AND", "items": []},
+            "then": {"noun": "S", "instance": "*", "property": "X", "value": "Y"},
+            "because": "r",
+        }
+        r = Rule.from_dict(d)
+        assert r.type == "positive"
+
+    def test_ruleout_with_gap_status(self):
+        """TC-12: RULEOUT rule with GAP status is valid combination."""
+        r = Rule(
+            rule_id="R-030",
+            status="GAP",
+            type="ruleout",
+            sources=["INC-003"],
+            requires=[Fact("S", "*", "P", ">", "1")],
+            produces=[Fact("RULEOUT", "*", "Target", "==", "SomeRC")],
+            note="Unknown RULEOUT reasoning",
+        )
+        d = r.to_dict()
+        r2 = Rule.from_dict(d)
+        assert r2.type == "ruleout"
+        assert r2.status == "GAP"
+        assert len(r2.requires) == 1
+
+    def test_ruleout_with_confirmed_status(self):
+        """TC-11: RULEOUT rule with CONFIRMED status and sources."""
+        r = Rule(
+            rule_id="R-020",
+            status="CONFIRMED",
+            type="ruleout",
+            sources=["INC-001", "INC-002"],
+            conditions=RuleConditions("AND", [Fact("S", "*", "P", "==", "v")]),
+            then=RuleThen("RULEOUT", "*", "Target", "RC1"),
+            because="Explanation",
+        )
+        assert r.status == "CONFIRMED"
+        assert r.sources == ["INC-001", "INC-002"]
+        assert r.because == "Explanation"

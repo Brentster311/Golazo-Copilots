@@ -34,6 +34,7 @@ Output JSON with this exact schema:
   ],
   "rules": [
     {
+      "type": "positive",
       "conditions": {
         "logic": "AND",
         "items": [{"noun": "...", "instance": "*", "property": "...", "operator": "...", "value": "..."}]
@@ -43,6 +44,17 @@ Output JSON with this exact schema:
     }
   ],
   "root_cause": "Root cause name or null"
+}
+
+For RULEOUT rules (elimination reasoning like "we ruled out X because..."):
+{
+  "type": "ruleout",
+  "conditions": {
+    "logic": "AND",
+    "items": [{"noun": "...", "instance": "*", "property": "...", "operator": "...", "value": "..."}]
+  },
+  "then": {"noun": "RULEOUT", "instance": "*", "property": "Target", "value": "<RootCauseName>"},
+  "because": "Why this root cause is ruled out"
 }
 
 Rules:
@@ -152,9 +164,11 @@ class FactExtractor:
                 for it in cond["items"]
             ]
             then_data = r["then"]
+            rule_type = r.get("type", "positive")
             rules.append(
                 Rule(
                     rule_id="",  # assigned later
+                    type=rule_type,
                     conditions=RuleConditions(logic=cond["logic"], items=items),
                     then=RuleThen(
                         noun=then_data["noun"],

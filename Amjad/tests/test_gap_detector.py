@@ -314,3 +314,77 @@ class TestCheckRefinements:
         detector = GapDetector(existing_rules=[resolved])
         results = detector.check_refinements([new_rule], "INC-002")
         assert len(results) == 0
+
+
+# ── RULEOUT + GAP Detection Tests (EES-00003) ──────────────────────
+
+
+class TestDetectGapsRuleout:
+    """TC-20, TC-21, TC-22: RULEOUT rules in GAP detection."""
+
+    def test_ruleout_facts_are_connected(self):
+        """TC-20: Facts connected via RULEOUT rules are not orphaned."""
+        fact_a = _fact("Net", "Latency", "==", "normal")
+        fact_b = _fact("Server", "MemoryFree", "<", "5%")
+
+        # fact_a connected via RULEOUT rule
+        ruleout = Rule(
+            rule_id="R-020",
+            status="CONFIRMED",
+            type="ruleout",
+            sources=["INC-001"],
+            conditions=RuleConditions(logic="AND", items=[fact_a]),
+            then=RuleThen("RULEOUT", "*", "Target", "Network Issue"),
+            because="Normal latency rules out network",
+        )
+
+        # fact_b connected via positive rule
+        positive = _confirmed_rule("R-001", [fact_b], "RootCause", "Name", "Resource Exhaustion")
+
+        detector = GapDetector(existing_rules=[ruleout, positive])
+        gaps = detector.detect_gaps([fact_a, fact_b], [], "Resource Exhaustion", "INC-002")
+        assert len(gaps) == 0  # No orphaned facts
+
+    def test_ruleout_mixed_with_positive(self):
+        """TC-21: Mix of positive + RULEOUT rules — all connected facts excluded."""
+        fact_a = _fact("Server", "CPUUsage", ">", "90")
+        fact_b = _fact("Net", "Latency", "==", "normal")
+
+        positive = _confirmed_rule("R-001", [fact_a], "RootCause", "Name", "RC1")
+        ruleout = Rule(
+            rule_id="R-020",
+            status="CONFIRMED",
+            type="ruleout",
+            sources=["INC-001"],
+            conditions=RuleConditions(logic="AND", items=[fact_b]),
+            then=RuleThen("RULEOUT", "*", "Target", "Network Issue"),
+            because="reason",
+        )
+
+        detector = GapDetector(existing_rules=[positive, ruleout])
+        gaps = detector.detect_gaps([fact_a, fact_b], [], "RC1", "INC-002")
+        assert len(gaps) == 0
+
+    def test_ruleout_present_but_facts_still_orphaned(self):
+        """TC-22: RULEOUT rules exist but some facts are still orphaned."""
+        fact_a = _fact("Net", "Latency", "==", "normal")
+        fact_b = _fact("Server", "MemoryFree", "<", "5%")
+        fact_c = _fact("Disk", "IOPS", ">", "1000")  # orphaned
+
+        ruleout = Rule(
+            rule_id="R-020",
+            status="CONFIRMED",
+            type="ruleout",
+            sources=["INC-001"],
+            conditions=RuleConditions(logic="AND", items=[fact_a]),
+            then=RuleThen("RULEOUT", "*", "Target", "Network Issue"),
+            because="reason",
+        )
+        positive = _confirmed_rule("R-001", [fact_b], "RootCause", "Name", "RC1")
+
+        detector = GapDetector(existing_rules=[ruleout, positive])
+        gaps = detector.detect_gaps([fact_a, fact_b, fact_c], [], "RC1", "INC-003")
+        assert len(gaps) == 1
+        # fact_c should be in the GAP's requires
+        require_keys = {f.match_key() for f in gaps[0].requires}
+        assert fact_c.match_key() in require_keys

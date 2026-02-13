@@ -45,11 +45,13 @@ class GapDetector:
         for rule in all_rules:
             if rule.status != "CONFIRMED":
                 continue
-            # Check if this rule's THEN sets RootCause to the confirmed value
-            if (
-                rule.then.noun.lower() == "rootcause"
-                and rule.then.value.lower() == rc_lower
-            ):
+            # Check if this rule's THEN targets the root cause (positive or RULEOUT)
+            then_noun = rule.then.noun.lower()
+            if then_noun == "rootcause" and rule.then.value.lower() == rc_lower:
+                for item in rule.conditions.items:
+                    connected_keys.add(item.match_key())
+            elif then_noun == "ruleout":
+                # RULEOUT rules contribute to diagnostic reasoning
                 for item in rule.conditions.items:
                     connected_keys.add(item.match_key())
 

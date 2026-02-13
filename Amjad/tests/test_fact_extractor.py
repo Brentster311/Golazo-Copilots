@@ -145,3 +145,98 @@ class TestFactExtractorAuth:
         mock_chained.assert_called_once()
         # Verify DefaultAzureCredential is NOT used
         mock_aoai.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# RULEOUT rule parsing (EES-00003)
+# ---------------------------------------------------------------------------
+class TestFactExtractorRuleout:
+    """Tests for RULEOUT rule parsing from LLM response."""
+
+    def test_parse_ruleout_rule(self):
+        """TC-01: _parse_response handles type='ruleout' rules."""
+        data = {
+            "facts": [],
+            "rules": [
+                {
+                    "type": "ruleout",
+                    "conditions": {
+                        "logic": "AND",
+                        "items": [{"noun": "Net", "instance": "*", "property": "Latency", "operator": "==", "value": "normal"}],
+                    },
+                    "then": {"noun": "RULEOUT", "instance": "*", "property": "Target", "value": "Network Issue"},
+                    "because": "Normal latency rules out network issues",
+                }
+            ],
+            "root_cause": None,
+        }
+        extractor = FactExtractor.__new__(FactExtractor)
+        extractor.client = MagicMock()
+        extractor.deployment = "gpt-4o"
+
+        mock_resp = _make_mock_openai_response(json.dumps(data))
+        extractor.client.chat.completions.create.return_value = mock_resp
+
+        result = extractor.extract("incident text", [])
+        assert len(result.rules) == 1
+        assert result.rules[0].type == "ruleout"
+        assert result.rules[0].then.noun == "RULEOUT"
+        assert result.rules[0].then.value == "Network Issue"
+
+    def test_parse_no_type_defaults_positive(self):
+        """TC-02: Rules without 'type' field default to 'positive'."""
+        data = {
+            "facts": [],
+            "rules": [
+                {
+                    "conditions": {
+                        "logic": "AND",
+                        "items": [{"noun": "S", "instance": "*", "property": "P", "operator": ">", "value": "1"}],
+                    },
+                    "then": {"noun": "S", "instance": "*", "property": "X", "value": "Y"},
+                    "because": "reason",
+                }
+            ],
+            "root_cause": None,
+        }
+        extractor = FactExtractor.__new__(FactExtractor)
+        extractor.client = MagicMock()
+        extractor.deployment = "gpt-4o"
+
+        mock_resp = _make_mock_openai_response(json.dumps(data))
+        extractor.client.chat.completions.create.return_value = mock_resp
+
+        result = extractor.extract("incident text", [])
+        assert result.rules[0].type == "positive"
+
+    def test_parse_mixed_positive_and_ruleout(self):
+        """TC-03: Mixed positive + RULEOUT rules in single response."""
+        data = {
+            "facts": [],
+            "rules": [
+                {
+                    "type": "positive",
+                    "conditions": {"logic": "AND", "items": [{"noun": "S", "instance": "*", "property": "P", "operator": ">", "value": "1"}]},
+                    "then": {"noun": "S", "instance": "*", "property": "X", "value": "Y"},
+                    "because": "positive reason",
+                },
+                {
+                    "type": "ruleout",
+                    "conditions": {"logic": "AND", "items": [{"noun": "N", "instance": "*", "property": "Q", "operator": "==", "value": "ok"}]},
+                    "then": {"noun": "RULEOUT", "instance": "*", "property": "Target", "value": "SomeRC"},
+                    "because": "ruleout reason",
+                },
+            ],
+            "root_cause": "SomeRC",
+        }
+        extractor = FactExtractor.__new__(FactExtractor)
+        extractor.client = MagicMock()
+        extractor.deployment = "gpt-4o"
+
+        mock_resp = _make_mock_openai_response(json.dumps(data))
+        extractor.client.chat.completions.create.return_value = mock_resp
+
+        result = extractor.extract("incident text", [])
+        assert len(result.rules) == 2
+        assert result.rules[0].type == "positive"
+        assert result.rules[1].type == "ruleout"

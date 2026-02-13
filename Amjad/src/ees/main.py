@@ -114,7 +114,7 @@ def _confirm_rules(rules: list[Rule]) -> list[Rule]:
     print("\nProposed rules:")
     for i, rule in enumerate(rules, 1):
         conditions_str = _format_rule_conditions(rule)
-        then_str = f"{rule.then.noun}({rule.then.instance}).{rule.then.property} = {rule.then.value}"
+        then_str = _format_rule_then(rule)
         print(f"  {i}. IF {conditions_str} THEN {then_str}")
         print(f"     BECAUSE: {rule.because}")
 
@@ -138,6 +138,13 @@ def _format_rule_conditions(rule: Rule) -> str:
         parts.append(f"{item.noun}({item.instance}).{item.property} {item.operator} {item.value}")
     joiner = f" {rule.conditions.logic} "
     return joiner.join(parts)
+
+
+def _format_rule_then(rule: Rule) -> str:
+    """Format the THEN clause for display."""
+    if rule.type == "ruleout":
+        return f"RULEOUT {rule.then.value}"
+    return f"{rule.then.noun}({rule.then.instance}).{rule.then.property} = {rule.then.value}"
 
 
 def _confirm_root_cause(proposed: str | None) -> str | None:
@@ -307,16 +314,19 @@ def process_incident(incident_path: str, data_dir: str) -> None:
     # Step 9: Print summary
     confirmed_count = len(confirmed_facts)
     rejected_count = len([f for f in all_facts if f.status == "rejected"])
+    positive_rules = [r for r in confirmed_rules if r.type != "ruleout"]
+    ruleout_rules = [r for r in confirmed_rules if r.type == "ruleout"]
+
     print(f"\nGenerated rules:")
     for rule in confirmed_rules:
         cond_str = _format_rule_conditions(rule)
-        then_str = f"{rule.then.noun}({rule.then.instance}).{rule.then.property} = {rule.then.value}"
+        then_str = _format_rule_then(rule)
         print(f"  {rule.rule_id}: IF {cond_str} THEN {then_str}")
 
     print(f"\nSummary:")
     print(f"  Facts: {len(all_facts)} proposed → {confirmed_count} confirmed, {rejected_count} rejected")
     print(f"  Ontology: {len(added)} new entries")
-    print(f"  Rules: {len(confirmed_rules)} generated")
+    print(f"  Rules: {len(positive_rules)} positive, {len(ruleout_rules)} ruleout generated")
     print(f"  GAPs: {len(confirmed_gaps)} created, {gaps_narrowed} narrowed, {gaps_resolved} resolved")
     print(f"\nAll files saved.")
 

@@ -481,3 +481,131 @@ class TestProcessIncidentGaps:
         assert "GAPs:" in captured.out
         # Should mention created, narrowed, resolved counts
         assert "created" in captured.out
+
+
+# ---------------------------------------------------------------------------
+# process_incident — RULEOUT integration tests (EES-00003)
+# ---------------------------------------------------------------------------
+class TestProcessIncidentRuleout:
+    def _mock_llm_response_with_ruleout(self):
+        """LLM returns both positive and RULEOUT rules."""
+        return LLMResponse(
+            facts=[
+                Fact("Server", "*", "CPUUsage", ">", "90"),
+                Fact("Net", "*", "Latency", "==", "normal"),
+            ],
+            rules=[
+                Rule(
+                    rule_id="",
+                    type="positive",
+                    conditions=RuleConditions("AND", [Fact("Server", "*", "CPUUsage", ">", "90")]),
+                    then=RuleThen("RootCause", "*", "Name", "Resource Exhaustion"),
+                    because="High CPU",
+                ),
+                Rule(
+                    rule_id="",
+                    type="ruleout",
+                    conditions=RuleConditions("AND", [Fact("Net", "*", "Latency", "==", "normal")]),
+                    then=RuleThen("RULEOUT", "*", "Target", "Network Issue"),
+                    because="Normal latency rules out network issue",
+                ),
+            ],
+            root_cause="Resource Exhaustion",
+        )
+
+    def test_ruleout_rules_persisted(self, tmp_path, monkeypatch, capsys):
+        """TC-23: RULEOUT rules are confirmed and persisted."""
+        incident_file = tmp_path / "incident.txt"
+        incident_file.write_text("Server high CPU, normal latency")
+        data_dir = tmp_path / "data"
+
+        mock_extractor = MagicMock()
+        mock_extractor.extract.return_value = self._mock_llm_response_with_ruleout()
+        monkeypatch.setattr("ees.main.FactExtractor", lambda: mock_extractor)
+
+        # confirm fact1, confirm fact2, confirm root cause, confirm positive rule, confirm ruleout rule
+        inputs = iter(["c", "c", "c", "c", "c"])
+        monkeypatch.setattr("builtins.input", lambda _: next(inputs))
+
+        process_incident(str(incident_file), str(data_dir))
+
+        # Should have 2 rule files: 1 positive + 1 ruleout
+        rule_files = list((data_dir / "rules").glob("*.yaml"))
+        assert len(rule_files) == 2
+
+        # Check that the RULEOUT rule has type=ruleout in YAML
+        from ees.yaml_store import YamlStore
+        store = YamlStore(data_dir)
+        rules = store.list_rules()
+        types = {r.type for r in rules}
+        assert "ruleout" in types
+        assert "positive" in types
+
+    def test_ruleout_summary_counts(self, tmp_path, monkeypatch, capsys):
+        """TC-24: Summary distinguishes positive and RULEOUT counts."""
+        incident_file = tmp_path / "incident.txt"
+        incident_file.write_text("Server issue with latency")
+        data_dir = tmp_path / "data"
+
+        mock_extractor = MagicMock()
+        mock_extractor.extract.return_value = self._mock_llm_response_with_ruleout()
+        monkeypatch.setattr("ees.main.FactExtractor", lambda: mock_extractor)
+
+        # confirm fact1, confirm fact2, confirm root cause, confirm positive, confirm ruleout
+        inputs = iter(["c", "c", "c", "c", "c"])
+        monkeypatch.setattr("builtins.input", lambda _: next(inputs))
+
+        process_incident(str(incident_file), str(data_dir))
+
+        captured = capsys.readouterr()
+        assert "positive" in captured.out.lower()
+        assert "ruleout" in captured.out.lower()
+
+    def test_ruleout_only_no_rootcause_modification(self, tmp_path, monkeypatch, capsys):
+        """TC-25: Only RULEOUT rules — rootcauses.yaml not modified by RULEOUT references."""
+        resp = LLMResponse(
+            facts=[Fact("Net", "*", "Latency", "==", "normal")],
+            rules=[
+                Rule(
+                    rule_id="",
+                    type="ruleout",
+                    conditions=RuleConditions("AND", [Fact("Net", "*", "Latency", "==", "normal")]),
+                    then=RuleThen("RULEOUT", "*", "Target", "Network Issue"),
+                    because="Normal latency rules out network issue",
+                ),
+            ],
+            root_cause=None,
+        )
+        incident_file = tmp_path / "incident.txt"
+        incident_file.write_text("Network looks fine")
+        data_dir = tmp_path / "data"
+
+        mock_extractor = MagicMock()
+        mock_extractor.extract.return_value = resp
+        monkeypatch.setattr("ees.main.FactExtractor", lambda: mock_extractor)
+
+        # confirm fact, no root cause prompt, confirm ruleout rule
+        inputs = iter(["c", "c"])
+        monkeypatch.setattr("builtins.input", lambda _: next(inputs))
+
+        process_incident(str(incident_file), str(data_dir))
+
+        # rootcauses.yaml should not exist
+        assert not (data_dir / "rootcauses.yaml").exists()
+
+    def test_ruleout_display_format(self, monkeypatch, capsys):
+        """TC-14: RULEOUT rules displayed as 'THEN RULEOUT <name>'."""
+        ruleout = Rule(
+            rule_id="R-020",
+            type="ruleout",
+            conditions=RuleConditions("AND", [Fact("Net", "*", "Latency", "==", "normal")]),
+            then=RuleThen("RULEOUT", "*", "Target", "Network Issue"),
+            because="Normal latency rules out network issue",
+        )
+
+        monkeypatch.setattr("builtins.input", lambda _: "c")
+        result = _confirm_rules([ruleout])
+
+        captured = capsys.readouterr()
+        assert "THEN RULEOUT Network Issue" in captured.out
+        assert len(result) == 1

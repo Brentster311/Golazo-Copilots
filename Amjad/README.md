@@ -96,13 +96,30 @@ GAP rules have `status: GAP` and are refined as subsequent incidents fill in the
 
 The summary line reports: `GAPs: X created, Y narrowed, Z resolved`
 
+### RULEOUT Rule Format
+
+RULEOUT rules capture elimination reasoning — "we know it's NOT X because...":
+
+```
+IF Noun(*).Property operator value AND ...
+THEN RULEOUT RootCauseName
+BECAUSE Why this root cause is eliminated
+```
+
+RULEOUT rules:
+- Are proposed by the LLM when elimination reasoning is detected in incident text
+- Follow the same confirmation flow as positive rules (confirm/edit/reject)
+- Are stored with `type: ruleout` in `rules/` YAML files
+- Do NOT modify `rootcauses.yaml` (they reference, not create, root causes)
+- Participate in GAP detection (their condition facts are considered connected)
+
 ## Testing
 
 ```bash
 pytest tests/ -v
 ```
 
-140 tests covering models, YAML persistence, ontology management, incident loading, LLM integration (mocked), rule generation, GAP detection, and GAP refinement.
+159 tests covering models, YAML persistence, ontology management, incident loading, LLM integration (mocked), rule generation, GAP detection, GAP refinement, and RULEOUT rule handling.
 
 ## Project Structure
 

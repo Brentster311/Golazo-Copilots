@@ -133,7 +133,7 @@ class Rule:
     """
     rule_id: str
     status: Literal["CONFIRMED", "GAP", "RESOLVED"] = "CONFIRMED"
-    type: Literal["positive"] = "positive"
+    type: Literal["positive", "ruleout"] = "positive"
     sources: list[str] = field(default_factory=list)
     conditions: RuleConditions = field(default_factory=lambda: RuleConditions(logic="AND"))
     then: RuleThen = field(default_factory=lambda: RuleThen("", "*", "", ""))
