@@ -88,6 +88,7 @@ capabilities:
       - src/ees/main.py
     contracts:
       - "process_incident(incident_path, data_dir) -> None"
+      - "evaluate_facts(facts_str, facts_file, data_dir, output_file) -> None"
       - "main() -> None"
     depends_on:
       - data-models
@@ -96,3 +97,13 @@ capabilities:
       - rule-generation
       - ontology-management
       - incident-loading
+      - rule-evaluation
+
+  - name: rule-evaluation
+    description: "Forward-chaining rule evaluation engine"
+    key_files:
+      - src/ees/rule_evaluator.py
+    contracts:
+      - "RuleEvaluator.evaluate(input_facts) -> EvaluationResult"
+    depends_on:
+      - data-models

@@ -2,6 +2,7 @@
 import pytest
 
 from ees.models import (
+    EvaluationResult,
     Fact,
     GapRefinement,
     Incident,
@@ -442,3 +443,81 @@ class TestRuleRuleoutType:
         assert r.status == "CONFIRMED"
         assert r.sources == ["INC-001", "INC-002"]
         assert r.because == "Explanation"
+
+
+# ── EvaluationResult tests ────────────────────────────────────
+
+class TestEvaluationResult:
+    """Tests for EvaluationResult dataclass."""
+
+    def test_empty_result(self):
+        """EvaluationResult with defaults is all empty."""
+        result = EvaluationResult(
+            input_facts=[],
+            derived_facts=[],
+            fired_rules=[],
+            root_causes=[],
+            ruled_out=[],
+            gap_rules=[],
+            rule_trace=[],
+        )
+        assert result.input_facts == []
+        assert result.root_causes == []
+
+    def test_to_dict_all_keys(self):
+        """to_dict returns all expected keys."""
+        f = Fact("Server", "*", "CPUUsage", ">", "90")
+        r = Rule(
+            rule_id="R-001",
+            conditions=RuleConditions("AND", [f]),
+            then=RuleThen("RootCause", "*", "Name", "HighCPU"),
+            because="test",
+        )
+        result = EvaluationResult(
+            input_facts=[f],
+            derived_facts=[Fact("RootCause", "*", "Name", "==", "HighCPU")],
+            fired_rules=[r],
+            root_causes=["HighCPU"],
+            ruled_out=[],
+            gap_rules=[],
+            rule_trace=[{"rule_id": "R-001", "iteration": 1, "derived": "RootCause(*).Name == HighCPU"}],
+        )
+        d = result.to_dict()
+        expected_keys = {"input_facts", "derived_facts", "fired_rules",
+                         "root_causes", "ruled_out", "gap_rules", "rule_trace"}
+        assert set(d.keys()) == expected_keys
+
+    def test_to_dict_serializes_facts(self):
+        """to_dict serializes facts via to_condition_dict."""
+        f = Fact("Server", "*", "CPUUsage", ">", "90")
+        result = EvaluationResult(
+            input_facts=[f],
+            derived_facts=[],
+            fired_rules=[],
+            root_causes=[],
+            ruled_out=[],
+            gap_rules=[],
+            rule_trace=[],
+        )
+        d = result.to_dict()
+        assert d["input_facts"][0]["noun"] == "Server"
+
+    def test_to_dict_serializes_rules(self):
+        """to_dict serializes fired_rules via Rule.to_dict."""
+        r = Rule(
+            rule_id="R-001",
+            conditions=RuleConditions("AND", [Fact("S", "*", "P", "==", "v")]),
+            then=RuleThen("RootCause", "*", "Name", "X"),
+            because="test",
+        )
+        result = EvaluationResult(
+            input_facts=[],
+            derived_facts=[],
+            fired_rules=[r],
+            root_causes=["X"],
+            ruled_out=[],
+            gap_rules=[],
+            rule_trace=[],
+        )
+        d = result.to_dict()
+        assert d["fired_rules"][0]["rule_id"] == "R-001"

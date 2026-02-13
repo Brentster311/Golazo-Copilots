@@ -36,11 +36,32 @@ Authentication uses `ChainedTokenCredential(AzureCliCredential(), ManagedIdentit
 
 ## Usage
 
+### Process an Incident (Learning Phase)
+
 ```bash
 ees process --incident path/to/incident.txt --data-dir data
 ```
 
-### Workflow
+### Evaluate Facts (Testing Phase)
+
+```bash
+# Evaluate with inline facts (semicolon-delimited)
+ees evaluate --facts "Server(*).CPUUsage > 90; Server(*).MemoryFree < 5%" --data-dir data
+
+# Evaluate with facts from a YAML file
+ees evaluate --facts-file path/to/facts.yaml --data-dir data
+
+# Write results to YAML file
+ees evaluate --facts "Server(*).CPUUsage > 90" --data-dir data --output result.yaml
+```
+
+The evaluate command runs a forward-chaining rule evaluation engine that:
+- Matches input facts against CONFIRMED rules using symbolic matching
+- Chains derived facts through dependent rules (forward chaining to fixed-point)
+- Reports identified root causes, eliminated candidates (RULEOUT), and GAP rules encountered
+- Provides a full rule chain trace for auditability
+
+### Process Workflow
 
 1. **Load** — Validates and reads the incident text file
 2. **Extract** — Sends text to Azure OpenAI, receives structured facts, rules, and root cause
@@ -119,7 +140,7 @@ RULEOUT rules:
 pytest tests/ -v
 ```
 
-159 tests covering models, YAML persistence, ontology management, incident loading, LLM integration (mocked), rule generation, GAP detection, GAP refinement, and RULEOUT rule handling.
+189 tests covering models, YAML persistence, ontology management, incident loading, LLM integration (mocked), rule generation, GAP detection, GAP refinement, RULEOUT rule handling, and rule evaluation engine.
 
 ## Project Structure
 
@@ -134,5 +155,6 @@ src/ees/
 ├── fact_extractor.py    # Azure OpenAI LLM integration
 ├── rule_generator.py    # Rule deduplication and filtering
 ├── gap_detector.py      # GAP detection and refinement
-└── main.py              # CLI entry point
+├── rule_evaluator.py    # Forward-chaining rule evaluation engine
+└── main.py              # CLI entry point (process + evaluate)
 ```

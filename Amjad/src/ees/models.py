@@ -283,3 +283,26 @@ class LLMResponse:
     facts: list[Fact] = field(default_factory=list)
     rules: list[Rule] = field(default_factory=list)
     root_cause: str | None = None
+
+
+@dataclass
+class EvaluationResult:
+    """Result of evaluating rules against input facts."""
+    input_facts: list[Fact]
+    derived_facts: list[Fact]
+    fired_rules: list[Rule]         # In firing order
+    root_causes: list[str]          # Identified root causes
+    ruled_out: list[str]            # Eliminated root causes (RULEOUT)
+    gap_rules: list[Rule]           # Encountered GAP rules
+    rule_trace: list[dict]          # [{rule_id, iteration, derived}]
+
+    def to_dict(self) -> dict:
+        return {
+            "input_facts": [f.to_condition_dict() for f in self.input_facts],
+            "derived_facts": [f.to_condition_dict() for f in self.derived_facts],
+            "fired_rules": [r.to_dict() for r in self.fired_rules],
+            "root_causes": list(self.root_causes),
+            "ruled_out": list(self.ruled_out),
+            "gap_rules": [r.to_dict() for r in self.gap_rules],
+            "rule_trace": list(self.rule_trace),
+        }

@@ -11,6 +11,7 @@ from ees.gap_detector import GapDetector
 from ees.incident_loader import IncidentLoader
 from ees.models import Fact, Incident, Rule, RootCause
 from ees.ontology_manager import OntologyManager
+from ees.rule_evaluator import RuleEvaluator
 from ees.rule_generator import RuleGenerator
 from ees.yaml_store import YamlStore
 
@@ -331,6 +332,106 @@ def process_incident(incident_path: str, data_dir: str) -> None:
     print(f"\nAll files saved.")
 
 
+def _parse_input_facts(facts_str: str) -> list[Fact]:
+    """Parse semicolon-delimited fact strings into Fact objects.
+
+    Exits with error if any fact has invalid format.
+    """
+    facts: list[Fact] = []
+    for part in facts_str.split(";"):
+        part = part.strip()
+        if not part:
+            continue
+        fact = Fact.parse(part)
+        if fact is None:
+            print(f"Error: Invalid fact format: {part}", file=sys.stderr)
+            sys.exit(1)
+        facts.append(fact)
+    return facts
+
+
+def evaluate_facts(
+    facts_str: str | None,
+    facts_file: str | None,
+    data_dir: str,
+    output_file: str | None,
+) -> None:
+    """Evaluate input facts against the knowledge base rules.
+
+    Parses facts from --facts (semicolon-delimited) or --facts-file (YAML list),
+    loads all rules, runs forward-chaining evaluation, and prints results.
+    """
+    data_path = Path(data_dir)
+    store = YamlStore(data_path)
+
+    # Parse input facts
+    if facts_str:
+        input_facts = _parse_input_facts(facts_str)
+    elif facts_file:
+        from ruamel.yaml import YAML
+        yaml = YAML()
+        with open(facts_file, encoding="utf-8") as f:
+            fact_strings = yaml.load(f)
+        input_facts = []
+        if isinstance(fact_strings, list):
+            for s in fact_strings:
+                fact = Fact.parse(str(s))
+                if fact is None:
+                    print(f"Error: Invalid fact format in file: {s}", file=sys.stderr)
+                    sys.exit(1)
+                input_facts.append(fact)
+    else:
+        print("Error: Provide --facts or --facts-file", file=sys.stderr)
+        sys.exit(1)
+
+    # Load rules and evaluate
+    rules = store.list_rules()
+    evaluator = RuleEvaluator(rules)
+    result = evaluator.evaluate(input_facts)
+
+    # Print results
+    print(f"\n=== Evaluation Results ===")
+    print(f"\nInput facts ({len(result.input_facts)}):")
+    for f in result.input_facts:
+        print(f"  • {f.to_display()}")
+
+    if result.fired_rules:
+        print(f"\nFired rules ({len(result.fired_rules)}):")
+        for rule in result.fired_rules:
+            cond_str = _format_rule_conditions(rule)
+            then_str = _format_rule_then(rule)
+            print(f"  {rule.rule_id}: IF {cond_str} THEN {then_str}")
+
+    if result.root_causes:
+        print(f"\nRoot causes identified ({len(result.root_causes)}):")
+        for rc in result.root_causes:
+            print(f"  ✓ {rc}")
+
+    if result.ruled_out:
+        print(f"\nRoot causes ruled out ({len(result.ruled_out)}):")
+        for ro in result.ruled_out:
+            print(f"  ✗ {ro}")
+
+    if result.gap_rules:
+        print(f"\nGAP rules encountered ({len(result.gap_rules)}):")
+        for gap in result.gap_rules:
+            requires_str = ", ".join(f.to_display() for f in gap.requires)
+            print(f"  {gap.rule_id}: REQUIRES {requires_str} — {gap.note}")
+
+    print(f"\nSummary: {len(rules)} rules evaluated, {len(result.fired_rules)} fired, "
+          f"{len(result.root_causes)} root causes, {len(result.ruled_out)} ruled out, "
+          f"{len(result.gap_rules)} GAPs")
+
+    # Write output file if requested
+    if output_file:
+        from ruamel.yaml import YAML as _YAML
+        out_yaml = _YAML()
+        out_yaml.default_flow_style = False
+        with open(output_file, "w", encoding="utf-8") as f:
+            out_yaml.dump(result.to_dict(), f)
+        print(f"\nResults written to: {output_file}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="ees",
@@ -348,6 +449,25 @@ def main() -> None:
         help="Path to the data directory (default: data)",
     )
 
+    evaluate_parser = subparsers.add_parser("evaluate", help="Evaluate facts against rules")
+    evaluate_parser.add_argument(
+        "--facts",
+        help="Semicolon-delimited facts: \"Noun(*).Prop op val; Noun(*).Prop op val\"",
+    )
+    evaluate_parser.add_argument(
+        "--facts-file",
+        help="Path to YAML file containing a list of fact strings",
+    )
+    evaluate_parser.add_argument(
+        "--data-dir",
+        default="data",
+        help="Path to the data directory (default: data)",
+    )
+    evaluate_parser.add_argument(
+        "--output",
+        help="Path to write evaluation results as YAML",
+    )
+
     args = parser.parse_args()
 
     if args.command == "process":
@@ -356,6 +476,13 @@ def main() -> None:
         except (IncidentLoadError, ConfigError, LLMError) as e:
             print(f"Error: {e}", file=sys.stderr)
             sys.exit(1)
+    elif args.command == "evaluate":
+        evaluate_facts(
+            facts_str=args.facts,
+            facts_file=args.facts_file,
+            data_dir=args.data_dir,
+            output_file=args.output,
+        )
     else:
         parser.print_help()
         sys.exit(1)

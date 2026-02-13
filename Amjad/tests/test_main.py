@@ -13,10 +13,12 @@ from ees.main import (
     _edit_fact,
     _format_rule_conditions,
     _specialize_fact,
+    evaluate_facts,
     main,
     process_incident,
 )
 from ees.models import (
+    EvaluationResult,
     Fact,
     Incident,
     LLMResponse,
@@ -609,3 +611,175 @@ class TestProcessIncidentRuleout:
         captured = capsys.readouterr()
         assert "THEN RULEOUT Network Issue" in captured.out
         assert len(result) == 1
+
+
+# ── CLI evaluate command tests ────────────────────────────────
+
+class TestEvaluateFacts:
+    """CLI evaluate subcommand integration tests."""
+
+    def test_evaluate_with_facts_flag(self, tmp_path, capsys):
+        """TC-16: ees evaluate --facts runs evaluation and prints results."""
+        data_dir = tmp_path / "data"
+        rules_dir = data_dir / "rules"
+        rules_dir.mkdir(parents=True)
+
+        # Write a rule file
+        from ruamel.yaml import YAML
+        yaml = YAML()
+        rule_data = Rule(
+            rule_id="R-001",
+            conditions=RuleConditions("AND", [Fact("Server", "*", "CPUUsage", ">", "90")]),
+            then=RuleThen("RootCause", "*", "Name", "HighCPU"),
+            because="High CPU indicates overload",
+        ).to_dict()
+        with open(rules_dir / "R-001.yaml", "w") as f:
+            yaml.dump(rule_data, f)
+
+        evaluate_facts(
+            facts_str="Server(*).CPUUsage > 90",
+            facts_file=None,
+            data_dir=str(data_dir),
+            output_file=None,
+        )
+
+        captured = capsys.readouterr()
+        assert "HighCPU" in captured.out
+
+    def test_evaluate_with_facts_file(self, tmp_path, capsys):
+        """TC-17: ees evaluate --facts-file reads facts from file."""
+        data_dir = tmp_path / "data"
+        rules_dir = data_dir / "rules"
+        rules_dir.mkdir(parents=True)
+
+        from ruamel.yaml import YAML
+        yaml = YAML()
+        rule_data = Rule(
+            rule_id="R-001",
+            conditions=RuleConditions("AND", [Fact("Server", "*", "CPUUsage", ">", "90")]),
+            then=RuleThen("RootCause", "*", "Name", "HighCPU"),
+            because="High CPU indicates overload",
+        ).to_dict()
+        with open(rules_dir / "R-001.yaml", "w") as f:
+            yaml.dump(rule_data, f)
+
+        # Write facts file
+        facts_file = tmp_path / "facts.yaml"
+        yaml.dump(["Server(*).CPUUsage > 90"], facts_file)
+
+        evaluate_facts(
+            facts_str=None,
+            facts_file=str(facts_file),
+            data_dir=str(data_dir),
+            output_file=None,
+        )
+
+        captured = capsys.readouterr()
+        assert "HighCPU" in captured.out
+
+    def test_evaluate_invalid_fact_format(self, tmp_path, capsys):
+        """TC-18: --facts with invalid fact format reports error."""
+        data_dir = tmp_path / "data"
+        rules_dir = data_dir / "rules"
+        rules_dir.mkdir(parents=True)
+
+        with pytest.raises(SystemExit):
+            evaluate_facts(
+                facts_str="this is not a valid fact",
+                facts_file=None,
+                data_dir=str(data_dir),
+                output_file=None,
+            )
+
+    def test_evaluate_no_rules(self, tmp_path, capsys):
+        """TC-19: --data-dir with no rules reports 0 rules fired."""
+        data_dir = tmp_path / "data"
+        rules_dir = data_dir / "rules"
+        rules_dir.mkdir(parents=True)
+
+        evaluate_facts(
+            facts_str="Server(*).CPUUsage > 90",
+            facts_file=None,
+            data_dir=str(data_dir),
+            output_file=None,
+        )
+
+        captured = capsys.readouterr()
+        assert "0" in captured.out  # 0 rules fired
+
+    def test_evaluate_output_file(self, tmp_path):
+        """TC-15: --output writes YAML file with correct structure."""
+        data_dir = tmp_path / "data"
+        rules_dir = data_dir / "rules"
+        rules_dir.mkdir(parents=True)
+
+        from ruamel.yaml import YAML
+        yaml = YAML()
+        rule_data = Rule(
+            rule_id="R-001",
+            conditions=RuleConditions("AND", [Fact("Server", "*", "CPUUsage", ">", "90")]),
+            then=RuleThen("RootCause", "*", "Name", "HighCPU"),
+            because="High CPU",
+        ).to_dict()
+        with open(rules_dir / "R-001.yaml", "w") as f:
+            yaml.dump(rule_data, f)
+
+        output_path = tmp_path / "result.yaml"
+        evaluate_facts(
+            facts_str="Server(*).CPUUsage > 90",
+            facts_file=None,
+            data_dir=str(data_dir),
+            output_file=str(output_path),
+        )
+
+        assert output_path.exists()
+        with open(output_path) as f:
+            result_data = yaml.load(f)
+        assert "root_causes" in result_data
+        assert "HighCPU" in result_data["root_causes"]
+
+    def test_evaluate_semicolon_delimiter(self, tmp_path, capsys):
+        """MN-1: Semicolons used as delimiter for multiple facts."""
+        data_dir = tmp_path / "data"
+        rules_dir = data_dir / "rules"
+        rules_dir.mkdir(parents=True)
+
+        from ruamel.yaml import YAML
+        yaml = YAML()
+        rule_data = Rule(
+            rule_id="R-001",
+            conditions=RuleConditions("AND", [
+                Fact("Server", "*", "CPUUsage", ">", "90"),
+                Fact("Server", "*", "MemoryFree", "<", "5%"),
+            ]),
+            then=RuleThen("RootCause", "*", "Name", "ResourceExhaustion"),
+            because="Both CPU and memory",
+        ).to_dict()
+        with open(rules_dir / "R-001.yaml", "w") as f:
+            yaml.dump(rule_data, f)
+
+        evaluate_facts(
+            facts_str="Server(*).CPUUsage > 90; Server(*).MemoryFree < 5%",
+            facts_file=None,
+            data_dir=str(data_dir),
+            output_file=None,
+        )
+
+        captured = capsys.readouterr()
+        assert "ResourceExhaustion" in captured.out
+
+
+class TestMainCLIEvaluate:
+    """Test CLI argument parsing for evaluate subcommand."""
+
+    def test_evaluate_subcommand_parsed(self, monkeypatch):
+        """evaluate subcommand is recognized by argparse."""
+        monkeypatch.setattr("sys.argv", [
+            "ees", "evaluate",
+            "--facts", "Server(*).CPUUsage > 90",
+            "--data-dir", "data",
+        ])
+        # Patch evaluate_facts to avoid actual execution
+        monkeypatch.setattr("ees.main.evaluate_facts", lambda **kwargs: None)
+        # Should not raise
+        main()
