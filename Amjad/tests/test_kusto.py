@@ -19,6 +19,7 @@ class TestKustoClientFetch:
         mock_df = MagicMock()
         mock_df.empty = False
         mock_df.iloc.__getitem__ = MagicMock(return_value="Server is down and not responding.")
+        # KQL projects 'Text' column from IncidentDescriptions
 
         with patch("ees.gui.kusto_client.KustoClient._execute_query", return_value=mock_df):
             from ees.gui.kusto_client import KustoClient
@@ -33,7 +34,7 @@ class TestKustoClientFetch:
     def test_fetch_not_found_raises(self) -> None:
         """TC-2: Returns RuntimeError when incident not found."""
         mock_df = MagicMock()
-        mock_df.empty = True
+        mock_df.empty = True  # No rows returned for unknown incident
 
         with patch("ees.gui.kusto_client.KustoClient._execute_query", return_value=mock_df):
             from ees.gui.kusto_client import KustoClient

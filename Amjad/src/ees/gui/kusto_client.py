@@ -20,8 +20,8 @@ _INCIDENT_ID_RE = re.compile(r"^[\w\-]+$")
 
 _KQL_TEMPLATE = (
     "IncidentDescriptions"
-    " | where IncidentId == '{incident_id}'"
-    " | project Description"
+    " | where IncidentId == {incident_id}"
+    " | project Text"
     " | take 1"
 )
 
