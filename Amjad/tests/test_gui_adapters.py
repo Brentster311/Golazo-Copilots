@@ -78,6 +78,19 @@ class TestFactsToRows:
         """Empty facts list returns empty rows."""
         assert facts_to_rows([]) == []
 
+    def test_facts_to_rows_includes_scope(self):
+        """TC-10: facts_to_rows includes scope field."""
+        fact = _fact("Server(*).CPUUsage > 90")
+        fact.scope = "context"
+        rows = facts_to_rows([fact])
+        assert rows[0]["scope"] == "context"
+
+    def test_facts_to_rows_scope_defaults_to_rule(self):
+        """facts_to_rows includes scope='rule' by default."""
+        fact = _fact("Server(*).CPUUsage > 90")
+        rows = facts_to_rows([fact])
+        assert rows[0]["scope"] == "rule"
+
 
 # ── AC-3: rules_to_rows ──────────────────────────────────────
 

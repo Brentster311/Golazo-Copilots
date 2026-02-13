@@ -244,9 +244,11 @@ def process_incident(incident_path: str, data_dir: str) -> None:
     root_cause = _confirm_root_cause(llm_response.root_cause)
 
     # Step 6: Confirm rules
+    # Only "rule" scope facts drive rule matching
+    rule_facts = [f for f in confirmed_facts if f.scope == "rule"]
     existing_rules = store.list_rules()
     gen = RuleGenerator(existing_rules)
-    filtered_rules = gen.filter_rules(llm_response.rules, confirmed_facts)
+    filtered_rules = gen.filter_rules(llm_response.rules, rule_facts)
 
     confirmed_rules: list[Rule] = []
     if filtered_rules:

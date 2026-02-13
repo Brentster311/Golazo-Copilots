@@ -93,6 +93,45 @@ class TestFactExtractorEmptyResponse:
         assert result.root_cause is None
 
 
+class TestFactExtractorScope:
+    """EES-00008: Scope field in LLM parse."""
+
+    def test_parse_response_reads_scope(self):
+        """TC-7: _parse_response reads scope from LLM JSON."""
+        extractor = FactExtractor.__new__(FactExtractor)
+        data = {
+            "facts": [
+                {"noun": "VM", "instance": "*", "property": "VMSize",
+                 "operator": "==", "value": "A100", "scope": "context"}
+            ],
+            "rules": [],
+            "root_cause": None,
+        }
+        result = extractor._parse_response(data)
+        assert result.facts[0].scope == "context"
+
+    def test_parse_response_defaults_scope_to_rule(self):
+        """TC-8: _parse_response defaults scope to 'rule' when absent."""
+        extractor = FactExtractor.__new__(FactExtractor)
+        data = {
+            "facts": [
+                {"noun": "VM", "instance": "*", "property": "VMSize",
+                 "operator": "==", "value": "A100"}
+            ],
+            "rules": [],
+            "root_cause": None,
+        }
+        result = extractor._parse_response(data)
+        assert result.facts[0].scope == "rule"
+
+    def test_system_prompt_contains_scope_instructions(self):
+        """TC-9: System prompt contains scope classification instructions."""
+        from ees.fact_extractor import _SYSTEM_PROMPT
+        assert "scope" in _SYSTEM_PROMPT.lower()
+        # Should mention what NOT to extract
+        assert "GUID" in _SYSTEM_PROMPT or "guid" in _SYSTEM_PROMPT.lower()
+
+
 class TestFactExtractorLLMFailure:
     """TC-25: LLM API failure."""
 

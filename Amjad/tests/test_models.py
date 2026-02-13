@@ -120,6 +120,54 @@ class TestFactSerialization:
         assert f.status == "confirmed"
 
 
+class TestFactScope:
+    """EES-00008: Fact scope classification tests."""
+
+    def test_scope_defaults_to_rule(self):
+        """TC-1: Fact scope should default to 'rule' for backward compatibility."""
+        f = Fact(noun="VM", instance="*", property="VMSize", operator="==", value="Standard_NC24")
+        assert f.scope == "rule"
+
+    def test_scope_can_be_set_to_context(self):
+        """TC-2: Fact scope can be explicitly set to 'context'."""
+        f = Fact(noun="RG", instance="*", property="Name", operator="==", value="my-rg", scope="context")
+        assert f.scope == "context"
+
+    def test_to_dict_includes_scope(self):
+        """TC-3: Fact.to_dict() includes scope."""
+        f = Fact(noun="RG", instance="*", property="Name", operator="==", value="my-rg", scope="context")
+        d = f.to_dict()
+        assert d["scope"] == "context"
+
+    def test_from_dict_reads_scope(self):
+        """TC-4: Fact.from_dict() reads scope from dict."""
+        d = {"noun": "VM", "instance": "*", "property": "VMSize",
+             "operator": "==", "value": "A100", "status": "confirmed", "scope": "context"}
+        f = Fact.from_dict(d)
+        assert f.scope == "context"
+
+    def test_from_dict_defaults_scope_to_rule(self):
+        """TC-5: Fact.from_dict() defaults scope to 'rule' when absent (backward compat)."""
+        d = {"noun": "VM", "instance": "*", "property": "VMSize",
+             "operator": "==", "value": "A100", "status": "confirmed"}
+        f = Fact.from_dict(d)
+        assert f.scope == "rule"
+
+    def test_to_condition_dict_excludes_scope(self):
+        """TC-6: Fact.to_condition_dict() does NOT include scope."""
+        f = Fact(noun="RG", instance="*", property="Name", operator="==", value="my-rg", scope="context")
+        d = f.to_condition_dict()
+        assert "scope" not in d
+
+    def test_roundtrip_with_scope(self):
+        """Scope survives to_dict/from_dict round-trip."""
+        f = Fact(noun="VM", instance="*", property="VMSize", operator="==", value="A100", scope="context")
+        d = f.to_dict()
+        f2 = Fact.from_dict(d)
+        assert f2.scope == "context"
+        assert f == f2
+
+
 class TestRuleConditions:
     def test_roundtrip(self):
         rc = RuleConditions(

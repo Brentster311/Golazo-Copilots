@@ -31,6 +31,7 @@ class Fact:
     operator: str
     value: str
     status: Literal["confirmed", "rejected"] = "confirmed"
+    scope: Literal["rule", "context"] = "rule"
 
     def to_display(self) -> str:
         """Format as human-readable string: Noun(instance).Property operator value."""
@@ -62,9 +63,10 @@ class Fact:
         }
 
     def to_dict(self) -> dict:
-        """Serialize to dict for YAML output (includes status)."""
+        """Serialize to dict for YAML output (includes status and scope)."""
         d = self.to_condition_dict()
         d["status"] = self.status
+        d["scope"] = self.scope
         return d
 
     @classmethod
@@ -77,6 +79,7 @@ class Fact:
             operator=d["operator"],
             value=d["value"],
             status=d.get("status", "confirmed"),
+            scope=d.get("scope", "rule"),
         )
 
 

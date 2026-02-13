@@ -11,7 +11,7 @@ from ees.models import EvaluationResult, Fact, OntologyNoun, Rule
 def facts_to_rows(facts: list[Fact]) -> list[dict]:
     """Convert Fact objects to display-ready row dicts.
 
-    Each row: {noun, instance, property, operator, value, status, display}
+    Each row: {noun, instance, property, operator, value, status, scope, display}
     """
     return [
         {
@@ -21,6 +21,7 @@ def facts_to_rows(facts: list[Fact]) -> list[dict]:
             "operator": f.operator,
             "value": f.value,
             "status": f.status,
+            "scope": f.scope,
             "display": f.to_display(),
         }
         for f in facts

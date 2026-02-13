@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "work_item_id": "EES-00008",
+  "profile": "complete",
+  "current_phase": "development",
+  "current_role": "developer",
+  "created_at": "2026-02-13T21:44:52.054100Z",
+  "updated_at": "2026-02-13T21:51:00.129817Z",
+  "role_history": [
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-02-13T21:44:52.054100Z",
+      "exited_at": "2026-02-13T21:48:06.113431Z"
+    },
+    {
+      "role": "program-manager",
+      "entered_at": "2026-02-13T21:48:06.113431Z",
+      "exited_at": "2026-02-13T21:49:05.248761Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-02-13T21:49:05.248761Z",
+      "exited_at": "2026-02-13T21:50:11.448104Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-02-13T21:50:11.448104Z",
+      "exited_at": "2026-02-13T21:51:00.129817Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-02-13T21:51:00.129817Z",
+      "exited_at": null
+    }
+  ],
+  "deviations": []
+}

@@ -30,7 +30,7 @@ extract structured facts and propose troubleshooting rules.
 Output JSON with this exact schema:
 {
   "facts": [
-    {"noun": "<NounName>", "instance": "*", "property": "<PropertyName>", "operator": "<op>", "value": "<val>"}
+    {"noun": "<NounName>", "instance": "*", "property": "<PropertyName>", "operator": "<op>", "value": "<val>", "scope": "rule"}
   ],
   "rules": [
     {
@@ -57,6 +57,23 @@ For RULEOUT rules (elimination reasoning like "we ruled out X because..."):
   "because": "Why this root cause is ruled out"
 }
 
+Fact scope classification:
+- Each fact MUST include a "scope" field: "rule" or "context".
+- "rule" = generalizable across incidents (use in troubleshooting rules).
+- "context" = instance-specific documentation (saved but NOT used in rules).
+
+Extract as "scope": "rule":
+- Error codes, result codes, failure categories
+- VM SKU sizes, operation types, service names
+- Boolean states (success/failure flags)
+- Error message patterns (use 'contains' operator)
+
+Extract as "scope": "context" (or DO NOT extract at all):
+- Resource group names, resource names, cluster names, node names
+- GUIDs (activity IDs, correlation IDs, request IDs, subscription IDs)
+- Specific timestamps or dates
+- Region names (unless the root cause IS region-specific)
+
 Rules:
 - Default instance to "*" (generalized) unless the incident clearly requires a specific instance.
 - Valid operators: ==, !=, >, <, >=, <=, contains, !contains
@@ -64,6 +81,7 @@ Rules:
 - Every rule must have a BECAUSE clause.
 - Reuse existing ontology noun/property names when they match (case-insensitive).
 - Identify the root cause if present in the incident, or set to null.
+- Only use "scope": "rule" facts in rule conditions.
 """
 
 

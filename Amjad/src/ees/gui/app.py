@@ -147,7 +147,7 @@ class EESApp:
         facts_frame = ttk.LabelFrame(right, text="Proposed Facts")
         facts_frame.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
 
-        cols = ("noun", "instance", "property", "operator", "value", "status")
+        cols = ("noun", "instance", "property", "operator", "value", "status", "scope")
         self.facts_tree = ttk.Treeview(facts_frame, columns=cols,
                                        show="headings", height=8)
         for col in cols:
@@ -166,6 +166,12 @@ class EESApp:
                        side=tk.LEFT, padx=2)
         ttk.Button(fact_btns, text="Confirm All",
                    command=self._confirm_all_facts).pack(side=tk.LEFT, padx=2)
+        ttk.Button(fact_btns, text="Set Rule",
+                   command=lambda: self._set_fact_scope("rule")).pack(
+                       side=tk.LEFT, padx=2)
+        ttk.Button(fact_btns, text="Set Context",
+                   command=lambda: self._set_fact_scope("context")).pack(
+                       side=tk.LEFT, padx=2)
 
         # Rules/save frame
         rules_frame = ttk.LabelFrame(right, text="Proposed Rules")
@@ -298,6 +304,7 @@ class EESApp:
             self.facts_tree.insert("", tk.END, iid=str(i), values=(
                 row["noun"], row["instance"], row["property"],
                 row["operator"], row["value"], row["status"],
+                row["scope"],
             ))
 
         # Populate rules tree
@@ -331,6 +338,16 @@ class EESApp:
             vals[5] = "confirmed"
             self.facts_tree.item(str(i), values=vals)
 
+    def _set_fact_scope(self, scope: str) -> None:
+        """Set the scope ('rule' or 'context') for selected facts."""
+        selected = self.facts_tree.selection()
+        for iid in selected:
+            idx = int(iid)
+            self._pending_facts[idx].scope = scope
+            vals = list(self.facts_tree.item(iid, "values"))
+            vals[6] = scope
+            self.facts_tree.item(iid, values=vals)
+
     def _save_all(self) -> None:
         """Save the processed incident, confirmed rules, and updates."""
         confirmed_facts = [f for f in self._pending_facts
@@ -351,10 +368,11 @@ class EESApp:
         )
         self.store.save_incident(incident)
 
-        # Filter and save rules
+        # Filter and save rules — only "rule" scope facts drive rule matching
+        rule_facts = [f for f in confirmed_facts if f.scope == "rule"]
         existing_rules = self.store.list_rules()
         gen = RuleGenerator(existing_rules)
-        filtered = gen.filter_rules(self._pending_rules, confirmed_facts)
+        filtered = gen.filter_rules(self._pending_rules, rule_facts)
 
         for rule in filtered:
             rule.rule_id = self.store.next_rule_id()
@@ -577,7 +595,8 @@ class EESApp:
                 f"Property:  {fact.property}\n"
                 f"Operator:  {fact.operator}\n"
                 f"Value:     {fact.value}\n"
-                f"Status:    {fact.status}"
+                f"Status:    {fact.status}\n"
+                f"Scope:     {fact.scope}"
             )
             _show_detail_dialog(self.root, "Fact Detail", detail)
 
