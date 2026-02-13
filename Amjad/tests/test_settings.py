@@ -35,8 +35,8 @@ class TestSettingsManagerLoad:
         mgr = SettingsManager(tmp_path)
         settings = mgr.load()
         assert settings["endpoint"] == "https://open-ai-poc.openai.azure.com/"
-        assert settings["deployment"] == "gpt5.2"
-        assert settings["api_version"] == "2025-12-11"
+        assert settings["deployment"] == "gpt-5.2"
+        assert settings["api_version"] == "2024-12-01-preview"
 
 
 class TestSettingsManagerSave:

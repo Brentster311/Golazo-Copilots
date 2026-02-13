@@ -78,7 +78,7 @@ python -m ees.gui --data-dir data
 
 The GUI uses Tkinter (ships with Python, no extra dependencies). LLM calls run on background threads to keep the UI responsive.
 
-Azure OpenAI settings can be configured via **File → Settings** in the GUI. Settings are saved to `data/settings.yaml` and override environment variables. Defaults: endpoint `open-ai-poc`, deployment `gpt5.2`, API version `2025-12-11`.
+Azure OpenAI settings can be configured via **File → Settings** in the GUI. Settings are saved to `data/settings.yaml` and override environment variables. Defaults: endpoint `open-ai-poc`, deployment `gpt-5.2`, API version `2024-12-01-preview`.
 
 **Kusto Integration:** The Process Incident tab also supports fetching incident text directly from Azure Data Explorer (Kusto). Enter an Incident ID and click "Fetch from Kusto" to retrieve the description from the `IncidentDescriptions` table. Kusto cluster and database are configurable in Settings. If `accia-datacollection` is not installed, the Fetch button is disabled (graceful degradation).
 

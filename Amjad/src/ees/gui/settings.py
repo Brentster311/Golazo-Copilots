@@ -13,8 +13,8 @@ from ruamel.yaml import YAML
 
 _DEFAULTS: dict[str, str] = {
     "endpoint": "https://open-ai-poc.openai.azure.com/",
-    "deployment": "gpt5.2",
-    "api_version": "2025-12-11",
+    "deployment": "gpt-5.2",
+    "api_version": "2024-12-01-preview",
 }
 
 _ENV_MAP: dict[str, str] = {
