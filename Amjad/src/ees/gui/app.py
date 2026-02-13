@@ -12,19 +12,12 @@ from pathlib import Path
 
 from tkhtmlview import HTMLScrolledText
 
-_RGBA_RE = re.compile(
-    r"rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*[\d.]+)?\s*\)"
-)
+_STYLE_RE = re.compile(r'\s*style\s*=\s*"[^"]*"', re.IGNORECASE)
 
 
 def _sanitize_html_colors(html: str) -> str:
-    """Replace CSS rgba()/rgb() colors with hex — Tkinter can't handle them."""
-    return _RGBA_RE.sub(
-        lambda m: "#{:02x}{:02x}{:02x}".format(
-            int(m.group(1)), int(m.group(2)), int(m.group(3))
-        ),
-        html,
-    )
+    """Strip inline style attributes — Tkinter can't handle CSS values."""
+    return _STYLE_RE.sub("", html)
 
 
 from ees.fact_extractor import FactExtractor
