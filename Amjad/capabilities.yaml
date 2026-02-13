@@ -114,6 +114,7 @@ capabilities:
       - src/ees/gui/app.py
       - src/ees/gui/adapters.py
       - src/ees/gui/workers.py
+      - src/ees/gui/settings.py
     contracts:
       - "EESApp(data_dir) — main application class"
       - "facts_to_rows, rules_to_rows, ontology_to_tree, eval_result_to_display, filter_rules — adapter functions"

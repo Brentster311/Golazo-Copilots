@@ -19,6 +19,7 @@ from ees.gui.adapters import (
     rules_to_rows,
 )
 from ees.gui.workers import run_in_worker
+from ees.gui.settings import SettingsManager
 from ees.models import Fact, Incident, Rule, RootCause
 from ees.ontology_manager import OntologyManager
 from ees.rule_evaluator import RuleEvaluator
@@ -32,6 +33,7 @@ class EESApp:
     def __init__(self, data_dir: str = "data") -> None:
         self.data_dir = Path(data_dir)
         self.store = YamlStore(self.data_dir)
+        self.settings_mgr = SettingsManager(self.data_dir)
 
         self._ensure_data_dirs()
 
@@ -55,6 +57,8 @@ class EESApp:
         file_menu = tk.Menu(menubar, tearoff=0)
         file_menu.add_command(label="Set Data Directory...",
                               command=self._set_data_dir)
+        file_menu.add_command(label="Settings...",
+                              command=self._open_settings)
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.root.quit)
         menubar.add_cascade(label="File", menu=file_menu)
@@ -193,7 +197,12 @@ class EESApp:
         ontology_nouns = self.store.load_ontology()
 
         def do_extract():
-            extractor = FactExtractor()
+            settings = self.settings_mgr.load()
+            extractor = FactExtractor(
+                endpoint=settings["endpoint"],
+                deployment=settings["deployment"],
+                api_version=settings["api_version"],
+            )
             return extractor.extract(self._incident_text, ontology_nouns)
 
         def on_complete(llm_response):
@@ -494,14 +503,91 @@ class EESApp:
         if path:
             self.data_dir = Path(path)
             self.store = YamlStore(self.data_dir)
+            self.settings_mgr = SettingsManager(self.data_dir)
             self._ensure_data_dirs()
             self.status_var.set(f"Data: {self.data_dir.resolve()}")
+
+    def _open_settings(self) -> None:
+        """Open the Settings dialog."""
+        SettingsDialog(self.root, self.settings_mgr)
 
     # ── Run ───────────────────────────────────────────────────
 
     def run(self) -> None:
         """Start the GUI event loop."""
         self.root.mainloop()
+
+
+class SettingsDialog:
+    """Modal dialog for Azure OpenAI configuration."""
+
+    _FIELDS = [
+        ("endpoint", "Endpoint URL:"),
+        ("deployment", "Deployment:"),
+        ("api_version", "API Version:"),
+    ]
+
+    def __init__(self, parent: tk.Tk, settings_mgr: SettingsManager) -> None:
+        self._mgr = settings_mgr
+
+        self._dialog = tk.Toplevel(parent)
+        self._dialog.title("Settings — Azure OpenAI")
+        self._dialog.resizable(False, False)
+        self._dialog.grab_set()
+        self._dialog.transient(parent)
+
+        self._entries: dict[str, tk.StringVar] = {}
+        self._source_labels: dict[str, ttk.Label] = {}
+
+        frame = ttk.Frame(self._dialog, padding=15)
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        for row, (key, label) in enumerate(self._FIELDS):
+            ttk.Label(frame, text=label).grid(
+                row=row, column=0, sticky=tk.W, pady=4)
+            var = tk.StringVar()
+            entry = ttk.Entry(frame, textvariable=var, width=50)
+            entry.grid(row=row, column=1, padx=5, pady=4)
+            src_label = ttk.Label(frame, text="", width=10)
+            src_label.grid(row=row, column=2, padx=5, pady=4)
+
+            # Load effective value
+            value, source = self._mgr.get_effective(key)
+            var.set(value)
+            src_label.config(text=f"({source})")
+
+            self._entries[key] = var
+            self._source_labels[key] = src_label
+
+        # Buttons
+        btn_frame = ttk.Frame(frame)
+        btn_frame.grid(row=len(self._FIELDS), column=0, columnspan=3,
+                       pady=10)
+        ttk.Button(btn_frame, text="Save", command=self._save).pack(
+            side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Cancel",
+                   command=self._dialog.destroy).pack(side=tk.LEFT, padx=5)
+
+    def _save(self) -> None:
+        settings = {key: var.get() for key, var in self._entries.items()}
+
+        # Basic URL validation
+        endpoint = settings.get("endpoint", "")
+        if endpoint and not endpoint.startswith("https://"):
+            messagebox.showwarning(
+                "Warning",
+                "Endpoint should start with https://. Saving anyway.",
+                parent=self._dialog,
+            )
+
+        self._mgr.save(settings)
+
+        # Update source labels
+        for key in self._entries:
+            self._source_labels[key].config(text="(config)")
+
+        messagebox.showinfo("Settings", "Settings saved.", parent=self._dialog)
+        self._dialog.destroy()
 
 
 def _format_eval_display(display: dict, *, total_rules: int) -> str:

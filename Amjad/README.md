@@ -78,6 +78,8 @@ python -m ees.gui --data-dir data
 
 The GUI uses Tkinter (ships with Python, no extra dependencies). LLM calls run on background threads to keep the UI responsive.
 
+Azure OpenAI settings can be configured via **File → Settings** in the GUI. Settings are saved to `data/settings.yaml` and override environment variables. Defaults: endpoint `open-ai-poc`, deployment `gpt5.2`, API version `2025-12-11`.
+
 ### Process Workflow
 
 1. **Load** — Validates and reads the incident text file
@@ -157,7 +159,7 @@ RULEOUT rules:
 pytest tests/ -v
 ```
 
-207 tests covering models, YAML persistence, ontology management, incident loading, LLM integration (mocked), rule generation, GAP detection, GAP refinement, RULEOUT rule handling, rule evaluation engine, and GUI adapters/workers.
+217 tests covering models, YAML persistence, ontology management, incident loading, LLM integration (mocked), rule generation, GAP detection, GAP refinement, RULEOUT rule handling, rule evaluation engine, GUI adapters/workers, and settings management.
 
 ## Project Structure
 
@@ -178,6 +180,7 @@ src/ees/
     ├── __init__.py
     ├── __main__.py      # python -m ees.gui support
     ├── adapters.py      # Pure model → display-data converters
+    ├── settings.py      # Settings persistence (Azure OpenAI config)
     ├── workers.py       # Background thread utilities
     └── app.py           # Main Tkinter application (EESApp)
 ```

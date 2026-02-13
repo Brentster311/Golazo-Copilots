@@ -70,16 +70,24 @@ Rules:
 class FactExtractor:
     """Extracts facts and rules from incident text using Azure OpenAI."""
 
-    def __init__(self) -> None:
-        endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
-        if not endpoint:
+    def __init__(
+        self,
+        *,
+        endpoint: str | None = None,
+        deployment: str | None = None,
+        api_version: str | None = None,
+    ) -> None:
+        resolved_endpoint = endpoint or os.environ.get("AZURE_OPENAI_ENDPOINT")
+        if not resolved_endpoint:
             raise ConfigError("AZURE_OPENAI_ENDPOINT environment variable not set.")
 
-        self.deployment = os.environ.get("AZURE_OPENAI_DEPLOYMENT")
+        self.deployment = deployment or os.environ.get("AZURE_OPENAI_DEPLOYMENT")
         if not self.deployment:
             raise ConfigError("AZURE_OPENAI_DEPLOYMENT environment variable not set.")
 
-        api_version = os.environ.get("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
+        resolved_api_version = api_version or os.environ.get(
+            "AZURE_OPENAI_API_VERSION", "2024-12-01-preview"
+        )
 
         # Per TechBestPractices.md: explicit credential chain, NOT DefaultAzureCredential
         credential = ChainedTokenCredential(
@@ -88,9 +96,9 @@ class FactExtractor:
         )
 
         self.client = AzureOpenAI(
-            azure_endpoint=endpoint,
+            azure_endpoint=resolved_endpoint,
             azure_ad_token_provider=self._make_token_provider(credential),
-            api_version=api_version,
+            api_version=resolved_api_version,
         )
 
     @staticmethod
