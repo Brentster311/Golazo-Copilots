@@ -1,0 +1,124 @@
+"""Adapter functions — convert engine models to GUI display-ready data.
+
+These are pure Python functions with no Tkinter dependency,
+making them fully testable without a GUI event loop.
+"""
+from __future__ import annotations
+
+from ees.models import EvaluationResult, Fact, OntologyNoun, Rule
+
+
+def facts_to_rows(facts: list[Fact]) -> list[dict]:
+    """Convert Fact objects to display-ready row dicts.
+
+    Each row: {noun, instance, property, operator, value, status, display}
+    """
+    return [
+        {
+            "noun": f.noun,
+            "instance": f.instance,
+            "property": f.property,
+            "operator": f.operator,
+            "value": f.value,
+            "status": f.status,
+            "display": f.to_display(),
+        }
+        for f in facts
+    ]
+
+
+def rules_to_rows(rules: list[Rule]) -> list[dict]:
+    """Convert Rule objects to display-ready row dicts.
+
+    Each row: {rule_id, status, type, conditions, then, because, sources}
+    """
+    rows = []
+    for r in rules:
+        # Format conditions as readable string
+        parts = []
+        for item in r.conditions.items:
+            parts.append(f"{item.noun}({item.instance}).{item.property} "
+                         f"{item.operator} {item.value}")
+        joiner = f" {r.conditions.logic} "
+        conditions_str = joiner.join(parts)
+
+        # Format then clause
+        if r.type == "ruleout":
+            then_str = f"RULEOUT {r.then.value}"
+        else:
+            then_str = (f"{r.then.noun}({r.then.instance}).{r.then.property} "
+                        f"= {r.then.value}")
+
+        rows.append({
+            "rule_id": r.rule_id,
+            "status": r.status,
+            "type": r.type,
+            "conditions": conditions_str,
+            "then": then_str,
+            "because": r.because,
+            "sources": r.sources,
+        })
+    return rows
+
+
+def ontology_to_tree(nouns: list[OntologyNoun]) -> list[dict]:
+    """Convert OntologyNoun objects to tree-ready dicts.
+
+    Each entry: {noun, properties: [{name, type}]}
+    """
+    tree = []
+    for noun in nouns:
+        tree.append({
+            "noun": noun.name,
+            "properties": [
+                {"name": p.name, "type": p.type}
+                for p in noun.properties
+            ],
+        })
+    return tree
+
+
+def eval_result_to_display(result: EvaluationResult) -> dict:
+    """Convert EvaluationResult to a display-ready dict.
+
+    Keys: input_facts, fired_rules, root_causes, ruled_out, gap_rules, trace
+    """
+    return {
+        "input_facts": [f.to_display() for f in result.input_facts],
+        "fired_rules": [
+            {
+                "rule_id": r.rule_id,
+                "conditions": " AND ".join(
+                    item.to_display() for item in r.conditions.items
+                ),
+                "then": r.then.value,
+                "type": r.type,
+            }
+            for r in result.fired_rules
+        ],
+        "root_causes": list(result.root_causes),
+        "ruled_out": list(result.ruled_out),
+        "gap_rules": [
+            {
+                "rule_id": g.rule_id,
+                "requires": ", ".join(f.to_display() for f in g.requires),
+                "note": g.note,
+            }
+            for g in result.gap_rules
+        ],
+        "trace": result.rule_trace,
+    }
+
+
+def filter_rules(
+    rules: list[Rule],
+    status: str | None = None,
+    rule_type: str | None = None,
+) -> list[Rule]:
+    """Filter rules by status and/or type."""
+    result = rules
+    if status is not None:
+        result = [r for r in result if r.status == status]
+    if rule_type is not None:
+        result = [r for r in result if r.type == rule_type]
+    return result

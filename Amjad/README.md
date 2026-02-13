@@ -61,6 +61,23 @@ The evaluate command runs a forward-chaining rule evaluation engine that:
 - Reports identified root causes, eliminated candidates (RULEOUT), and GAP rules encountered
 - Provides a full rule chain trace for auditability
 
+### GUI Application
+
+A desktop GUI for visual incident processing, knowledge base browsing, and rule evaluation:
+
+```bash
+ees-gui --data-dir data
+# or
+python -m ees.gui --data-dir data
+```
+
+**Tabs:**
+- **Process Incident** — Load incident files, review AI-proposed facts (confirm/reject), preview generated rules, save all to YAML
+- **Knowledge Base** — Browse rules (filter by status/type), ontology (tree view), and root causes
+- **Evaluate** — Enter facts (one per line), run forward-chaining evaluation, view root causes, ruleouts, and GAPs
+
+The GUI uses Tkinter (ships with Python, no extra dependencies). LLM calls run on background threads to keep the UI responsive.
+
 ### Process Workflow
 
 1. **Load** — Validates and reads the incident text file
@@ -140,7 +157,7 @@ RULEOUT rules:
 pytest tests/ -v
 ```
 
-189 tests covering models, YAML persistence, ontology management, incident loading, LLM integration (mocked), rule generation, GAP detection, GAP refinement, RULEOUT rule handling, and rule evaluation engine.
+207 tests covering models, YAML persistence, ontology management, incident loading, LLM integration (mocked), rule generation, GAP detection, GAP refinement, RULEOUT rule handling, rule evaluation engine, and GUI adapters/workers.
 
 ## Project Structure
 
@@ -156,5 +173,11 @@ src/ees/
 ├── rule_generator.py    # Rule deduplication and filtering
 ├── gap_detector.py      # GAP detection and refinement
 ├── rule_evaluator.py    # Forward-chaining rule evaluation engine
-└── main.py              # CLI entry point (process + evaluate)
+├── main.py              # CLI entry point (process + evaluate)
+└── gui/                 # Desktop GUI application
+    ├── __init__.py
+    ├── __main__.py      # python -m ees.gui support
+    ├── adapters.py      # Pure model → display-data converters
+    ├── workers.py       # Background thread utilities
+    └── app.py           # Main Tkinter application (EESApp)
 ```

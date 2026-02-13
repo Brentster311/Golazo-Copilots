@@ -22,6 +22,7 @@ dev = [
 
 [project.scripts]
 ees = "ees.main:main"
+ees-gui = "ees.gui.app:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
