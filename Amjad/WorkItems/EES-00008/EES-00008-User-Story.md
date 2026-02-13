@@ -1,6 +1,6 @@
 # EES-00008: Fact Scope Classification — Prevent Rule Overfitting
 
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 ## User Story
 - **Title**: Fact scope classification to prevent rule overfitting

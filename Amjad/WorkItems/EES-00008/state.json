@@ -2,10 +2,10 @@
   "schema_version": "1.0",
   "work_item_id": "EES-00008",
   "profile": "complete",
-  "current_phase": "development",
-  "current_role": "developer",
+  "current_phase": "completion",
+  "current_role": "builder",
   "created_at": "2026-02-13T21:44:52.054100Z",
-  "updated_at": "2026-02-13T21:51:00.129817Z",
+  "updated_at": "2026-02-13T21:57:25.613029Z",
   "role_history": [
     {
       "role": "project-owner-assistant",
@@ -30,6 +30,21 @@
     {
       "role": "developer",
       "entered_at": "2026-02-13T21:51:00.129817Z",
+      "exited_at": "2026-02-13T21:56:48.960098Z"
+    },
+    {
+      "role": "refactor-expert",
+      "entered_at": "2026-02-13T21:56:48.960098Z",
+      "exited_at": "2026-02-13T21:57:07.782437Z"
+    },
+    {
+      "role": "documentor",
+      "entered_at": "2026-02-13T21:57:07.782437Z",
+      "exited_at": "2026-02-13T21:57:25.613029Z"
+    },
+    {
+      "role": "builder",
+      "entered_at": "2026-02-13T21:57:25.613029Z",
       "exited_at": null
     }
   ],
