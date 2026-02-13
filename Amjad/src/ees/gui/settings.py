@@ -1,4 +1,4 @@
-"""Settings manager for EES GUI — persists Azure OpenAI config to YAML.
+"""Settings manager for EES GUI — persists Azure OpenAI and Kusto config to YAML.
 
 Resolution order: settings.yaml → environment variable → built-in default.
 No Tkinter dependency — fully testable in isolation.
@@ -21,6 +21,16 @@ _ENV_MAP: dict[str, str] = {
     "endpoint": "AZURE_OPENAI_ENDPOINT",
     "deployment": "AZURE_OPENAI_DEPLOYMENT",
     "api_version": "AZURE_OPENAI_API_VERSION",
+}
+
+_KUSTO_DEFAULTS: dict[str, str] = {
+    "cluster": "https://acciafollowercentralus.centralus.kusto.windows.net",
+    "database": "IcmDataWarehouse",
+}
+
+_KUSTO_ENV_MAP: dict[str, str] = {
+    "cluster": "KUSTO_CLUSTER",
+    "database": "KUSTO_DATABASE",
 }
 
 _SETTINGS_FILE = "settings.yaml"
@@ -51,14 +61,48 @@ class SettingsManager:
         }
 
     def save(self, settings: dict[str, str]) -> None:
-        """Persist settings to settings.yaml."""
-        data: dict[str, Any] = {
-            "azure_openai": {
-                "endpoint": settings.get("endpoint", ""),
-                "deployment": settings.get("deployment", ""),
-                "api_version": settings.get("api_version", ""),
-            }
+        """Persist Azure OpenAI settings to settings.yaml (preserves other sections)."""
+        existing = self._load_raw()
+        existing["azure_openai"] = {
+            "endpoint": settings.get("endpoint", ""),
+            "deployment": settings.get("deployment", ""),
+            "api_version": settings.get("api_version", ""),
         }
+        self._write_raw(existing)
+
+    # ── Kusto settings ────────────────────────────────────────
+
+    def load_kusto(self) -> dict[str, str]:
+        """Load Kusto settings from YAML; return defaults if missing."""
+        if not self._path.exists():
+            return dict(_KUSTO_DEFAULTS)
+
+        raw = self._yaml.load(self._path)
+        section = (raw or {}).get("kusto", {})
+        return {
+            key: section.get(key, _KUSTO_DEFAULTS[key]) or _KUSTO_DEFAULTS[key]
+            for key in _KUSTO_DEFAULTS
+        }
+
+    def save_kusto(self, settings: dict[str, str]) -> None:
+        """Persist Kusto settings to settings.yaml (preserves other sections)."""
+        existing = self._load_raw()
+        existing["kusto"] = {
+            "cluster": settings.get("cluster", ""),
+            "database": settings.get("database", ""),
+        }
+        self._write_raw(existing)
+
+    # ── Helpers ───────────────────────────────────────────────
+
+    def _load_raw(self) -> dict[str, Any]:
+        """Load the full raw YAML dict, or empty dict if missing."""
+        if self._path.exists():
+            return dict(self._yaml.load(self._path) or {})
+        return {}
+
+    def _write_raw(self, data: dict[str, Any]) -> None:
+        """Write full dict back to settings file."""
         self._data_dir.mkdir(parents=True, exist_ok=True)
         with self._path.open("w", encoding="utf-8") as f:
             self._yaml.dump(data, f)

@@ -20,6 +20,10 @@ from ees.gui.adapters import (
 )
 from ees.gui.workers import run_in_worker
 from ees.gui.settings import SettingsManager
+try:
+    from ees.gui.kusto_client import KustoClient, KUSTO_AVAILABLE
+except ImportError:  # pragma: no cover
+    KUSTO_AVAILABLE = False
 from ees.models import Fact, Incident, Rule, RootCause
 from ees.ontology_manager import OntologyManager
 from ees.rule_evaluator import RuleEvaluator
@@ -103,6 +107,26 @@ class EESApp:
                                       command=self._extract_facts)
         self.extract_btn.pack(side=tk.LEFT, padx=5)
 
+        # Kusto fetch row
+        kusto_row = ttk.Frame(frame)
+        kusto_row.pack(fill=tk.X, padx=5, pady=(0, 5))
+
+        ttk.Label(kusto_row, text="Incident ID:").pack(side=tk.LEFT)
+        self.incident_id_var = tk.StringVar()
+        ttk.Entry(kusto_row, textvariable=self.incident_id_var, width=30).pack(
+            side=tk.LEFT, padx=5)
+        self.fetch_kusto_btn = ttk.Button(
+            kusto_row, text="Fetch from Kusto",
+            command=self._fetch_from_kusto,
+            state=tk.NORMAL if KUSTO_AVAILABLE else tk.DISABLED,
+        )
+        self.fetch_kusto_btn.pack(side=tk.LEFT)
+        if not KUSTO_AVAILABLE:
+            ttk.Label(
+                kusto_row, text="(azure-kusto-data not installed)",
+                foreground="gray",
+            ).pack(side=tk.LEFT, padx=5)
+
         # Paned window: left=text, right=facts/rules
         paned = ttk.PanedWindow(frame, orient=tk.HORIZONTAL)
         paned.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
@@ -184,6 +208,49 @@ class EESApp:
             self.incident_text.config(state=tk.DISABLED)
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load file: {e}")
+
+    def _fetch_from_kusto(self) -> None:
+        """Fetch incident text from Kusto by incident ID."""
+        incident_id = self.incident_id_var.get().strip()
+        if not incident_id:
+            messagebox.showwarning("Warning", "Enter an Incident ID first.")
+            return
+
+        self.fetch_kusto_btn.config(state=tk.DISABLED)
+        self.progress.start()
+        self.status_var.set(f"Fetching incident {incident_id} from Kusto...")
+
+        kusto_settings = self.settings_mgr.load_kusto()
+        client = KustoClient(
+            cluster=kusto_settings["cluster"],
+            database=kusto_settings["database"],
+        )
+
+        def task():
+            return client.fetch_incident(incident_id)
+
+        def on_done(text):
+            self.progress.stop()
+            self.fetch_kusto_btn.config(state=tk.NORMAL)
+            self._incident_text = text
+            self.incident_text.config(state=tk.NORMAL)
+            self.incident_text.delete("1.0", tk.END)
+            self.incident_text.insert("1.0", text)
+            self.incident_text.config(state=tk.DISABLED)
+            self.status_var.set(
+                f"Loaded incident {incident_id} from Kusto "
+                f"({len(text)} chars)"
+            )
+
+        def on_error(exc):
+            self.progress.stop()
+            self.fetch_kusto_btn.config(state=tk.NORMAL)
+            self.status_var.set("Kusto fetch failed.")
+            messagebox.showerror(
+                "Kusto Error", str(exc), parent=self.root,
+            )
+
+        run_in_worker(self.root, task, on_done, on_error)
 
     def _extract_facts(self) -> None:
         if not self._incident_text:
@@ -519,30 +586,41 @@ class EESApp:
 
 
 class SettingsDialog:
-    """Modal dialog for Azure OpenAI configuration."""
+    """Modal dialog for Azure OpenAI and Kusto configuration."""
 
-    _FIELDS = [
+    _OPENAI_FIELDS = [
         ("endpoint", "Endpoint URL:"),
         ("deployment", "Deployment:"),
         ("api_version", "API Version:"),
+    ]
+
+    _KUSTO_FIELDS = [
+        ("cluster", "Kusto Cluster:"),
+        ("database", "Kusto Database:"),
     ]
 
     def __init__(self, parent: tk.Tk, settings_mgr: SettingsManager) -> None:
         self._mgr = settings_mgr
 
         self._dialog = tk.Toplevel(parent)
-        self._dialog.title("Settings — Azure OpenAI")
+        self._dialog.title("Settings")
         self._dialog.resizable(False, False)
         self._dialog.grab_set()
         self._dialog.transient(parent)
 
         self._entries: dict[str, tk.StringVar] = {}
         self._source_labels: dict[str, ttk.Label] = {}
+        self._kusto_entries: dict[str, tk.StringVar] = {}
 
         frame = ttk.Frame(self._dialog, padding=15)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        for row, (key, label) in enumerate(self._FIELDS):
+        # ── Azure OpenAI section ──
+        ttk.Label(frame, text="Azure OpenAI", font=("", 10, "bold")).grid(
+            row=0, column=0, columnspan=3, sticky=tk.W, pady=(0, 5))
+
+        for idx, (key, label) in enumerate(self._OPENAI_FIELDS):
+            row = idx + 1
             ttk.Label(frame, text=label).grid(
                 row=row, column=0, sticky=tk.W, pady=4)
             var = tk.StringVar()
@@ -551,7 +629,6 @@ class SettingsDialog:
             src_label = ttk.Label(frame, text="", width=10)
             src_label.grid(row=row, column=2, padx=5, pady=4)
 
-            # Load effective value
             value, source = self._mgr.get_effective(key)
             var.set(value)
             src_label.config(text=f"({source})")
@@ -559,20 +636,39 @@ class SettingsDialog:
             self._entries[key] = var
             self._source_labels[key] = src_label
 
+        # ── Kusto section ──
+        kusto_start = len(self._OPENAI_FIELDS) + 1
+        ttk.Separator(frame, orient=tk.HORIZONTAL).grid(
+            row=kusto_start, column=0, columnspan=3, sticky="ew", pady=8)
+        ttk.Label(frame, text="Kusto (Azure Data Explorer)",
+                  font=("", 10, "bold")).grid(
+            row=kusto_start + 1, column=0, columnspan=3,
+            sticky=tk.W, pady=(0, 5))
+
+        kusto_settings = self._mgr.load_kusto()
+        for idx, (key, label) in enumerate(self._KUSTO_FIELDS):
+            row = kusto_start + 2 + idx
+            ttk.Label(frame, text=label).grid(
+                row=row, column=0, sticky=tk.W, pady=4)
+            var = tk.StringVar(value=kusto_settings.get(key, ""))
+            entry = ttk.Entry(frame, textvariable=var, width=50)
+            entry.grid(row=row, column=1, padx=5, pady=4)
+            self._kusto_entries[key] = var
+
         # Buttons
+        btn_row = kusto_start + 2 + len(self._KUSTO_FIELDS)
         btn_frame = ttk.Frame(frame)
-        btn_frame.grid(row=len(self._FIELDS), column=0, columnspan=3,
-                       pady=10)
+        btn_frame.grid(row=btn_row, column=0, columnspan=3, pady=10)
         ttk.Button(btn_frame, text="Save", command=self._save).pack(
             side=tk.LEFT, padx=5)
         ttk.Button(btn_frame, text="Cancel",
                    command=self._dialog.destroy).pack(side=tk.LEFT, padx=5)
 
     def _save(self) -> None:
-        settings = {key: var.get() for key, var in self._entries.items()}
+        openai_settings = {key: var.get() for key, var in self._entries.items()}
 
         # Basic URL validation
-        endpoint = settings.get("endpoint", "")
+        endpoint = openai_settings.get("endpoint", "")
         if endpoint and not endpoint.startswith("https://"):
             messagebox.showwarning(
                 "Warning",
@@ -580,7 +676,13 @@ class SettingsDialog:
                 parent=self._dialog,
             )
 
-        self._mgr.save(settings)
+        self._mgr.save(openai_settings)
+
+        # Save Kusto settings
+        kusto_settings = {
+            key: var.get() for key, var in self._kusto_entries.items()
+        }
+        self._mgr.save_kusto(kusto_settings)
 
         # Update source labels
         for key in self._entries:

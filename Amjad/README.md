@@ -80,6 +80,8 @@ The GUI uses Tkinter (ships with Python, no extra dependencies). LLM calls run o
 
 Azure OpenAI settings can be configured via **File → Settings** in the GUI. Settings are saved to `data/settings.yaml` and override environment variables. Defaults: endpoint `open-ai-poc`, deployment `gpt5.2`, API version `2025-12-11`.
 
+**Kusto Integration:** The Process Incident tab also supports fetching incident text directly from Azure Data Explorer (Kusto). Enter an Incident ID and click "Fetch from Kusto" to retrieve the description from the `IncidentDescriptions` table. Kusto cluster and database are configurable in Settings. If `azure-kusto-data` is not installed, the Fetch button is disabled (graceful degradation).
+
 ### Process Workflow
 
 1. **Load** — Validates and reads the incident text file
@@ -159,7 +161,7 @@ RULEOUT rules:
 pytest tests/ -v
 ```
 
-217 tests covering models, YAML persistence, ontology management, incident loading, LLM integration (mocked), rule generation, GAP detection, GAP refinement, RULEOUT rule handling, rule evaluation engine, GUI adapters/workers, and settings management.
+226 tests covering models, YAML persistence, ontology management, incident loading, LLM integration (mocked), rule generation, GAP detection, GAP refinement, RULEOUT rule handling, rule evaluation engine, GUI adapters/workers, settings management, and Kusto client integration.
 
 ## Project Structure
 
@@ -180,7 +182,8 @@ src/ees/
     ├── __init__.py
     ├── __main__.py      # python -m ees.gui support
     ├── adapters.py      # Pure model → display-data converters
-    ├── settings.py      # Settings persistence (Azure OpenAI config)
+    ├── settings.py      # Settings persistence (Azure OpenAI + Kusto config)
+    ├── kusto_client.py  # Azure Data Explorer incident fetch
     ├── workers.py       # Background thread utilities
     └── app.py           # Main Tkinter application (EESApp)
 ```

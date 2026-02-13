@@ -1,6 +1,6 @@
 # EES-00007 — User Story
 
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 ## Related Work Items
 - **Depends on:** EES-00005 (GUI Application)

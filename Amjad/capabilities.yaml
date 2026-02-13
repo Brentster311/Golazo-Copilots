@@ -115,8 +115,10 @@ capabilities:
       - src/ees/gui/adapters.py
       - src/ees/gui/workers.py
       - src/ees/gui/settings.py
+      - src/ees/gui/kusto_client.py
     contracts:
       - "EESApp(data_dir) — main application class"
+      - "KustoClient(cluster, database).fetch_incident(incident_id) -> str"
       - "facts_to_rows, rules_to_rows, ontology_to_tree, eval_result_to_display, filter_rules — adapter functions"
       - "run_in_worker(func, on_complete, on_error) — background worker"
     depends_on:
