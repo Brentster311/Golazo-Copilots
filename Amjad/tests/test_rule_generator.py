@@ -132,3 +132,94 @@ class TestRuleGeneratorConfirmation:
         llm_rules = []
         result = gen.filter_rules(llm_rules, confirmed_facts)
         assert len(result) == 0
+
+
+class TestFilterRules:
+    """Coverage for filter_rules logic: confirmed-fact matching and dedup."""
+
+    def test_keep_rule_all_conditions_confirmed(self):
+        """Rule is kept when all its condition facts are in confirmed_facts."""
+        gen = RuleGenerator(existing_rules=[])
+        confirmed = [
+            Fact("Server", "*", "CPUUsage", ">", "90"),
+            Fact("Server", "*", "MemoryFree", "<", "5%"),
+        ]
+        rule = Rule(
+            rule_id="",
+            conditions=RuleConditions("AND", [
+                Fact("Server", "*", "CPUUsage", ">", "90"),
+                Fact("Server", "*", "MemoryFree", "<", "5%"),
+            ]),
+            then=RuleThen("Server", "*", "Overloaded", "TRUE"),
+            because="reason",
+        )
+        result = gen.filter_rules([rule], confirmed)
+        assert len(result) == 1
+
+    def test_drop_rule_missing_condition(self):
+        """Rule is dropped when a condition fact is not confirmed."""
+        gen = RuleGenerator(existing_rules=[])
+        confirmed = [Fact("Server", "*", "CPUUsage", ">", "90")]
+        rule = Rule(
+            rule_id="",
+            conditions=RuleConditions("AND", [
+                Fact("Server", "*", "CPUUsage", ">", "90"),
+                Fact("Server", "*", "MemoryFree", "<", "5%"),  # not confirmed
+            ]),
+            then=RuleThen("Server", "*", "Overloaded", "TRUE"),
+            because="reason",
+        )
+        result = gen.filter_rules([rule], confirmed)
+        assert len(result) == 0
+
+    def test_drop_duplicate_rule_in_filter(self):
+        """Rule is dropped if it duplicates an existing rule."""
+        existing = Rule(
+            rule_id="R-001",
+            conditions=RuleConditions("AND", [Fact("S", "*", "P", ">", "1")]),
+            then=RuleThen("S", "*", "X", "TRUE"),
+            because="old",
+        )
+        gen = RuleGenerator(existing_rules=[existing])
+        confirmed = [Fact("S", "*", "P", ">", "1")]
+        dup = Rule(
+            rule_id="",
+            conditions=RuleConditions("AND", [Fact("S", "*", "P", ">", "1")]),
+            then=RuleThen("S", "*", "X", "TRUE"),
+            because="new",
+        )
+        result = gen.filter_rules([dup], confirmed)
+        assert len(result) == 0
+
+    def test_case_insensitive_matching(self):
+        """Confirmed facts match rule conditions case-insensitively on noun/property."""
+        gen = RuleGenerator(existing_rules=[])
+        confirmed = [Fact("server", "*", "cpuusage", ">", "90")]
+        rule = Rule(
+            rule_id="",
+            conditions=RuleConditions("AND", [Fact("Server", "*", "CPUUsage", ">", "90")]),
+            then=RuleThen("S", "*", "X", "TRUE"),
+            because="r",
+        )
+        result = gen.filter_rules([rule], confirmed)
+        assert len(result) == 1
+
+    def test_mixed_keep_and_drop(self):
+        """Multiple rules: some kept, some dropped."""
+        gen = RuleGenerator(existing_rules=[])
+        confirmed = [Fact("S", "*", "A", ">", "1")]
+        good = Rule(
+            rule_id="",
+            conditions=RuleConditions("AND", [Fact("S", "*", "A", ">", "1")]),
+            then=RuleThen("S", "*", "X", "TRUE"),
+            because="r",
+        )
+        bad = Rule(
+            rule_id="",
+            conditions=RuleConditions("AND", [Fact("S", "*", "B", "<", "2")]),
+            then=RuleThen("S", "*", "Y", "TRUE"),
+            because="r",
+        )
+        result = gen.filter_rules([good, bad], confirmed)
+        assert len(result) == 1
+        assert result[0].then.property == "X"

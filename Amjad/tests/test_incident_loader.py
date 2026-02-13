@@ -59,3 +59,14 @@ class TestIncidentLoaderErrors:
         loader = IncidentLoader()
         text = loader.load(large)
         assert len(text) > 0
+
+    def test_large_file_abort(self, tmp_path, monkeypatch):
+        """User declines to proceed with large file."""
+        large = tmp_path / "large.txt"
+        large.write_text("x" * (600 * 1024))
+
+        monkeypatch.setattr("builtins.input", lambda _: "n")
+
+        loader = IncidentLoader()
+        with pytest.raises(IncidentLoadError, match="Aborted by user"):
+            loader.load(large)
