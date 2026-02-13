@@ -33,6 +33,30 @@ credential = ChainedTokenCredential(
 
 ---
 
+### Authentication - No Keys or Certificates
+**DO NOT** use API keys, shared keys, connection strings with keys, or certificate-based authentication.
+
+**Instead**, use managed identity or token-based credential flows (e.g., `ManagedIdentityCredential`, `AzureCliCredential`).
+
+```python
+# ❌ Wrong - Key-based or certificate-based authentication
+client = BlobServiceClient(account_url, credential=account_key)
+credential = CertificateCredential(tenant_id, client_id, certificate_path)
+
+# ✅ Correct - Token-based identity authentication
+from azure.identity import ChainedTokenCredential, AzureCliCredential, ManagedIdentityCredential
+
+credential = ChainedTokenCredential(
+    AzureCliCredential(),
+    ManagedIdentityCredential()
+)
+client = BlobServiceClient(account_url, credential=credential)
+```
+
+**Reason:** Keys and certificates are secrets that can leak, rotate poorly, and create security risks. Identity-based authentication is more secure and easier to manage. Keys or certificates may **only** be used when (1) there is no alternative and (2) the Project Owner has explicitly approved the exception.
+
+---
+
 ## Python
 
 ### Kusto / Azure Data Explorer Queries

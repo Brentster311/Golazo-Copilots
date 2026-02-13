@@ -138,7 +138,7 @@ Configure the MCP server in your **VS Code User Settings** so it's available acr
 ### Step 1: Open User MCP Configuration
 
 1. Open Command Palette: `Ctrl+Shift+P`
-2. Run: **"MCP: Open User Configuration"**
+2. Run: **"Preferences: Open User Settings (JSON)"**
 3. Add the MCP server configuration, or
 4. Create/edit the file directly at:
    - **Windows**: `%APPDATA%\Code\User\mcp.json`
