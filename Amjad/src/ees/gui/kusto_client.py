@@ -21,8 +21,8 @@ _INCIDENT_ID_RE = re.compile(r"^[\w\-]+$")
 _KQL_TEMPLATE = (
     "IncidentDescriptions"
     " | where IncidentId == {incident_id}"
-    " | project Text"
-    " | take 1"
+    " | order by HistoryId asc"
+    " | summarize Text=make_list(Text)"
 )
 
 
@@ -86,4 +86,8 @@ class KustoClient:
                 f"Incident '{stripped}' not found in IncidentDescriptions."
             )
 
-        return str(df.iloc[0, 0])
+        # Result is a single row with a JSON list of text entries
+        raw = df.iloc[0, 0]
+        if isinstance(raw, list):
+            return "\n".join(str(item) for item in raw)
+        return str(raw)
