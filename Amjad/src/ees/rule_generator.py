@@ -11,8 +11,14 @@ class RuleGenerator:
         self._existing = list(existing_rules)
 
     def is_duplicate(self, rule: Rule) -> bool:
-        """Check if a rule is an exact duplicate of any existing rule."""
+        """Check if a rule is an exact duplicate of any existing CONFIRMED rule.
+
+        GAP-status rules are skipped — a confirmed rule matching a GAP
+        is a refinement, not a duplicate.
+        """
         for existing in self._existing:
+            if existing.status == "GAP":
+                continue
             if rule.is_duplicate_of(existing):
                 return True
         return False

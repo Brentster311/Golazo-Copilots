@@ -223,3 +223,43 @@ class TestFilterRules:
         result = gen.filter_rules([good, bad], confirmed)
         assert len(result) == 1
         assert result[0].then.property == "X"
+
+
+class TestFilterRulesGapExclusion:
+    """MN-3: is_duplicate skips GAP-status rules."""
+
+    def test_is_duplicate_skips_gap_rule(self):
+        """A confirmed rule matching a GAP rule's conditions/then is NOT a duplicate."""
+        gap = Rule(
+            rule_id="R-010",
+            status="GAP",
+            conditions=RuleConditions("AND", [Fact("S", "*", "P", ">", "1")]),
+            then=RuleThen("S", "*", "X", "TRUE"),
+            because="gap",
+        )
+        gen = RuleGenerator(existing_rules=[gap])
+        new_rule = Rule(
+            rule_id="",
+            conditions=RuleConditions("AND", [Fact("S", "*", "P", ">", "1")]),
+            then=RuleThen("S", "*", "X", "TRUE"),
+            because="confirmed",
+        )
+        assert not gen.is_duplicate(new_rule)
+
+    def test_is_duplicate_still_catches_confirmed_dupes(self):
+        """Existing CONFIRMED rules still trigger duplicate detection."""
+        confirmed = Rule(
+            rule_id="R-001",
+            status="CONFIRMED",
+            conditions=RuleConditions("AND", [Fact("S", "*", "P", ">", "1")]),
+            then=RuleThen("S", "*", "X", "TRUE"),
+            because="old",
+        )
+        gen = RuleGenerator(existing_rules=[confirmed])
+        new_rule = Rule(
+            rule_id="",
+            conditions=RuleConditions("AND", [Fact("S", "*", "P", ">", "1")]),
+            then=RuleThen("S", "*", "X", "TRUE"),
+            because="new",
+        )
+        assert gen.is_duplicate(new_rule)

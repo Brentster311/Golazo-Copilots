@@ -51,16 +51,21 @@ class Fact:
             return None
         return cls(noun=noun, instance=instance, property=prop, operator=op, value=val.strip())
 
-    def to_dict(self) -> dict:
-        """Serialize to dict for YAML output."""
+    def to_condition_dict(self) -> dict:
+        """Serialize to dict without status — used for rule conditions, requires, produces."""
         return {
             "noun": self.noun,
             "instance": self.instance,
             "property": self.property,
             "operator": self.operator,
             "value": self.value,
-            "status": self.status,
         }
+
+    def to_dict(self) -> dict:
+        """Serialize to dict for YAML output (includes status)."""
+        d = self.to_condition_dict()
+        d["status"] = self.status
+        return d
 
     @classmethod
     def from_dict(cls, d: dict) -> Fact:
@@ -84,16 +89,7 @@ class RuleConditions:
     def to_dict(self) -> dict:
         return {
             "logic": self.logic,
-            "items": [
-                {
-                    "noun": f.noun,
-                    "instance": f.instance,
-                    "property": f.property,
-                    "operator": f.operator,
-                    "value": f.value,
-                }
-                for f in self.items
-            ],
+            "items": [f.to_condition_dict() for f in self.items],
         }
 
     @classmethod
@@ -130,17 +126,25 @@ class RuleThen:
 
 @dataclass
 class Rule:
-    """A troubleshooting rule: IF conditions THEN conclusion BECAUSE reason."""
+    """A troubleshooting rule: IF conditions THEN conclusion BECAUSE reason.
+
+    For CONFIRMED rules: uses conditions/then.
+    For GAP rules: uses requires/produces/note (conditions/then left at defaults).
+    """
     rule_id: str
-    status: Literal["CONFIRMED"] = "CONFIRMED"
+    status: Literal["CONFIRMED", "GAP", "RESOLVED"] = "CONFIRMED"
     type: Literal["positive"] = "positive"
     sources: list[str] = field(default_factory=list)
     conditions: RuleConditions = field(default_factory=lambda: RuleConditions(logic="AND"))
     then: RuleThen = field(default_factory=lambda: RuleThen("", "*", "", ""))
     because: str = ""
+    # GAP-specific fields
+    requires: list[Fact] = field(default_factory=list)
+    produces: list[Fact] = field(default_factory=list)
+    note: str = ""
 
     def to_dict(self) -> dict:
-        return {
+        d = {
             "rule_id": self.rule_id,
             "status": self.status,
             "type": self.type,
@@ -149,6 +153,13 @@ class Rule:
             "then": self.then.to_dict(),
             "because": self.because,
         }
+        if self.requires:
+            d["requires"] = [f.to_condition_dict() for f in self.requires]
+        if self.produces:
+            d["produces"] = [f.to_condition_dict() for f in self.produces]
+        if self.note:
+            d["note"] = self.note
+        return d
 
     @classmethod
     def from_dict(cls, d: dict) -> Rule:
@@ -160,6 +171,9 @@ class Rule:
             conditions=RuleConditions.from_dict(d["conditions"]),
             then=RuleThen.from_dict(d["then"]),
             because=d.get("because", ""),
+            requires=[Fact.from_dict(f) for f in d.get("requires", [])],
+            produces=[Fact.from_dict(f) for f in d.get("produces", [])],
+            note=d.get("note", ""),
         )
 
     def is_duplicate_of(self, other: Rule) -> bool:
@@ -253,6 +267,14 @@ class RootCause:
     @classmethod
     def from_dict(cls, d: dict) -> RootCause:
         return cls(name=d["name"], action_plan=d.get("action_plan"))
+
+
+@dataclass
+class GapRefinement:
+    """Result of checking a GAP rule against new rules."""
+    gap_rule_id: str
+    action: Literal["narrowed", "resolved"]
+    updated_rule: Rule
 
 
 @dataclass

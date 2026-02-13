@@ -3,6 +3,7 @@ import pytest
 
 from ees.models import (
     Fact,
+    GapRefinement,
     Incident,
     LLMResponse,
     OntologyNoun,
@@ -223,3 +224,122 @@ class TestRootCause:
         rc2 = RootCause.from_dict(d)
         assert rc2.name == "Resource Exhaustion"
         assert rc2.action_plan is None
+
+
+# ── GAP Rule Model Tests (EES-00002) ──────────────────────────────────
+
+
+class TestRuleGapFields:
+    """TC-07, TC-08, TC-09, TC-10: GAP rule model extensions."""
+
+    def test_gap_rule_required_fields(self):
+        """TC-07: GAP rule has requires, produces, note fields."""
+        r = Rule(
+            rule_id="R-010",
+            status="GAP",
+            sources=["INC-001"],
+            requires=[Fact("Server", "*", "CPUUsage", ">", "90")],
+            produces=[Fact("RootCause", "*", "Name", "==", "Resource Exhaustion")],
+            note="Unknown intermediate steps",
+            because="Orphaned facts detected",
+        )
+        assert isinstance(r.requires, list)
+        assert isinstance(r.produces, list)
+        assert isinstance(r.note, str)
+        assert len(r.requires) == 1
+        assert len(r.produces) == 1
+        assert r.note == "Unknown intermediate steps"
+
+    def test_gap_rule_status(self):
+        """TC-08: GAP rule status is 'GAP'."""
+        r = Rule(rule_id="R-010", status="GAP")
+        assert r.status == "GAP"
+
+    def test_gap_rule_roundtrip(self):
+        """TC-09: GAP rule roundtrip serialization."""
+        r = Rule(
+            rule_id="R-010",
+            status="GAP",
+            sources=["INC-001"],
+            requires=[Fact("Server", "*", "CPUUsage", ">", "90")],
+            produces=[Fact("RootCause", "*", "Name", "==", "Resource Exhaustion")],
+            note="Unknown intermediate steps",
+            because="Orphaned facts detected",
+        )
+        d = r.to_dict()
+        r2 = Rule.from_dict(d)
+        assert r2.status == "GAP"
+        assert len(r2.requires) == 1
+        assert r2.requires[0].noun == "Server"
+        assert len(r2.produces) == 1
+        assert r2.produces[0].value == "Resource Exhaustion"
+        assert r2.note == "Unknown intermediate steps"
+
+    def test_confirmed_rule_backward_compat(self):
+        """TC-10: Existing CONFIRMED rule YAML (no requires/produces) loads cleanly."""
+        d = {
+            "rule_id": "R-001",
+            "status": "CONFIRMED",
+            "type": "positive",
+            "sources": ["INC-001"],
+            "conditions": {"logic": "AND", "items": [
+                {"noun": "S", "instance": "*", "property": "P", "operator": ">", "value": "1"}
+            ]},
+            "then": {"noun": "S", "instance": "*", "property": "X", "value": "TRUE"},
+            "because": "reason",
+        }
+        r = Rule.from_dict(d)
+        assert r.requires == []
+        assert r.produces == []
+        assert r.note == ""
+
+    def test_resolved_status(self):
+        """RESOLVED status is accepted."""
+        r = Rule(rule_id="R-010", status="RESOLVED")
+        assert r.status == "RESOLVED"
+
+    def test_to_dict_omits_empty_gap_fields(self):
+        """CONFIRMED rule to_dict omits requires/produces/note when default."""
+        r = Rule(rule_id="R-001", status="CONFIRMED", because="reason")
+        d = r.to_dict()
+        assert "requires" not in d
+        assert "produces" not in d
+        assert "note" not in d
+
+    def test_to_dict_includes_gap_fields_when_set(self):
+        """GAP rule to_dict includes requires/produces/note."""
+        r = Rule(
+            rule_id="R-010",
+            status="GAP",
+            requires=[Fact("S", "*", "P", ">", "1")],
+            produces=[Fact("RootCause", "*", "Name", "==", "X")],
+            note="Some note",
+        )
+        d = r.to_dict()
+        assert "requires" in d
+        assert "produces" in d
+        assert "note" in d
+        assert len(d["requires"]) == 1
+        assert d["requires"][0]["noun"] == "S"
+        # requires/produces items should NOT include status
+        assert "status" not in d["requires"][0]
+
+
+class TestGapRefinement:
+    """TC-14 related: GapRefinement dataclass."""
+
+    def test_creation(self):
+        gap = Rule(rule_id="R-010", status="GAP")
+        ref = GapRefinement(
+            gap_rule_id="R-010",
+            action="resolved",
+            updated_rule=gap,
+        )
+        assert ref.gap_rule_id == "R-010"
+        assert ref.action == "resolved"
+        assert ref.updated_rule is gap
+
+    def test_narrowed_action(self):
+        gap = Rule(rule_id="R-011", status="GAP")
+        ref = GapRefinement(gap_rule_id="R-011", action="narrowed", updated_rule=gap)
+        assert ref.action == "narrowed"

@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch, call
 from ees.exceptions import ConfigError, IncidentLoadError, LLMError
 from ees.main import (
     _confirm_facts,
+    _confirm_gaps,
     _confirm_root_cause,
     _confirm_rules,
     _edit_fact,
@@ -241,8 +242,8 @@ class TestProcessIncident:
 
         monkeypatch.setattr("ees.main.FactExtractor", lambda: mock_extractor)
 
-        # User confirms everything: fact=c, root_cause=c, rule=c
-        inputs = iter(["c", "c", "c"])
+        # User confirms everything: fact=c, root_cause=c, rule=c, gap=c
+        inputs = iter(["c", "c", "c", "c"])
         monkeypatch.setattr("builtins.input", lambda _: next(inputs))
 
         process_incident(str(incident_file), str(data_dir))
@@ -250,7 +251,7 @@ class TestProcessIncident:
         # Verify files were created
         assert (data_dir / "incidents").exists()
         assert len(list((data_dir / "incidents").glob("*.yaml"))) == 1
-        assert len(list((data_dir / "rules").glob("*.yaml"))) == 1
+        assert len(list((data_dir / "rules").glob("*.yaml"))) >= 1
         assert (data_dir / "ontology.yaml").exists()
         assert (data_dir / "rootcauses.yaml").exists()
 
@@ -330,3 +331,153 @@ class TestMainCLI:
         assert exc.value.code == 1
         captured = capsys.readouterr()
         assert "Error:" in captured.err
+
+
+# ---------------------------------------------------------------------------
+# _confirm_gaps
+# ---------------------------------------------------------------------------
+class TestConfirmGaps:
+    def _make_gap(self, rule_id="R-010"):
+        return Rule(
+            rule_id=rule_id,
+            status="GAP",
+            sources=["INC-001"],
+            requires=[Fact("Server", "*", "MemoryFree", "<", "5%")],
+            produces=[Fact("RootCause", "*", "Name", "==", "X")],
+            note="Unknown steps",
+            because="Orphaned facts",
+        )
+
+    def test_confirm_gap(self, monkeypatch):
+        monkeypatch.setattr("builtins.input", lambda _: "c")
+        result = _confirm_gaps([self._make_gap()])
+        assert len(result) == 1
+        assert result[0].status == "GAP"
+
+    def test_reject_gap(self, monkeypatch):
+        monkeypatch.setattr("builtins.input", lambda _: "r")
+        result = _confirm_gaps([self._make_gap()])
+        assert len(result) == 0
+
+    def test_edit_gap_note(self, monkeypatch):
+        inputs = iter(["e", "Missing DB connection logic"])
+        monkeypatch.setattr("builtins.input", lambda _: next(inputs))
+        result = _confirm_gaps([self._make_gap()])
+        assert len(result) == 1
+        assert result[0].note == "Missing DB connection logic"
+
+    def test_edit_empty_note_keeps_original(self, monkeypatch):
+        inputs = iter(["e", ""])
+        monkeypatch.setattr("builtins.input", lambda _: next(inputs))
+        result = _confirm_gaps([self._make_gap()])
+        assert len(result) == 1
+        assert result[0].note == "Unknown steps"
+
+
+# ---------------------------------------------------------------------------
+# process_incident — GAP integration tests
+# ---------------------------------------------------------------------------
+class TestProcessIncidentGaps:
+    def _mock_llm_response_with_root_cause(self):
+        """LLM response where fact connects to root cause via rule."""
+        return LLMResponse(
+            facts=[
+                Fact("Server", "*", "CPUUsage", ">", "90"),
+                Fact("Server", "*", "MemoryFree", "<", "5%"),
+            ],
+            rules=[
+                Rule(
+                    rule_id="",
+                    conditions=RuleConditions("AND", [
+                        Fact("Server", "*", "CPUUsage", ">", "90"),
+                    ]),
+                    then=RuleThen("RootCause", "*", "Name", "Resource Exhaustion"),
+                    because="High CPU",
+                )
+            ],
+            root_cause="Resource Exhaustion",
+        )
+
+    def test_gap_detected_and_confirmed(self, tmp_path, monkeypatch, capsys):
+        """GAP is created for orphaned fact and confirmed by user."""
+        incident_file = tmp_path / "incident.txt"
+        incident_file.write_text("Server issue")
+        data_dir = tmp_path / "data"
+
+        mock_extractor = MagicMock()
+        mock_extractor.extract.return_value = self._mock_llm_response_with_root_cause()
+        monkeypatch.setattr("ees.main.FactExtractor", lambda: mock_extractor)
+
+        # confirm fact1, confirm fact2, confirm root cause, confirm rule, confirm gap
+        inputs = iter(["c", "c", "c", "c", "c"])
+        monkeypatch.setattr("builtins.input", lambda _: next(inputs))
+
+        process_incident(str(incident_file), str(data_dir))
+
+        captured = capsys.readouterr()
+        assert "GAPs:" in captured.out
+        assert "1 created" in captured.out
+        # 1 confirmed rule + 1 GAP rule
+        rule_files = list((data_dir / "rules").glob("*.yaml"))
+        assert len(rule_files) == 2
+
+    def test_no_gap_when_no_root_cause(self, tmp_path, monkeypatch, capsys):
+        """No GAP detection when root cause is rejected."""
+        incident_file = tmp_path / "incident.txt"
+        incident_file.write_text("Server issue")
+        data_dir = tmp_path / "data"
+
+        mock_extractor = MagicMock()
+        resp = self._mock_llm_response_with_root_cause()
+        mock_extractor.extract.return_value = resp
+        monkeypatch.setattr("ees.main.FactExtractor", lambda: mock_extractor)
+
+        # confirm fact1, confirm fact2, reject root cause, confirm rule
+        inputs = iter(["c", "c", "r", "c"])
+        monkeypatch.setattr("builtins.input", lambda _: next(inputs))
+
+        process_incident(str(incident_file), str(data_dir))
+
+        captured = capsys.readouterr()
+        assert "GAPs: 0 created" in captured.out
+
+    def test_gap_rejected_by_user(self, tmp_path, monkeypatch, capsys):
+        """User rejects the GAP — it is not persisted."""
+        incident_file = tmp_path / "incident.txt"
+        incident_file.write_text("Server issue")
+        data_dir = tmp_path / "data"
+
+        mock_extractor = MagicMock()
+        mock_extractor.extract.return_value = self._mock_llm_response_with_root_cause()
+        monkeypatch.setattr("ees.main.FactExtractor", lambda: mock_extractor)
+
+        # confirm fact1, confirm fact2, confirm root cause, confirm rule, REJECT gap
+        inputs = iter(["c", "c", "c", "c", "r"])
+        monkeypatch.setattr("builtins.input", lambda _: next(inputs))
+
+        process_incident(str(incident_file), str(data_dir))
+
+        # Only 1 rule (the confirmed rule), no GAP
+        rule_files = list((data_dir / "rules").glob("*.yaml"))
+        assert len(rule_files) == 1
+
+    def test_gap_report_in_summary(self, tmp_path, monkeypatch, capsys):
+        """Summary shows GAP stats."""
+        incident_file = tmp_path / "incident.txt"
+        incident_file.write_text("Server issue")
+        data_dir = tmp_path / "data"
+
+        mock_extractor = MagicMock()
+        mock_extractor.extract.return_value = self._mock_llm_response_with_root_cause()
+        monkeypatch.setattr("ees.main.FactExtractor", lambda: mock_extractor)
+
+        # confirm fact1, confirm fact2, confirm root cause, confirm rule, confirm gap
+        inputs = iter(["c", "c", "c", "c", "c"])
+        monkeypatch.setattr("builtins.input", lambda _: next(inputs))
+
+        process_incident(str(incident_file), str(data_dir))
+
+        captured = capsys.readouterr()
+        assert "GAPs:" in captured.out
+        # Should mention created, narrowed, resolved counts
+        assert "created" in captured.out

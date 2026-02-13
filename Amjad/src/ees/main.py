@@ -7,6 +7,7 @@ from pathlib import Path
 
 from ees.exceptions import ConfigError, IncidentLoadError, LLMError
 from ees.fact_extractor import FactExtractor
+from ees.gap_detector import GapDetector
 from ees.incident_loader import IncidentLoader
 from ees.models import Fact, Incident, Rule, RootCause
 from ees.ontology_manager import OntologyManager
@@ -157,6 +158,34 @@ def _confirm_root_cause(proposed: str | None) -> str | None:
         return None
 
 
+def _confirm_gaps(gaps: list[Rule]) -> list[Rule]:
+    """Interactive CLI confirmation of detected GAP rules.
+
+    Actions: c=confirm, e=edit note, r=reject
+    """
+    confirmed: list[Rule] = []
+
+    print("\nDetected GAP rules:")
+    for i, gap in enumerate(gaps, 1):
+        requires_str = ", ".join(f.to_display() for f in gap.requires)
+        produces_str = ", ".join(f.to_display() for f in gap.produces)
+        print(f"  {i}. REQUIRES: {requires_str}")
+        print(f"     PRODUCES: {produces_str}")
+        print(f"     NOTE: {gap.note}")
+
+        action = input("     [confirm/edit note/reject] (c/e/r): ").strip().lower()
+        if action == "c":
+            confirmed.append(gap)
+        elif action == "e":
+            new_note = input("     Enter updated NOTE: ").strip()
+            if new_note:
+                gap.note = new_note
+            confirmed.append(gap)
+        # action == "r" or anything else: skip
+
+    return confirmed
+
+
 def process_incident(incident_path: str, data_dir: str) -> None:
     """Main workflow: load incident → extract → confirm → persist."""
     data_path = Path(data_dir)
@@ -215,6 +244,24 @@ def process_incident(incident_path: str, data_dir: str) -> None:
     if filtered_rules:
         confirmed_rules = _confirm_rules(filtered_rules)
 
+    # Step 6b: GAP detection and refinement
+    detector = GapDetector(existing_rules)
+    detected_gaps = detector.detect_gaps(
+        confirmed_facts, confirmed_rules, root_cause, incident_id
+    )
+
+    confirmed_gaps: list[Rule] = []
+    if detected_gaps:
+        confirmed_gaps = _confirm_gaps(detected_gaps)
+
+    refinements = detector.check_refinements(confirmed_rules, incident_id)
+    gaps_narrowed = sum(1 for r in refinements if r.action == "narrowed")
+    gaps_resolved = sum(1 for r in refinements if r.action == "resolved")
+
+    # Persist refinement updates
+    for ref in refinements:
+        store.save_rule(ref.updated_rule)
+
     # Step 7: Update ontology
     ontology_mgr = OntologyManager(ontology_nouns)
     added = ontology_mgr.update_from_facts(confirmed_facts)
@@ -239,6 +286,11 @@ def process_incident(incident_path: str, data_dir: str) -> None:
         rule.rule_id = store.next_rule_id()
         rule.sources = [incident_id]
         store.save_rule(rule)
+
+    # Save GAP rules
+    for gap in confirmed_gaps:
+        gap.rule_id = store.next_rule_id()
+        store.save_rule(gap)
 
     # Update ontology
     if ontology_mgr.has_changes():
@@ -265,6 +317,7 @@ def process_incident(incident_path: str, data_dir: str) -> None:
     print(f"  Facts: {len(all_facts)} proposed → {confirmed_count} confirmed, {rejected_count} rejected")
     print(f"  Ontology: {len(added)} new entries")
     print(f"  Rules: {len(confirmed_rules)} generated")
+    print(f"  GAPs: {len(confirmed_gaps)} created, {gaps_narrowed} narrowed, {gaps_resolved} resolved")
     print(f"\nAll files saved.")
 
 
