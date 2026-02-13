@@ -5,11 +5,27 @@ Uses ttk themed widgets for Windows-native appearance.
 """
 from __future__ import annotations
 
+import re
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from pathlib import Path
 
 from tkhtmlview import HTMLScrolledText
+
+_RGBA_RE = re.compile(
+    r"rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*[\d.]+)?\s*\)"
+)
+
+
+def _sanitize_html_colors(html: str) -> str:
+    """Replace CSS rgba()/rgb() colors with hex — Tkinter can't handle them."""
+    return _RGBA_RE.sub(
+        lambda m: "#{:02x}{:02x}{:02x}".format(
+            int(m.group(1)), int(m.group(2)), int(m.group(3))
+        ),
+        html,
+    )
+
 
 from ees.fact_extractor import FactExtractor
 from ees.gap_detector import GapDetector
@@ -211,7 +227,7 @@ class EESApp:
         try:
             text = Path(path).read_text(encoding="utf-8")
             self._incident_text = text
-            self.incident_text.set_html(text)
+            self.incident_text.set_html(_sanitize_html_colors(text))
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load file: {e}")
 
@@ -247,7 +263,7 @@ class EESApp:
         self.progress.stop()
         self.fetch_kusto_btn.config(state=tk.NORMAL)
         self._incident_text = text
-        self.incident_text.set_html(text)
+        self.incident_text.set_html(_sanitize_html_colors(text))
         self.status_var.set(
             f"Loaded incident {incident_id} from Kusto "
             f"({len(text)} chars)"
