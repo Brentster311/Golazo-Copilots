@@ -250,7 +250,7 @@ class EESApp:
                 "Kusto Error", str(exc), parent=self.root,
             )
 
-        run_in_worker(self.root, task, on_done, on_error)
+        run_in_worker(task, on_done, on_error)
 
     def _extract_facts(self) -> None:
         if not self._incident_text:

@@ -64,6 +64,11 @@ client = BlobServiceClient(account_url, credential=credential)
 
 **Instead**, use the `accia-datacollection` package from Azure Artifacts:
 
+```bash
+# Install from ACCIA Azure Artifacts feed
+pip install accia-datacollection --index-url=https://msazure.pkgs.visualstudio.com/One/_packaging/azinsights_accia_pkgs/pypi/simple/
+```
+
 ```python
 # ❌ Wrong - Direct Kusto library usage
 from azure.kusto.data import KustoClient, KustoConnectionStringBuilder
