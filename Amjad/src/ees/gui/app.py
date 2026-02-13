@@ -153,6 +153,7 @@ class EESApp:
             self.facts_tree.heading(col, text=col.title())
             self.facts_tree.column(col, width=100)
         self.facts_tree.pack(fill=tk.BOTH, expand=True)
+        self.facts_tree.bind("<Double-1>", self._on_facts_double_click)
 
         fact_btns = ttk.Frame(facts_frame)
         fact_btns.pack(fill=tk.X, pady=2)
@@ -179,6 +180,7 @@ class EESApp:
         self.rules_tree.column("conditions", width=250)
         self.rules_tree.column("then", width=200)
         self.rules_tree.pack(fill=tk.BOTH, expand=True)
+        self.rules_tree.bind("<Double-1>", self._on_rules_double_click)
 
         save_frame = ttk.Frame(rules_frame)
         save_frame.pack(fill=tk.X, pady=2)
@@ -230,27 +232,33 @@ class EESApp:
             return client.fetch_incident(incident_id)
 
         def on_done(text):
-            self.progress.stop()
-            self.fetch_kusto_btn.config(state=tk.NORMAL)
-            self._incident_text = text
-            self.incident_text.config(state=tk.NORMAL)
-            self.incident_text.delete("1.0", tk.END)
-            self.incident_text.insert("1.0", text)
-            self.incident_text.config(state=tk.DISABLED)
-            self.status_var.set(
-                f"Loaded incident {incident_id} from Kusto "
-                f"({len(text)} chars)"
-            )
+            self.root.after(0, self._on_kusto_complete, incident_id, text)
 
         def on_error(exc):
-            self.progress.stop()
-            self.fetch_kusto_btn.config(state=tk.NORMAL)
-            self.status_var.set("Kusto fetch failed.")
-            messagebox.showerror(
-                "Kusto Error", str(exc), parent=self.root,
-            )
+            self.root.after(0, self._on_kusto_error, exc)
 
         run_in_worker(task, on_done, on_error)
+
+    def _on_kusto_complete(self, incident_id: str, text: str) -> None:
+        self.progress.stop()
+        self.fetch_kusto_btn.config(state=tk.NORMAL)
+        self._incident_text = text
+        self.incident_text.config(state=tk.NORMAL)
+        self.incident_text.delete("1.0", tk.END)
+        self.incident_text.insert("1.0", text)
+        self.incident_text.config(state=tk.DISABLED)
+        self.status_var.set(
+            f"Loaded incident {incident_id} from Kusto "
+            f"({len(text)} chars)"
+        )
+
+    def _on_kusto_error(self, exc: Exception) -> None:
+        self.progress.stop()
+        self.fetch_kusto_btn.config(state=tk.NORMAL)
+        self.status_var.set("Kusto fetch failed.")
+        messagebox.showerror(
+            "Kusto Error", str(exc), parent=self.root,
+        )
 
     def _extract_facts(self) -> None:
         if not self._incident_text:
@@ -440,6 +448,7 @@ class EESApp:
         self.kb_rules_tree.column("then", width=200)
         self.kb_rules_tree.column("because", width=250)
         self.kb_rules_tree.pack(fill=tk.BOTH, expand=True, padx=5)
+        self.kb_rules_tree.bind("<Double-1>", self._on_kb_rules_double_click)
 
         # Ontology sub-tab
         ont_frame = ttk.Frame(kb_notebook)
@@ -557,6 +566,51 @@ class EESApp:
         self.eval_results.config(state=tk.DISABLED)
 
         self.status_var.set(f"Evaluation: {len(display['fired_rules'])} rules fired")
+
+    # ── Double-click detail views ─────────────────────────────
+
+    def _on_facts_double_click(self, event) -> None:
+        iid = self.facts_tree.identify_row(event.y)
+        if not iid:
+            return
+        idx = int(iid)
+        if 0 <= idx < len(self._pending_facts):
+            fact = self._pending_facts[idx]
+            detail = (
+                f"Noun:      {fact.noun}\n"
+                f"Instance:  {fact.instance}\n"
+                f"Property:  {fact.property}\n"
+                f"Operator:  {fact.operator}\n"
+                f"Value:     {fact.value}\n"
+                f"Status:    {fact.status}"
+            )
+            _show_detail_dialog(self.root, "Fact Detail", detail)
+
+    def _on_rules_double_click(self, event) -> None:
+        iid = self.rules_tree.identify_row(event.y)
+        if not iid:
+            return
+        idx = int(iid)
+        if 0 <= idx < len(self._pending_rules):
+            rule = self._pending_rules[idx]
+            _show_rule_detail(self.root, rule)
+
+    def _on_kb_rules_double_click(self, event) -> None:
+        iid = self.kb_rules_tree.identify_row(event.y)
+        if not iid:
+            return
+        vals = self.kb_rules_tree.item(iid, "values")
+        if not vals:
+            return
+        detail = (
+            f"Rule ID:     {vals[0]}\n"
+            f"Status:      {vals[1]}\n"
+            f"Type:        {vals[2]}\n"
+            f"Conditions:  {vals[3]}\n"
+            f"Then:        {vals[4]}\n"
+            f"Because:     {vals[5]}"
+        )
+        _show_detail_dialog(self.root, f"Rule {vals[0]}", detail)
 
     # ── Settings ──────────────────────────────────────────────
 
@@ -690,6 +744,64 @@ class SettingsDialog:
 
         messagebox.showinfo("Settings", "Settings saved.", parent=self._dialog)
         self._dialog.destroy()
+
+
+def _show_detail_dialog(parent: tk.Tk, title: str, text: str) -> None:
+    """Show a read-only detail dialog with the given text."""
+    dlg = tk.Toplevel(parent)
+    dlg.title(title)
+    dlg.geometry("600x400")
+    dlg.transient(parent)
+
+    txt = tk.Text(dlg, wrap=tk.WORD, padx=10, pady=10)
+    scroll = ttk.Scrollbar(dlg, command=txt.yview)
+    txt.config(yscrollcommand=scroll.set)
+    scroll.pack(side=tk.RIGHT, fill=tk.Y)
+    txt.pack(fill=tk.BOTH, expand=True)
+    txt.insert("1.0", text)
+    txt.config(state=tk.DISABLED)
+
+    ttk.Button(dlg, text="Close", command=dlg.destroy).pack(pady=5)
+    dlg.focus_set()
+
+
+def _show_rule_detail(parent: tk.Tk, rule) -> None:
+    """Show full rule details in a dialog."""
+    cond_parts = []
+    for item in rule.conditions.items:
+        cond_parts.append(
+            f"  {item.noun}({item.instance}).{item.property} "
+            f"{item.operator} {item.value}"
+        )
+    cond_str = f" {rule.conditions.logic}\n".join(cond_parts) or "(none)"
+
+    if rule.type == "ruleout":
+        then_str = f"RULEOUT {rule.then.value}"
+    else:
+        then_str = (
+            f"{rule.then.noun}({rule.then.instance}).{rule.then.property}"
+            f" = {rule.then.value}"
+        )
+
+    detail = (
+        f"Rule ID:     {rule.rule_id}\n"
+        f"Status:      {rule.status}\n"
+        f"Type:        {rule.type}\n"
+        f"Sources:     {', '.join(rule.sources) if rule.sources else '(none)'}\n"
+        f"\nConditions ({rule.conditions.logic}):\n{cond_str}\n"
+        f"\nThen:        {then_str}\n"
+        f"\nBecause:\n  {rule.because or '(none)'}\n"
+    )
+    if rule.requires:
+        req = "\n".join(f"  {r.to_display()}" for r in rule.requires)
+        detail += f"\nRequires:\n{req}\n"
+    if rule.produces:
+        prod = "\n".join(f"  {p.to_display()}" for p in rule.produces)
+        detail += f"\nProduces:\n{prod}\n"
+    if rule.note:
+        detail += f"\nNote:\n  {rule.note}\n"
+
+    _show_detail_dialog(parent, f"Rule {rule.rule_id}", detail)
 
 
 def _format_eval_display(display: dict, *, total_rules: int) -> str:
