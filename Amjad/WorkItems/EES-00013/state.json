@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "work_item_id": "EES-00013",
+  "profile": "complete",
+  "current_phase": "definition",
+  "current_role": "project-owner-assistant",
+  "created_at": "2026-02-14T15:55:08.941946Z",
+  "updated_at": "2026-02-14T15:55:08.941946Z",
+  "role_history": [
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-02-14T15:55:08.941946Z",
+      "exited_at": null
+    }
+  ],
+  "deviations": []
+}
