@@ -8,7 +8,6 @@ from ees.exceptions import ConfigError, IncidentLoadError, LLMError
 from ees.main import (
     _confirm_facts,
     _confirm_gaps,
-    _confirm_root_cause,
     _confirm_rules,
     _edit_fact,
     _format_rule_conditions,
@@ -131,7 +130,6 @@ class TestConfirmRules:
             rule_id=rule_id,
             conditions=RuleConditions("AND", [Fact("S", "*", "P", ">", "1")]),
             then=RuleThen("S", "*", "X", "TRUE"),
-            because="reason",
         )
 
     def test_confirm_rule(self, monkeypatch):
@@ -143,46 +141,6 @@ class TestConfirmRules:
         monkeypatch.setattr("builtins.input", lambda _: "r")
         result = _confirm_rules([self._make_rule()])
         assert len(result) == 0
-
-    def test_edit_because_clause(self, monkeypatch):
-        inputs = iter(["e", "updated reason"])
-        monkeypatch.setattr("builtins.input", lambda _: next(inputs))
-        result = _confirm_rules([self._make_rule()])
-        assert len(result) == 1
-        assert result[0].because == "updated reason"
-
-    def test_edit_empty_because_keeps_original(self, monkeypatch):
-        inputs = iter(["e", ""])
-        monkeypatch.setattr("builtins.input", lambda _: next(inputs))
-        result = _confirm_rules([self._make_rule()])
-        assert len(result) == 1
-        assert result[0].because == "reason"
-
-
-# ---------------------------------------------------------------------------
-# _confirm_root_cause
-# ---------------------------------------------------------------------------
-class TestConfirmRootCause:
-    def test_none_proposed(self):
-        assert _confirm_root_cause(None) is None
-
-    def test_confirm(self, monkeypatch):
-        monkeypatch.setattr("builtins.input", lambda _: "c")
-        assert _confirm_root_cause("Disk Failure") == "Disk Failure"
-
-    def test_edit(self, monkeypatch):
-        inputs = iter(["e", "Network Issue"])
-        monkeypatch.setattr("builtins.input", lambda _: next(inputs))
-        assert _confirm_root_cause("Disk Failure") == "Network Issue"
-
-    def test_edit_empty(self, monkeypatch):
-        inputs = iter(["e", ""])
-        monkeypatch.setattr("builtins.input", lambda _: next(inputs))
-        assert _confirm_root_cause("Disk Failure") is None
-
-    def test_reject(self, monkeypatch):
-        monkeypatch.setattr("builtins.input", lambda _: "r")
-        assert _confirm_root_cause("Disk Failure") is None
 
 
 # ---------------------------------------------------------------------------
@@ -224,10 +182,8 @@ class TestProcessIncident:
                     rule_id="",
                     conditions=RuleConditions("AND", [Fact("Server", "*", "CPUUsage", ">", "90")]),
                     then=RuleThen("Server", "*", "HighLoad", "TRUE"),
-                    because="High CPU",
                 )
             ],
-            root_cause="Resource Exhaustion",
         )
 
     def test_full_happy_path(self, tmp_path, monkeypatch):
@@ -244,8 +200,8 @@ class TestProcessIncident:
 
         monkeypatch.setattr("ees.main.FactExtractor", lambda: mock_extractor)
 
-        # User confirms everything: fact=c, root_cause=c, rule=c, gap=c
-        inputs = iter(["c", "c", "c", "c"])
+        # User confirms everything: fact=c, rule=c
+        inputs = iter(["c", "c"])
         monkeypatch.setattr("builtins.input", lambda _: next(inputs))
 
         process_incident(str(incident_file), str(data_dir))
@@ -255,7 +211,6 @@ class TestProcessIncident:
         assert len(list((data_dir / "incidents").glob("*.yaml"))) == 1
         assert len(list((data_dir / "rules").glob("*.yaml"))) >= 1
         assert (data_dir / "ontology.yaml").exists()
-        assert (data_dir / "rootcauses.yaml").exists()
 
     def test_no_facts_extracted(self, tmp_path, monkeypatch, capsys):
         """LLM returns no facts → early exit, no files created."""
@@ -264,7 +219,7 @@ class TestProcessIncident:
         data_dir = tmp_path / "data"
 
         mock_extractor = MagicMock()
-        mock_extractor.extract.return_value = LLMResponse(facts=[], rules=[], root_cause=None)
+        mock_extractor.extract.return_value = LLMResponse(facts=[], rules=[])
         monkeypatch.setattr("ees.main.FactExtractor", lambda: mock_extractor)
 
         process_incident(str(incident_file), str(data_dir))
@@ -347,7 +302,6 @@ class TestConfirmGaps:
             requires=[Fact("Server", "*", "MemoryFree", "<", "5%")],
             produces=[Fact("RootCause", "*", "Name", "==", "X")],
             note="Unknown steps",
-            because="Orphaned facts",
         )
 
     def test_confirm_gap(self, monkeypatch):
@@ -381,7 +335,7 @@ class TestConfirmGaps:
 # ---------------------------------------------------------------------------
 class TestProcessIncidentGaps:
     def _mock_llm_response_with_root_cause(self):
-        """LLM response where fact connects to root cause via rule."""
+        """LLM response with two facts and one rule."""
         return LLMResponse(
             facts=[
                 Fact("Server", "*", "CPUUsage", ">", "90"),
@@ -394,14 +348,12 @@ class TestProcessIncidentGaps:
                         Fact("Server", "*", "CPUUsage", ">", "90"),
                     ]),
                     then=RuleThen("RootCause", "*", "Name", "Resource Exhaustion"),
-                    because="High CPU",
                 )
             ],
-            root_cause="Resource Exhaustion",
         )
 
     def test_gap_detected_and_confirmed(self, tmp_path, monkeypatch, capsys):
-        """GAP is created for orphaned fact and confirmed by user."""
+        """No GAP created when root cause is not set."""
         incident_file = tmp_path / "incident.txt"
         incident_file.write_text("Server issue")
         data_dir = tmp_path / "data"
@@ -410,21 +362,21 @@ class TestProcessIncidentGaps:
         mock_extractor.extract.return_value = self._mock_llm_response_with_root_cause()
         monkeypatch.setattr("ees.main.FactExtractor", lambda: mock_extractor)
 
-        # confirm fact1, confirm fact2, confirm root cause, confirm rule, confirm gap
-        inputs = iter(["c", "c", "c", "c", "c"])
+        # confirm fact1, confirm fact2, confirm rule
+        inputs = iter(["c", "c", "c"])
         monkeypatch.setattr("builtins.input", lambda _: next(inputs))
 
         process_incident(str(incident_file), str(data_dir))
 
         captured = capsys.readouterr()
         assert "GAPs:" in captured.out
-        assert "1 created" in captured.out
-        # 1 confirmed rule + 1 GAP rule
+        assert "0 created" in captured.out
+        # 1 confirmed rule only (no GAP rule)
         rule_files = list((data_dir / "rules").glob("*.yaml"))
-        assert len(rule_files) == 2
+        assert len(rule_files) == 1
 
     def test_no_gap_when_no_root_cause(self, tmp_path, monkeypatch, capsys):
-        """No GAP detection when root cause is rejected."""
+        """No GAP detection when root cause is not set."""
         incident_file = tmp_path / "incident.txt"
         incident_file.write_text("Server issue")
         data_dir = tmp_path / "data"
@@ -434,8 +386,8 @@ class TestProcessIncidentGaps:
         mock_extractor.extract.return_value = resp
         monkeypatch.setattr("ees.main.FactExtractor", lambda: mock_extractor)
 
-        # confirm fact1, confirm fact2, reject root cause, confirm rule
-        inputs = iter(["c", "c", "r", "c"])
+        # confirm fact1, confirm fact2, confirm rule
+        inputs = iter(["c", "c", "c"])
         monkeypatch.setattr("builtins.input", lambda _: next(inputs))
 
         process_incident(str(incident_file), str(data_dir))
@@ -444,7 +396,7 @@ class TestProcessIncidentGaps:
         assert "GAPs: 0 created" in captured.out
 
     def test_gap_rejected_by_user(self, tmp_path, monkeypatch, capsys):
-        """User rejects the GAP — it is not persisted."""
+        """No GAP is created (root cause not set)."""
         incident_file = tmp_path / "incident.txt"
         incident_file.write_text("Server issue")
         data_dir = tmp_path / "data"
@@ -453,8 +405,8 @@ class TestProcessIncidentGaps:
         mock_extractor.extract.return_value = self._mock_llm_response_with_root_cause()
         monkeypatch.setattr("ees.main.FactExtractor", lambda: mock_extractor)
 
-        # confirm fact1, confirm fact2, confirm root cause, confirm rule, REJECT gap
-        inputs = iter(["c", "c", "c", "c", "r"])
+        # confirm fact1, confirm fact2, confirm rule
+        inputs = iter(["c", "c", "c"])
         monkeypatch.setattr("builtins.input", lambda _: next(inputs))
 
         process_incident(str(incident_file), str(data_dir))
@@ -473,8 +425,8 @@ class TestProcessIncidentGaps:
         mock_extractor.extract.return_value = self._mock_llm_response_with_root_cause()
         monkeypatch.setattr("ees.main.FactExtractor", lambda: mock_extractor)
 
-        # confirm fact1, confirm fact2, confirm root cause, confirm rule, confirm gap
-        inputs = iter(["c", "c", "c", "c", "c"])
+        # confirm fact1, confirm fact2, confirm rule
+        inputs = iter(["c", "c", "c"])
         monkeypatch.setattr("builtins.input", lambda _: next(inputs))
 
         process_incident(str(incident_file), str(data_dir))
@@ -502,17 +454,14 @@ class TestProcessIncidentRuleout:
                     type="positive",
                     conditions=RuleConditions("AND", [Fact("Server", "*", "CPUUsage", ">", "90")]),
                     then=RuleThen("RootCause", "*", "Name", "Resource Exhaustion"),
-                    because="High CPU",
                 ),
                 Rule(
                     rule_id="",
                     type="ruleout",
                     conditions=RuleConditions("AND", [Fact("Net", "*", "Latency", "==", "normal")]),
                     then=RuleThen("RULEOUT", "*", "Target", "Network Issue"),
-                    because="Normal latency rules out network issue",
                 ),
             ],
-            root_cause="Resource Exhaustion",
         )
 
     def test_ruleout_rules_persisted(self, tmp_path, monkeypatch, capsys):
@@ -525,8 +474,8 @@ class TestProcessIncidentRuleout:
         mock_extractor.extract.return_value = self._mock_llm_response_with_ruleout()
         monkeypatch.setattr("ees.main.FactExtractor", lambda: mock_extractor)
 
-        # confirm fact1, confirm fact2, confirm root cause, confirm positive rule, confirm ruleout rule
-        inputs = iter(["c", "c", "c", "c", "c"])
+        # confirm fact1, confirm fact2, confirm positive rule, confirm ruleout rule
+        inputs = iter(["c", "c", "c", "c"])
         monkeypatch.setattr("builtins.input", lambda _: next(inputs))
 
         process_incident(str(incident_file), str(data_dir))
@@ -553,8 +502,8 @@ class TestProcessIncidentRuleout:
         mock_extractor.extract.return_value = self._mock_llm_response_with_ruleout()
         monkeypatch.setattr("ees.main.FactExtractor", lambda: mock_extractor)
 
-        # confirm fact1, confirm fact2, confirm root cause, confirm positive, confirm ruleout
-        inputs = iter(["c", "c", "c", "c", "c"])
+        # confirm fact1, confirm fact2, confirm positive, confirm ruleout
+        inputs = iter(["c", "c", "c", "c"])
         monkeypatch.setattr("builtins.input", lambda _: next(inputs))
 
         process_incident(str(incident_file), str(data_dir))
@@ -573,10 +522,8 @@ class TestProcessIncidentRuleout:
                     type="ruleout",
                     conditions=RuleConditions("AND", [Fact("Net", "*", "Latency", "==", "normal")]),
                     then=RuleThen("RULEOUT", "*", "Target", "Network Issue"),
-                    because="Normal latency rules out network issue",
                 ),
             ],
-            root_cause=None,
         )
         incident_file = tmp_path / "incident.txt"
         incident_file.write_text("Network looks fine")
@@ -602,7 +549,6 @@ class TestProcessIncidentRuleout:
             type="ruleout",
             conditions=RuleConditions("AND", [Fact("Net", "*", "Latency", "==", "normal")]),
             then=RuleThen("RULEOUT", "*", "Target", "Network Issue"),
-            because="Normal latency rules out network issue",
         )
 
         monkeypatch.setattr("builtins.input", lambda _: "c")
@@ -631,7 +577,6 @@ class TestEvaluateFacts:
             rule_id="R-001",
             conditions=RuleConditions("AND", [Fact("Server", "*", "CPUUsage", ">", "90")]),
             then=RuleThen("RootCause", "*", "Name", "HighCPU"),
-            because="High CPU indicates overload",
         ).to_dict()
         with open(rules_dir / "R-001.yaml", "w") as f:
             yaml.dump(rule_data, f)
@@ -658,7 +603,6 @@ class TestEvaluateFacts:
             rule_id="R-001",
             conditions=RuleConditions("AND", [Fact("Server", "*", "CPUUsage", ">", "90")]),
             then=RuleThen("RootCause", "*", "Name", "HighCPU"),
-            because="High CPU indicates overload",
         ).to_dict()
         with open(rules_dir / "R-001.yaml", "w") as f:
             yaml.dump(rule_data, f)
@@ -719,7 +663,6 @@ class TestEvaluateFacts:
             rule_id="R-001",
             conditions=RuleConditions("AND", [Fact("Server", "*", "CPUUsage", ">", "90")]),
             then=RuleThen("RootCause", "*", "Name", "HighCPU"),
-            because="High CPU",
         ).to_dict()
         with open(rules_dir / "R-001.yaml", "w") as f:
             yaml.dump(rule_data, f)
@@ -753,7 +696,6 @@ class TestEvaluateFacts:
                 Fact("Server", "*", "MemoryFree", "<", "5%"),
             ]),
             then=RuleThen("RootCause", "*", "Name", "ResourceExhaustion"),
-            because="Both CPU and memory",
         ).to_dict()
         with open(rules_dir / "R-001.yaml", "w") as f:
             yaml.dump(rule_data, f)

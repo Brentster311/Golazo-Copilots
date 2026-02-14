@@ -197,7 +197,6 @@ class Rule:
     conditions: RuleConditions = field(default_factory=lambda: RuleConditions(logic="AND"))
     then: RuleOutput = field(default_factory=lambda: RuleOutput("CHANGE_STATE", ""))
     else_: RuleOutput | None = None
-    because: str = ""
 
     # ── deprecated v1 fields (kept for backward compat until EES-00011/12) ──
     type: str = "positive"
@@ -212,7 +211,6 @@ class Rule:
             "sources": self.sources,
             "conditions": self.conditions.to_dict(),
             "then": self.then.to_dict(),
-            "because": self.because,
         }
         if self.else_ is not None:
             d["else"] = self.else_.to_dict()
@@ -244,7 +242,6 @@ class Rule:
             conditions=RuleConditions.from_dict(d["conditions"]),
             then=then,
             else_=RuleOutput.from_dict(else_data) if else_data else None,
-            because=d.get("because", ""),
             type=d.get("type", "positive"),
             requires=[Fact.from_dict(f) for f in d.get("requires", [])],
             produces=[Fact.from_dict(f) for f in d.get("produces", [])],
@@ -357,10 +354,9 @@ class GapRefinement:
 
 @dataclass
 class LLMResponse:
-    """Parsed response from LLM containing facts, rules, and root cause."""
+    """Parsed response from LLM containing facts and rules."""
     facts: list[Fact] = field(default_factory=list)
     rules: list[Rule] = field(default_factory=list)
-    root_cause: str | None = None
 
 
 @dataclass

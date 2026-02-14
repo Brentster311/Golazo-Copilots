@@ -89,7 +89,7 @@ def _make_extractor() -> FactExtractor:
 # ---------------------------------------------------------------------------
 class TestHappyPath:
     def test_full_extraction(self):
-        """TC-01: Model calls get_ontology, submit_fact x2, submit_rule, set_root_cause."""
+        """TC-01: Model calls get_ontology, submit_fact x2, submit_rule."""
         ext = _make_extractor()
         ontology = [OntologyNoun("Server", [OntologyProperty("CPUUsage")])]
 
@@ -117,15 +117,11 @@ class TestHappyPath:
                     ],
                 },
                 "then": {"kind": "CHANGE_STATE", "description": "Resource exhaustion"},
-                "because": "High CPU + low memory = resource exhaustion",
             }, "c5"),
         ])
-        turn4 = _assistant_msg_with_tools([
-            _tool_call("set_root_cause", {"name": "Resource Exhaustion"}, "c6"),
-        ])
-        turn5 = _assistant_msg_done()
+        turn4 = _assistant_msg_done()
 
-        ext.client.chat.completions.create.side_effect = [turn1, turn2, turn3, turn4, turn5]
+        ext.client.chat.completions.create.side_effect = [turn1, turn2, turn3, turn4]
 
         result = ext.extract("Server is slow", ontology)
 
@@ -137,8 +133,6 @@ class TestHappyPath:
         assert len(result.rules) == 1
         assert result.rules[0].then.kind == "CHANGE_STATE"
         assert result.rules[0].then.description == "Resource exhaustion"
-        assert result.rules[0].because == "High CPU + low memory = resource exhaustion"
-        assert result.root_cause == "Resource Exhaustion"
 
 
 # ---------------------------------------------------------------------------
@@ -278,7 +272,6 @@ class TestRuleValidation:
                     {"noun": "S", "property": "P", "operator": ">", "value": "1"},
                 ]},
                 "then": {"kind": "POSITIVE", "description": "test"},
-                "because": "reason",
             }, "c1"),
         ])
         turn2 = _assistant_msg_with_tools([
@@ -287,7 +280,6 @@ class TestRuleValidation:
                     {"noun": "S", "property": "P", "operator": ">", "value": "1"},
                 ]},
                 "then": {"kind": "CHANGE_STATE", "description": "test"},
-                "because": "reason",
             }, "c2"),
         ])
         turn3 = _assistant_msg_done()
@@ -307,44 +299,6 @@ class TestRuleValidation:
                     {"noun": "S", "property": "P", "operator": ">", "value": "1"},
                 ]},
                 "then": {"kind": "CHANGE_STATE", "description": ""},
-                "because": "reason",
-            }, "c1"),
-        ])
-        turn2 = _assistant_msg_done()
-        ext.client.chat.completions.create.side_effect = [turn1, turn2]
-
-        result = ext.extract("text", [])
-        assert len(result.rules) == 0
-
-    def test_missing_because_rejected(self):
-        """TC-05: Missing because rejected."""
-        ext = _make_extractor()
-
-        turn1 = _assistant_msg_with_tools([
-            _tool_call("submit_rule", {
-                "conditions": {"logic": "AND", "items": [
-                    {"noun": "S", "property": "P", "operator": ">", "value": "1"},
-                ]},
-                "then": {"kind": "CHANGE_STATE", "description": "test"},
-            }, "c1"),
-        ])
-        turn2 = _assistant_msg_done()
-        ext.client.chat.completions.create.side_effect = [turn1, turn2]
-
-        result = ext.extract("text", [])
-        assert len(result.rules) == 0
-
-    def test_empty_because_rejected(self):
-        """TC-05 variant: Empty string because rejected."""
-        ext = _make_extractor()
-
-        turn1 = _assistant_msg_with_tools([
-            _tool_call("submit_rule", {
-                "conditions": {"logic": "AND", "items": [
-                    {"noun": "S", "property": "P", "operator": ">", "value": "1"},
-                ]},
-                "then": {"kind": "CHANGE_STATE", "description": "test"},
-                "because": "",
             }, "c1"),
         ])
         turn2 = _assistant_msg_done()
@@ -364,7 +318,6 @@ class TestRuleValidation:
                 ]},
                 "then": {"kind": "CHANGE_STATE", "description": "Identified issue"},
                 "else": {"kind": "GAP", "description": "Need more info"},
-                "because": "reason",
             }, "c1"),
         ])
         turn2 = _assistant_msg_done()
@@ -386,7 +339,6 @@ class TestRuleValidation:
                     {"noun": "Net", "property": "Latency", "operator": "==", "value": "normal"},
                 ]},
                 "then": {"kind": "RULED_OUT", "description": "Network issue eliminated"},
-                "because": "Normal latency rules out network issues",
             }, "c1"),
         ])
         turn2 = _assistant_msg_done()
@@ -405,7 +357,6 @@ class TestRuleValidation:
                     {"noun": "S", "property": "P", "operator": "==", "value": "X"},
                 ]},
                 "then": {"kind": "GAP", "description": "Missing disk usage data"},
-                "because": "Need disk info",
             }, "c1"),
         ])
         turn2 = _assistant_msg_done()
@@ -422,7 +373,6 @@ class TestRuleValidation:
             _tool_call("submit_rule", {
                 "conditions": {"logic": "AND", "items": []},
                 "then": {"kind": "CHANGE_STATE", "description": "test"},
-                "because": "reason",
             }, "c1"),
         ])
         turn2 = _assistant_msg_done()
@@ -441,7 +391,6 @@ class TestRuleValidation:
                     {"noun": "S", "property": "P", "operator": "LIKE", "value": "X"},
                 ]},
                 "then": {"kind": "CHANGE_STATE", "description": "test"},
-                "because": "reason",
             }, "c1"),
         ])
         turn2 = _assistant_msg_done()
@@ -460,7 +409,6 @@ class TestRuleValidation:
                     {"noun": "Error", "instance": "$op", "property": "Code", "operator": "==", "value": "Fail"},
                 ]},
                 "then": {"kind": "CHANGE_STATE", "description": "Op failed"},
-                "because": "reason",
             }, "c1"),
         ])
         turn2 = _assistant_msg_done()
@@ -481,7 +429,6 @@ class TestRuleValidation:
                 ]},
                 "then": {"kind": "CHANGE_STATE", "description": "test"},
                 "else": {"kind": "INVALID", "description": "test"},
-                "because": "reason",
             }, "c1"),
         ])
         turn2 = _assistant_msg_done()
@@ -524,7 +471,6 @@ class TestLoopControl:
         assert isinstance(result, LLMResponse)
         assert result.facts == []
         assert result.rules == []
-        assert result.root_cause is None
 
 
 # ---------------------------------------------------------------------------
@@ -599,27 +545,6 @@ class TestGetExistingRules:
 
 
 # ---------------------------------------------------------------------------
-# TC-16: Multiple set_root_cause — last wins
-# ---------------------------------------------------------------------------
-class TestSetRootCause:
-    def test_last_wins(self):
-        """TC-16: Multiple set_root_cause calls, last one wins."""
-        ext = _make_extractor()
-
-        turn1 = _assistant_msg_with_tools([
-            _tool_call("set_root_cause", {"name": "A"}, "c1"),
-        ])
-        turn2 = _assistant_msg_with_tools([
-            _tool_call("set_root_cause", {"name": "B"}, "c2"),
-        ])
-        turn3 = _assistant_msg_done()
-        ext.client.chat.completions.create.side_effect = [turn1, turn2, turn3]
-
-        result = ext.extract("text", [])
-        assert result.root_cause == "B"
-
-
-# ---------------------------------------------------------------------------
 # TC-19: API failure during loop
 # ---------------------------------------------------------------------------
 class TestAPIFailure:
@@ -661,7 +586,6 @@ class TestBackwardCompat:
                     {"noun": "S", "property": "P", "operator": "==", "value": "X"},
                 ]},
                 "then": {"kind": "CHANGE_STATE", "description": "test"},
-                "because": "reason",
             }, "c1"),
         ])
         turn2 = _assistant_msg_done()

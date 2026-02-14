@@ -32,7 +32,7 @@ def _fact(text: str) -> Fact:
 
 
 def _rule(rule_id: str, conditions: list[Fact], then: RuleThen,
-          because: str = "test", logic: str = "AND",
+          logic: str = "AND",
           rule_type: str = "positive", status: str = "CONFIRMED") -> Rule:
     return Rule(
         rule_id=rule_id,
@@ -40,7 +40,6 @@ def _rule(rule_id: str, conditions: list[Fact], then: RuleThen,
         type=rule_type,
         conditions=RuleConditions(logic=logic, items=conditions),
         then=then,
-        because=because,
     )
 
 
@@ -99,18 +98,16 @@ class TestRulesToRows:
     """TC-8/9: Rule-to-display row conversion."""
 
     def test_rules_to_rows_basic(self):
-        """TC-8: Rules displayed with IF/THEN/BECAUSE."""
+        """TC-8: Rules displayed with IF/THEN."""
         rules = [_rule("R-001",
                        [_fact("Server(*).CPUUsage > 90")],
-                       RuleThen("RootCause", "*", "Name", "HighCPU"),
-                       because="High CPU causes overload")]
+                       RuleThen("RootCause", "*", "Name", "HighCPU"))]
         rows = rules_to_rows(rules)
         assert len(rows) == 1
         row = rows[0]
         assert row["rule_id"] == "R-001"
         assert "CPUUsage" in row["conditions"]
         assert "HighCPU" in row["then"]
-        assert row["because"] == "High CPU causes overload"
 
     def test_rules_to_rows_ruleout(self):
         """TC-9: RULEOUT rules show type distinction."""
@@ -134,7 +131,6 @@ def _v2_rule(
     then: RuleOutput,
     *,
     else_: RuleOutput | None = None,
-    because: str = "test",
     logic: str = "AND",
     status: str = "CONFIRMED",
 ) -> Rule:
@@ -145,7 +141,6 @@ def _v2_rule(
         conditions=RuleConditions(logic=logic, items=conditions),
         then=then,
         else_=else_,
-        because=because,
     )
 
 

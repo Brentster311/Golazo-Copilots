@@ -44,14 +44,12 @@ You are an expert system fact extractor. Given an incident report, your job is t
 2. Call get_existing_rules() to see what rules already exist (avoid duplicates).
 3. Read the incident report and extract facts using submit_fact().
 4. Propose troubleshooting rules using submit_rule().
-5. If a root cause is identified, call set_root_cause().
 
 Guidelines:
 - Facts use scope="rule" for generalizable patterns, scope="context" for instance-specific data.
 - Do NOT extract GUIDs, timestamps, resource names, or subscription IDs as rule-scoped facts.
 - Rules use variables ($op, $vm, etc.) in instance fields when conditions must match the same entity.
 - Facts never use variables — only rules do.
-- Every rule needs a "because" explanation.
 - Use CHANGE_STATE for positive identification, RULED_OUT for elimination, GAP for missing information.
 - Prefer reusing existing ontology nouns/properties (case-insensitive match).
 - Default instance to "*" unless a specific instance is required.
@@ -163,26 +161,8 @@ _TOOLS: list[dict[str, Any]] = [
                         },
                         "required": ["kind", "description"],
                     },
-                    "because": {"type": "string", "description": "Human-readable explanation"},
                 },
-                "required": ["conditions", "then", "because"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "set_root_cause",
-            "description": (
-                "Set the root cause identified in this incident. "
-                "Call once when you have determined the root cause."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "name": {"type": "string", "description": "Root cause name"},
-                },
-                "required": ["name"],
+                "required": ["conditions", "then"],
             },
         },
     },
@@ -289,7 +269,6 @@ class FactExtractor:
         # State accumulators for the agentic loop
         collected_facts: list[Fact] = []
         collected_rules: list[Rule] = []
-        root_cause: str | None = None
         total_tokens = 0
         total_tool_calls = 0
         total_rejections = 0
@@ -300,7 +279,6 @@ class FactExtractor:
             "get_existing_rules": "Checking existing rules",
             "submit_fact": "Submitting fact",
             "submit_rule": "Submitting rule",
-            "set_root_cause": "Setting root cause",
         }
 
         messages: list[dict[str, Any]] = [
@@ -361,9 +339,6 @@ class FactExtractor:
                 elif fn_name == "submit_rule":
                     kind = (args.get("then") or {}).get("kind", "?")
                     _emit(f"Turn {turn + 1}: {label} — {kind}")
-                elif fn_name == "set_root_cause":
-                    name = args.get("name", "?")
-                    _emit(f"Turn {turn + 1}: {label} — {name}")
                 else:
                     _emit(f"Turn {turn + 1}: {label}")
 
@@ -376,10 +351,6 @@ class FactExtractor:
 
                 if not accepted:
                     total_rejections += 1
-
-                # Handle root_cause specially (returned via _dispatch_tool side channel)
-                if fn_name == "set_root_cause" and accepted:
-                    root_cause = args.get("name")
 
                 # Append tool result message
                 messages.append({
@@ -422,7 +393,6 @@ class FactExtractor:
         return LLMResponse(
             facts=collected_facts,
             rules=collected_rules,
-            root_cause=root_cause,
         )
 
     # ------------------------------------------------------------------
@@ -451,8 +421,6 @@ class FactExtractor:
                 return self._handle_submit_fact(args, ontology, collected_facts)
             elif name == "submit_rule":
                 return self._handle_submit_rule(args, collected_rules)
-            elif name == "set_root_cause":
-                return self._handle_set_root_cause(args)
             else:
                 return (
                     f"Unknown tool: '{name}'. Available tools: "
@@ -540,11 +508,6 @@ class FactExtractor:
         collected_rules: list[Rule],
     ) -> tuple[str, bool]:
         """Validate and collect a rule with v2 grammar."""
-        # Validate because
-        because = args.get("because", "")
-        if not because:
-            return "Rule must have a 'because' explanation.", False
-
         # Validate conditions
         cond_data = args.get("conditions", {})
         items_data = cond_data.get("items", [])
@@ -589,15 +552,6 @@ class FactExtractor:
             conditions=conditions,
             then=then_output,
             else_=else_output,
-            because=because,
         )
         collected_rules.append(rule)
         return f"Rule accepted: IF ... THEN {then_kind}('{then_desc}')", True
-
-    @staticmethod
-    def _handle_set_root_cause(args: dict) -> tuple[str, bool]:
-        """Set root cause. Last call wins."""
-        name = args.get("name", "")
-        if not name:
-            return "Root cause name must not be empty.", False
-        return f"Root cause set to: {name}", True

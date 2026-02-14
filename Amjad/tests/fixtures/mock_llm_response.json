@@ -31,9 +31,7 @@
           {"noun": "Server", "instance": "*", "property": "MemoryFree", "operator": "<", "value": "5%"}
         ]
       },
-      "then": {"noun": "Server", "instance": "*", "property": "ResourceExhausted", "value": "TRUE"},
-      "because": "High CPU combined with low memory indicates resource exhaustion"
+      "then": {"noun": "Server", "instance": "*", "property": "ResourceExhausted", "value": "TRUE"}
     }
-  ],
-  "root_cause": "Resource Exhaustion"
+  ]
 }

@@ -42,7 +42,7 @@ def _then_display(then: RuleOutput | object) -> str:
 def rules_to_rows(rules: list[Rule]) -> list[dict]:
     """Convert Rule objects to display-ready row dicts.
 
-    Each row: {rule_id, status, type, conditions, then, else, because, sources}
+    Each row: {rule_id, status, type, conditions, then, else, sources}
     """
     rows = []
     for r in rules:
@@ -65,7 +65,6 @@ def rules_to_rows(rules: list[Rule]) -> list[dict]:
             "conditions": conditions_str,
             "then": then_str,
             "else": else_str,
-            "because": r.because,
             "sources": r.sources,
         })
     return rows

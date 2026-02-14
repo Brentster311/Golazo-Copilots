@@ -17,7 +17,6 @@ def _confirmed_rule(rule_id, conditions, then_noun, then_prop, then_value, then_
         sources=["INC-001"],
         conditions=RuleConditions(logic="AND", items=conditions),
         then=RuleThen(noun=then_noun, instance=then_instance, property=then_prop, value=then_value),
-        because="test",
     )
 
 
@@ -30,7 +29,6 @@ def _gap_rule(rule_id, requires, produces_value, sources=None, note="Unknown"):
         requires=requires,
         produces=[_fact("RootCause", "Name", "==", produces_value)],
         note=note,
-        because="Orphaned facts",
     )
 
 
@@ -308,7 +306,6 @@ class TestCheckRefinements:
             requires=[orphan],
             produces=[_fact("RootCause", "Name", "==", "X")],
             note="was a gap",
-            because="test",
         )
         new_rule = _confirmed_rule("R-011", [orphan], "RootCause", "Name", "X")
         detector = GapDetector(existing_rules=[resolved])
@@ -335,7 +332,6 @@ class TestDetectGapsRuleout:
             sources=["INC-001"],
             conditions=RuleConditions(logic="AND", items=[fact_a]),
             then=RuleThen("RULEOUT", "*", "Target", "Network Issue"),
-            because="Normal latency rules out network",
         )
 
         # fact_b connected via positive rule
@@ -358,7 +354,6 @@ class TestDetectGapsRuleout:
             sources=["INC-001"],
             conditions=RuleConditions(logic="AND", items=[fact_b]),
             then=RuleThen("RULEOUT", "*", "Target", "Network Issue"),
-            because="reason",
         )
 
         detector = GapDetector(existing_rules=[positive, ruleout])
@@ -378,7 +373,6 @@ class TestDetectGapsRuleout:
             sources=["INC-001"],
             conditions=RuleConditions(logic="AND", items=[fact_a]),
             then=RuleThen("RULEOUT", "*", "Target", "Network Issue"),
-            because="reason",
         )
         positive = _confirmed_rule("R-001", [fact_b], "RootCause", "Name", "RC1")
 

@@ -35,7 +35,7 @@ try:
     from ees.gui.kusto_client import KustoClient, KUSTO_AVAILABLE
 except ImportError:  # pragma: no cover
     KUSTO_AVAILABLE = False
-from ees.models import Fact, Incident, Rule, RootCause
+from ees.models import Fact, Incident, Rule
 from ees.ontology_manager import OntologyManager
 from ees.rule_evaluator import RuleEvaluator
 from ees.rule_generator import RuleGenerator
@@ -60,7 +60,6 @@ class EESApp:
         # State
         self._pending_facts: list[Fact] = []
         self._pending_rules: list[Rule] = []
-        self._pending_root_cause: str | None = None
         self._incident_text: str = ""
 
         self._build_ui()
@@ -311,7 +310,6 @@ class EESApp:
 
         self._pending_facts = llm_response.facts
         self._pending_rules = llm_response.rules
-        self._pending_root_cause = llm_response.root_cause
 
         # Populate facts tree
         self.facts_tree.delete(*self.facts_tree.get_children())
@@ -380,7 +378,6 @@ class EESApp:
             incident_id=incident_id,
             source_text=self._incident_text,
             facts=self._pending_facts,
-            root_cause_identified=self._pending_root_cause,
         )
         self.store.save_incident(incident)
 
@@ -398,7 +395,7 @@ class EESApp:
         # GAP detection
         detector = GapDetector(existing_rules)
         gaps = detector.detect_gaps(
-            confirmed_facts, filtered, self._pending_root_cause, incident_id)
+            confirmed_facts, filtered, None, incident_id)
         for gap in gaps:
             gap.rule_id = self.store.next_rule_id()
             self.store.save_rule(gap)
@@ -414,14 +411,6 @@ class EESApp:
         mgr.update_from_facts(confirmed_facts)
         if mgr.has_changes():
             self.store.save_ontology(mgr.get_nouns())
-
-        # Root causes
-        if self._pending_root_cause:
-            rcs = self.store.load_root_causes()
-            rc_names = {rc.name.lower() for rc in rcs}
-            if self._pending_root_cause.lower() not in rc_names:
-                rcs.append(RootCause(name=self._pending_root_cause))
-            self.store.save_root_causes(rcs)
 
         self.save_btn.config(state=tk.DISABLED)
         self.status_var.set(
@@ -465,7 +454,7 @@ class EESApp:
                    command=self._refresh_kb_rules).pack(side=tk.LEFT, padx=5)
 
         # Rules treeview
-        cols = ("rule_id", "status", "type", "conditions", "then", "else", "because")
+        cols = ("rule_id", "status", "type", "conditions", "then", "else")
         self.kb_rules_tree = ttk.Treeview(rules_frame, columns=cols,
                                           show="headings", height=15)
         for col in cols:
@@ -476,7 +465,6 @@ class EESApp:
         self.kb_rules_tree.column("conditions", width=300)
         self.kb_rules_tree.column("then", width=200)
         self.kb_rules_tree.column("else", width=200)
-        self.kb_rules_tree.column("because", width=250)
         self.kb_rules_tree.pack(fill=tk.BOTH, expand=True, padx=5)
         self.kb_rules_tree.bind("<Double-1>", self._on_kb_rules_double_click)
 
@@ -514,7 +502,6 @@ class EESApp:
             self.kb_rules_tree.insert("", tk.END, values=(
                 row["rule_id"], row["status"], row["type"],
                 row["conditions"], row["then"], row["else"],
-                row["because"],
             ))
         self.status_var.set(f"Rules: {len(filtered)} shown of {len(all_rules)} total")
 
@@ -640,8 +627,7 @@ class EESApp:
             f"Type:        {vals[2]}\n"
             f"Conditions:  {vals[3]}\n"
             f"Then:        {vals[4]}\n"
-            f"Else:        {vals[5]}\n"
-            f"Because:     {vals[6]}"
+            f"Else:        {vals[5]}"
         )
         _show_detail_dialog(self.root, f"Rule {vals[0]}", detail)
 
@@ -830,7 +816,6 @@ def _show_rule_detail(parent: tk.Tk, rule) -> None:
     )
     if rule.else_:
         detail += f"Else:        {_then_display(rule.else_)}\n"
-    detail += f"\nBecause:\n  {rule.because or '(none)'}\n"
 
     _show_detail_dialog(parent, f"Rule {rule.rule_id}", detail)
 

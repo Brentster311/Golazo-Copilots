@@ -76,10 +76,6 @@ class GapDetector:
                 )
             ],
             note="Unknown intermediate diagnostic steps",
-            because=(
-                f"Facts {', '.join(f.to_display() for f in orphaned)} do not connect "
-                f"to root cause '{root_cause}' through any known rules"
-            ),
         )
         return [gap]
 
@@ -174,7 +170,6 @@ class GapDetector:
                     requires=list(gap.requires),
                     produces=list(gap.produces),
                     note=gap.note,
-                    because=gap.because,
                 )
                 results.append(
                     GapRefinement(
@@ -195,7 +190,6 @@ class GapDetector:
                     requires=remaining_facts,
                     produces=list(gap.produces),
                     note=gap.note,
-                    because=gap.because,
                 )
                 results.append(
                     GapRefinement(

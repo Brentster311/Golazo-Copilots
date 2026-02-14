@@ -81,7 +81,6 @@ class TestYamlStoreRules:
                 items=[Fact("Server", "*", "CPUUsage", ">", "90")],
             ),
             then=RuleThen("Server", "*", "ResourceExhausted", "TRUE"),
-            because="High CPU indicates exhaustion",
         )
         store.save_rule(rule)
 
@@ -91,13 +90,12 @@ class TestYamlStoreRules:
         loaded = store.load_rule("R-001")
         assert loaded.rule_id == "R-001"
         assert loaded.status == "CONFIRMED"
-        assert loaded.because == "High CPU indicates exhaustion"
         assert len(loaded.conditions.items) == 1
 
     def test_list_rules(self, store):
         """List all existing rules."""
-        store.save_rule(Rule(rule_id="R-001", because="a"))
-        store.save_rule(Rule(rule_id="R-002", because="b"))
+        store.save_rule(Rule(rule_id="R-001"))
+        store.save_rule(Rule(rule_id="R-002"))
         rules = store.list_rules()
         ids = [r.rule_id for r in rules]
         assert "R-001" in ids
@@ -196,7 +194,6 @@ class TestYamlValidity:
             sources=["INC-001"],
             conditions=RuleConditions("AND", [Fact("S", "*", "P", ">", "1")]),
             then=RuleThen("S", "*", "X", "TRUE"),
-            because="reason",
         )
         store.save_rule(rule)
 

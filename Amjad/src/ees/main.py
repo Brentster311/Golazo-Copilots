@@ -9,7 +9,7 @@ from ees.exceptions import ConfigError, IncidentLoadError, LLMError
 from ees.fact_extractor import FactExtractor
 from ees.gap_detector import GapDetector
 from ees.incident_loader import IncidentLoader
-from ees.models import Fact, Incident, Rule, RootCause, RuleOutput
+from ees.models import Fact, Incident, Rule, RuleOutput
 from ees.ontology_manager import OntologyManager
 from ees.rule_evaluator import RuleEvaluator
 from ees.rule_generator import RuleGenerator
@@ -108,7 +108,7 @@ def _specialize_fact(fact: Fact) -> Fact | None:
 def _confirm_rules(rules: list[Rule]) -> list[Rule]:
     """Interactive CLI confirmation of proposed rules.
 
-    Actions: c=confirm, e=edit (BECAUSE clause), r=reject
+    Actions: c=confirm, r=reject
     """
     confirmed: list[Rule] = []
 
@@ -117,15 +117,9 @@ def _confirm_rules(rules: list[Rule]) -> list[Rule]:
         conditions_str = _format_rule_conditions(rule)
         then_str = _format_rule_then(rule)
         print(f"  {i}. IF {conditions_str} THEN {then_str}")
-        print(f"     BECAUSE: {rule.because}")
 
-        action = input("     [confirm/edit/reject] (c/e/r): ").strip().lower()
+        action = input("     [confirm/reject] (c/r): ").strip().lower()
         if action == "c":
-            confirmed.append(rule)
-        elif action == "e":
-            new_because = input("     Enter updated BECAUSE clause: ").strip()
-            if new_because:
-                rule.because = new_because
             confirmed.append(rule)
         # action == "r" or anything else: skip
 
@@ -149,24 +143,6 @@ def _format_rule_then(rule: Rule) -> str:
     if rule.type == "ruleout":
         return f"RULEOUT {rule.then.value}"
     return f"{rule.then.noun}({rule.then.instance}).{rule.then.property} = {rule.then.value}"
-
-
-def _confirm_root_cause(proposed: str | None) -> str | None:
-    """Confirm root cause (c/e/r only — root causes are not parameterized)."""
-    if not proposed:
-        return None
-
-    action = input(
-        f"\nProposed root cause: \"{proposed}\"  [confirm/edit/reject] (c/e/r): "
-    ).strip().lower()
-
-    if action == "c":
-        return proposed
-    elif action == "e":
-        edited = input("  Enter root cause name: ").strip()
-        return edited if edited else None
-    else:
-        return None
 
 
 def _confirm_gaps(gaps: list[Rule]) -> list[Rule]:
@@ -243,10 +219,7 @@ def process_incident(incident_path: str, data_dir: str) -> None:
         print("Incident saved (all facts rejected).")
         return
 
-    # Step 5: Confirm root cause
-    root_cause = _confirm_root_cause(llm_response.root_cause)
-
-    # Step 6: Confirm rules
+    # Step 5: Confirm rules
     # Only "rule" scope facts drive rule matching
     rule_facts = [f for f in confirmed_facts if f.scope == "rule"]
     existing_rules = store.list_rules()
@@ -260,7 +233,7 @@ def process_incident(incident_path: str, data_dir: str) -> None:
     # Step 6b: GAP detection and refinement
     detector = GapDetector(existing_rules)
     detected_gaps = detector.detect_gaps(
-        confirmed_facts, confirmed_rules, root_cause, incident_id
+        confirmed_facts, confirmed_rules, None, incident_id
     )
 
     confirmed_gaps: list[Rule] = []
@@ -290,7 +263,6 @@ def process_incident(incident_path: str, data_dir: str) -> None:
         incident_id=incident_id,
         source_text=text,
         facts=all_facts,
-        root_cause_identified=root_cause,
     )
     store.save_incident(incident)
 
@@ -308,14 +280,6 @@ def process_incident(incident_path: str, data_dir: str) -> None:
     # Update ontology
     if ontology_mgr.has_changes():
         store.save_ontology(ontology_mgr.get_nouns())
-
-    # Update root causes
-    if root_cause:
-        existing_rcs = store.load_root_causes()
-        rc_names = {rc.name.lower() for rc in existing_rcs}
-        if root_cause.lower() not in rc_names:
-            existing_rcs.append(RootCause(name=root_cause))
-        store.save_root_causes(existing_rcs)
 
     # Step 9: Print summary
     confirmed_count = len(confirmed_facts)

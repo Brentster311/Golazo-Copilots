@@ -277,7 +277,6 @@ class TestRule:
             conditions=_make_cond(("CPU", "High"), ("Memory", "Low")),
             then=RuleOutput(kind="CHANGE_STATE", description="CPU+Memory issue"),
             else_=RuleOutput(kind="RULED_OUT", description="Not CPU+Memory"),
-            because="both thresholds exceeded",
         )
         d1 = r.to_dict()
         r2 = Rule.from_dict(d1)
