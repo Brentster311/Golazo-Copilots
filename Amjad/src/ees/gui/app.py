@@ -22,6 +22,45 @@ def _sanitize_html_colors(html: str) -> str:
     return _STYLE_RE.sub("", html)
 
 
+class _ToolTip:
+    """Lightweight hover tooltip for any Tkinter widget."""
+
+    def __init__(self, widget: tk.Widget, text: str, *, delay: int = 400) -> None:
+        self._widget = widget
+        self._text = text
+        self._delay = delay
+        self._tip_window: tk.Toplevel | None = None
+        self._after_id: str | None = None
+        widget.bind("<Enter>", self._schedule, add="+")
+        widget.bind("<Leave>", self._hide, add="+")
+
+    def _schedule(self, _event: tk.Event) -> None:
+        self._after_id = self._widget.after(self._delay, self._show)
+
+    def _show(self) -> None:
+        if self._tip_window:
+            return
+        x = self._widget.winfo_rootx() + self._widget.winfo_width() // 2
+        y = self._widget.winfo_rooty() + self._widget.winfo_height() + 4
+        tw = tk.Toplevel(self._widget)
+        tw.wm_overrideredirect(True)
+        tw.wm_geometry(f"+{x}+{y}")
+        label = tk.Label(
+            tw, text=self._text, background="#ffffe1", relief="solid",
+            borderwidth=1, font=("Segoe UI", 9), wraplength=300, justify="left",
+        )
+        label.pack()
+        self._tip_window = tw
+
+    def _hide(self, _event: tk.Event | None = None) -> None:
+        if self._after_id:
+            self._widget.after_cancel(self._after_id)
+            self._after_id = None
+        if self._tip_window:
+            self._tip_window.destroy()
+            self._tip_window = None
+
+
 from ees.fact_extractor import FactExtractor
 from ees.gap_detector import GapDetector
 from ees.gui.adapters import (
@@ -168,20 +207,34 @@ class EESApp:
 
         fact_btns = ttk.Frame(facts_frame)
         fact_btns.pack(fill=tk.X, pady=2)
-        ttk.Button(fact_btns, text="Confirm",
-                   command=lambda: self._set_fact_status("confirmed")).pack(
-                       side=tk.LEFT, padx=2)
-        ttk.Button(fact_btns, text="Reject",
-                   command=lambda: self._set_fact_status("rejected")).pack(
-                       side=tk.LEFT, padx=2)
-        ttk.Button(fact_btns, text="Confirm All",
-                   command=self._confirm_all_facts).pack(side=tk.LEFT, padx=2)
-        ttk.Button(fact_btns, text="Set Rule",
-                   command=lambda: self._set_fact_scope("rule")).pack(
-                       side=tk.LEFT, padx=2)
-        ttk.Button(fact_btns, text="Set Context",
-                   command=lambda: self._set_fact_scope("context")).pack(
-                       side=tk.LEFT, padx=2)
+        btn = ttk.Button(fact_btns, text="Confirm",
+                         command=lambda: self._set_fact_status("confirmed"))
+        btn.pack(side=tk.LEFT, padx=2)
+        _ToolTip(btn, "Mark the selected fact as confirmed.\n"
+                 "Only confirmed facts are saved to the knowledge base.")
+
+        btn = ttk.Button(fact_btns, text="Reject",
+                         command=lambda: self._set_fact_status("rejected"))
+        btn.pack(side=tk.LEFT, padx=2)
+        _ToolTip(btn, "Mark the selected fact as rejected.\n"
+                 "Rejected facts are discarded and won't be saved.")
+
+        btn = ttk.Button(fact_btns, text="Confirm All",
+                         command=self._confirm_all_facts)
+        btn.pack(side=tk.LEFT, padx=2)
+        _ToolTip(btn, "Confirm every proposed fact at once.")
+
+        btn = ttk.Button(fact_btns, text="Set Rule",
+                         command=lambda: self._set_fact_scope("rule"))
+        btn.pack(side=tk.LEFT, padx=2)
+        _ToolTip(btn, "Change scope to 'rule'. Rule-scoped facts are\n"
+                 "generalizable and used to build troubleshooting rules.")
+
+        btn = ttk.Button(fact_btns, text="Set Context",
+                         command=lambda: self._set_fact_scope("context"))
+        btn.pack(side=tk.LEFT, padx=2)
+        _ToolTip(btn, "Change scope to 'context'. Context-scoped facts are\n"
+                 "instance-specific and stored for documentation only.")
 
         # Rules/save frame
         rules_frame = ttk.LabelFrame(right, text="Proposed Rules")
