@@ -1,9 +1,15 @@
-"""Fact extractor — LLM integration via Azure OpenAI with Azure Identity auth."""
+"""Fact extractor — multi-turn tool-calling via Azure OpenAI (EES-00013).
+
+Uses an agentic loop: the model inspects ontology/rules via read-only tools,
+then submits facts and rules through schema-validated tool calls.  Invalid
+submissions return validation errors so the model can self-correct.
+"""
 from __future__ import annotations
 
 import json
+import logging
 import os
-from pathlib import Path
+from typing import Any
 
 from azure.identity import (
     AzureCliCredential,
@@ -19,100 +25,173 @@ from ees.models import (
     OntologyNoun,
     Rule,
     RuleConditions,
-    RuleThen,
+    RuleOutput,
+    VALID_OPERATORS,
+    VALID_OUTPUT_KINDS,
 )
 
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# System prompt — intentionally brief; schema is enforced by tool parameters
+# ---------------------------------------------------------------------------
 
 _SYSTEM_PROMPT = """\
-You are an expert system fact extractor. Given an incident report and an existing ontology, \
-extract structured facts and propose troubleshooting rules.
+You are an expert system fact extractor. Given an incident report, your job is to:
 
-Output JSON with this exact schema:
-{
-  "facts": [
-    {"noun": "<NounName>", "instance": "*", "property": "<PropertyName>", "operator": "<op>", "value": "<val>", "scope": "rule"}
-  ],
-  "rules": [
-    {
-      "type": "positive",
-      "conditions": {
-        "logic": "AND",
-        "items": [{"noun": "...", "instance": "*", "property": "...", "operator": "...", "value": "..."}]
-      },
-      "then": {"noun": "...", "instance": "*", "property": "...", "value": "..."},
-      "because": "Human-readable explanation"
-    }
-  ],
-  "root_cause": "Root cause name or null"
-}
+1. Call get_ontology() to see existing entity types and properties.
+2. Call get_existing_rules() to see what rules already exist (avoid duplicates).
+3. Read the incident report and extract facts using submit_fact().
+4. Propose troubleshooting rules using submit_rule().
+5. If a root cause is identified, call set_root_cause().
 
-For RULEOUT rules (elimination reasoning like "we ruled out X because..."):
-{
-  "type": "ruleout",
-  "conditions": {
-    "logic": "AND",
-    "items": [{"noun": "...", "instance": "*", "property": "...", "operator": "...", "value": "..."}]
-  },
-  "then": {"noun": "RULEOUT", "instance": "*", "property": "Target", "value": "<RootCauseName>"},
-  "because": "Why this root cause is ruled out"
-}
-
-Fact scope classification:
-- Each fact MUST include a "scope" field: "rule" or "context".
-- "rule" = generalizable across incidents (use in troubleshooting rules).
-- "context" = instance-specific documentation (saved but NOT used in rules).
-
-Extract as "scope": "rule":
-- Error codes, result codes, failure categories
-- VM SKU sizes, operation types, service names
-- Boolean states (success/failure flags)
-- Error message patterns (use 'contains' operator)
-
-Extract as "scope": "context" (or DO NOT extract at all):
-- Resource group names, resource names, cluster names, node names
-- GUIDs (activity IDs, correlation IDs, request IDs, subscription IDs)
-- Specific timestamps or dates
-- Region names (unless the root cause IS region-specific)
-
-Rules:
-- Default instance to "*" (generalized) unless the incident clearly requires a specific instance.
+Guidelines:
+- Facts use scope="rule" for generalizable patterns, scope="context" for instance-specific data.
+- Do NOT extract GUIDs, timestamps, resource names, or subscription IDs as rule-scoped facts.
+- Rules use variables ($op, $vm, etc.) in instance fields when conditions must match the same entity.
+- Facts never use variables — only rules do.
+- Every rule needs a "because" explanation.
+- Use CHANGE_STATE for positive identification, RULED_OUT for elimination, GAP for missing information.
+- Prefer reusing existing ontology nouns/properties (case-insensitive match).
+- Default instance to "*" unless a specific instance is required.
 - Valid operators: ==, !=, >, <, >=, <=, contains, !contains
 - Use flat AND or flat OR logic only (never mix).
-- Every rule must have a BECAUSE clause.
-- Reuse existing ontology noun/property names when they match (case-insensitive).
-- Identify the root cause if present in the incident, or set to null.
-- Only use "scope": "rule" facts in rule conditions.
-
-Variable binding in rules:
-- When a rule has multiple conditions that must refer to the SAME operation, request, or entity \
-use a shared variable like "$op" in the instance field instead of "*".
-- Variables start with "$" followed by a descriptive name (e.g. "$op", "$vmsize", "$region").
-- If two conditions share "$op", the rule only fires when both match facts with the same instance value.
-- Use "*" when the instance genuinely does not matter (e.g. a single global fact).
-- Variables can also appear in the value field (e.g. "value": "$vmsize") to capture and \
-reuse a value in the conclusion.
-- Variables in the "then" clause are substituted with the bound value when the rule fires.
-
-Example rule with variable binding:
-{
-  "type": "positive",
-  "conditions": {
-    "logic": "AND",
-    "items": [
-      {"noun": "Error", "instance": "$op", "property": "ResultCode", "operator": "==", "value": "ZonalAllocationFailed"},
-      {"noun": "Error", "instance": "$op", "property": "Message", "operator": "contains", "value": "insufficient capacity"}
-    ]
-  },
-  "then": {"noun": "RootCause", "instance": "$op", "property": "Name", "value": "Zonal capacity exhaustion"},
-  "because": "When the same operation has both a ZonalAllocationFailed code and an insufficient capacity message, the root cause is zonal capacity exhaustion"
-}
-
-Facts should NEVER use variables — only rules use them. Facts always use "*" or a specific instance name.
 """
+
+# ---------------------------------------------------------------------------
+# Tool definitions (JSON-Schema for each tool's parameters)
+# ---------------------------------------------------------------------------
+
+_TOOLS: list[dict[str, Any]] = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_ontology",
+            "description": (
+                "Retrieve the current ontology (nouns and their properties). "
+                "Call this first to understand available entities before extracting facts."
+            ),
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_existing_rules",
+            "description": (
+                "Retrieve all confirmed troubleshooting rules in the knowledge base. "
+                "Use to avoid duplicating existing rules."
+            ),
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "submit_fact",
+            "description": (
+                "Submit a single extracted fact. Facts represent observed conditions "
+                "in the incident. Use scope='rule' for generalizable facts, "
+                "scope='context' for instance-specific documentation. "
+                "Do NOT include variables ($) in facts."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "noun": {"type": "string", "description": "Entity name (e.g., 'Error', 'VM')"},
+                    "instance": {"type": "string", "description": "Instance name or '*' for generalized"},
+                    "property": {"type": "string", "description": "Property name (e.g., 'ResultCode')"},
+                    "operator": {
+                        "type": "string",
+                        "enum": list(VALID_OPERATORS),
+                    },
+                    "value": {"type": "string", "description": "The observed value"},
+                    "scope": {"type": "string", "enum": ["rule", "context"]},
+                },
+                "required": ["noun", "property", "operator", "value"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "submit_rule",
+            "description": (
+                "Submit a troubleshooting rule with v2 grammar. "
+                "The THEN branch is required (CHANGE_STATE, RULED_OUT, or GAP). "
+                "An optional ELSE branch fires when conditions are NOT met."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "conditions": {
+                        "type": "object",
+                        "properties": {
+                            "logic": {"type": "string", "enum": ["AND", "OR"]},
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "noun": {"type": "string"},
+                                        "instance": {"type": "string"},
+                                        "property": {"type": "string"},
+                                        "operator": {"type": "string", "enum": list(VALID_OPERATORS)},
+                                        "value": {"type": "string"},
+                                    },
+                                    "required": ["noun", "property", "operator", "value"],
+                                },
+                                "minItems": 1,
+                            },
+                        },
+                        "required": ["logic", "items"],
+                    },
+                    "then": {
+                        "type": "object",
+                        "properties": {
+                            "kind": {"type": "string", "enum": list(VALID_OUTPUT_KINDS)},
+                            "description": {"type": "string", "minLength": 1},
+                        },
+                        "required": ["kind", "description"],
+                    },
+                    "else": {
+                        "type": "object",
+                        "properties": {
+                            "kind": {"type": "string", "enum": list(VALID_OUTPUT_KINDS)},
+                            "description": {"type": "string", "minLength": 1},
+                        },
+                        "required": ["kind", "description"],
+                    },
+                    "because": {"type": "string", "description": "Human-readable explanation"},
+                },
+                "required": ["conditions", "then", "because"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "set_root_cause",
+            "description": (
+                "Set the root cause identified in this incident. "
+                "Call once when you have determined the root cause."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "description": "Root cause name"},
+                },
+                "required": ["name"],
+            },
+        },
+    },
+]
+
+_KNOWN_TOOLS = {t["function"]["name"] for t in _TOOLS}
 
 
 class FactExtractor:
-    """Extracts facts and rules from incident text using Azure OpenAI."""
+    """Extracts facts and rules from incident text using Azure OpenAI tool calling."""
 
     def __init__(
         self,
@@ -153,87 +232,310 @@ class FactExtractor:
             return token.token
         return get_token
 
-    def extract(self, incident_text: str, ontology: list[OntologyNoun]) -> LLMResponse:
-        """Send incident text to LLM and parse the response.
+    # ------------------------------------------------------------------
+    # Public API — signature unchanged from v1
+    # ------------------------------------------------------------------
 
-        Retries once on parse failure. Raises LLMError on API or persistent parse failure.
+    def extract(
+        self,
+        incident_text: str,
+        ontology: list[OntologyNoun],
+        *,
+        max_turns: int = 10,
+    ) -> LLMResponse:
+        """Extract facts and rules from incident text via multi-turn tool calling.
+
+        Args:
+            incident_text: Raw incident report text.
+            ontology: Current ontology nouns for context.
+            max_turns: Maximum agentic loop iterations (default 10).
+
+        Returns:
+            LLMResponse with collected facts, rules, and root cause.
+
+        Raises:
+            LLMError: On API failure.
         """
-        ontology_context = self._format_ontology(ontology)
-        user_msg = f"Existing ontology:\n{ontology_context}\n\nIncident report:\n{incident_text}"
+        # State accumulators for the agentic loop
+        collected_facts: list[Fact] = []
+        collected_rules: list[Rule] = []
+        root_cause: str | None = None
+        total_tokens = 0
+        total_tool_calls = 0
+        total_rejections = 0
 
-        raw = ""
-        for attempt in range(2):  # initial + 1 retry
+        messages: list[dict[str, Any]] = [
+            {"role": "system", "content": _SYSTEM_PROMPT},
+            {"role": "user", "content": f"Incident report:\n{incident_text}"},
+        ]
+
+        for turn in range(max_turns):
             try:
                 response = self.client.chat.completions.create(
                     model=self.deployment,
-                    messages=[
-                        {"role": "system", "content": _SYSTEM_PROMPT},
-                        {"role": "user", "content": user_msg},
-                    ],
-                    response_format={"type": "json_object"},
+                    messages=messages,
+                    tools=_TOOLS,
+                    tool_choice="auto",
                 )
             except Exception as e:
                 raise LLMError(f"LLM API call failed: {e}") from e
 
-            raw = response.choices[0].message.content
-            try:
-                parsed = json.loads(raw)
-                return self._parse_response(parsed)
-            except (json.JSONDecodeError, KeyError, TypeError):
-                if attempt == 0:
-                    # Retry with simplified prompt
-                    user_msg = (
-                        f"Previous response was not valid JSON. "
-                        f"Please respond with ONLY valid JSON.\n\n{user_msg}"
-                    )
-                    continue
+            # Track tokens
+            if response.usage:
+                total_tokens += response.usage.total_tokens
 
-        # Both attempts failed
-        raise LLMError(f"Could not parse LLM response. Raw output:\n{raw}")
+            assistant_msg = response.choices[0].message
+            tool_calls = assistant_msg.tool_calls
 
-    def _format_ontology(self, ontology: list[OntologyNoun]) -> str:
-        """Format ontology as text for the LLM prompt."""
-        if not ontology:
-            return "(empty — no existing ontology)"
-        lines = []
-        for noun in ontology:
-            props = ", ".join(p.name for p in noun.properties)
-            lines.append(f"- {noun.name}: {props}")
-        return "\n".join(lines)
+            # No tool calls → model is done
+            if not tool_calls:
+                break
 
-    def _parse_response(self, data: dict) -> LLMResponse:
-        """Parse the JSON response into an LLMResponse."""
-        facts = [
-            Fact.from_dict({**f, "instance": f.get("instance", "*")})
-            for f in data.get("facts", [])
-        ]
+            # Append the assistant message (with tool_calls) to history
+            messages.append(assistant_msg)
 
-        rules = []
-        for r in data.get("rules", []):
-            cond = r["conditions"]
-            items = [
-                Fact.from_dict({**it, "instance": it.get("instance", "*")})
-                for it in cond["items"]
-            ]
-            then_data = r["then"]
-            rule_type = r.get("type", "positive")
-            rules.append(
-                Rule(
-                    rule_id="",  # assigned later
-                    type=rule_type,
-                    conditions=RuleConditions(logic=cond["logic"], items=items),
-                    then=RuleThen(
-                        noun=then_data["noun"],
-                        instance=then_data.get("instance", "*"),
-                        property=then_data["property"],
-                        value=then_data["value"],
-                    ),
-                    because=r.get("because", ""),
+            # Process each tool call
+            for tc in tool_calls:
+                total_tool_calls += 1
+                fn_name = tc.function.name
+                try:
+                    args = json.loads(tc.function.arguments)
+                except (json.JSONDecodeError, TypeError):
+                    args = {}
+
+                # Dispatch to handler
+                result_str, accepted = self._dispatch_tool(
+                    fn_name, args, ontology, collected_facts, collected_rules,
                 )
+
+                if not accepted:
+                    total_rejections += 1
+
+                # Handle root_cause specially (returned via _dispatch_tool side channel)
+                if fn_name == "set_root_cause" and accepted:
+                    root_cause = args.get("name")
+
+                # Append tool result message
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc.id,
+                    "content": result_str,
+                })
+        else:
+            logger.warning(
+                "Max turns (%d) reached during extraction. "
+                "Returning %d facts, %d rules collected so far.",
+                max_turns, len(collected_facts), len(collected_rules),
             )
 
-        return LLMResponse(
-            facts=facts,
-            rules=rules,
-            root_cause=data.get("root_cause"),
+        logger.info(
+            "Extraction complete: turns=%d, tool_calls=%d, rejections=%d, "
+            "facts=%d, rules=%d, tokens=%d",
+            min(turn + 1, max_turns) if max_turns > 0 else 0,
+            total_tool_calls,
+            total_rejections,
+            len(collected_facts),
+            len(collected_rules),
+            total_tokens,
         )
+
+        return LLMResponse(
+            facts=collected_facts,
+            rules=collected_rules,
+            root_cause=root_cause,
+        )
+
+    # ------------------------------------------------------------------
+    # Tool dispatch
+    # ------------------------------------------------------------------
+
+    def _dispatch_tool(
+        self,
+        name: str,
+        args: dict,
+        ontology: list[OntologyNoun],
+        collected_facts: list[Fact],
+        collected_rules: list[Rule],
+    ) -> tuple[str, bool]:
+        """Dispatch a tool call to its handler.
+
+        Returns (result_string, accepted).  accepted=False means validation
+        failed and the result_string contains an error message.
+        """
+        try:
+            if name == "get_ontology":
+                return self._handle_get_ontology(ontology), True
+            elif name == "get_existing_rules":
+                return self._handle_get_existing_rules(), True
+            elif name == "submit_fact":
+                return self._handle_submit_fact(args, ontology, collected_facts)
+            elif name == "submit_rule":
+                return self._handle_submit_rule(args, collected_rules)
+            elif name == "set_root_cause":
+                return self._handle_set_root_cause(args)
+            else:
+                return (
+                    f"Unknown tool: '{name}'. Available tools: "
+                    f"{', '.join(sorted(_KNOWN_TOOLS))}",
+                    False,
+                )
+        except Exception as e:
+            logger.debug("Tool handler error for %s: %s", name, e)
+            return f"Internal error processing {name}: {e}", False
+
+    # ------------------------------------------------------------------
+    # Tool handlers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _handle_get_ontology(ontology: list[OntologyNoun]) -> str:
+        """Return ontology as JSON."""
+        if not ontology:
+            return json.dumps({"nouns": [], "message": "No ontology exists yet. You may create new nouns."})
+        data = [
+            {"name": n.name, "properties": [p.name for p in n.properties]}
+            for n in ontology
+        ]
+        return json.dumps({"nouns": data})
+
+    @staticmethod
+    def _handle_get_existing_rules() -> str:
+        """Return existing rules. Currently returns empty (no rules parameter on extract)."""
+        return json.dumps([])
+
+    @staticmethod
+    def _handle_submit_fact(
+        args: dict,
+        ontology: list[OntologyNoun],
+        collected_facts: list[Fact],
+    ) -> tuple[str, bool]:
+        """Validate and collect a fact."""
+        noun = args.get("noun", "")
+        instance = args.get("instance", "*")
+        prop = args.get("property", "")
+        operator = args.get("operator", "")
+        value = args.get("value", "")
+        scope = args.get("scope", "rule")
+
+        # Validate operator
+        if operator not in VALID_OPERATORS:
+            return (
+                f"Invalid operator '{operator}'. Valid operators: {', '.join(VALID_OPERATORS)}",
+                False,
+            )
+
+        # Reject variables in facts
+        if Fact.is_variable(instance):
+            return "Facts must not contain variables. Use '*' or a specific instance name.", False
+        if Fact.is_variable(value):
+            return "Facts must not contain variables in the value field.", False
+
+        # Build fact
+        fact = Fact(
+            noun=noun,
+            instance=instance,
+            property=prop,
+            operator=operator,
+            value=value,
+            scope=scope,
+        )
+        collected_facts.append(fact)
+
+        # Ontology warning (accepted but noted)
+        warnings: list[str] = []
+        known_nouns = {n.name.lower(): n for n in ontology}
+        if noun.lower() not in known_nouns:
+            warnings.append(f"Note: noun '{noun}' is not in the current ontology. It will be created.")
+        elif not known_nouns[noun.lower()].has_property(prop):
+            warnings.append(f"Note: property '{prop}' is new for noun '{noun}'.")
+
+        msg = f"Fact accepted: {fact.to_display()}"
+        if warnings:
+            msg += " | " + " | ".join(warnings)
+        return msg, True
+
+    @staticmethod
+    def _handle_submit_rule(
+        args: dict,
+        collected_rules: list[Rule],
+    ) -> tuple[str, bool]:
+        """Validate and collect a rule with v2 grammar."""
+        # Validate because
+        because = args.get("because", "")
+        if not because:
+            return "Rule must have a 'because' explanation.", False
+
+        # Validate conditions
+        cond_data = args.get("conditions", {})
+        items_data = cond_data.get("items", [])
+        if not items_data:
+            return "Rule must have at least one condition.", False
+
+        # Validate each condition's operator
+        for i, item in enumerate(items_data):
+            op = item.get("operator", "")
+            if op not in VALID_OPERATORS:
+                return f"Invalid operator '{op}' in condition {i + 1}. Valid: {', '.join(VALID_OPERATORS)}", False
+
+        # Build condition items
+        condition_facts = [
+            Fact(
+                noun=it.get("noun", ""),
+                instance=it.get("instance", "*"),
+                property=it.get("property", ""),
+                operator=it.get("operator", ""),
+                value=it.get("value", ""),
+            )
+            for it in items_data
+        ]
+        conditions = RuleConditions(logic=cond_data.get("logic", "AND"), items=condition_facts)
+
+        # Validate then branch
+        then_data = args.get("then", {})
+        then_kind = then_data.get("kind", "")
+        then_desc = then_data.get("description", "")
+
+        if then_kind not in VALID_OUTPUT_KINDS:
+            return (
+                f"Invalid kind '{then_kind}' in THEN branch. "
+                f"Valid: {', '.join(VALID_OUTPUT_KINDS)}",
+                False,
+            )
+        if not then_desc:
+            return "THEN description must not be empty.", False
+
+        then_output = RuleOutput(kind=then_kind, description=then_desc)
+
+        # Validate optional else branch
+        else_output: RuleOutput | None = None
+        else_data = args.get("else")
+        if else_data:
+            else_kind = else_data.get("kind", "")
+            else_desc = else_data.get("description", "")
+            if else_kind not in VALID_OUTPUT_KINDS:
+                return (
+                    f"Invalid kind '{else_kind}' in ELSE branch. "
+                    f"Valid: {', '.join(VALID_OUTPUT_KINDS)}",
+                    False,
+                )
+            if not else_desc:
+                return "ELSE description must not be empty.", False
+            else_output = RuleOutput(kind=else_kind, description=else_desc)
+
+        rule = Rule(
+            rule_id="",  # assigned later by rule_generator
+            conditions=conditions,
+            then=then_output,
+            else_=else_output,
+            because=because,
+        )
+        collected_rules.append(rule)
+        return f"Rule accepted: IF ... THEN {then_kind}('{then_desc}')", True
+
+    @staticmethod
+    def _handle_set_root_cause(args: dict) -> tuple[str, bool]:
+        """Set root cause. Last call wins."""
+        name = args.get("name", "")
+        if not name:
+            return "Root cause name must not be empty.", False
+        return f"Root cause set to: {name}", True

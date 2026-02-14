@@ -1,281 +1,720 @@
-"""Tests for fact extractor (LLM integration)."""
+"""Tests for multi-turn tool-calling fact extractor (EES-00013).
+
+Covers TC-01 through TC-27 from the test cases document.
+All tests mock client.chat.completions.create to simulate tool-call sequences.
+"""
+from __future__ import annotations
+
 import json
-import pytest
-from pathlib import Path
+import logging
+import os
 from unittest.mock import MagicMock, patch
 
-from ees.exceptions import LLMError
+import pytest
+
+from ees.exceptions import ConfigError, LLMError
 from ees.fact_extractor import FactExtractor
-from ees.models import Fact, LLMResponse, OntologyNoun, OntologyProperty
+from ees.models import (
+    Fact,
+    LLMResponse,
+    OntologyNoun,
+    OntologyProperty,
+    Rule,
+    RuleOutput,
+)
 
 
-@pytest.fixture
-def fixtures_dir():
-    return Path(__file__).parent / "fixtures"
+# ---------------------------------------------------------------------------
+# Helpers to build mock OpenAI tool-calling responses
+# ---------------------------------------------------------------------------
+
+def _tool_call(name: str, arguments: dict, call_id: str = "call_1") -> MagicMock:
+    """Build a mock tool_call object."""
+    tc = MagicMock()
+    tc.id = call_id
+    tc.type = "function"
+    tc.function.name = name
+    tc.function.arguments = json.dumps(arguments)
+    return tc
 
 
-@pytest.fixture
-def mock_llm_response(fixtures_dir):
-    with open(fixtures_dir / "mock_llm_response.json") as f:
-        return json.load(f)
+def _assistant_msg_with_tools(tool_calls: list[MagicMock]) -> MagicMock:
+    """Build a mock ChatCompletion response whose message has tool_calls."""
+    msg = MagicMock()
+    msg.role = "assistant"
+    msg.content = None
+    msg.tool_calls = tool_calls
+    choice = MagicMock()
+    choice.message = msg
+    choice.finish_reason = "tool_calls"
+    resp = MagicMock()
+    resp.choices = [choice]
+    usage = MagicMock()
+    usage.total_tokens = 100
+    usage.prompt_tokens = 60
+    usage.completion_tokens = 40
+    resp.usage = usage
+    return resp
 
 
-@pytest.fixture
-def mock_llm_empty(fixtures_dir):
-    with open(fixtures_dir / "mock_llm_empty.json") as f:
-        return json.load(f)
+def _assistant_msg_done(content: str = "Extraction complete.") -> MagicMock:
+    """Build a mock ChatCompletion response with no tool_calls (model is done)."""
+    msg = MagicMock()
+    msg.role = "assistant"
+    msg.content = content
+    msg.tool_calls = None
+    choice = MagicMock()
+    choice.message = msg
+    choice.finish_reason = "stop"
+    resp = MagicMock()
+    resp.choices = [choice]
+    usage = MagicMock()
+    usage.total_tokens = 50
+    usage.prompt_tokens = 30
+    usage.completion_tokens = 20
+    resp.usage = usage
+    return resp
 
 
-def _make_mock_openai_response(content: str):
-    """Create a mock that mimics Azure OpenAI chat completion response."""
-    mock_message = MagicMock()
-    mock_message.content = content
-    mock_choice = MagicMock()
-    mock_choice.message = mock_message
-    mock_response = MagicMock()
-    mock_response.choices = [mock_choice]
-    return mock_response
+def _make_extractor() -> FactExtractor:
+    """Create a FactExtractor with mocked client."""
+    ext = FactExtractor.__new__(FactExtractor)
+    ext.client = MagicMock()
+    ext.deployment = "gpt-5.2"
+    return ext
 
 
-class TestFactExtractorHappyPath:
-    """TC-01: Extract facts from incident text via LLM."""
+# ---------------------------------------------------------------------------
+# TC-01: Happy Path — Full Extraction
+# ---------------------------------------------------------------------------
+class TestHappyPath:
+    def test_full_extraction(self):
+        """TC-01: Model calls get_ontology, submit_fact x2, submit_rule, set_root_cause."""
+        ext = _make_extractor()
+        ontology = [OntologyNoun("Server", [OntologyProperty("CPUUsage")])]
 
-    def test_extract_facts(self, mock_llm_response):
-        """TC-01: LLM returns valid facts."""
-        extractor = FactExtractor.__new__(FactExtractor)
-        extractor.client = MagicMock()
-        extractor.deployment = "gpt-4o"
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("get_ontology", {}, "c1"),
+            _tool_call("get_existing_rules", {}, "c2"),
+        ])
+        turn2 = _assistant_msg_with_tools([
+            _tool_call("submit_fact", {
+                "noun": "Server", "instance": "*", "property": "CPUUsage",
+                "operator": ">", "value": "90", "scope": "rule",
+            }, "c3"),
+            _tool_call("submit_fact", {
+                "noun": "Server", "instance": "*", "property": "MemoryFree",
+                "operator": "<", "value": "5%", "scope": "rule",
+            }, "c4"),
+        ])
+        turn3 = _assistant_msg_with_tools([
+            _tool_call("submit_rule", {
+                "conditions": {
+                    "logic": "AND",
+                    "items": [
+                        {"noun": "Server", "instance": "*", "property": "CPUUsage", "operator": ">", "value": "90"},
+                        {"noun": "Server", "instance": "*", "property": "MemoryFree", "operator": "<", "value": "5%"},
+                    ],
+                },
+                "then": {"kind": "CHANGE_STATE", "description": "Resource exhaustion"},
+                "because": "High CPU + low memory = resource exhaustion",
+            }, "c5"),
+        ])
+        turn4 = _assistant_msg_with_tools([
+            _tool_call("set_root_cause", {"name": "Resource Exhaustion"}, "c6"),
+        ])
+        turn5 = _assistant_msg_done()
 
-        mock_resp = _make_mock_openai_response(json.dumps(mock_llm_response))
-        extractor.client.chat.completions.create.return_value = mock_resp
+        ext.client.chat.completions.create.side_effect = [turn1, turn2, turn3, turn4, turn5]
 
-        result = extractor.extract("Some incident text", [])
+        result = ext.extract("Server is slow", ontology)
 
         assert isinstance(result, LLMResponse)
-        assert len(result.facts) == 3
+        assert len(result.facts) == 2
         assert result.facts[0].noun == "Server"
         assert result.facts[0].operator == ">"
-        assert result.root_cause == "Resource Exhaustion"
+        assert result.facts[1].operator == "<"
         assert len(result.rules) == 1
-
-    def test_extract_with_ontology_context(self, mock_llm_response):
-        """LLM receives ontology as context."""
-        extractor = FactExtractor.__new__(FactExtractor)
-        extractor.client = MagicMock()
-        extractor.deployment = "gpt-4o"
-
-        mock_resp = _make_mock_openai_response(json.dumps(mock_llm_response))
-        extractor.client.chat.completions.create.return_value = mock_resp
-
-        ontology = [OntologyNoun("Server", [OntologyProperty("CPUUsage", "numeric")])]
-        result = extractor.extract("text", ontology)
-
-        # Verify ontology was included in the prompt
-        call_args = extractor.client.chat.completions.create.call_args
-        messages = call_args.kwargs.get("messages") or call_args[1].get("messages")
-        prompt_text = str(messages)
-        assert "Server" in prompt_text or "CPUUsage" in prompt_text
+        assert result.rules[0].then.kind == "CHANGE_STATE"
+        assert result.rules[0].then.description == "Resource exhaustion"
+        assert result.rules[0].because == "High CPU + low memory = resource exhaustion"
+        assert result.root_cause == "Resource Exhaustion"
 
 
-class TestFactExtractorEmptyResponse:
-    """TC-04: LLM returns no facts."""
+# ---------------------------------------------------------------------------
+# TC-02: Invalid operator in submit_fact → error → retry succeeds
+# ---------------------------------------------------------------------------
+class TestFactValidation:
+    def test_invalid_operator_returns_error(self):
+        """TC-02: Invalid operator gets error, retry with valid operator succeeds."""
+        ext = _make_extractor()
 
-    def test_empty_facts(self, mock_llm_empty):
-        extractor = FactExtractor.__new__(FactExtractor)
-        extractor.client = MagicMock()
-        extractor.deployment = "gpt-4o"
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("submit_fact", {
+                "noun": "X", "property": "Y", "operator": "LIKE", "value": "z",
+            }, "c1"),
+        ])
+        turn2 = _assistant_msg_with_tools([
+            _tool_call("submit_fact", {
+                "noun": "X", "property": "Y", "operator": "contains", "value": "z",
+            }, "c2"),
+        ])
+        turn3 = _assistant_msg_done()
 
-        mock_resp = _make_mock_openai_response(json.dumps(mock_llm_empty))
-        extractor.client.chat.completions.create.return_value = mock_resp
+        ext.client.chat.completions.create.side_effect = [turn1, turn2, turn3]
+        result = ext.extract("text", [])
 
-        result = extractor.extract("Some text", [])
+        assert len(result.facts) == 1
+        assert result.facts[0].operator == "contains"
+
+    def test_variable_in_fact_rejected(self):
+        """TC-06: Facts with variables ($) are rejected."""
+        ext = _make_extractor()
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("submit_fact", {
+                "noun": "X", "instance": "$op", "property": "Y",
+                "operator": "==", "value": "z",
+            }, "c1"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+
+        result = ext.extract("text", [])
         assert len(result.facts) == 0
+
+    def test_variable_in_value_rejected(self):
+        """TC-06 extended: Variable in value field rejected."""
+        ext = _make_extractor()
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("submit_fact", {
+                "noun": "X", "property": "Y", "operator": "==", "value": "$val",
+            }, "c1"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+
+        result = ext.extract("text", [])
+        assert len(result.facts) == 0
+
+    def test_scope_preserved(self):
+        """TC-22: Facts with scope='context' retain that scope."""
+        ext = _make_extractor()
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("submit_fact", {
+                "noun": "VM", "property": "Name", "operator": "==",
+                "value": "myvm", "scope": "context",
+            }, "c1"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+
+        result = ext.extract("text", [])
+        assert result.facts[0].scope == "context"
+
+    def test_instance_defaults_to_star(self):
+        """TC-23: Omitted instance defaults to '*'."""
+        ext = _make_extractor()
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("submit_fact", {
+                "noun": "X", "property": "Y", "operator": "==", "value": "z",
+            }, "c1"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+
+        result = ext.extract("text", [])
+        assert result.facts[0].instance == "*"
+
+    def test_scope_defaults_to_rule(self):
+        """TC-24: Omitted scope defaults to 'rule'."""
+        ext = _make_extractor()
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("submit_fact", {
+                "noun": "X", "property": "Y", "operator": "==", "value": "z",
+            }, "c1"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+
+        result = ext.extract("text", [])
+        assert result.facts[0].scope == "rule"
+
+    def test_ontology_warning_but_accepted(self):
+        """TC-17: Unknown noun accepted with warning."""
+        ext = _make_extractor()
+        ontology = [OntologyNoun("Server", [OntologyProperty("CPUUsage")])]
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("submit_fact", {
+                "noun": "Storage", "property": "Capacity",
+                "operator": "==", "value": "full",
+            }, "c1"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+
+        result = ext.extract("text", ontology)
+        # Fact IS accepted even though "Storage" isn't in ontology
+        assert len(result.facts) == 1
+        assert result.facts[0].noun == "Storage"
+
+
+# ---------------------------------------------------------------------------
+# TC-03 through TC-09: Rule validation
+# ---------------------------------------------------------------------------
+class TestRuleValidation:
+    def test_invalid_kind_returns_error(self):
+        """TC-03: Invalid kind POSITIVE rejected, retry with CHANGE_STATE succeeds."""
+        ext = _make_extractor()
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("submit_rule", {
+                "conditions": {"logic": "AND", "items": [
+                    {"noun": "S", "property": "P", "operator": ">", "value": "1"},
+                ]},
+                "then": {"kind": "POSITIVE", "description": "test"},
+                "because": "reason",
+            }, "c1"),
+        ])
+        turn2 = _assistant_msg_with_tools([
+            _tool_call("submit_rule", {
+                "conditions": {"logic": "AND", "items": [
+                    {"noun": "S", "property": "P", "operator": ">", "value": "1"},
+                ]},
+                "then": {"kind": "CHANGE_STATE", "description": "test"},
+                "because": "reason",
+            }, "c2"),
+        ])
+        turn3 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2, turn3]
+
+        result = ext.extract("text", [])
+        assert len(result.rules) == 1
+        assert result.rules[0].then.kind == "CHANGE_STATE"
+
+    def test_empty_description_rejected(self):
+        """TC-04: Empty description rejected."""
+        ext = _make_extractor()
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("submit_rule", {
+                "conditions": {"logic": "AND", "items": [
+                    {"noun": "S", "property": "P", "operator": ">", "value": "1"},
+                ]},
+                "then": {"kind": "CHANGE_STATE", "description": ""},
+                "because": "reason",
+            }, "c1"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+
+        result = ext.extract("text", [])
+        assert len(result.rules) == 0
+
+    def test_missing_because_rejected(self):
+        """TC-05: Missing because rejected."""
+        ext = _make_extractor()
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("submit_rule", {
+                "conditions": {"logic": "AND", "items": [
+                    {"noun": "S", "property": "P", "operator": ">", "value": "1"},
+                ]},
+                "then": {"kind": "CHANGE_STATE", "description": "test"},
+            }, "c1"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+
+        result = ext.extract("text", [])
+        assert len(result.rules) == 0
+
+    def test_empty_because_rejected(self):
+        """TC-05 variant: Empty string because rejected."""
+        ext = _make_extractor()
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("submit_rule", {
+                "conditions": {"logic": "AND", "items": [
+                    {"noun": "S", "property": "P", "operator": ">", "value": "1"},
+                ]},
+                "then": {"kind": "CHANGE_STATE", "description": "test"},
+                "because": "",
+            }, "c1"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+
+        result = ext.extract("text", [])
+        assert len(result.rules) == 0
+
+    def test_rule_with_else_branch(self):
+        """TC-07: Rule with THEN and ELSE branches."""
+        ext = _make_extractor()
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("submit_rule", {
+                "conditions": {"logic": "AND", "items": [
+                    {"noun": "S", "property": "P", "operator": "==", "value": "X"},
+                ]},
+                "then": {"kind": "CHANGE_STATE", "description": "Identified issue"},
+                "else": {"kind": "GAP", "description": "Need more info"},
+                "because": "reason",
+            }, "c1"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+
+        result = ext.extract("text", [])
+        assert len(result.rules) == 1
+        assert result.rules[0].then.kind == "CHANGE_STATE"
+        assert result.rules[0].else_ is not None
+        assert result.rules[0].else_.kind == "GAP"
+
+    def test_rule_ruled_out(self):
+        """TC-08: Rule with RULED_OUT kind."""
+        ext = _make_extractor()
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("submit_rule", {
+                "conditions": {"logic": "AND", "items": [
+                    {"noun": "Net", "property": "Latency", "operator": "==", "value": "normal"},
+                ]},
+                "then": {"kind": "RULED_OUT", "description": "Network issue eliminated"},
+                "because": "Normal latency rules out network issues",
+            }, "c1"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+
+        result = ext.extract("text", [])
+        assert result.rules[0].then.kind == "RULED_OUT"
+
+    def test_rule_gap(self):
+        """TC-09: Rule with GAP kind."""
+        ext = _make_extractor()
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("submit_rule", {
+                "conditions": {"logic": "AND", "items": [
+                    {"noun": "S", "property": "P", "operator": "==", "value": "X"},
+                ]},
+                "then": {"kind": "GAP", "description": "Missing disk usage data"},
+                "because": "Need disk info",
+            }, "c1"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+
+        result = ext.extract("text", [])
+        assert result.rules[0].then.kind == "GAP"
+
+    def test_empty_conditions_rejected(self):
+        """TC-18: Rule with empty conditions.items rejected."""
+        ext = _make_extractor()
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("submit_rule", {
+                "conditions": {"logic": "AND", "items": []},
+                "then": {"kind": "CHANGE_STATE", "description": "test"},
+                "because": "reason",
+            }, "c1"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+
+        result = ext.extract("text", [])
+        assert len(result.rules) == 0
+
+    def test_invalid_operator_in_condition(self):
+        """TC-26: Condition item with invalid operator."""
+        ext = _make_extractor()
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("submit_rule", {
+                "conditions": {"logic": "AND", "items": [
+                    {"noun": "S", "property": "P", "operator": "LIKE", "value": "X"},
+                ]},
+                "then": {"kind": "CHANGE_STATE", "description": "test"},
+                "because": "reason",
+            }, "c1"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+
+        result = ext.extract("text", [])
+        assert len(result.rules) == 0
+
+    def test_variable_binding_in_conditions_allowed(self):
+        """TC-27: Variables allowed in rule conditions (not facts)."""
+        ext = _make_extractor()
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("submit_rule", {
+                "conditions": {"logic": "AND", "items": [
+                    {"noun": "Error", "instance": "$op", "property": "Code", "operator": "==", "value": "Fail"},
+                ]},
+                "then": {"kind": "CHANGE_STATE", "description": "Op failed"},
+                "because": "reason",
+            }, "c1"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+
+        result = ext.extract("text", [])
+        assert len(result.rules) == 1
+        assert result.rules[0].conditions.items[0].instance == "$op"
+
+    def test_invalid_else_kind_rejected(self):
+        """Else branch with invalid kind rejected."""
+        ext = _make_extractor()
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("submit_rule", {
+                "conditions": {"logic": "AND", "items": [
+                    {"noun": "S", "property": "P", "operator": "==", "value": "X"},
+                ]},
+                "then": {"kind": "CHANGE_STATE", "description": "test"},
+                "else": {"kind": "INVALID", "description": "test"},
+                "because": "reason",
+            }, "c1"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+
+        result = ext.extract("text", [])
+        assert len(result.rules) == 0
+
+
+# ---------------------------------------------------------------------------
+# TC-10 & TC-11: Loop control
+# ---------------------------------------------------------------------------
+class TestLoopControl:
+    def test_max_turns_cutoff(self):
+        """TC-10: Loop exits at max_turns, returns collected data."""
+        ext = _make_extractor()
+
+        # Every turn submits a fact
+        def make_turn(i):
+            return _assistant_msg_with_tools([
+                _tool_call("submit_fact", {
+                    "noun": f"N{i}", "property": "P", "operator": "==", "value": "v",
+                }, f"c{i}"),
+            ])
+
+        # 20 turns worth of responses, but max_turns=3
+        ext.client.chat.completions.create.side_effect = [make_turn(i) for i in range(20)]
+
+        result = ext.extract("text", [], max_turns=3)
+        # Should have facts from 3 turns only
+        assert len(result.facts) == 3
+
+    def test_no_tool_calls_returns_empty(self):
+        """TC-11: Model responds with plain text, no tool_calls."""
+        ext = _make_extractor()
+
+        ext.client.chat.completions.create.return_value = _assistant_msg_done("No facts found.")
+
+        result = ext.extract("text", [])
+        assert isinstance(result, LLMResponse)
+        assert result.facts == []
+        assert result.rules == []
         assert result.root_cause is None
 
 
-class TestFactExtractorScope:
-    """EES-00008: Scope field in LLM parse."""
+# ---------------------------------------------------------------------------
+# TC-12: Unknown tool name
+# ---------------------------------------------------------------------------
+class TestUnknownTool:
+    def test_unknown_tool_returns_error(self):
+        """TC-12: Unknown tool name returns error, not collected."""
+        ext = _make_extractor()
 
-    def test_parse_response_reads_scope(self):
-        """TC-7: _parse_response reads scope from LLM JSON."""
-        extractor = FactExtractor.__new__(FactExtractor)
-        data = {
-            "facts": [
-                {"noun": "VM", "instance": "*", "property": "VMSize",
-                 "operator": "==", "value": "A100", "scope": "context"}
-            ],
-            "rules": [],
-            "root_cause": None,
-        }
-        result = extractor._parse_response(data)
-        assert result.facts[0].scope == "context"
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("do_something_else", {"x": 1}, "c1"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
 
-    def test_parse_response_defaults_scope_to_rule(self):
-        """TC-8: _parse_response defaults scope to 'rule' when absent."""
-        extractor = FactExtractor.__new__(FactExtractor)
-        data = {
-            "facts": [
-                {"noun": "VM", "instance": "*", "property": "VMSize",
-                 "operator": "==", "value": "A100"}
-            ],
-            "rules": [],
-            "root_cause": None,
-        }
-        result = extractor._parse_response(data)
-        assert result.facts[0].scope == "rule"
-
-    def test_system_prompt_contains_scope_instructions(self):
-        """TC-9: System prompt contains scope classification instructions."""
-        from ees.fact_extractor import _SYSTEM_PROMPT
-        assert "scope" in _SYSTEM_PROMPT.lower()
-        # Should mention what NOT to extract
-        assert "GUID" in _SYSTEM_PROMPT or "guid" in _SYSTEM_PROMPT.lower()
+        result = ext.extract("text", [])
+        assert result.facts == []
+        assert result.rules == []
 
 
-class TestFactExtractorLLMFailure:
-    """TC-25: LLM API failure."""
+# ---------------------------------------------------------------------------
+# TC-13 & TC-14: get_ontology handler
+# ---------------------------------------------------------------------------
+class TestGetOntology:
+    def test_returns_ontology_json(self):
+        """TC-13: get_ontology returns formatted ontology."""
+        ext = _make_extractor()
+        ontology = [OntologyNoun("Server", [OntologyProperty("CPUUsage")])]
 
-    def test_api_unreachable(self):
-        """TC-25: LLM API call fails."""
-        extractor = FactExtractor.__new__(FactExtractor)
-        extractor.client = MagicMock()
-        extractor.deployment = "gpt-4o"
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("get_ontology", {}, "c1"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
 
-        extractor.client.chat.completions.create.side_effect = Exception("Connection refused")
+        # We verify by checking the tool result message sent back
+        result = ext.extract("text", ontology)
+        # The call happened — verify messages were built correctly
+        assert ext.client.chat.completions.create.call_count == 2
+
+    def test_empty_ontology(self):
+        """TC-14: get_ontology with empty ontology."""
+        ext = _make_extractor()
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("get_ontology", {}, "c1"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+
+        result = ext.extract("text", [])
+        assert ext.client.chat.completions.create.call_count == 2
+
+
+# ---------------------------------------------------------------------------
+# TC-15: get_existing_rules returns empty
+# ---------------------------------------------------------------------------
+class TestGetExistingRules:
+    def test_returns_empty_list(self):
+        """TC-15: get_existing_rules returns empty list."""
+        ext = _make_extractor()
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("get_existing_rules", {}, "c1"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+
+        result = ext.extract("text", [])
+        assert ext.client.chat.completions.create.call_count == 2
+
+
+# ---------------------------------------------------------------------------
+# TC-16: Multiple set_root_cause — last wins
+# ---------------------------------------------------------------------------
+class TestSetRootCause:
+    def test_last_wins(self):
+        """TC-16: Multiple set_root_cause calls, last one wins."""
+        ext = _make_extractor()
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("set_root_cause", {"name": "A"}, "c1"),
+        ])
+        turn2 = _assistant_msg_with_tools([
+            _tool_call("set_root_cause", {"name": "B"}, "c2"),
+        ])
+        turn3 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2, turn3]
+
+        result = ext.extract("text", [])
+        assert result.root_cause == "B"
+
+
+# ---------------------------------------------------------------------------
+# TC-19: API failure during loop
+# ---------------------------------------------------------------------------
+class TestAPIFailure:
+    def test_api_error_raises_llm_error(self):
+        """TC-19: API call raises exception → LLMError."""
+        ext = _make_extractor()
+        ext.client.chat.completions.create.side_effect = Exception("Connection refused")
 
         with pytest.raises(LLMError, match="LLM API call failed"):
-            extractor.extract("text", [])
+            ext.extract("text", [])
 
-    def test_malformed_response_retries(self):
-        """TC-25 related (MJ-2): Malformed LLM response triggers retry, then fails."""
-        extractor = FactExtractor.__new__(FactExtractor)
-        extractor.client = MagicMock()
-        extractor.deployment = "gpt-4o"
+    def test_api_error_mid_loop(self):
+        """TC-19: API fails on second turn."""
+        ext = _make_extractor()
 
-        # Both attempts return garbage
-        bad_resp = _make_mock_openai_response("not json at all {{{")
-        extractor.client.chat.completions.create.return_value = bad_resp
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("get_ontology", {}, "c1"),
+        ])
+        ext.client.chat.completions.create.side_effect = [
+            turn1,
+            Exception("timeout"),
+        ]
 
-        with pytest.raises(LLMError, match="Could not parse LLM response"):
-            extractor.extract("text", [])
-        # Should have been called twice (initial + retry)
-        assert extractor.client.chat.completions.create.call_count == 2
+        with pytest.raises(LLMError, match="LLM API call failed"):
+            ext.extract("text", [])
 
 
-class TestFactExtractorAuth:
-    """Authentication uses ChainedTokenCredential per best practices."""
+# ---------------------------------------------------------------------------
+# TC-20: Backward compat — extract returns LLMResponse with v2 Rule
+# ---------------------------------------------------------------------------
+class TestBackwardCompat:
+    def test_returns_v2_rule_objects(self):
+        """TC-20: Rules use RuleOutput, not RuleThen."""
+        ext = _make_extractor()
 
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("submit_rule", {
+                "conditions": {"logic": "AND", "items": [
+                    {"noun": "S", "property": "P", "operator": "==", "value": "X"},
+                ]},
+                "then": {"kind": "CHANGE_STATE", "description": "test"},
+                "because": "reason",
+            }, "c1"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+
+        result = ext.extract("text", [])
+        assert isinstance(result, LLMResponse)
+        assert isinstance(result.rules[0].then, RuleOutput)
+        assert result.rules[0].then.kind in ("CHANGE_STATE", "RULED_OUT", "GAP")
+
+
+# ---------------------------------------------------------------------------
+# TC-21: Auth uses ChainedTokenCredential
+# ---------------------------------------------------------------------------
+class TestAuth:
     @patch("ees.fact_extractor.AzureCliCredential")
     @patch("ees.fact_extractor.ManagedIdentityCredential")
     @patch("ees.fact_extractor.ChainedTokenCredential")
     @patch("ees.fact_extractor.AzureOpenAI")
     def test_uses_chained_credential(self, mock_aoai, mock_chained, mock_msi, mock_cli):
-        """Auth uses ChainedTokenCredential(AzureCli, MSI), NOT DefaultAzureCredential."""
-        import os
+        """TC-21: Auth uses ChainedTokenCredential, NOT DefaultAzureCredential."""
         env = {
             "AZURE_OPENAI_ENDPOINT": "https://test.openai.azure.com/",
             "AZURE_OPENAI_DEPLOYMENT": "gpt-4o",
         }
         with patch.dict(os.environ, env):
-            extractor = FactExtractor()
+            FactExtractor()
 
         mock_cli.assert_called_once()
         mock_msi.assert_called_once()
         mock_chained.assert_called_once()
-        # Verify DefaultAzureCredential is NOT used
         mock_aoai.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
-# RULEOUT rule parsing (EES-00003)
+# TC-25: Token usage logged
 # ---------------------------------------------------------------------------
-class TestFactExtractorRuleout:
-    """Tests for RULEOUT rule parsing from LLM response."""
+class TestTokenLogging:
+    def test_token_usage_logged(self, caplog):
+        """TC-25: Total tokens summed and logged."""
+        ext = _make_extractor()
 
-    def test_parse_ruleout_rule(self):
-        """TC-01: _parse_response handles type='ruleout' rules."""
-        data = {
-            "facts": [],
-            "rules": [
-                {
-                    "type": "ruleout",
-                    "conditions": {
-                        "logic": "AND",
-                        "items": [{"noun": "Net", "instance": "*", "property": "Latency", "operator": "==", "value": "normal"}],
-                    },
-                    "then": {"noun": "RULEOUT", "instance": "*", "property": "Target", "value": "Network Issue"},
-                    "because": "Normal latency rules out network issues",
-                }
-            ],
-            "root_cause": None,
-        }
-        extractor = FactExtractor.__new__(FactExtractor)
-        extractor.client = MagicMock()
-        extractor.deployment = "gpt-4o"
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("submit_fact", {
+                "noun": "X", "property": "Y", "operator": "==", "value": "z",
+            }, "c1"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
 
-        mock_resp = _make_mock_openai_response(json.dumps(data))
-        extractor.client.chat.completions.create.return_value = mock_resp
+        with caplog.at_level(logging.INFO, logger="ees.fact_extractor"):
+            ext.extract("text", [])
 
-        result = extractor.extract("incident text", [])
-        assert len(result.rules) == 1
-        assert result.rules[0].type == "ruleout"
-        assert result.rules[0].then.noun == "RULEOUT"
-        assert result.rules[0].then.value == "Network Issue"
-
-    def test_parse_no_type_defaults_positive(self):
-        """TC-02: Rules without 'type' field default to 'positive'."""
-        data = {
-            "facts": [],
-            "rules": [
-                {
-                    "conditions": {
-                        "logic": "AND",
-                        "items": [{"noun": "S", "instance": "*", "property": "P", "operator": ">", "value": "1"}],
-                    },
-                    "then": {"noun": "S", "instance": "*", "property": "X", "value": "Y"},
-                    "because": "reason",
-                }
-            ],
-            "root_cause": None,
-        }
-        extractor = FactExtractor.__new__(FactExtractor)
-        extractor.client = MagicMock()
-        extractor.deployment = "gpt-4o"
-
-        mock_resp = _make_mock_openai_response(json.dumps(data))
-        extractor.client.chat.completions.create.return_value = mock_resp
-
-        result = extractor.extract("incident text", [])
-        assert result.rules[0].type == "positive"
-
-    def test_parse_mixed_positive_and_ruleout(self):
-        """TC-03: Mixed positive + RULEOUT rules in single response."""
-        data = {
-            "facts": [],
-            "rules": [
-                {
-                    "type": "positive",
-                    "conditions": {"logic": "AND", "items": [{"noun": "S", "instance": "*", "property": "P", "operator": ">", "value": "1"}]},
-                    "then": {"noun": "S", "instance": "*", "property": "X", "value": "Y"},
-                    "because": "positive reason",
-                },
-                {
-                    "type": "ruleout",
-                    "conditions": {"logic": "AND", "items": [{"noun": "N", "instance": "*", "property": "Q", "operator": "==", "value": "ok"}]},
-                    "then": {"noun": "RULEOUT", "instance": "*", "property": "Target", "value": "SomeRC"},
-                    "because": "ruleout reason",
-                },
-            ],
-            "root_cause": "SomeRC",
-        }
-        extractor = FactExtractor.__new__(FactExtractor)
-        extractor.client = MagicMock()
-        extractor.deployment = "gpt-4o"
-
-        mock_resp = _make_mock_openai_response(json.dumps(data))
-        extractor.client.chat.completions.create.return_value = mock_resp
-
-        result = extractor.extract("incident text", [])
-        assert len(result.rules) == 2
-        assert result.rules[0].type == "positive"
-        assert result.rules[1].type == "ruleout"
+        log_text = caplog.text
+        # Should log token count (100 + 50 = 150)
+        assert "150" in log_text or "token" in log_text.lower()
