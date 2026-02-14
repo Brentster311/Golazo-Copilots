@@ -3,9 +3,9 @@
   "work_item_id": "EES-00010",
   "profile": "complete",
   "current_phase": "completion",
-  "current_role": "builder",
+  "current_role": "retrospective",
   "created_at": "2026-02-14T04:13:34.573227Z",
-  "updated_at": "2026-02-14T05:15:03.065010Z",
+  "updated_at": "2026-02-14T05:15:18.788984Z",
   "role_history": [
     {
       "role": "project-owner-assistant",
@@ -45,6 +45,11 @@
     {
       "role": "builder",
       "entered_at": "2026-02-14T05:15:03.065010Z",
+      "exited_at": "2026-02-14T05:15:18.788984Z"
+    },
+    {
+      "role": "retrospective",
+      "entered_at": "2026-02-14T05:15:18.788984Z",
       "exited_at": null
     }
   ],
