@@ -1,13 +1,14 @@
-"""Forward-chaining rule evaluation engine.
+"""Forward-chaining rule evaluation engine (v2).
 
 Evaluates a set of input facts against the knowledge base rules using
-forward chaining. Matching is symbolic/string-based via match_key().
+forward chaining. Supports IF/THEN with optional ELSE branches.
+Output entity types: CHANGE_STATE, RULED_OUT, GAP.
 """
 from __future__ import annotations
 
 from itertools import product
 
-from ees.models import EvaluationResult, Fact, Rule
+from ees.models import EvaluationResult, Fact, Rule, RuleOutput
 
 
 class RuleEvaluator:
@@ -21,12 +22,13 @@ class RuleEvaluator:
 
         Forward chaining algorithm:
         1. Start with input facts as the working set.
-        2. Iterate CONFIRMED rules. If all conditions match (AND) or
-           any condition matches (OR), the rule fires — add derived fact.
+        2. For each CONFIRMED rule:
+           a. If conditions met → fire THEN branch, add output to working set
+              (unless GAP, which is terminal).
+           b. If conditions NOT met and ELSE exists → fire ELSE branch.
         3. Repeat until no new facts are derived (fixed-point).
-        4. Scan GAP rules for those whose requires are all in working set.
 
-        Returns EvaluationResult with root causes, ruleouts, gaps, trace.
+        Returns EvaluationResult with outputs, fired rules, and trace.
         """
         # Build working set keyed by match_key for O(1) lookup
         working_keys: set[tuple] = set()
@@ -34,13 +36,12 @@ class RuleEvaluator:
         for f in input_facts:
             working_keys.add(f.match_key())
 
-        # Separate CONFIRMED rules (fireable) from GAP rules
         confirmed_rules = [r for r in self._rules if r.status == "CONFIRMED"]
-        gap_rules = [r for r in self._rules if r.status == "GAP"]
 
         fired_rules: list[Rule] = []
         fired_rule_ids: set[str] = set()
         derived_facts: list[Fact] = []
+        outputs: list[dict] = []
         rule_trace: list[dict] = []
         iteration = 0
 
@@ -53,61 +54,58 @@ class RuleEvaluator:
                 if rule.rule_id in fired_rule_ids:
                     continue
 
-                # Fast path: no variables in conditions — use hash lookup
+                # Check conditions
                 has_vars = any(c.has_variables for c in rule.conditions.items)
                 if not has_vars:
-                    if not self._conditions_met(rule, working_keys):
-                        continue
-                    bindings: dict[str, str] = {}
+                    conditions_met = self._conditions_met(rule, working_keys)
                 else:
-                    # Slow path: variable binding with backtracking
                     bindings = self._conditions_met_with_bindings(
                         rule, working_facts,
                     )
-                    if bindings is None:
-                        continue
+                    conditions_met = bindings is not None
 
-                # Rule fires — create derived fact, substituting bindings
-                derived = self._substitute_then(rule, bindings)
-                derived_key = derived.match_key()
-                if derived_key not in working_keys:
-                    working_keys.add(derived_key)
-                    working_facts.append(derived)
-                    derived_facts.append(derived)
-                    changed = True
+                if conditions_met:
+                    # THEN branch fires
+                    output = rule.then
+                    branch = "then"
+                else:
+                    # ELSE branch fires (if present)
+                    if rule.else_ is None:
+                        continue
+                    output = rule.else_
+                    branch = "else"
+
+                # Record output
+                outputs.append({
+                    "rule_id": rule.rule_id,
+                    "branch": branch,
+                    "output": output,
+                })
+
+                # Add derived fact to working set (GAP is terminal — not added)
+                if output.kind != "GAP":
+                    derived = output.to_fact()
+                    derived_key = derived.match_key()
+                    if derived_key not in working_keys:
+                        working_keys.add(derived_key)
+                        working_facts.append(derived)
+                        derived_facts.append(derived)
+                        changed = True
 
                 fired_rules.append(rule)
                 fired_rule_ids.add(rule.rule_id)
                 rule_trace.append({
                     "rule_id": rule.rule_id,
                     "iteration": iteration,
-                    "derived": derived.to_display(),
+                    "branch": branch,
+                    "derived": f"{output.kind}(\"{output.description}\")",
                 })
-
-        # Collect root causes and ruleouts from fired rules
-        root_causes: list[str] = []
-        ruled_out: list[str] = []
-        for rule in fired_rules:
-            if rule.then.noun.lower() == "rootcause":
-                root_causes.append(rule.then.value)
-            elif rule.then.noun.lower() == "ruleout":
-                ruled_out.append(rule.then.value)
-
-        # Scan GAP rules — report those whose requires are all in working set
-        triggered_gaps: list[Rule] = []
-        for gap in gap_rules:
-            if gap.requires and all(
-                f.match_key() in working_keys for f in gap.requires
-            ):
-                triggered_gaps.append(gap)
 
         return EvaluationResult(
             input_facts=list(input_facts),
             derived_facts=derived_facts,
             fired_rules=fired_rules,
-            root_causes=root_causes,
-            ruled_out=ruled_out,
-            gap_rules=triggered_gaps,
+            outputs=outputs,
             rule_trace=rule_trace,
         )
 
@@ -222,23 +220,4 @@ class RuleEvaluator:
 
         return None
 
-    # ---- then substitution ---------------------------------------------------
 
-    @staticmethod
-    def _substitute_then(rule: Rule, bindings: dict[str, str]) -> Fact:
-        """Create derived Fact from rule.then, substituting whole-field variables."""
-        instance = rule.then.instance
-        value = rule.then.value
-
-        if Fact.is_variable(instance) and instance in bindings:
-            instance = bindings[instance]
-        if Fact.is_variable(value) and value in bindings:
-            value = bindings[value]
-
-        return Fact(
-            noun=rule.then.noun,
-            instance=instance,
-            property=rule.then.property,
-            operator="==",
-            value=value,
-        )

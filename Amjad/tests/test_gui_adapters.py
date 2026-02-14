@@ -196,13 +196,29 @@ class TestEvalResultToDisplay:
     """TC-16/17/18/19: Evaluation result display conversion."""
 
     def _make_result(self, root_causes=None, ruled_out=None, gap_rules=None):
+        """Build EvaluationResult with v2 outputs structure."""
+        from ees.models import RuleOutput
+        outputs: list[dict] = []
+        fired: list[Rule] = []
+        for rc in (root_causes or []):
+            o = RuleOutput(kind="CHANGE_STATE", description=rc)
+            r = Rule(rule_id=f"R-CS-{rc}", then=o)
+            fired.append(r)
+            outputs.append({"rule_id": r.rule_id, "branch": "then", "output": o})
+        for ro in (ruled_out or []):
+            o = RuleOutput(kind="RULED_OUT", description=ro)
+            r = Rule(rule_id=f"R-RO-{ro}", then=o)
+            fired.append(r)
+            outputs.append({"rule_id": r.rule_id, "branch": "then", "output": o})
+        for gap in (gap_rules or []):
+            o = RuleOutput(kind="GAP", description=gap.note or "gap")
+            fired.append(gap)
+            outputs.append({"rule_id": gap.rule_id, "branch": "then", "output": o})
         return EvaluationResult(
             input_facts=[_fact("Server(*).CPUUsage > 90")],
             derived_facts=[],
-            fired_rules=[],
-            root_causes=root_causes or [],
-            ruled_out=ruled_out or [],
-            gap_rules=gap_rules or [],
+            fired_rules=fired,
+            outputs=outputs,
             rule_trace=[],
         )
 

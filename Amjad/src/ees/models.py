@@ -10,6 +10,9 @@ from typing import Literal
 # Valid operators for fact expressions
 VALID_OPERATORS = ("==", "!=", ">", "<", ">=", "<=", "contains", "!contains")
 
+# Valid output entity kinds for v2 rule grammar
+VALID_OUTPUT_KINDS = ("CHANGE_STATE", "RULED_OUT", "GAP")
+
 # Regex for parsing a fact string: Noun(instance).Property operator value
 FACT_PATTERN = re.compile(
     r"^([A-Za-z_]\w*)"          # noun name
@@ -123,12 +126,46 @@ class RuleConditions:
 
 
 @dataclass
+class RuleOutput:
+    """Output entity for a rule branch (THEN or ELSE).
+
+    kind: CHANGE_STATE | RULED_OUT | GAP
+    description: free-text describing the state change, elimination, or gap.
+    """
+    kind: Literal["CHANGE_STATE", "RULED_OUT", "GAP"]
+    description: str
+
+    def to_dict(self) -> dict:
+        return {"kind": self.kind, "description": self.description}
+
+    @classmethod
+    def from_dict(cls, d: dict) -> RuleOutput:
+        return cls(kind=d["kind"], description=d["description"])
+
+    def to_fact(self) -> Fact:
+        """Convert this output to a Fact for working-set matching.
+
+        CHANGE_STATE("X") -> Fact(noun="CHANGE_STATE", instance="*",
+                                  property="description", operator="==", value="X")
+        """
+        return Fact(
+            noun=self.kind,
+            instance="*",
+            property="description",
+            operator="==",
+            value=self.description,
+        )
+
+
+# Backward-compat alias — old code that imports RuleThen still works at import time.
+# RuleThen is deprecated; new code should use RuleOutput.
 class RuleThen:
-    """The THEN clause of a rule."""
-    noun: str
-    instance: str
-    property: str
-    value: str
+    """DEPRECATED — use RuleOutput. Kept for import compatibility during migration."""
+    def __init__(self, noun: str, instance: str, property: str, value: str):
+        self.noun = noun
+        self.instance = instance
+        self.property = property
+        self.value = value
 
     def to_dict(self) -> dict:
         return {
@@ -150,33 +187,38 @@ class RuleThen:
 
 @dataclass
 class Rule:
-    """A troubleshooting rule: IF conditions THEN conclusion BECAUSE reason.
+    """A troubleshooting rule using v2 grammar.
 
-    For CONFIRMED rules: uses conditions/then.
-    For GAP rules: uses requires/produces/note (conditions/then left at defaults).
+    IF <conditions> THEN CHANGE_STATE|RULED_OUT|GAP [ELSE CHANGE_STATE|RULED_OUT|GAP]
     """
     rule_id: str
     status: Literal["CONFIRMED", "GAP", "RESOLVED"] = "CONFIRMED"
-    type: Literal["positive", "ruleout"] = "positive"
     sources: list[str] = field(default_factory=list)
     conditions: RuleConditions = field(default_factory=lambda: RuleConditions(logic="AND"))
-    then: RuleThen = field(default_factory=lambda: RuleThen("", "*", "", ""))
+    then: RuleOutput = field(default_factory=lambda: RuleOutput("CHANGE_STATE", ""))
+    else_: RuleOutput | None = None
     because: str = ""
-    # GAP-specific fields
+
+    # ── deprecated v1 fields (kept for backward compat until EES-00011/12) ──
+    type: str = "positive"
     requires: list[Fact] = field(default_factory=list)
     produces: list[Fact] = field(default_factory=list)
     note: str = ""
 
     def to_dict(self) -> dict:
-        d = {
+        d: dict = {
             "rule_id": self.rule_id,
             "status": self.status,
-            "type": self.type,
             "sources": self.sources,
             "conditions": self.conditions.to_dict(),
             "then": self.then.to_dict(),
             "because": self.because,
         }
+        if self.else_ is not None:
+            d["else"] = self.else_.to_dict()
+        # Deprecated v1 fields — serialize for backward compat
+        if self.type != "positive":
+            d["type"] = self.type
         if self.requires:
             d["requires"] = [f.to_condition_dict() for f in self.requires]
         if self.produces:
@@ -187,25 +229,37 @@ class Rule:
 
     @classmethod
     def from_dict(cls, d: dict) -> Rule:
+        else_data = d.get("else")
+        # Handle v1 then format (RuleThen dict) vs v2 (RuleOutput dict)
+        then_data = d.get("then", {})
+        if "kind" in then_data:
+            then = RuleOutput.from_dict(then_data)
+        else:
+            # v1 format: {"noun": ..., "instance": ..., "property": ..., "value": ...}
+            then = RuleOutput(kind="CHANGE_STATE", description=then_data.get("value", ""))
         return cls(
             rule_id=d["rule_id"],
             status=d.get("status", "CONFIRMED"),
-            type=d.get("type", "positive"),
             sources=d.get("sources", []),
             conditions=RuleConditions.from_dict(d["conditions"]),
-            then=RuleThen.from_dict(d["then"]),
+            then=then,
+            else_=RuleOutput.from_dict(else_data) if else_data else None,
             because=d.get("because", ""),
+            type=d.get("type", "positive"),
             requires=[Fact.from_dict(f) for f in d.get("requires", [])],
             produces=[Fact.from_dict(f) for f in d.get("produces", [])],
             note=d.get("note", ""),
         )
 
     def is_duplicate_of(self, other: Rule) -> bool:
-        """Check exact duplicate: same conditions and same then clause."""
-        return (
-            self.conditions.to_dict() == other.conditions.to_dict()
-            and self.then.to_dict() == other.then.to_dict()
-        )
+        """Check exact duplicate: same conditions, same then, same else."""
+        if self.conditions.to_dict() != other.conditions.to_dict():
+            return False
+        if self.then.to_dict() != other.then.to_dict():
+            return False
+        self_else = self.else_.to_dict() if self.else_ else None
+        other_else = other.else_.to_dict() if other.else_ else None
+        return self_else == other_else
 
 
 @dataclass
@@ -315,18 +369,56 @@ class EvaluationResult:
     input_facts: list[Fact]
     derived_facts: list[Fact]
     fired_rules: list[Rule]         # In firing order
-    root_causes: list[str]          # Identified root causes
-    ruled_out: list[str]            # Eliminated root causes (RULEOUT)
-    gap_rules: list[Rule]           # Encountered GAP rules
-    rule_trace: list[dict]          # [{rule_id, iteration, derived}]
+    outputs: list[dict]             # [{rule_id, branch, output: RuleOutput}]
+    rule_trace: list[dict]          # [{rule_id, iteration, branch, derived}]
+
+    # ── convenience properties ──
+
+    @property
+    def change_states(self) -> list[str]:
+        """Descriptions of all CHANGE_STATE outputs."""
+        return [o["output"].description for o in self.outputs if o["output"].kind == "CHANGE_STATE"]
+
+    @property
+    def ruled_outs(self) -> list[str]:
+        """Descriptions of all RULED_OUT outputs."""
+        return [o["output"].description for o in self.outputs if o["output"].kind == "RULED_OUT"]
+
+    @property
+    def gaps(self) -> list[str]:
+        """Descriptions of all GAP outputs."""
+        return [o["output"].description for o in self.outputs if o["output"].kind == "GAP"]
+
+    # ── backward-compat properties (used by GUI/CLI until EES-00012) ──
+
+    @property
+    def root_causes(self) -> list[str]:
+        """DEPRECATED — returns change_states for backward compat."""
+        return self.change_states
+
+    @property
+    def ruled_out(self) -> list[str]:
+        """DEPRECATED — returns ruled_outs for backward compat."""
+        return self.ruled_outs
+
+    @property
+    def gap_rules(self) -> list[Rule]:
+        """DEPRECATED — returns fired rules that produced GAP outputs."""
+        gap_rule_ids = {o["rule_id"] for o in self.outputs if o["output"].kind == "GAP"}
+        return [r for r in self.fired_rules if r.rule_id in gap_rule_ids]
 
     def to_dict(self) -> dict:
         return {
             "input_facts": [f.to_condition_dict() for f in self.input_facts],
             "derived_facts": [f.to_condition_dict() for f in self.derived_facts],
             "fired_rules": [r.to_dict() for r in self.fired_rules],
-            "root_causes": list(self.root_causes),
-            "ruled_out": list(self.ruled_out),
-            "gap_rules": [r.to_dict() for r in self.gap_rules],
+            "outputs": [
+                {"rule_id": o["rule_id"], "branch": o["branch"],
+                 "kind": o["output"].kind, "description": o["output"].description}
+                for o in self.outputs
+            ],
             "rule_trace": list(self.rule_trace),
+            # Backward-compat keys (used by main.py CLI until EES-00012)
+            "root_causes": self.root_causes,
+            "ruled_out": self.ruled_out,
         }

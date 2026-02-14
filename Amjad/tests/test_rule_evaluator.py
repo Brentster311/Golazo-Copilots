@@ -1,624 +1,533 @@
-"""Tests for rule_evaluator.py — forward chaining rule evaluation engine."""
-import pytest
+"""Tests for ees.rule_evaluator — v2 engine with THEN/ELSE branches."""
+from __future__ import annotations
 
+import pytest
 from ees.models import (
     EvaluationResult,
     Fact,
     Rule,
     RuleConditions,
-    RuleThen,
+    RuleOutput,
 )
 from ees.rule_evaluator import RuleEvaluator
 
 
-# ── Helper factories ──────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
-def _fact(text: str) -> Fact:
-    """Parse a fact string, assert valid."""
-    f = Fact.parse(text)
-    assert f is not None, f"Invalid fact: {text}"
-    return f
+def _fact(noun: str, value: str, instance: str = "*", prop: str = "Status") -> Fact:
+    """Shorthand for creating a confirmed Fact."""
+    return Fact(noun=noun, instance=instance, property=prop, operator="==", value=value)
 
 
-def _rule(rule_id: str, conditions: list[Fact], then: RuleThen,
-          because: str = "test", logic: str = "AND",
-          rule_type: str = "positive", status: str = "CONFIRMED") -> Rule:
-    """Build a rule with given conditions and then clause."""
-    return Rule(
-        rule_id=rule_id,
-        status=status,
-        type=rule_type,
-        conditions=RuleConditions(logic=logic, items=conditions),
-        then=then,
-        because=because,
+def _cond(*pairs: tuple[str, str], logic: str = "AND") -> RuleConditions:
+    """Build conditions from (noun, value) pairs."""
+    return RuleConditions(
+        logic=logic,
+        items=[_fact(n, v) for n, v in pairs],
     )
 
 
-# ── AC-1: Evaluates rules and reports matching root causes ────
+def _rule(
+    rule_id: str,
+    conditions: RuleConditions,
+    then: RuleOutput,
+    else_: RuleOutput | None = None,
+    status: str = "CONFIRMED",
+) -> Rule:
+    return Rule(
+        rule_id=rule_id,
+        status=status,
+        conditions=conditions,
+        then=then,
+        else_=else_,
+    )
 
-class TestBasicEvaluation:
-    """AC-1: Evaluates rules and reports matching root causes."""
 
-    def test_single_rule_fires(self):
-        """TC-1: Single rule fires and identifies root cause."""
-        rules = [
-            _rule("R-001",
-                  [_fact("Server(*).CPUUsage > 90")],
-                  RuleThen("RootCause", "*", "Name", "HighCPU")),
-        ]
-        evaluator = RuleEvaluator(rules)
-        result = evaluator.evaluate([_fact("Server(*).CPUUsage > 90")])
+# ============================================================================
+# TC4: Engine THEN Branch Fires
+# ============================================================================
 
-        assert "HighCPU" in result.root_causes
+class TestThenBranchFires:
+    def test_then_fires_change_state(self):
+        """When conditions are met, THEN branch fires and derived fact is CHANGE_STATE."""
+        r = _rule(
+            "R1",
+            _cond(("CPU", "High")),
+            then=RuleOutput(kind="CHANGE_STATE", description="CPU is overloaded"),
+        )
+        facts = [_fact("CPU", "High")]
+        result = RuleEvaluator([r]).evaluate(facts)
+
         assert len(result.fired_rules) == 1
-        assert result.fired_rules[0].rule_id == "R-001"
-
-    def test_no_rules_fire(self):
-        """TC-2: No matching conditions — empty result."""
-        rules = [
-            _rule("R-001",
-                  [_fact("Server(*).CPUUsage > 90")],
-                  RuleThen("RootCause", "*", "Name", "HighCPU")),
-        ]
-        evaluator = RuleEvaluator(rules)
-        result = evaluator.evaluate([_fact("Server(*).MemoryFree < 5%")])
-
-        assert result.root_causes == []
-        assert result.fired_rules == []
-
-    def test_multiple_root_causes(self):
-        """TC-3: Multiple root causes identified from same facts."""
-        rules = [
-            _rule("R-001",
-                  [_fact("Server(*).CPUUsage > 90")],
-                  RuleThen("RootCause", "*", "Name", "HighCPU")),
-            _rule("R-002",
-                  [_fact("Server(*).CPUUsage > 90")],
-                  RuleThen("RootCause", "*", "Name", "RunawayProcess")),
-        ]
-        evaluator = RuleEvaluator(rules)
-        result = evaluator.evaluate([_fact("Server(*).CPUUsage > 90")])
-
-        assert "HighCPU" in result.root_causes
-        assert "RunawayProcess" in result.root_causes
-        assert len(result.fired_rules) == 2
-
-
-# ── AC-2: Reports RULEOUT rules and eliminated root causes ────
-
-class TestRuleoutEvaluation:
-    """AC-2: Reports RULEOUT rules and eliminated root causes."""
-
-    def test_ruleout_fires(self):
-        """TC-4: RULEOUT rule fires and reports eliminated root cause."""
-        rules = [
-            _rule("R-001",
-                  [_fact("Network(*).Latency == normal")],
-                  RuleThen("RULEOUT", "*", "Target", "NetworkIssue"),
-                  rule_type="ruleout"),
-        ]
-        evaluator = RuleEvaluator(rules)
-        result = evaluator.evaluate([_fact("Network(*).Latency == normal")])
-
-        assert "NetworkIssue" in result.ruled_out
-        assert len(result.fired_rules) == 1
-
-    def test_positive_and_ruleout_both_fire(self):
-        """TC-5: Both positive and RULEOUT rules fire."""
-        rules = [
-            _rule("R-001",
-                  [_fact("Server(*).CPUUsage > 90")],
-                  RuleThen("RootCause", "*", "Name", "HighCPU")),
-            _rule("R-002",
-                  [_fact("Network(*).Latency == normal")],
-                  RuleThen("RULEOUT", "*", "Target", "NetworkIssue"),
-                  rule_type="ruleout"),
-        ]
-        evaluator = RuleEvaluator(rules)
-        result = evaluator.evaluate([
-            _fact("Server(*).CPUUsage > 90"),
-            _fact("Network(*).Latency == normal"),
-        ])
-
-        assert "HighCPU" in result.root_causes
-        assert "NetworkIssue" in result.ruled_out
-
-
-# ── AC-3: Reports encountered GAP rules ──────────────────────
-
-class TestGapDetection:
-    """AC-3: Reports encountered GAP rules."""
-
-    def test_gap_rule_fully_met(self):
-        """TC-6: GAP rule whose requires are all in working set is reported."""
-        gap_rule = Rule(
-            rule_id="R-GAP-001",
-            status="GAP",
-            requires=[_fact("Server(*).CPUUsage > 90")],
-            produces=[_fact("Server(*).Diagnosis == unknown")],
-            note="Missing link",
-        )
-        rules = [gap_rule]
-        evaluator = RuleEvaluator(rules)
-        result = evaluator.evaluate([_fact("Server(*).CPUUsage > 90")])
-
-        assert len(result.gap_rules) == 1
-        assert result.gap_rules[0].rule_id == "R-GAP-001"
-
-    def test_gap_rule_partially_met(self):
-        """TC-7: GAP rule with only partial match is NOT reported."""
-        gap_rule = Rule(
-            rule_id="R-GAP-001",
-            status="GAP",
-            requires=[
-                _fact("Server(*).CPUUsage > 90"),
-                _fact("Server(*).MemoryFree < 5%"),
-            ],
-            produces=[_fact("Server(*).Diagnosis == unknown")],
-            note="Missing link",
-        )
-        rules = [gap_rule]
-        evaluator = RuleEvaluator(rules)
-        result = evaluator.evaluate([_fact("Server(*).CPUUsage > 90")])
-
-        assert result.gap_rules == []
-
-
-# ── AC-4: Full rule chain trace ──────────────────────────────
-
-class TestRuleTrace:
-    """AC-4: Full rule chain trace (traceability)."""
-
-    def test_chain_trace_order(self):
-        """TC-8: Two-rule chain produces trace with 2 entries in order."""
-        rules = [
-            _rule("R-001",
-                  [_fact("Server(*).CPUUsage > 90")],
-                  RuleThen("Server", "*", "State", "overloaded")),
-            _rule("R-002",
-                  [_fact("Server(*).State == overloaded")],
-                  RuleThen("RootCause", "*", "Name", "HighCPU")),
-        ]
-        evaluator = RuleEvaluator(rules)
-        result = evaluator.evaluate([_fact("Server(*).CPUUsage > 90")])
-
-        assert len(result.rule_trace) == 2
-        assert result.rule_trace[0]["rule_id"] == "R-001"
-        assert result.rule_trace[1]["rule_id"] == "R-002"
-
-    def test_trace_entry_structure(self):
-        """TC-9: Each trace entry contains rule_id and derived fact."""
-        rules = [
-            _rule("R-001",
-                  [_fact("Server(*).CPUUsage > 90")],
-                  RuleThen("RootCause", "*", "Name", "HighCPU")),
-        ]
-        evaluator = RuleEvaluator(rules)
-        result = evaluator.evaluate([_fact("Server(*).CPUUsage > 90")])
-
-        entry = result.rule_trace[0]
-        assert "rule_id" in entry
-        assert "derived" in entry
-        assert entry["rule_id"] == "R-001"
-
-
-# ── AC-5: Rules evaluated in dependency order (chaining) ──────
-
-class TestChaining:
-    """AC-5: Forward chaining with dependent rules."""
-
-    def test_two_level_chain(self):
-        """TC-10: Chain depth 2 — derived fact triggers second rule."""
-        rules = [
-            _rule("R-001",
-                  [_fact("Server(*).CPUUsage > 90")],
-                  RuleThen("Server", "*", "State", "overloaded")),
-            _rule("R-002",
-                  [_fact("Server(*).State == overloaded")],
-                  RuleThen("RootCause", "*", "Name", "HighCPU")),
-        ]
-        evaluator = RuleEvaluator(rules)
-        result = evaluator.evaluate([_fact("Server(*).CPUUsage > 90")])
-
-        assert "HighCPU" in result.root_causes
-        assert len(result.fired_rules) == 2
-
-    def test_three_level_chain(self):
-        """TC-11: Chain depth 3 — A→B→C→RootCause."""
-        rules = [
-            _rule("R-001",
-                  [_fact("Server(*).CPUUsage > 90")],
-                  RuleThen("Server", "*", "State", "overloaded")),
-            _rule("R-002",
-                  [_fact("Server(*).State == overloaded")],
-                  RuleThen("Server", "*", "Alert", "critical")),
-            _rule("R-003",
-                  [_fact("Server(*).Alert == critical")],
-                  RuleThen("RootCause", "*", "Name", "CriticalOverload")),
-        ]
-        evaluator = RuleEvaluator(rules)
-        result = evaluator.evaluate([_fact("Server(*).CPUUsage > 90")])
-
-        assert "CriticalOverload" in result.root_causes
-        assert len(result.fired_rules) == 3
-
-    def test_convergence_skips_inapplicable_rules(self):
-        """TC-12: Rules that can't fire are skipped."""
-        rules = [
-            _rule("R-001",
-                  [_fact("Server(*).CPUUsage > 90")],
-                  RuleThen("RootCause", "*", "Name", "HighCPU")),
-            _rule("R-002",
-                  [_fact("Network(*).Latency > 100")],
-                  RuleThen("RootCause", "*", "Name", "NetworkSlow")),
-        ]
-        evaluator = RuleEvaluator(rules)
-        result = evaluator.evaluate([_fact("Server(*).CPUUsage > 90")])
-
-        assert "HighCPU" in result.root_causes
-        assert "NetworkSlow" not in result.root_causes
-        assert len(result.fired_rules) == 1
-
-
-# ── AC-6: Conflicting root causes presented as candidates ────
-
-class TestConflicts:
-    """AC-6: Conflicting root causes all presented."""
-
-    def test_conflicting_root_causes(self):
-        """TC-13: Same facts lead to different root causes — both reported."""
-        rules = [
-            _rule("R-001",
-                  [_fact("Server(*).CPUUsage > 90")],
-                  RuleThen("RootCause", "*", "Name", "HighCPU")),
-            _rule("R-002",
-                  [_fact("Server(*).CPUUsage > 90")],
-                  RuleThen("RootCause", "*", "Name", "MiningMalware")),
-        ]
-        evaluator = RuleEvaluator(rules)
-        result = evaluator.evaluate([_fact("Server(*).CPUUsage > 90")])
-
-        assert len(result.root_causes) == 2
-        assert set(result.root_causes) == {"HighCPU", "MiningMalware"}
-
-
-# ── AC-7: Structured output ──────────────────────────────────
-
-class TestStructuredOutput:
-    """AC-7: EvaluationResult.to_dict() serialization."""
-
-    def test_to_dict_keys(self):
-        """TC-14: to_dict contains all expected keys."""
-        rules = [
-            _rule("R-001",
-                  [_fact("Server(*).CPUUsage > 90")],
-                  RuleThen("RootCause", "*", "Name", "HighCPU")),
-        ]
-        evaluator = RuleEvaluator(rules)
-        result = evaluator.evaluate([_fact("Server(*).CPUUsage > 90")])
-        d = result.to_dict()
-
-        expected_keys = {
-            "input_facts", "derived_facts", "fired_rules",
-            "root_causes", "ruled_out", "gap_rules", "rule_trace",
-        }
-        assert set(d.keys()) == expected_keys
-
-
-# ── Edge cases ────────────────────────────────────────────────
-
-class TestEdgeCases:
-    """Cross-cutting: Edge cases."""
-
-    def test_empty_input_facts(self):
-        """TC-20: Empty input facts — no rules fire."""
-        rules = [
-            _rule("R-001",
-                  [_fact("Server(*).CPUUsage > 90")],
-                  RuleThen("RootCause", "*", "Name", "HighCPU")),
-        ]
-        evaluator = RuleEvaluator(rules)
-        result = evaluator.evaluate([])
-
-        assert result.root_causes == []
-        assert result.fired_rules == []
-        assert result.derived_facts == []
-
-    def test_or_logic_fires(self):
-        """TC-21: OR logic rule fires when any condition matches."""
-        rules = [
-            _rule("R-001",
-                  [_fact("Server(*).CPUUsage > 90"),
-                   _fact("Server(*).MemoryFree < 5%")],
-                  RuleThen("RootCause", "*", "Name", "ResourceExhaustion"),
-                  logic="OR"),
-        ]
-        evaluator = RuleEvaluator(rules)
-        # Only one condition matches — should fire with OR logic
-        result = evaluator.evaluate([_fact("Server(*).CPUUsage > 90")])
-
-        assert "ResourceExhaustion" in result.root_causes
-        assert len(result.fired_rules) == 1
-
-    def test_derived_fact_chains(self):
-        """TC-22: Derived fact from one rule matches condition of another."""
-        rules = [
-            _rule("R-001",
-                  [_fact("App(*).ErrorRate > 50")],
-                  RuleThen("App", "*", "Health", "degraded")),
-            _rule("R-002",
-                  [_fact("App(*).Health == degraded")],
-                  RuleThen("RootCause", "*", "Name", "AppFailure")),
-        ]
-        evaluator = RuleEvaluator(rules)
-        result = evaluator.evaluate([_fact("App(*).ErrorRate > 50")])
-
-        assert "AppFailure" in result.root_causes
-        assert len(result.derived_facts) == 2  # Health=degraded + RootCause
-
-    def test_only_confirmed_rules_evaluated(self):
-        """Only CONFIRMED rules are evaluated — GAP and RESOLVED are skipped."""
-        rules = [
-            _rule("R-001",
-                  [_fact("Server(*).CPUUsage > 90")],
-                  RuleThen("RootCause", "*", "Name", "HighCPU"),
-                  status="CONFIRMED"),
-            _rule("R-002",
-                  [_fact("Server(*).CPUUsage > 90")],
-                  RuleThen("RootCause", "*", "Name", "OldRC"),
-                  status="RESOLVED"),
-        ]
-        evaluator = RuleEvaluator(rules)
-        result = evaluator.evaluate([_fact("Server(*).CPUUsage > 90")])
-
-        assert result.root_causes == ["HighCPU"]
-        assert len(result.fired_rules) == 1
-
-    def test_no_rules_at_all(self):
-        """Empty rule set — evaluation returns empty result."""
-        evaluator = RuleEvaluator([])
-        result = evaluator.evaluate([_fact("Server(*).CPUUsage > 90")])
-
-        assert result.root_causes == []
-        assert result.fired_rules == []
-        assert result.gap_rules == []
-
-
-class TestVariableBinding:
-    """TC-3 through TC-14: Variable binding in rule evaluation."""
-
-    def test_single_instance_variable_binds(self):
-        """TC-3: Error($op).ResultCode == X matches Error(op-1).ResultCode == X."""
-        rule = Rule(
-            rule_id="R-VAR-1",
-            conditions=RuleConditions("AND", [
-                Fact("Error", "$op", "ResultCode", "==", "ZonalAllocationFailed"),
-            ]),
-            then=RuleThen("RootCause", "$op", "Name", "Zonal capacity"),
-            because="test",
-        )
-        evaluator = RuleEvaluator([rule])
-        result = evaluator.evaluate([
-            Fact("Error", "op-1", "ResultCode", "==", "ZonalAllocationFailed"),
-        ])
-        assert len(result.fired_rules) == 1
-        # Derived fact should have $op substituted with op-1
-        assert any(f.instance == "op-1" for f in result.derived_facts)
-
-    def test_single_value_variable_binds(self):
-        """TC-4: VMSeries(*).Name == $vmsize matches VMSeries(*).Name == NvadsA10v5."""
-        rule = Rule(
-            rule_id="R-VAR-2",
-            conditions=RuleConditions("AND", [
-                Fact("VMSeries", "*", "Name", "==", "$vmsize"),
-            ]),
-            then=RuleThen("Troubleshooting", "*", "VMSize", "$vmsize"),
-            because="test",
-        )
-        evaluator = RuleEvaluator([rule])
-        result = evaluator.evaluate([
-            Fact("VMSeries", "*", "Name", "==", "NvadsA10v5"),
-        ])
-        assert len(result.fired_rules) == 1
-        assert any(f.value == "NvadsA10v5" for f in result.derived_facts)
-
-    def test_shared_variable_and_consistent(self):
-        """TC-5: Two conditions with same $op — consistent binding fires."""
-        rule = Rule(
-            rule_id="R-VAR-3",
-            conditions=RuleConditions("AND", [
-                Fact("Error", "$op", "ResultCode", "==", "ZonalAllocationFailed"),
-                Fact("VMSeries", "$op", "Name", "==", "NvadsA10v5"),
-            ]),
-            then=RuleThen("RootCause", "*", "Name", "Zonal capacity"),
-            because="test",
-        )
-        evaluator = RuleEvaluator([rule])
-        result = evaluator.evaluate([
-            Fact("Error", "op-1", "ResultCode", "==", "ZonalAllocationFailed"),
-            Fact("VMSeries", "op-1", "Name", "==", "NvadsA10v5"),
-        ])
-        assert len(result.fired_rules) == 1
-
-    def test_shared_variable_and_inconsistent_no_fire(self):
-        """TC-6: Two conditions with same $op — inconsistent binding does NOT fire."""
-        rule = Rule(
-            rule_id="R-VAR-4",
-            conditions=RuleConditions("AND", [
-                Fact("Error", "$op", "ResultCode", "==", "ZonalAllocationFailed"),
-                Fact("VMSeries", "$op", "Name", "==", "NvadsA10v5"),
-            ]),
-            then=RuleThen("RootCause", "*", "Name", "Zonal capacity"),
-            because="test",
-        )
-        evaluator = RuleEvaluator([rule])
-        result = evaluator.evaluate([
-            Fact("Error", "op-1", "ResultCode", "==", "ZonalAllocationFailed"),
-            Fact("VMSeries", "op-2", "Name", "==", "NvadsA10v5"),
-        ])
-        assert len(result.fired_rules) == 0
-
-    def test_shared_variable_backtracking(self):
-        """TC-7: Multiple candidates — correct one found via backtracking."""
-        rule = Rule(
-            rule_id="R-VAR-5",
-            conditions=RuleConditions("AND", [
-                Fact("Error", "$op", "ResultCode", "==", "ZonalAllocationFailed"),
-                Fact("VMSeries", "$op", "Name", "==", "NvadsA10v5"),
-            ]),
-            then=RuleThen("RootCause", "*", "Name", "Zonal capacity"),
-            because="test",
-        )
-        evaluator = RuleEvaluator([rule])
-        result = evaluator.evaluate([
-            Fact("Error", "op-1", "ResultCode", "==", "OK"),
-            Fact("Error", "op-2", "ResultCode", "==", "ZonalAllocationFailed"),
-            Fact("VMSeries", "op-2", "Name", "==", "NvadsA10v5"),
-        ])
-        assert len(result.fired_rules) == 1
-
-    def test_then_instance_substitution(self):
-        """TC-8: Variable in then.instance is substituted."""
-        rule = Rule(
-            rule_id="R-VAR-6",
-            conditions=RuleConditions("AND", [
-                Fact("Error", "$op", "ResultCode", "==", "ZonalAllocationFailed"),
-            ]),
-            then=RuleThen("RootCause", "$op", "Name", "Zonal capacity"),
-            because="test",
-        )
-        evaluator = RuleEvaluator([rule])
-        result = evaluator.evaluate([
-            Fact("Error", "op-1", "ResultCode", "==", "ZonalAllocationFailed"),
-        ])
-        derived = [f for f in result.derived_facts if f.noun == "RootCause"]
-        assert len(derived) == 1
-        assert derived[0].instance == "op-1"
-
-    def test_then_value_substitution_whole(self):
-        """TC-9: If then.value is exactly '$vmsize', substitute it."""
-        rule = Rule(
-            rule_id="R-VAR-7",
-            conditions=RuleConditions("AND", [
-                Fact("VMSeries", "*", "Name", "==", "$vmsize"),
-            ]),
-            then=RuleThen("Troubleshooting", "*", "VMSize", "$vmsize"),
-            because="test",
-        )
-        evaluator = RuleEvaluator([rule])
-        result = evaluator.evaluate([
-            Fact("VMSeries", "*", "Name", "==", "NvadsA10v5"),
-        ])
-        derived = [f for f in result.derived_facts if f.noun == "Troubleshooting"]
-        assert len(derived) == 1
-        assert derived[0].value == "NvadsA10v5"
-
-    def test_then_value_embedded_not_substituted(self):
-        """TC-9 clarification: Embedded $var in value is NOT substituted."""
-        rule = Rule(
-            rule_id="R-VAR-8",
-            conditions=RuleConditions("AND", [
-                Fact("VMSeries", "*", "Name", "==", "$vmsize"),
-            ]),
-            then=RuleThen("Troubleshooting", "*", "Info", "Capacity for $vmsize"),
-            because="test",
-        )
-        evaluator = RuleEvaluator([rule])
-        result = evaluator.evaluate([
-            Fact("VMSeries", "*", "Name", "==", "NvadsA10v5"),
-        ])
-        derived = [f for f in result.derived_facts if f.noun == "Troubleshooting"]
-        assert len(derived) == 1
-        # Embedded variable — left as-is
-        assert derived[0].value == "Capacity for $vmsize"
-
-    def test_no_variable_rules_unchanged(self):
-        """TC-10: Non-variable rules still work via fast path."""
-        rule = Rule(
-            rule_id="R-NOVAR",
-            conditions=RuleConditions("AND", [
-                Fact("Error", "*", "ResultCode", "==", "ZonalAllocationFailed"),
-            ]),
-            then=RuleThen("RootCause", "*", "Name", "Zonal capacity"),
-            because="test",
-        )
-        evaluator = RuleEvaluator([rule])
-        result = evaluator.evaluate([
-            Fact("Error", "*", "ResultCode", "==", "ZonalAllocationFailed"),
-        ])
-        assert len(result.fired_rules) == 1
-
-    def test_or_logic_with_variables(self):
-        """TC-11: OR logic — any condition with variable can match."""
-        rule = Rule(
-            rule_id="R-VAR-OR",
-            conditions=RuleConditions("OR", [
-                Fact("Error", "$op", "ResultCode", "==", "ZonalAllocationFailed"),
-                Fact("Error", "$op", "ResultCode", "==", "AllocationFailed"),
-            ]),
-            then=RuleThen("RootCause", "*", "Name", "Allocation failure"),
-            because="test",
-        )
-        evaluator = RuleEvaluator([rule])
-        result = evaluator.evaluate([
-            Fact("Error", "op-1", "ResultCode", "==", "AllocationFailed"),
-        ])
-        assert len(result.fired_rules) == 1
-
-    def test_multiple_different_variables(self):
-        """TC-12: Two different variables bind independently."""
-        rule = Rule(
-            rule_id="R-VAR-MULTI",
-            conditions=RuleConditions("AND", [
-                Fact("Error", "$op", "ResultCode", "==", "ZonalAllocationFailed"),
-                Fact("VMSeries", "$op", "Name", "==", "$vmsize"),
-            ]),
-            then=RuleThen("RootCause", "*", "Name", "Zonal capacity"),
-            because="test",
-        )
-        evaluator = RuleEvaluator([rule])
-        result = evaluator.evaluate([
-            Fact("Error", "op-1", "ResultCode", "==", "ZonalAllocationFailed"),
-            Fact("VMSeries", "op-1", "Name", "==", "NvadsA10v5"),
-        ])
-        assert len(result.fired_rules) == 1
-
-    def test_variable_with_contains_operator(self):
-        """TC-13: Variable binding works with contains operator."""
-        rule = Rule(
-            rule_id="R-VAR-CONTAINS",
-            conditions=RuleConditions("AND", [
-                Fact("Error", "$op", "Message", "contains", "insufficient capacity"),
-            ]),
-            then=RuleThen("RootCause", "*", "Name", "Capacity issue"),
-            because="test",
-        )
-        evaluator = RuleEvaluator([rule])
-        result = evaluator.evaluate([
-            Fact("Error", "op-1", "Message", "contains", "No compute stamps available"),
-            Fact("Error", "op-2", "Message", "contains", "insufficient capacity"),
-        ])
-        assert len(result.fired_rules) == 1
-
-    def test_full_evaluate_variable_rule_derived_fact(self):
-        """TC-14: Full integration — variable rule fires and produces derived fact."""
-        rule = Rule(
-            rule_id="R-VAR-INT",
-            conditions=RuleConditions("AND", [
-                Fact("Error", "$op", "ResultCode", "==", "ZonalAllocationFailed"),
-                Fact("Error", "$op", "Message", "contains", "insufficient capacity"),
-            ]),
-            then=RuleThen("RootCause", "$op", "Name", "Zonal capacity exhaustion"),
-            because="test",
-        )
-        evaluator = RuleEvaluator([rule])
-        facts = [
-            Fact("Error", "op-1", "ResultCode", "==", "ZonalAllocationFailed"),
-            Fact("Error", "op-1", "Message", "contains", "insufficient capacity"),
-        ]
-        result = evaluator.evaluate(facts)
-        assert "Zonal capacity exhaustion" in result.root_causes
+        assert result.outputs[0]["branch"] == "then"
+        assert result.outputs[0]["output"].kind == "CHANGE_STATE"
+        # Derived fact should be in working set
         assert any(
-            f.noun == "RootCause" and f.instance == "op-1" and f.value == "Zonal capacity exhaustion"
+            f.noun == "CHANGE_STATE" and f.value == "CPU is overloaded"
             for f in result.derived_facts
         )
+
+    def test_then_fires_ruled_out(self):
+        """RULED_OUT via THEN branch produces a derived fact."""
+        r = _rule(
+            "R1",
+            _cond(("DNS", "OK")),
+            then=RuleOutput(kind="RULED_OUT", description="DNS is fine"),
+        )
+        facts = [_fact("DNS", "OK")]
+        result = RuleEvaluator([r]).evaluate(facts)
+
+        assert len(result.fired_rules) == 1
+        assert result.outputs[0]["output"].kind == "RULED_OUT"
+        assert any(
+            f.noun == "RULED_OUT" and f.value == "DNS is fine"
+            for f in result.derived_facts
+        )
+
+    def test_then_fires_gap(self):
+        """GAP via THEN branch is recorded but NOT added to working set."""
+        r = _rule(
+            "R1",
+            _cond(("Disk", "Unknown")),
+            then=RuleOutput(kind="GAP", description="Need disk I/O metrics"),
+        )
+        facts = [_fact("Disk", "Unknown")]
+        result = RuleEvaluator([r]).evaluate(facts)
+
+        assert len(result.fired_rules) == 1
+        assert result.outputs[0]["output"].kind == "GAP"
+        # GAP must NOT appear in derived_facts (terminal)
+        assert not any(f.noun == "GAP" for f in result.derived_facts)
+
+    def test_no_fire_when_conditions_not_met_no_else(self):
+        """Rule without ELSE does not fire when conditions are not met."""
+        r = _rule(
+            "R1",
+            _cond(("CPU", "High")),
+            then=RuleOutput(kind="CHANGE_STATE", description="x"),
+        )
+        facts = [_fact("CPU", "Low")]
+        result = RuleEvaluator([r]).evaluate(facts)
+
+        assert len(result.fired_rules) == 0
+        assert len(result.outputs) == 0
+
+
+# ============================================================================
+# TC5: Engine ELSE Branch Fires
+# ============================================================================
+
+class TestElseBranchFires:
+    def test_else_fires_when_conditions_not_met(self):
+        """ELSE branch fires when conditions are NOT met."""
+        r = _rule(
+            "R1",
+            _cond(("CPU", "High")),
+            then=RuleOutput(kind="CHANGE_STATE", description="CPU is root cause"),
+            else_=RuleOutput(kind="RULED_OUT", description="CPU ruled out"),
+        )
+        facts = [_fact("CPU", "Low")]
+        result = RuleEvaluator([r]).evaluate(facts)
+
+        assert len(result.fired_rules) == 1
+        assert result.outputs[0]["branch"] == "else"
+        assert result.outputs[0]["output"].kind == "RULED_OUT"
+        assert any(
+            f.noun == "RULED_OUT" and f.value == "CPU ruled out"
+            for f in result.derived_facts
+        )
+
+    def test_else_not_fired_when_no_else(self):
+        """Rule without ELSE does not fire anything when conditions not met."""
+        r = _rule(
+            "R1",
+            _cond(("CPU", "High")),
+            then=RuleOutput(kind="CHANGE_STATE", description="x"),
+            # No else_
+        )
+        facts = [_fact("CPU", "Low")]
+        result = RuleEvaluator([r]).evaluate(facts)
+
+        assert len(result.fired_rules) == 0
+        assert len(result.outputs) == 0
+
+    def test_else_not_fired_when_then_fires(self):
+        """When conditions ARE met, only THEN fires — ELSE is ignored."""
+        r = _rule(
+            "R1",
+            _cond(("CPU", "High")),
+            then=RuleOutput(kind="CHANGE_STATE", description="CPU root cause"),
+            else_=RuleOutput(kind="RULED_OUT", description="CPU ruled out"),
+        )
+        facts = [_fact("CPU", "High")]
+        result = RuleEvaluator([r]).evaluate(facts)
+
+        assert len(result.fired_rules) == 1
+        assert result.outputs[0]["branch"] == "then"
+        assert result.outputs[0]["output"].kind == "CHANGE_STATE"
+        # ELSE output should NOT appear
+        assert not any(
+            o["output"].kind == "RULED_OUT" for o in result.outputs
+        )
+
+
+# ============================================================================
+# TC6: Chaining RULED_OUT
+# ============================================================================
+
+class TestChainingRuledOut:
+    def test_ruled_out_chains_as_condition(self):
+        """RULED_OUT from R1 and R2 chains into R3's conditions."""
+        r1 = _rule(
+            "R1",
+            _cond(("CPU", "OK")),
+            then=RuleOutput(kind="RULED_OUT", description="CPU ruled out"),
+        )
+        r2 = _rule(
+            "R2",
+            _cond(("Memory", "OK")),
+            then=RuleOutput(kind="RULED_OUT", description="Memory ruled out"),
+        )
+        # R3 conditions require both RULED_OUTs
+        r3_cond = RuleConditions(
+            logic="AND",
+            items=[
+                Fact(noun="RULED_OUT", instance="*", property="description",
+                     operator="==", value="CPU ruled out"),
+                Fact(noun="RULED_OUT", instance="*", property="description",
+                     operator="==", value="Memory ruled out"),
+            ],
+        )
+        r3 = _rule(
+            "R3",
+            r3_cond,
+            then=RuleOutput(kind="CHANGE_STATE", description="Look at network"),
+        )
+
+        facts = [_fact("CPU", "OK"), _fact("Memory", "OK")]
+        result = RuleEvaluator([r1, r2, r3]).evaluate(facts)
+
+        assert len(result.fired_rules) == 3
+        assert any(r.rule_id == "R3" for r in result.fired_rules)
+        assert "Look at network" in result.change_states
+
+    def test_ruled_out_chain_incomplete(self):
+        """Only one RULED_OUT present — R3 does NOT fire."""
+        r1 = _rule(
+            "R1",
+            _cond(("CPU", "OK")),
+            then=RuleOutput(kind="RULED_OUT", description="CPU ruled out"),
+        )
+        r3_cond = RuleConditions(
+            logic="AND",
+            items=[
+                Fact(noun="RULED_OUT", instance="*", property="description",
+                     operator="==", value="CPU ruled out"),
+                Fact(noun="RULED_OUT", instance="*", property="description",
+                     operator="==", value="Memory ruled out"),
+            ],
+        )
+        r3 = _rule(
+            "R3",
+            r3_cond,
+            then=RuleOutput(kind="CHANGE_STATE", description="Look at network"),
+        )
+
+        facts = [_fact("CPU", "OK")]
+        result = RuleEvaluator([r1, r3]).evaluate(facts)
+
+        fired_ids = {r.rule_id for r in result.fired_rules}
+        assert "R1" in fired_ids
+        assert "R3" not in fired_ids
+
+
+# ============================================================================
+# TC7: Chaining CHANGE_STATE
+# ============================================================================
+
+class TestChainingChangeState:
+    def test_change_state_chains(self):
+        """CHANGE_STATE from R1 satisfies R2's condition."""
+        r1 = _rule(
+            "R1",
+            _cond(("Service", "Degraded")),
+            then=RuleOutput(kind="CHANGE_STATE", description="Escalate to L2"),
+        )
+        r2_cond = RuleConditions(
+            logic="AND",
+            items=[
+                Fact(noun="CHANGE_STATE", instance="*", property="description",
+                     operator="==", value="Escalate to L2"),
+            ],
+        )
+        r2 = _rule(
+            "R2",
+            r2_cond,
+            then=RuleOutput(kind="CHANGE_STATE", description="Notify manager"),
+        )
+
+        facts = [_fact("Service", "Degraded")]
+        result = RuleEvaluator([r1, r2]).evaluate(facts)
+
+        assert len(result.fired_rules) == 2
+        assert "Notify manager" in result.change_states
+
+
+# ============================================================================
+# TC8: GAP Terminal
+# ============================================================================
+
+class TestGapTerminal:
+    def test_gap_not_in_working_set(self):
+        """GAP output is recorded but does NOT chain to downstream rules."""
+        r1 = _rule(
+            "R1",
+            _cond(("Disk", "Unknown")),
+            then=RuleOutput(kind="GAP", description="Need disk metrics"),
+        )
+        r2_cond = RuleConditions(
+            logic="AND",
+            items=[
+                Fact(noun="GAP", instance="*", property="description",
+                     operator="==", value="Need disk metrics"),
+            ],
+        )
+        r2 = _rule(
+            "R2",
+            r2_cond,
+            then=RuleOutput(kind="CHANGE_STATE", description="Should not fire"),
+        )
+
+        facts = [_fact("Disk", "Unknown")]
+        result = RuleEvaluator([r1, r2]).evaluate(facts)
+
+        # R1 fires (GAP), R2 should NOT fire
+        fired_ids = {r.rule_id for r in result.fired_rules}
+        assert "R1" in fired_ids
+        assert "R2" not in fired_ids
+        assert result.gaps == ["Need disk metrics"]
+        assert not any(f.noun == "GAP" for f in result.derived_facts)
+
+
+# ============================================================================
+# TC9: Rule Trace
+# ============================================================================
+
+class TestRuleTrace:
+    def test_trace_records_branch(self):
+        """Each trace entry includes which branch fired."""
+        r1 = _rule(
+            "R1",
+            _cond(("CPU", "High")),
+            then=RuleOutput(kind="CHANGE_STATE", description="x"),
+            else_=RuleOutput(kind="RULED_OUT", description="y"),
+        )
+        r2 = _rule(
+            "R2",
+            _cond(("Memory", "High")),
+            then=RuleOutput(kind="CHANGE_STATE", description="m"),
+            else_=RuleOutput(kind="RULED_OUT", description="n"),
+        )
+        # CPU high → R1 THEN fires; Memory not present → R2 ELSE fires
+        facts = [_fact("CPU", "High")]
+        result = RuleEvaluator([r1, r2]).evaluate(facts)
+
+        trace_by_id = {t["rule_id"]: t for t in result.rule_trace}
+        assert trace_by_id["R1"]["branch"] == "then"
+        assert trace_by_id["R2"]["branch"] == "else"
+
+    def test_trace_iteration_and_derived(self):
+        """Trace includes iteration count and derived description."""
+        r = _rule(
+            "R1",
+            _cond(("A", "1")),
+            then=RuleOutput(kind="CHANGE_STATE", description="state X"),
+        )
+        facts = [_fact("A", "1")]
+        result = RuleEvaluator([r]).evaluate(facts)
+
+        assert len(result.rule_trace) == 1
+        assert result.rule_trace[0]["iteration"] == 1
+        assert "CHANGE_STATE" in result.rule_trace[0]["derived"]
+
+
+# ============================================================================
+# Condition matching — AND / OR
+# ============================================================================
+
+class TestConditionLogic:
+    def test_and_conditions_all_met(self):
+        r = _rule(
+            "R1",
+            _cond(("A", "1"), ("B", "2")),
+            then=RuleOutput(kind="CHANGE_STATE", description="both"),
+        )
+        facts = [_fact("A", "1"), _fact("B", "2")]
+        result = RuleEvaluator([r]).evaluate(facts)
+        assert len(result.fired_rules) == 1
+
+    def test_and_conditions_partial(self):
+        r = _rule(
+            "R1",
+            _cond(("A", "1"), ("B", "2")),
+            then=RuleOutput(kind="CHANGE_STATE", description="both"),
+        )
+        facts = [_fact("A", "1")]
+        result = RuleEvaluator([r]).evaluate(facts)
+        assert len(result.fired_rules) == 0
+
+    def test_or_conditions_one_met(self):
+        r = _rule(
+            "R1",
+            _cond(("A", "1"), ("B", "2"), logic="OR"),
+            then=RuleOutput(kind="CHANGE_STATE", description="either"),
+        )
+        facts = [_fact("B", "2")]
+        result = RuleEvaluator([r]).evaluate(facts)
+        assert len(result.fired_rules) == 1
+
+    def test_or_conditions_none_met(self):
+        r = _rule(
+            "R1",
+            _cond(("A", "1"), ("B", "2"), logic="OR"),
+            then=RuleOutput(kind="CHANGE_STATE", description="either"),
+        )
+        facts = [_fact("C", "3")]
+        result = RuleEvaluator([r]).evaluate(facts)
+        assert len(result.fired_rules) == 0
+
+
+# ============================================================================
+# Variable binding
+# ============================================================================
+
+class TestVariableBinding:
+    def test_variable_conditions_then_fires(self):
+        """Variable binding works with v2 THEN output."""
+        cond = RuleConditions(
+            logic="AND",
+            items=[
+                Fact(noun="Server", instance="$host", property="CPU",
+                     operator="==", value="High"),
+            ],
+        )
+        r = _rule(
+            "R1",
+            cond,
+            then=RuleOutput(kind="CHANGE_STATE", description="High CPU on server"),
+        )
+        facts = [
+            Fact(noun="Server", instance="web01", property="CPU",
+                 operator="==", value="High"),
+        ]
+        result = RuleEvaluator([r]).evaluate(facts)
+
+        assert len(result.fired_rules) == 1
+        assert result.outputs[0]["output"].kind == "CHANGE_STATE"
+
+    def test_variable_conditions_else_fires(self):
+        """Variable binding: conditions not met → ELSE fires."""
+        cond = RuleConditions(
+            logic="AND",
+            items=[
+                Fact(noun="Server", instance="$host", property="CPU",
+                     operator="==", value="High"),
+            ],
+        )
+        r = _rule(
+            "R1",
+            cond,
+            then=RuleOutput(kind="CHANGE_STATE", description="CPU problem"),
+            else_=RuleOutput(kind="RULED_OUT", description="CPU fine"),
+        )
+        facts = [
+            Fact(noun="Server", instance="web01", property="CPU",
+                 operator="==", value="Low"),
+        ]
+        result = RuleEvaluator([r]).evaluate(facts)
+
+        assert len(result.fired_rules) == 1
+        assert result.outputs[0]["branch"] == "else"
+
+
+# ============================================================================
+# Only CONFIRMED rules fire
+# ============================================================================
+
+class TestStatusFiltering:
+    def test_gap_status_rule_skipped(self):
+        """Rules with status=GAP are not evaluated."""
+        r = _rule(
+            "R1",
+            _cond(("A", "1")),
+            then=RuleOutput(kind="CHANGE_STATE", description="x"),
+            status="GAP",
+        )
+        facts = [_fact("A", "1")]
+        result = RuleEvaluator([r]).evaluate(facts)
+        assert len(result.fired_rules) == 0
+
+    def test_resolved_status_rule_skipped(self):
+        r = _rule(
+            "R1",
+            _cond(("A", "1")),
+            then=RuleOutput(kind="CHANGE_STATE", description="x"),
+            status="RESOLVED",
+        )
+        facts = [_fact("A", "1")]
+        result = RuleEvaluator([r]).evaluate(facts)
+        assert len(result.fired_rules) == 0
+
+
+# ============================================================================
+# Empty inputs
+# ============================================================================
+
+class TestEdgeCases:
+    def test_no_rules(self):
+        result = RuleEvaluator([]).evaluate([_fact("A", "1")])
+        assert result.fired_rules == []
+        assert result.outputs == []
+
+    def test_no_facts(self):
+        r = _rule(
+            "R1",
+            _cond(("A", "1")),
+            then=RuleOutput(kind="CHANGE_STATE", description="x"),
+        )
+        result = RuleEvaluator([r]).evaluate([])
+        assert result.fired_rules == []
+
+    def test_empty_both(self):
+        result = RuleEvaluator([]).evaluate([])
+        assert result.fired_rules == []
+
+    def test_result_input_facts_preserved(self):
+        facts = [_fact("A", "1")]
+        result = RuleEvaluator([]).evaluate(facts)
+        assert result.input_facts == facts
+
+    def test_multiple_rules_fire_order(self):
+        """Multiple rules fire in list order."""
+        r1 = _rule("R1", _cond(("A", "1")),
+                    then=RuleOutput(kind="CHANGE_STATE", description="first"))
+        r2 = _rule("R2", _cond(("B", "2")),
+                    then=RuleOutput(kind="RULED_OUT", description="second"))
+        facts = [_fact("A", "1"), _fact("B", "2")]
+        result = RuleEvaluator([r1, r2]).evaluate(facts)
+
+        assert [r.rule_id for r in result.fired_rules] == ["R1", "R2"]
+
+    def test_else_fires_with_no_input_facts(self):
+        """ELSE fires when there are no input facts at all (conditions can't be met)."""
+        r = _rule(
+            "R1",
+            _cond(("CPU", "High")),
+            then=RuleOutput(kind="CHANGE_STATE", description="x"),
+            else_=RuleOutput(kind="RULED_OUT", description="CPU not checked"),
+        )
+        result = RuleEvaluator([r]).evaluate([])
+        assert len(result.fired_rules) == 1
+        assert result.outputs[0]["branch"] == "else"

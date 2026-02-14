@@ -5,7 +5,7 @@ making them fully testable without a GUI event loop.
 """
 from __future__ import annotations
 
-from ees.models import EvaluationResult, Fact, OntologyNoun, Rule
+from ees.models import EvaluationResult, Fact, OntologyNoun, Rule, RuleOutput
 
 
 def facts_to_rows(facts: list[Fact]) -> list[dict]:
@@ -84,6 +84,11 @@ def eval_result_to_display(result: EvaluationResult) -> dict:
 
     Keys: input_facts, fired_rules, root_causes, ruled_out, gap_rules, trace
     """
+    def _then_display(rule):
+        if isinstance(rule.then, RuleOutput):
+            return f"{rule.then.kind}(\"{rule.then.description}\")"
+        return rule.then.value  # v1 backward compat
+
     return {
         "input_facts": [f.to_display() for f in result.input_facts],
         "fired_rules": [
@@ -92,7 +97,7 @@ def eval_result_to_display(result: EvaluationResult) -> dict:
                 "conditions": " AND ".join(
                     item.to_display() for item in r.conditions.items
                 ),
-                "then": r.then.value,
+                "then": _then_display(r),
                 "type": r.type,
             }
             for r in result.fired_rules

@@ -1,369 +1,250 @@
-"""Tests for rule generator."""
+"""Tests for ees.rule_generator — v2 deduplication and filtering."""
+from __future__ import annotations
+
 import pytest
-
+from ees.models import (
+    Fact,
+    Rule,
+    RuleConditions,
+    RuleOutput,
+)
 from ees.rule_generator import RuleGenerator
-from ees.models import Fact, Rule, RuleConditions, RuleThen
 
 
-class TestRuleGeneratorHappyPath:
-    """TC-16, TC-17, TC-18, TC-19: Rule generation."""
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
-    def test_generate_rule_with_required_fields(self):
-        """TC-16: Generated rule has all required fields."""
-        rule = Rule(
-            rule_id="R-001",
-            status="CONFIRMED",
-            type="positive",
-            sources=["INC-001"],
-            conditions=RuleConditions(
-                logic="AND",
-                items=[
-                    Fact("Server", "*", "CPUUsage", ">", "90"),
-                    Fact("Server", "*", "MemoryFree", "<", "5%"),
-                ],
-            ),
-            then=RuleThen("Server", "*", "ResourceExhausted", "TRUE"),
-            because="High CPU combined with low memory indicates resource exhaustion",
+def _fact(noun: str, value: str, instance: str = "*", prop: str = "Status") -> Fact:
+    return Fact(noun=noun, instance=instance, property=prop, operator="==", value=value)
+
+
+def _cond(*pairs: tuple[str, str], logic: str = "AND") -> RuleConditions:
+    return RuleConditions(
+        logic=logic,
+        items=[_fact(n, v) for n, v in pairs],
+    )
+
+
+def _rule(
+    rule_id: str,
+    conditions: RuleConditions,
+    then: RuleOutput,
+    else_: RuleOutput | None = None,
+    status: str = "CONFIRMED",
+) -> Rule:
+    return Rule(
+        rule_id=rule_id,
+        status=status,
+        conditions=conditions,
+        then=then,
+        else_=else_,
+    )
+
+
+# ============================================================================
+# TC10: is_duplicate
+# ============================================================================
+
+class TestIsDuplicate:
+    def test_is_duplicate_v2(self):
+        """Two rules with same conditions + then + else_ → duplicate."""
+        existing = _rule(
+            "R1",
+            _cond(("CPU", "High")),
+            then=RuleOutput(kind="CHANGE_STATE", description="CPU problem"),
+            else_=RuleOutput(kind="RULED_OUT", description="CPU ok"),
         )
-        d = rule.to_dict()
-        assert d["rule_id"] == "R-001"
-        assert d["status"] == "CONFIRMED"
-        assert d["type"] == "positive"
-        assert "INC-001" in d["sources"]
-        assert d["conditions"]["logic"] in ("AND", "OR")
-        assert len(d["conditions"]["items"]) > 0
-        assert d["then"]["noun"] == "Server"
-        assert len(d["because"]) > 0
-
-    def test_flat_logic_only(self):
-        """TC-17: Rules use flat AND or OR only, never mixed."""
-        rule = Rule(
-            rule_id="R-001",
-            conditions=RuleConditions(
-                logic="AND",
-                items=[
-                    Fact("S", "*", "A", ">", "1"),
-                    Fact("S", "*", "B", "<", "2"),
-                ],
-            ),
-            then=RuleThen("S", "*", "X", "TRUE"),
-            because="reason",
+        candidate = _rule(
+            "R2",
+            _cond(("CPU", "High")),
+            then=RuleOutput(kind="CHANGE_STATE", description="CPU problem"),
+            else_=RuleOutput(kind="RULED_OUT", description="CPU ok"),
         )
-        assert rule.conditions.logic in ("AND", "OR")
+        gen = RuleGenerator([existing])
+        assert gen.is_duplicate(candidate)
 
-    def test_instance_preserved(self):
-        """TC-18: Rules preserve instance parameter."""
-        rule = Rule(
-            rule_id="R-001",
-            conditions=RuleConditions(
-                logic="AND",
-                items=[Fact("Server", "WebApp01", "CPUUsage", ">", "90")],
-            ),
-            then=RuleThen("Server", "WebApp01", "ResourceExhausted", "TRUE"),
-            because="specific server",
+    def test_not_duplicate_different_then(self):
+        existing = _rule(
+            "R1",
+            _cond(("CPU", "High")),
+            then=RuleOutput(kind="CHANGE_STATE", description="CPU problem"),
         )
-        assert rule.conditions.items[0].instance == "WebApp01"
-        assert rule.then.instance == "WebApp01"
-
-    def test_single_fact_rule(self):
-        """TC-19: Single confirmed fact generates a valid rule."""
-        rule = Rule(
-            rule_id="R-001",
-            conditions=RuleConditions(
-                logic="AND",
-                items=[Fact("Server", "*", "CPUUsage", ">", "90")],
-            ),
-            then=RuleThen("Server", "*", "HighLoad", "TRUE"),
-            because="reason",
+        candidate = _rule(
+            "R2",
+            _cond(("CPU", "High")),
+            then=RuleOutput(kind="RULED_OUT", description="CPU problem"),
         )
-        assert len(rule.conditions.items) == 1
-        d = rule.to_dict()
-        assert d["conditions"]["logic"] == "AND"
+        gen = RuleGenerator([existing])
+        assert not gen.is_duplicate(candidate)
 
-
-class TestRuleGeneratorDuplication:
-    """MN-3: Duplicate rule detection."""
-
-    def test_exact_duplicate_detected(self):
-        """Exact duplicate rules are detected."""
-        gen = RuleGenerator(existing_rules=[
-            Rule(
-                rule_id="R-001",
-                conditions=RuleConditions("AND", [Fact("S", "*", "P", ">", "1")]),
-                then=RuleThen("S", "*", "X", "TRUE"),
-                because="a",
-            ),
-        ])
-        new_rule = Rule(
-            rule_id="R-002",
-            conditions=RuleConditions("AND", [Fact("S", "*", "P", ">", "1")]),
-            then=RuleThen("S", "*", "X", "TRUE"),
-            because="b",
+    def test_not_duplicate_different_conditions(self):
+        existing = _rule(
+            "R1",
+            _cond(("CPU", "High")),
+            then=RuleOutput(kind="CHANGE_STATE", description="x"),
         )
-        assert gen.is_duplicate(new_rule)
-
-    def test_not_duplicate_different_value(self):
-        gen = RuleGenerator(existing_rules=[
-            Rule(
-                rule_id="R-001",
-                conditions=RuleConditions("AND", [Fact("S", "*", "P", ">", "1")]),
-                then=RuleThen("S", "*", "X", "TRUE"),
-                because="a",
-            ),
-        ])
-        new_rule = Rule(
-            rule_id="R-002",
-            conditions=RuleConditions("AND", [Fact("S", "*", "P", ">", "2")]),
-            then=RuleThen("S", "*", "X", "TRUE"),
-            because="b",
+        candidate = _rule(
+            "R2",
+            _cond(("Memory", "High")),
+            then=RuleOutput(kind="CHANGE_STATE", description="x"),
         )
-        assert not gen.is_duplicate(new_rule)
+        gen = RuleGenerator([existing])
+        assert not gen.is_duplicate(candidate)
+
+    def test_not_duplicate_different_else(self):
+        existing = _rule(
+            "R1",
+            _cond(("CPU", "High")),
+            then=RuleOutput(kind="CHANGE_STATE", description="x"),
+            else_=RuleOutput(kind="RULED_OUT", description="a"),
+        )
+        candidate = _rule(
+            "R2",
+            _cond(("CPU", "High")),
+            then=RuleOutput(kind="CHANGE_STATE", description="x"),
+            else_=RuleOutput(kind="RULED_OUT", description="b"),
+        )
+        gen = RuleGenerator([existing])
+        assert not gen.is_duplicate(candidate)
+
+    def test_gap_status_skipped_in_dedup(self):
+        """GAP-status rules are skipped — a confirmed rule matching a GAP is a refinement."""
+        existing = _rule(
+            "R1",
+            _cond(("CPU", "High")),
+            then=RuleOutput(kind="CHANGE_STATE", description="x"),
+            status="GAP",
+        )
+        candidate = _rule(
+            "R2",
+            _cond(("CPU", "High")),
+            then=RuleOutput(kind="CHANGE_STATE", description="x"),
+        )
+        gen = RuleGenerator([existing])
+        assert not gen.is_duplicate(candidate)
+
+    def test_empty_existing(self):
+        candidate = _rule(
+            "R1",
+            _cond(("A", "1")),
+            then=RuleOutput(kind="CHANGE_STATE", description="x"),
+        )
+        gen = RuleGenerator([])
+        assert not gen.is_duplicate(candidate)
 
 
-class TestRuleGeneratorConfirmation:
-    """TC-05-TC-10: User confirmation of rules (via simulated input)."""
-
-    def test_all_facts_rejected_no_rules(self):
-        """TC-10: All facts rejected means no rules generated."""
-        gen = RuleGenerator(existing_rules=[])
-        # If all facts are rejected, the confirmed facts list is empty
-        # and no rules should be produced
-        confirmed_facts = []
-        llm_rules = []
-        result = gen.filter_rules(llm_rules, confirmed_facts)
-        assert len(result) == 0
-
+# ============================================================================
+# TC10: filter_rules
+# ============================================================================
 
 class TestFilterRules:
-    """Coverage for filter_rules logic: confirmed-fact matching and dedup."""
+    def test_filter_rules_v2_keeps_matching(self):
+        """filter_rules keeps rules whose conditions are all in confirmed_facts."""
+        existing = []
+        gen = RuleGenerator(existing)
 
-    def test_keep_rule_all_conditions_confirmed(self):
-        """Rule is kept when all its condition facts are in confirmed_facts."""
-        gen = RuleGenerator(existing_rules=[])
-        confirmed = [
-            Fact("Server", "*", "CPUUsage", ">", "90"),
-            Fact("Server", "*", "MemoryFree", "<", "5%"),
-        ]
-        rule = Rule(
-            rule_id="",
-            conditions=RuleConditions("AND", [
-                Fact("Server", "*", "CPUUsage", ">", "90"),
-                Fact("Server", "*", "MemoryFree", "<", "5%"),
-            ]),
-            then=RuleThen("Server", "*", "Overloaded", "TRUE"),
-            because="reason",
+        candidate = _rule(
+            "R1",
+            _cond(("CPU", "High"), ("Memory", "Low")),
+            then=RuleOutput(kind="CHANGE_STATE", description="both issues"),
         )
-        result = gen.filter_rules([rule], confirmed)
-        assert len(result) == 1
+        confirmed = [_fact("CPU", "High"), _fact("Memory", "Low")]
+        kept = gen.filter_rules([candidate], confirmed)
+        assert len(kept) == 1
+        assert kept[0].rule_id == "R1"
 
-    def test_drop_rule_missing_condition(self):
-        """Rule is dropped when a condition fact is not confirmed."""
-        gen = RuleGenerator(existing_rules=[])
-        confirmed = [Fact("Server", "*", "CPUUsage", ">", "90")]
-        rule = Rule(
-            rule_id="",
-            conditions=RuleConditions("AND", [
-                Fact("Server", "*", "CPUUsage", ">", "90"),
-                Fact("Server", "*", "MemoryFree", "<", "5%"),  # not confirmed
-            ]),
-            then=RuleThen("Server", "*", "Overloaded", "TRUE"),
-            because="reason",
-        )
-        result = gen.filter_rules([rule], confirmed)
-        assert len(result) == 0
-
-    def test_drop_duplicate_rule_in_filter(self):
-        """Rule is dropped if it duplicates an existing rule."""
-        existing = Rule(
-            rule_id="R-001",
-            conditions=RuleConditions("AND", [Fact("S", "*", "P", ">", "1")]),
-            then=RuleThen("S", "*", "X", "TRUE"),
-            because="old",
-        )
-        gen = RuleGenerator(existing_rules=[existing])
-        confirmed = [Fact("S", "*", "P", ">", "1")]
-        dup = Rule(
-            rule_id="",
-            conditions=RuleConditions("AND", [Fact("S", "*", "P", ">", "1")]),
-            then=RuleThen("S", "*", "X", "TRUE"),
-            because="new",
-        )
-        result = gen.filter_rules([dup], confirmed)
-        assert len(result) == 0
-
-    def test_case_insensitive_matching(self):
-        """Confirmed facts match rule conditions case-insensitively on noun/property."""
-        gen = RuleGenerator(existing_rules=[])
-        confirmed = [Fact("server", "*", "cpuusage", ">", "90")]
-        rule = Rule(
-            rule_id="",
-            conditions=RuleConditions("AND", [Fact("Server", "*", "CPUUsage", ">", "90")]),
-            then=RuleThen("S", "*", "X", "TRUE"),
-            because="r",
-        )
-        result = gen.filter_rules([rule], confirmed)
-        assert len(result) == 1
-
-    def test_mixed_keep_and_drop(self):
-        """Multiple rules: some kept, some dropped."""
-        gen = RuleGenerator(existing_rules=[])
-        confirmed = [Fact("S", "*", "A", ">", "1")]
-        good = Rule(
-            rule_id="",
-            conditions=RuleConditions("AND", [Fact("S", "*", "A", ">", "1")]),
-            then=RuleThen("S", "*", "X", "TRUE"),
-            because="r",
-        )
-        bad = Rule(
-            rule_id="",
-            conditions=RuleConditions("AND", [Fact("S", "*", "B", "<", "2")]),
-            then=RuleThen("S", "*", "Y", "TRUE"),
-            because="r",
-        )
-        result = gen.filter_rules([good, bad], confirmed)
-        assert len(result) == 1
-        assert result[0].then.property == "X"
-
-
-class TestFilterRulesGapExclusion:
-    """MN-3: is_duplicate skips GAP-status rules."""
-
-    def test_is_duplicate_skips_gap_rule(self):
-        """A confirmed rule matching a GAP rule's conditions/then is NOT a duplicate."""
-        gap = Rule(
-            rule_id="R-010",
-            status="GAP",
-            conditions=RuleConditions("AND", [Fact("S", "*", "P", ">", "1")]),
-            then=RuleThen("S", "*", "X", "TRUE"),
-            because="gap",
-        )
-        gen = RuleGenerator(existing_rules=[gap])
-        new_rule = Rule(
-            rule_id="",
-            conditions=RuleConditions("AND", [Fact("S", "*", "P", ">", "1")]),
-            then=RuleThen("S", "*", "X", "TRUE"),
-            because="confirmed",
-        )
-        assert not gen.is_duplicate(new_rule)
-
-    def test_is_duplicate_still_catches_confirmed_dupes(self):
-        """Existing CONFIRMED rules still trigger duplicate detection."""
-        confirmed = Rule(
-            rule_id="R-001",
-            status="CONFIRMED",
-            conditions=RuleConditions("AND", [Fact("S", "*", "P", ">", "1")]),
-            then=RuleThen("S", "*", "X", "TRUE"),
-            because="old",
-        )
-        gen = RuleGenerator(existing_rules=[confirmed])
-        new_rule = Rule(
-            rule_id="",
-            conditions=RuleConditions("AND", [Fact("S", "*", "P", ">", "1")]),
-            then=RuleThen("S", "*", "X", "TRUE"),
-            because="new",
-        )
-        assert gen.is_duplicate(new_rule)
-
-
-# ── RULEOUT Deduplication Tests (EES-00003) ──────────────────────────
-
-
-class TestRuleoutDeduplication:
-    """TC-17, TC-18, TC-19: RULEOUT rule deduplication."""
-
-    def test_ruleout_duplicate_detected(self):
-        """TC-17: Matching RULEOUT rule is detected as duplicate."""
-        existing = Rule(
-            rule_id="R-020",
-            status="CONFIRMED",
-            type="ruleout",
-            conditions=RuleConditions("AND", [Fact("Net", "*", "Latency", "==", "normal")]),
-            then=RuleThen("RULEOUT", "*", "Target", "Network Issue"),
-            because="prev",
-        )
-        gen = RuleGenerator(existing_rules=[existing])
-        new = Rule(
-            rule_id="",
-            type="ruleout",
-            conditions=RuleConditions("AND", [Fact("Net", "*", "Latency", "==", "normal")]),
-            then=RuleThen("RULEOUT", "*", "Target", "Network Issue"),
-            because="new",
-        )
-        assert gen.is_duplicate(new)
-
-    def test_ruleout_vs_positive_not_duplicate(self):
-        """TC-18: RULEOUT rule and positive rule with same conditions are NOT duplicates."""
-        positive = Rule(
-            rule_id="R-001",
-            status="CONFIRMED",
-            type="positive",
-            conditions=RuleConditions("AND", [Fact("Net", "*", "Latency", "==", "normal")]),
-            then=RuleThen("Net", "*", "Status", "OK"),
-            because="positive",
-        )
-        gen = RuleGenerator(existing_rules=[positive])
-        ruleout = Rule(
-            rule_id="",
-            type="ruleout",
-            conditions=RuleConditions("AND", [Fact("Net", "*", "Latency", "==", "normal")]),
-            then=RuleThen("RULEOUT", "*", "Target", "Network Issue"),
-            because="ruleout",
-        )
-        assert not gen.is_duplicate(ruleout)
-
-    def test_filter_rules_keeps_ruleout(self):
-        """TC-19: filter_rules passes RULEOUT rule with confirmed conditions."""
-        gen = RuleGenerator(existing_rules=[])
-        confirmed = [Fact("Net", "*", "Latency", "==", "normal")]
-        ruleout = Rule(
-            rule_id="",
-            type="ruleout",
-            conditions=RuleConditions("AND", [Fact("Net", "*", "Latency", "==", "normal")]),
-            then=RuleThen("RULEOUT", "*", "Target", "Network Issue"),
-            because="reason",
-        )
-        result = gen.filter_rules([ruleout], confirmed)
-        assert len(result) == 1
-        assert result[0].type == "ruleout"
-
-
-class TestFilterRulesVariableBinding:
-    """TC-15: filter_rules with variable conditions."""
-
-    def test_keeps_rule_with_variable_conditions(self):
-        """A rule with $op variable conditions should be kept if matching confirmed facts exist."""
+    def test_filter_rules_removes_unconfirmed(self):
+        """Rules with conditions not in confirmed_facts are removed."""
         gen = RuleGenerator([])
-        rule = Rule(
-            rule_id="",
-            conditions=RuleConditions("AND", [
-                Fact("Error", "$op", "ResultCode", "==", "ZonalAllocationFailed"),
-                Fact("VMSeries", "$op", "Name", "==", "NvadsA10v5"),
-            ]),
-            then=RuleThen("RootCause", "*", "Name", "Zonal capacity"),
-            because="test",
+        candidate = _rule(
+            "R1",
+            _cond(("CPU", "High"), ("Disk", "Full")),
+            then=RuleOutput(kind="CHANGE_STATE", description="x"),
         )
-        confirmed = [
-            Fact("Error", "op-1", "ResultCode", "==", "ZonalAllocationFailed"),
-            Fact("VMSeries", "op-1", "Name", "==", "NvadsA10v5"),
-        ]
-        result = gen.filter_rules([rule], confirmed)
-        assert len(result) == 1
+        confirmed = [_fact("CPU", "High")]  # Disk not confirmed
+        kept = gen.filter_rules([candidate], confirmed)
+        assert len(kept) == 0
 
-    def test_drops_rule_with_variable_no_match(self):
-        """A rule with $op should be dropped if no consistent binding exists."""
+    def test_filter_rules_removes_duplicates(self):
+        """Duplicates of existing rules are removed."""
+        existing = _rule(
+            "R1",
+            _cond(("CPU", "High")),
+            then=RuleOutput(kind="CHANGE_STATE", description="x"),
+        )
+        gen = RuleGenerator([existing])
+
+        candidate = _rule(
+            "R2",
+            _cond(("CPU", "High")),
+            then=RuleOutput(kind="CHANGE_STATE", description="x"),
+        )
+        confirmed = [_fact("CPU", "High")]
+        kept = gen.filter_rules([candidate], confirmed)
+        assert len(kept) == 0
+
+    def test_filter_rules_empty_confirmed(self):
         gen = RuleGenerator([])
-        rule = Rule(
-            rule_id="",
-            conditions=RuleConditions("AND", [
-                Fact("Error", "$op", "ResultCode", "==", "ZonalAllocationFailed"),
-                Fact("VMSeries", "$op", "Name", "==", "NvadsA10v5"),
-            ]),
-            then=RuleThen("RootCause", "*", "Name", "Zonal capacity"),
-            because="test",
+        candidate = _rule(
+            "R1",
+            _cond(("A", "1")),
+            then=RuleOutput(kind="CHANGE_STATE", description="x"),
+        )
+        kept = gen.filter_rules([candidate], [])
+        assert len(kept) == 0
+
+    def test_filter_rules_with_variables(self):
+        """Variable conditions use unification matching."""
+        gen = RuleGenerator([])
+        cond = RuleConditions(
+            logic="AND",
+            items=[
+                Fact(noun="Server", instance="$host", property="CPU",
+                     operator="==", value="High"),
+            ],
+        )
+        candidate = _rule(
+            "R1",
+            cond,
+            then=RuleOutput(kind="CHANGE_STATE", description="server issue"),
         )
         confirmed = [
-            Fact("Error", "op-1", "ResultCode", "==", "ZonalAllocationFailed"),
-            Fact("VMSeries", "op-2", "Name", "==", "NvadsA10v5"),
+            Fact(noun="Server", instance="web01", property="CPU",
+                 operator="==", value="High"),
         ]
-        result = gen.filter_rules([rule], confirmed)
-        assert len(result) == 0
+        kept = gen.filter_rules([candidate], confirmed)
+        assert len(kept) == 1
+
+    def test_filter_rules_variable_no_match(self):
+        gen = RuleGenerator([])
+        cond = RuleConditions(
+            logic="AND",
+            items=[
+                Fact(noun="Server", instance="$host", property="CPU",
+                     operator="==", value="High"),
+            ],
+        )
+        candidate = _rule(
+            "R1",
+            cond,
+            then=RuleOutput(kind="CHANGE_STATE", description="x"),
+        )
+        confirmed = [
+            Fact(noun="Server", instance="web01", property="CPU",
+                 operator="==", value="Low"),
+        ]
+        kept = gen.filter_rules([candidate], confirmed)
+        assert len(kept) == 0
+
+    def test_filter_multiple_candidates(self):
+        """Multiple candidates — keeps valid, removes invalid."""
+        gen = RuleGenerator([])
+        good = _rule("R1", _cond(("A", "1")),
+                      then=RuleOutput(kind="CHANGE_STATE", description="ok"))
+        bad = _rule("R2", _cond(("Z", "9")),
+                     then=RuleOutput(kind="CHANGE_STATE", description="nope"))
+        confirmed = [_fact("A", "1")]
+        kept = gen.filter_rules([good, bad], confirmed)
+        assert len(kept) == 1
+        assert kept[0].rule_id == "R1"

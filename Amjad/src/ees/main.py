@@ -9,7 +9,7 @@ from ees.exceptions import ConfigError, IncidentLoadError, LLMError
 from ees.fact_extractor import FactExtractor
 from ees.gap_detector import GapDetector
 from ees.incident_loader import IncidentLoader
-from ees.models import Fact, Incident, Rule, RootCause
+from ees.models import Fact, Incident, Rule, RootCause, RuleOutput
 from ees.ontology_manager import OntologyManager
 from ees.rule_evaluator import RuleEvaluator
 from ees.rule_generator import RuleGenerator
@@ -143,6 +143,9 @@ def _format_rule_conditions(rule: Rule) -> str:
 
 def _format_rule_then(rule: Rule) -> str:
     """Format the THEN clause for display."""
+    if isinstance(rule.then, RuleOutput):
+        return f"{rule.then.kind}(\"{rule.then.description}\")"
+    # Backward compat for v1 RuleThen objects
     if rule.type == "ruleout":
         return f"RULEOUT {rule.then.value}"
     return f"{rule.then.noun}({rule.then.instance}).{rule.then.property} = {rule.then.value}"
