@@ -3,9 +3,9 @@
   "work_item_id": "EES-00013",
   "profile": "complete",
   "current_phase": "definition",
-  "current_role": "program-manager",
+  "current_role": "quality-assurance",
   "created_at": "2026-02-14T15:55:08.941946Z",
-  "updated_at": "2026-02-14T16:00:19.279040Z",
+  "updated_at": "2026-02-14T16:04:19.971121Z",
   "role_history": [
     {
       "role": "project-owner-assistant",
@@ -15,6 +15,11 @@
     {
       "role": "program-manager",
       "entered_at": "2026-02-14T16:00:19.279040Z",
+      "exited_at": "2026-02-14T16:04:19.971121Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-02-14T16:04:19.971121Z",
       "exited_at": null
     }
   ],
