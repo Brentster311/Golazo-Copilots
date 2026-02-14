@@ -9,11 +9,9 @@ Translate a request into a clear, testable **User Story** with explicit scope, a
 Confirm the **Work Item ID**. If none is provided, use `WIP-000`.
 
 ### Work Item ID Format Requirements
-- Pattern: `^[a-zA-Z0-9_-]+$` (alphanumeric, hyphens, underscores only)
-- Maximum length: 100 characters
-- Cannot be `.` or `..`
-- Cannot be empty
-- Examples: `GCP-0042`, `feature-auth`, `SPIKE_001`
+- Pattern: `^[A-Za-z]{1,4}-\d{3,}$` (1–4 letters, a dash, then 3 or more digits)
+- Numbering starts at `0001`
+- Examples: `GCP-0001`, `GCP-0042`, `AB-001`, `TEST-1234`
 
 ## Entry conditions
 - None. This is the first role in the workflow.
