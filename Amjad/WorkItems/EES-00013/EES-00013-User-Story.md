@@ -1,6 +1,6 @@
 # EES-00013 — Multi-Turn Tool-Calling Fact Extractor
 
-**Status**: BACKLOG
+**Status**: IN PROGRESS
 
 **User Story**
 - **Title**: Refactor FactExtractor to multi-turn tool-calling architecture

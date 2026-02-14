@@ -1,6 +1,6 @@
 # EES-00011 — V2 Rule Grammar: LLM Prompt & Extraction
 
-**Status**: BACKLOG
+**Status**: SUPERSEDED — replaced by EES-00013 (multi-turn tool-calling architecture)
 
 **User Story**
 - **Title:** V2 Rule Grammar — LLM Prompt & Fact/Rule Extraction
