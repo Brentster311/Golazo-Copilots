@@ -325,3 +325,45 @@ class TestRuleoutDeduplication:
         result = gen.filter_rules([ruleout], confirmed)
         assert len(result) == 1
         assert result[0].type == "ruleout"
+
+
+class TestFilterRulesVariableBinding:
+    """TC-15: filter_rules with variable conditions."""
+
+    def test_keeps_rule_with_variable_conditions(self):
+        """A rule with $op variable conditions should be kept if matching confirmed facts exist."""
+        gen = RuleGenerator([])
+        rule = Rule(
+            rule_id="",
+            conditions=RuleConditions("AND", [
+                Fact("Error", "$op", "ResultCode", "==", "ZonalAllocationFailed"),
+                Fact("VMSeries", "$op", "Name", "==", "NvadsA10v5"),
+            ]),
+            then=RuleThen("RootCause", "*", "Name", "Zonal capacity"),
+            because="test",
+        )
+        confirmed = [
+            Fact("Error", "op-1", "ResultCode", "==", "ZonalAllocationFailed"),
+            Fact("VMSeries", "op-1", "Name", "==", "NvadsA10v5"),
+        ]
+        result = gen.filter_rules([rule], confirmed)
+        assert len(result) == 1
+
+    def test_drops_rule_with_variable_no_match(self):
+        """A rule with $op should be dropped if no consistent binding exists."""
+        gen = RuleGenerator([])
+        rule = Rule(
+            rule_id="",
+            conditions=RuleConditions("AND", [
+                Fact("Error", "$op", "ResultCode", "==", "ZonalAllocationFailed"),
+                Fact("VMSeries", "$op", "Name", "==", "NvadsA10v5"),
+            ]),
+            then=RuleThen("RootCause", "*", "Name", "Zonal capacity"),
+            because="test",
+        )
+        confirmed = [
+            Fact("Error", "op-1", "ResultCode", "==", "ZonalAllocationFailed"),
+            Fact("VMSeries", "op-2", "Name", "==", "NvadsA10v5"),
+        ]
+        result = gen.filter_rules([rule], confirmed)
+        assert len(result) == 0

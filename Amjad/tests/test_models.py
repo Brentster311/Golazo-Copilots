@@ -569,3 +569,41 @@ class TestEvaluationResult:
         )
         d = result.to_dict()
         assert d["fired_rules"][0]["rule_id"] == "R-001"
+
+
+class TestVariableDetection:
+    """TC-1 and TC-2: Variable detection on Fact."""
+
+    def test_is_variable_dollar_prefix(self):
+        assert Fact.is_variable("$op") is True
+
+    def test_is_variable_star_is_not(self):
+        assert Fact.is_variable("*") is False
+
+    def test_is_variable_plain_string(self):
+        assert Fact.is_variable("op-1") is False
+
+    def test_is_variable_empty(self):
+        assert Fact.is_variable("") is False
+
+    def test_is_variable_bare_dollar(self):
+        """A bare '$' with no name is not a valid variable."""
+        assert Fact.is_variable("$") is False
+
+    def test_has_variable_instance(self):
+        f = Fact("Error", "$op", "ResultCode", "==", "X")
+        assert f.has_variable_instance is True
+        assert f.has_variable_value is False
+
+    def test_has_variable_value(self):
+        f = Fact("VMSeries", "*", "Name", "==", "$vmsize")
+        assert f.has_variable_instance is False
+        assert f.has_variable_value is True
+
+    def test_has_variables_both(self):
+        f = Fact("Error", "$op", "ResultCode", "==", "$code")
+        assert f.has_variables is True
+
+    def test_has_variables_none(self):
+        f = Fact("Error", "*", "ResultCode", "==", "X")
+        assert f.has_variables is False

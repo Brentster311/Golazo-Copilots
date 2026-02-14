@@ -33,6 +33,27 @@ class Fact:
     status: Literal["confirmed", "rejected"] = "confirmed"
     scope: Literal["rule", "context"] = "rule"
 
+    # ------ variable helpers (EES-00009) ------
+
+    @staticmethod
+    def is_variable(text: str) -> bool:
+        """Return True if *text* is a variable token (starts with '$' + name)."""
+        return len(text) >= 2 and text.startswith("$")
+
+    @property
+    def has_variable_instance(self) -> bool:
+        return self.is_variable(self.instance)
+
+    @property
+    def has_variable_value(self) -> bool:
+        return self.is_variable(self.value)
+
+    @property
+    def has_variables(self) -> bool:
+        return self.has_variable_instance or self.has_variable_value
+
+    # ------ display / matching ------
+
     def to_display(self) -> str:
         """Format as human-readable string: Noun(instance).Property operator value."""
         return f"{self.noun}({self.instance}).{self.property} {self.operator} {self.value}"

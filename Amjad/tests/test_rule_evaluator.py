@@ -382,3 +382,243 @@ class TestEdgeCases:
         assert result.root_causes == []
         assert result.fired_rules == []
         assert result.gap_rules == []
+
+
+class TestVariableBinding:
+    """TC-3 through TC-14: Variable binding in rule evaluation."""
+
+    def test_single_instance_variable_binds(self):
+        """TC-3: Error($op).ResultCode == X matches Error(op-1).ResultCode == X."""
+        rule = Rule(
+            rule_id="R-VAR-1",
+            conditions=RuleConditions("AND", [
+                Fact("Error", "$op", "ResultCode", "==", "ZonalAllocationFailed"),
+            ]),
+            then=RuleThen("RootCause", "$op", "Name", "Zonal capacity"),
+            because="test",
+        )
+        evaluator = RuleEvaluator([rule])
+        result = evaluator.evaluate([
+            Fact("Error", "op-1", "ResultCode", "==", "ZonalAllocationFailed"),
+        ])
+        assert len(result.fired_rules) == 1
+        # Derived fact should have $op substituted with op-1
+        assert any(f.instance == "op-1" for f in result.derived_facts)
+
+    def test_single_value_variable_binds(self):
+        """TC-4: VMSeries(*).Name == $vmsize matches VMSeries(*).Name == NvadsA10v5."""
+        rule = Rule(
+            rule_id="R-VAR-2",
+            conditions=RuleConditions("AND", [
+                Fact("VMSeries", "*", "Name", "==", "$vmsize"),
+            ]),
+            then=RuleThen("Troubleshooting", "*", "VMSize", "$vmsize"),
+            because="test",
+        )
+        evaluator = RuleEvaluator([rule])
+        result = evaluator.evaluate([
+            Fact("VMSeries", "*", "Name", "==", "NvadsA10v5"),
+        ])
+        assert len(result.fired_rules) == 1
+        assert any(f.value == "NvadsA10v5" for f in result.derived_facts)
+
+    def test_shared_variable_and_consistent(self):
+        """TC-5: Two conditions with same $op — consistent binding fires."""
+        rule = Rule(
+            rule_id="R-VAR-3",
+            conditions=RuleConditions("AND", [
+                Fact("Error", "$op", "ResultCode", "==", "ZonalAllocationFailed"),
+                Fact("VMSeries", "$op", "Name", "==", "NvadsA10v5"),
+            ]),
+            then=RuleThen("RootCause", "*", "Name", "Zonal capacity"),
+            because="test",
+        )
+        evaluator = RuleEvaluator([rule])
+        result = evaluator.evaluate([
+            Fact("Error", "op-1", "ResultCode", "==", "ZonalAllocationFailed"),
+            Fact("VMSeries", "op-1", "Name", "==", "NvadsA10v5"),
+        ])
+        assert len(result.fired_rules) == 1
+
+    def test_shared_variable_and_inconsistent_no_fire(self):
+        """TC-6: Two conditions with same $op — inconsistent binding does NOT fire."""
+        rule = Rule(
+            rule_id="R-VAR-4",
+            conditions=RuleConditions("AND", [
+                Fact("Error", "$op", "ResultCode", "==", "ZonalAllocationFailed"),
+                Fact("VMSeries", "$op", "Name", "==", "NvadsA10v5"),
+            ]),
+            then=RuleThen("RootCause", "*", "Name", "Zonal capacity"),
+            because="test",
+        )
+        evaluator = RuleEvaluator([rule])
+        result = evaluator.evaluate([
+            Fact("Error", "op-1", "ResultCode", "==", "ZonalAllocationFailed"),
+            Fact("VMSeries", "op-2", "Name", "==", "NvadsA10v5"),
+        ])
+        assert len(result.fired_rules) == 0
+
+    def test_shared_variable_backtracking(self):
+        """TC-7: Multiple candidates — correct one found via backtracking."""
+        rule = Rule(
+            rule_id="R-VAR-5",
+            conditions=RuleConditions("AND", [
+                Fact("Error", "$op", "ResultCode", "==", "ZonalAllocationFailed"),
+                Fact("VMSeries", "$op", "Name", "==", "NvadsA10v5"),
+            ]),
+            then=RuleThen("RootCause", "*", "Name", "Zonal capacity"),
+            because="test",
+        )
+        evaluator = RuleEvaluator([rule])
+        result = evaluator.evaluate([
+            Fact("Error", "op-1", "ResultCode", "==", "OK"),
+            Fact("Error", "op-2", "ResultCode", "==", "ZonalAllocationFailed"),
+            Fact("VMSeries", "op-2", "Name", "==", "NvadsA10v5"),
+        ])
+        assert len(result.fired_rules) == 1
+
+    def test_then_instance_substitution(self):
+        """TC-8: Variable in then.instance is substituted."""
+        rule = Rule(
+            rule_id="R-VAR-6",
+            conditions=RuleConditions("AND", [
+                Fact("Error", "$op", "ResultCode", "==", "ZonalAllocationFailed"),
+            ]),
+            then=RuleThen("RootCause", "$op", "Name", "Zonal capacity"),
+            because="test",
+        )
+        evaluator = RuleEvaluator([rule])
+        result = evaluator.evaluate([
+            Fact("Error", "op-1", "ResultCode", "==", "ZonalAllocationFailed"),
+        ])
+        derived = [f for f in result.derived_facts if f.noun == "RootCause"]
+        assert len(derived) == 1
+        assert derived[0].instance == "op-1"
+
+    def test_then_value_substitution_whole(self):
+        """TC-9: If then.value is exactly '$vmsize', substitute it."""
+        rule = Rule(
+            rule_id="R-VAR-7",
+            conditions=RuleConditions("AND", [
+                Fact("VMSeries", "*", "Name", "==", "$vmsize"),
+            ]),
+            then=RuleThen("Troubleshooting", "*", "VMSize", "$vmsize"),
+            because="test",
+        )
+        evaluator = RuleEvaluator([rule])
+        result = evaluator.evaluate([
+            Fact("VMSeries", "*", "Name", "==", "NvadsA10v5"),
+        ])
+        derived = [f for f in result.derived_facts if f.noun == "Troubleshooting"]
+        assert len(derived) == 1
+        assert derived[0].value == "NvadsA10v5"
+
+    def test_then_value_embedded_not_substituted(self):
+        """TC-9 clarification: Embedded $var in value is NOT substituted."""
+        rule = Rule(
+            rule_id="R-VAR-8",
+            conditions=RuleConditions("AND", [
+                Fact("VMSeries", "*", "Name", "==", "$vmsize"),
+            ]),
+            then=RuleThen("Troubleshooting", "*", "Info", "Capacity for $vmsize"),
+            because="test",
+        )
+        evaluator = RuleEvaluator([rule])
+        result = evaluator.evaluate([
+            Fact("VMSeries", "*", "Name", "==", "NvadsA10v5"),
+        ])
+        derived = [f for f in result.derived_facts if f.noun == "Troubleshooting"]
+        assert len(derived) == 1
+        # Embedded variable — left as-is
+        assert derived[0].value == "Capacity for $vmsize"
+
+    def test_no_variable_rules_unchanged(self):
+        """TC-10: Non-variable rules still work via fast path."""
+        rule = Rule(
+            rule_id="R-NOVAR",
+            conditions=RuleConditions("AND", [
+                Fact("Error", "*", "ResultCode", "==", "ZonalAllocationFailed"),
+            ]),
+            then=RuleThen("RootCause", "*", "Name", "Zonal capacity"),
+            because="test",
+        )
+        evaluator = RuleEvaluator([rule])
+        result = evaluator.evaluate([
+            Fact("Error", "*", "ResultCode", "==", "ZonalAllocationFailed"),
+        ])
+        assert len(result.fired_rules) == 1
+
+    def test_or_logic_with_variables(self):
+        """TC-11: OR logic — any condition with variable can match."""
+        rule = Rule(
+            rule_id="R-VAR-OR",
+            conditions=RuleConditions("OR", [
+                Fact("Error", "$op", "ResultCode", "==", "ZonalAllocationFailed"),
+                Fact("Error", "$op", "ResultCode", "==", "AllocationFailed"),
+            ]),
+            then=RuleThen("RootCause", "*", "Name", "Allocation failure"),
+            because="test",
+        )
+        evaluator = RuleEvaluator([rule])
+        result = evaluator.evaluate([
+            Fact("Error", "op-1", "ResultCode", "==", "AllocationFailed"),
+        ])
+        assert len(result.fired_rules) == 1
+
+    def test_multiple_different_variables(self):
+        """TC-12: Two different variables bind independently."""
+        rule = Rule(
+            rule_id="R-VAR-MULTI",
+            conditions=RuleConditions("AND", [
+                Fact("Error", "$op", "ResultCode", "==", "ZonalAllocationFailed"),
+                Fact("VMSeries", "$op", "Name", "==", "$vmsize"),
+            ]),
+            then=RuleThen("RootCause", "*", "Name", "Zonal capacity"),
+            because="test",
+        )
+        evaluator = RuleEvaluator([rule])
+        result = evaluator.evaluate([
+            Fact("Error", "op-1", "ResultCode", "==", "ZonalAllocationFailed"),
+            Fact("VMSeries", "op-1", "Name", "==", "NvadsA10v5"),
+        ])
+        assert len(result.fired_rules) == 1
+
+    def test_variable_with_contains_operator(self):
+        """TC-13: Variable binding works with contains operator."""
+        rule = Rule(
+            rule_id="R-VAR-CONTAINS",
+            conditions=RuleConditions("AND", [
+                Fact("Error", "$op", "Message", "contains", "insufficient capacity"),
+            ]),
+            then=RuleThen("RootCause", "*", "Name", "Capacity issue"),
+            because="test",
+        )
+        evaluator = RuleEvaluator([rule])
+        result = evaluator.evaluate([
+            Fact("Error", "op-1", "Message", "contains", "No compute stamps available"),
+            Fact("Error", "op-2", "Message", "contains", "insufficient capacity"),
+        ])
+        assert len(result.fired_rules) == 1
+
+    def test_full_evaluate_variable_rule_derived_fact(self):
+        """TC-14: Full integration — variable rule fires and produces derived fact."""
+        rule = Rule(
+            rule_id="R-VAR-INT",
+            conditions=RuleConditions("AND", [
+                Fact("Error", "$op", "ResultCode", "==", "ZonalAllocationFailed"),
+                Fact("Error", "$op", "Message", "contains", "insufficient capacity"),
+            ]),
+            then=RuleThen("RootCause", "$op", "Name", "Zonal capacity exhaustion"),
+            because="test",
+        )
+        evaluator = RuleEvaluator([rule])
+        facts = [
+            Fact("Error", "op-1", "ResultCode", "==", "ZonalAllocationFailed"),
+            Fact("Error", "op-1", "Message", "contains", "insufficient capacity"),
+        ]
+        result = evaluator.evaluate(facts)
+        assert "Zonal capacity exhaustion" in result.root_causes
+        assert any(
+            f.noun == "RootCause" and f.instance == "op-1" and f.value == "Zonal capacity exhaustion"
+            for f in result.derived_facts
+        )

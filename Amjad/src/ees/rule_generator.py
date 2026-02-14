@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from ees.models import Fact, Rule
+from ees.rule_evaluator import RuleEvaluator
 
 
 class RuleGenerator:
@@ -30,6 +31,8 @@ class RuleGenerator:
 
         A rule is kept only if ALL its condition facts are present in confirmed_facts.
         Duplicate rules (matching an existing rule) are skipped.
+
+        Variable conditions use unification-based matching via RuleEvaluator.
         """
         if not confirmed_facts:
             return []
@@ -38,13 +41,24 @@ class RuleGenerator:
 
         kept: list[Rule] = []
         for rule in llm_rules:
-            # Check all condition facts are confirmed
-            all_confirmed = all(
-                item.match_key() in confirmed_set
-                for item in rule.conditions.items
-            )
-            if not all_confirmed:
-                continue
+            has_vars = any(c.has_variables for c in rule.conditions.items)
+
+            if has_vars:
+                # Slow path: use unification to check if a consistent
+                # binding exists against the confirmed facts.
+                bindings = RuleEvaluator._conditions_met_with_bindings(
+                    rule, confirmed_facts,
+                )
+                if bindings is None:
+                    continue
+            else:
+                # Fast path: exact match_key lookup
+                all_confirmed = all(
+                    item.match_key() in confirmed_set
+                    for item in rule.conditions.items
+                )
+                if not all_confirmed:
+                    continue
 
             # Dedup check
             if self.is_duplicate(rule):
