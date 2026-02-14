@@ -79,7 +79,12 @@ cause when the condition is NOT met.
 Do NOT invent new nouns or properties in rule conditions that have no corresponding fact.
 - CHANGE_STATE description must be a concise state assignment: "Noun.property => new_value" \
 (e.g., "User.role => admin-escalated"). It describes WHAT STATE CHANGES, not what action \
-to take or who to engage. Wrong: "Exchange team engaged". Right: "Permission.mailSend => granted".
+to take or who to engage. The noun.property in the description should match the \
+condition's noun.property. Examples:
+  Wrong: "Escalation.team => Exchange-engaged"  (describes a process, not system state)
+  Wrong: "Team.engagement => Exchange team engaged"  (action, not state)
+  Right: "Permission.mailSend => granted"  (the property being tested, changed to new value)
+  Right: "AppRegistration.adminConsent => granted"  (mirrors the condition property)
 - RULED_OUT description must be a concise elimination statement.
 - Build a CHAIN of diagnostic rules: \
   (a) Individual hypothesis rules (R1, R2, R3...) that each test one condition and \
@@ -103,7 +108,7 @@ Example — Jira/AAD app-registration incident:
       THEN CHANGE_STATE("AppRegistration.adminConsent => granted")
       ELSE RULED_OUT("Admin consent is not the issue")
   R3: IF AppRegistration($app).permissions !contains "Mail.Send"
-      THEN CHANGE_STATE("AppRegistration.permissions => Mail.Send granted")
+      THEN CHANGE_STATE("Permission.mailSend => granted")
       ELSE RULED_OUT("Mail.Send permission is already present")
   R4 (catch-all — NO ELSE, conditions use RULED_OUT noun):
       IF RULED_OUT(*).description contains "User access is not the issue" \
