@@ -248,3 +248,44 @@ class TestFilterRules:
         kept = gen.filter_rules([good, bad], confirmed)
         assert len(kept) == 1
         assert kept[0].rule_id == "R1"
+
+    def test_filter_keeps_catchall_gap_rule(self):
+        """Catch-all GAP rule with only RULED_OUT conditions is kept."""
+        gen = RuleGenerator([])
+        catchall = Rule(
+            rule_id="R5",
+            conditions=RuleConditions(logic="AND", items=[
+                Fact(noun="RULED_OUT", instance="*", property="User.adminRole",
+                     operator="==", value="true"),
+                Fact(noun="RULED_OUT", instance="*", property="Permission.mailAPI",
+                     operator="==", value="true"),
+            ]),
+            then=RuleOutput(kind="GAP", description="All causes eliminated"),
+        )
+        confirmed = [_fact("User", "not confirmed", prop="adminRole")]
+        kept = gen.filter_rules([catchall], confirmed)
+        assert len(kept) == 1
+        assert kept[0].then.kind == "GAP"
+
+    def test_filter_mixed_chaining_and_regular(self):
+        """Rule with both regular and chaining conditions — regular must match."""
+        gen = RuleGenerator([])
+        rule = Rule(
+            rule_id="R6",
+            conditions=RuleConditions(logic="AND", items=[
+                Fact(noun="RULED_OUT", instance="*", property="X.y",
+                     operator="==", value="true"),
+                Fact(noun="Error", instance="*", property="code",
+                     operator="==", value="500"),
+            ]),
+            then=RuleOutput(kind="CHANGE_STATE", description="test"),
+        )
+        # Error.code=500 NOT in confirmed → should be filtered out
+        confirmed = [_fact("User", "v")]
+        assert gen.filter_rules([rule], confirmed) == []
+
+        # Now with Error.code=500 confirmed → should pass
+        confirmed2 = [Fact(noun="Error", instance="*", property="code",
+                           operator="==", value="500")]
+        kept = gen.filter_rules([rule], confirmed2)
+        assert len(kept) == 1
