@@ -127,9 +127,9 @@ pip install golazo-copilot --index-url https://msazure.pkgs.visualstudio.com/One
 
 ### Verify Installation
 
-```powershell
-python -c "import golazo_copilot; print(f'golazo-copilot version: {golazo_copilot.__version__}')"
-```
+In GitHub Copilot Chat, ask: **"GCP version?"**
+
+It will run `gcp_status` and display the running version (e.g., `v2.103.6`).
 
 ## VS Code Configuration
 

@@ -1,8 +1,8 @@
-# Expert System — Design Decisions (v1)
+# Expert System — Design Decisions (v2)
 
 ## Overview
 
-Build a system that reverse-engineers documented incidents into expert system rules for troubleshooting. Given a collection of free-text incident reports, the system extracts facts and generates rules that determine the correct root cause.
+Build a system that reverse-engineers documented incidents into expert system rules for troubleshooting. Given a collection of free-text incident reports, the system extracts facts and generates rules that determine the correct root cause. The output is an intermediate representation that compiles into deterministic code — Nouns become classes, instance parameters become dictionaries.
 
 ## Scope
 
@@ -26,78 +26,72 @@ Build a system that reverse-engineers documented incidents into expert system ru
 
 ### Rule Format
 
-**Positive rule (sets a fact or root cause):**
 ```
-RULE <id> (status: CONFIRMED|GAP, sources: [incident-ids])
-  IF <Noun.Property> <operator> <value> [AND|OR ...]
-  THEN <Noun.Property> = <value>
-  BECAUSE <reasoning>
+IF <condition> [AND <condition> ...]
+THEN CHANGE_STATE|RULED_OUT|GAP
+[ELSE CHANGE_STATE|RULED_OUT|GAP]
 ```
 
-**Elimination rule (narrows candidates):**
+- **ELSE is optional.** Rules without ELSE simply don't produce output when conditions are not met.
+- Conditions are joined by **AND** (explicit keyword).
+- Each condition is either a `Noun.Property <operator> <value>` test, or a reference to a RULED_OUT produced by another rule.
+
+### Output Entity Types
+
+| Type | Meaning | Chainable? |
+|------|---------|------------|
+| **CHANGE_STATE("...")** | Describes a concrete state mutation (e.g., `"Mail.Send permission => true"`) | Yes — downstream rules can depend on it |
+| **RULED_OUT("...")** | Elimination — this cause has been excluded (e.g., `"Admin consent is not the issue"`) | Yes — can appear in conditions of other rules |
+| **GAP("...")** | Unknown — knowledge base doesn't cover this case (e.g., `"All known causes eliminated"`) | No — terminal |
+
+### Example Rules
+
+**R1:**
 ```
-RULE <id> (status: CONFIRMED|GAP, sources: [incident-ids])
-  IF <Noun.Property> <operator> <value> [AND|OR ...]
-  THEN RULEOUT <RootCauseName>
-  BECAUSE <reasoning>
-```
-
-### Rule Types
-| Type | Purpose |
-|------|---------|
-| **Positive** | Sets a property value or assigns a root cause (`THEN X = Y`) |
-| **RULEOUT** | Eliminates a root cause candidate, preserving diagnostic reasoning |
-
-### Rule Statuses
-| Status | Meaning |
-|--------|---------|
-| **CONFIRMED** | Fully supported by incident evidence |
-| **GAP** | Bridges known facts across an unknown middle ("magic happens here") — has defined inputs and outputs but the intermediate logic is unresolved |
-
-### GAP Rules
-When an incident reveals the beginning and end of a diagnostic chain but not the middle, the system creates an explicit GAP rule:
-
-```
-RULE R-007a (status: CONFIRMED, sources: [INC-012])
-  IF Database.ConnectionPool.Active > 90%
-  THEN GAP-007 = TRUE
-
-RULE R-007b (status: GAP, sources: [INC-012])
-  REQUIRES GAP-007 = TRUE
-  PRODUCES Database.ConnectionPoolExhausted = TRUE
-  NOTE: "Unknown intermediate steps"
-
-RULE R-007c (status: CONFIRMED, sources: [INC-012])
-  IF Database.ConnectionPoolExhausted = TRUE
-  THEN RootCause = "Connection Pool Exhaustion"
+IF User.role = "non-admin"
+THEN CHANGE_STATE("User.role => admin-escalated")
+ELSE RULED_OUT("User access is not the issue")
 ```
 
-New incidents iteratively refine GAP rules by filling in intermediate steps.
+**R2:**
+```
+IF AppRegistration.adminConsent = "not granted"
+THEN CHANGE_STATE("AppRegistration.adminConsent => granted")
+ELSE RULED_OUT("Admin consent is not the issue")
+```
+
+**R3:**
+```
+IF AppRegistration.permissions contains "Mail.Send" = false
+THEN CHANGE_STATE("Mail.Send permission => true")
+ELSE RULED_OUT("Mail.Send permission is already present")
+```
+
+**R4 (chaining — consumes RULED_OUTs):**
+```
+IF RULED_OUT("User access is not the issue") AND RULED_OUT("Admin consent is not the issue") AND RULED_OUT("Mail.Send permission is already present")
+THEN GAP("All known causes eliminated — investigate further")
+```
+
+### How Chaining Works
+- R1/R2/R3 each produce either a CHANGE_STATE (found a problem) or a RULED_OUT (this isn't the cause).
+- R4 collects all three RULED_OUTs. If every known cause is eliminated but the problem persists, R4 fires and declares a GAP.
+- If any rule found a problem (CHANGE_STATE), R4 doesn't fire — there's still an active lead.
 
 ### Boolean Logic
-- **Flat only** — each rule uses either all `AND` or all `OR`, never mixed.
-- Mixed logic is decomposed into multiple rules that set the same outcome.
+- **AND only** — conditions are joined by explicit `AND` keyword.
+- OR logic is decomposed into multiple rules that produce the same outcome.
 
 ### Operators
 `==`, `!=`, `>`, `<`, `>=`, `<=`, `contains`, `!contains`
 
 ### Conflict Resolution
-- When multiple rules fire and assign different root causes, **present all as candidates**.
-- This handles incidents with multiple actual problems, or reveals previously misidentified root causes / hidden GAPs.
-
-### BECAUSE Clause
-- Present on all rules (positive and RULEOUT).
-- Captures the diagnostic reasoning behind the rule.
-- Makes the entire rule chain explainable during testing.
+- When multiple rules fire and produce different outputs, **present all as candidates**.
+- This handles incidents with multiple actual problems, or reveals hidden GAPs.
 
 ### Rule Provenance
 - Every rule tracks which incident IDs contributed to its creation.
 - Essential for GAP refinement and rule auditing.
-
-### RootCause as Entity
-- RootCause is modeled as an entity, not a bare string.
-- Properties: `Name`, `ActionPlan` (placeholder for Problem Solving phase).
-- Stored in `rootcauses.yaml`.
 
 ### Storage
 - **Format:** YAML files, local.
@@ -105,7 +99,6 @@ New incidents iteratively refine GAP rules by filling in intermediate steps.
   - `incidents/*.yaml` — incidents with extracted facts
   - `rules/*.yaml` — expert system rules
   - `ontology.yaml` — Noun.Property registry
-  - `rootcauses.yaml` — RootCause entities
 
 ### Phases of Use
 1. **Learning phase** — Process incidents, extract facts, generate/refine rules.
@@ -117,3 +110,5 @@ New incidents iteratively refine GAP rules by filling in intermediate steps.
 - OBSERVED vs INFERRED fact distinction
 - Symptom clusters / 3-tier model (Observations → Patterns → Root Cause)
 - DRAFT rule status
+- BECAUSE clause (diagnostic reasoning per rule)
+- RootCause as a separate entity type (currently root cause fixes are CHANGE_STATEs)

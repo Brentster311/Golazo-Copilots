@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from ees.models import Fact, GapRefinement, Rule
+from ees.rule_evaluator import RuleEvaluator
 
 # Normalized key type from Fact.match_key()
 MatchKey = tuple[str, str, str, str, str]
@@ -48,12 +49,10 @@ class GapDetector:
             # Check if this rule's THEN targets the root cause (positive or RULEOUT)
             then_noun = rule.then.noun.lower()
             if then_noun == "rootcause" and rule.then.value.lower() == rc_lower:
-                for item in rule.conditions.items:
-                    connected_keys.add(item.match_key())
+                self._collect_connected_keys(rule, confirmed_facts, connected_keys)
             elif then_noun == "ruleout":
                 # RULEOUT rules contribute to diagnostic reasoning
-                for item in rule.conditions.items:
-                    connected_keys.add(item.match_key())
+                self._collect_connected_keys(rule, confirmed_facts, connected_keys)
 
         # Orphaned facts = confirmed facts not consumed by any root-cause rule
         orphaned = [f for f in confirmed_facts if f.match_key() not in connected_keys]
@@ -84,6 +83,32 @@ class GapDetector:
         )
         return [gap]
 
+    @staticmethod
+    def _collect_connected_keys(
+        rule: Rule,
+        confirmed_facts: list[Fact],
+        connected_keys: set[MatchKey],
+    ) -> None:
+        """Add match_keys of confirmed facts consumed by *rule*'s conditions.
+
+        For non-variable conditions, adds the condition's own match_key.
+        For variable conditions, uses unification to find which confirmed
+        facts actually match and adds those facts' keys instead.
+        """
+        has_vars = any(c.has_variables for c in rule.conditions.items)
+        if not has_vars:
+            for item in rule.conditions.items:
+                connected_keys.add(item.match_key())
+        else:
+            # Variable conditions: unify each condition against all facts
+            for cond in rule.conditions.items:
+                if cond.has_variables:
+                    for fact in confirmed_facts:
+                        if RuleEvaluator._unify_condition(cond, fact) is not None:
+                            connected_keys.add(fact.match_key())
+                else:
+                    connected_keys.add(cond.match_key())
+
     def check_refinements(
         self,
         new_rules: list[Rule],
@@ -102,18 +127,35 @@ class GapDetector:
 
         # Collect condition facts from new CONFIRMED rules
         new_condition_keys: set[MatchKey] = set()
+        new_var_conditions: list[Fact] = []
         for rule in new_rules:
             if rule.status != "CONFIRMED":
                 continue
             for item in rule.conditions.items:
-                new_condition_keys.add(item.match_key())
+                if item.has_variables:
+                    new_var_conditions.append(item)
+                else:
+                    new_condition_keys.add(item.match_key())
 
         for gap in self._existing_rules:
             if gap.status != "GAP":
                 continue
 
             gap_require_keys = {f.match_key() for f in gap.requires}
+
+            # Direct key overlap
             overlap = gap_require_keys & new_condition_keys
+
+            # Variable-aware overlap: check if any GAP required fact
+            # can unify with a variable condition from a new rule
+            if new_var_conditions:
+                for req_fact in gap.requires:
+                    if req_fact.match_key() in overlap:
+                        continue  # already matched
+                    for var_cond in new_var_conditions:
+                        if RuleEvaluator._unify_condition(var_cond, req_fact) is not None:
+                            overlap.add(req_fact.match_key())
+                            break
 
             if not overlap:
                 continue

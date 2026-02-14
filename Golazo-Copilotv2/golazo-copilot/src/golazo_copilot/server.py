@@ -109,14 +109,14 @@ async def list_tools() -> list[Tool]:
                 "properties": {
                     "work_item_id": {
                         "type": "string",
-                        "description": "Work item identifier"
+                        "description": "Work item identifier. If omitted or empty, only the version is returned."
                     },
                     "workspace_path": {
                         "type": "string",
                         "description": "Workspace root path containing the WorkItems folder (auto-detected if not provided)"
                     }
                 },
-                "required": ["work_item_id"]
+                "required": []
             }
         ),
         Tool(
@@ -249,9 +249,14 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         return [TextContent(type="text", text=content)]
     
     elif name == "gcp_status":
+        work_item_id = arguments.get("work_item_id", "").strip()
+        if not work_item_id:
+            from golazo_copilot import __version__ as ver
+            content = f"**Golazo Copilot** (v{ver})"
+            return [TextContent(type="text", text=content)]
         work_items_dir = resolve_work_items_dir(arguments.get("workspace_path"))
         result = await gcp_status(
-            work_item_id=arguments["work_item_id"],
+            work_item_id=work_item_id,
             work_items_dir=work_items_dir
         )
         

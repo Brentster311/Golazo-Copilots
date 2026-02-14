@@ -82,6 +82,32 @@ Rules:
 - Reuse existing ontology noun/property names when they match (case-insensitive).
 - Identify the root cause if present in the incident, or set to null.
 - Only use "scope": "rule" facts in rule conditions.
+
+Variable binding in rules:
+- When a rule has multiple conditions that must refer to the SAME operation, request, or entity \
+use a shared variable like "$op" in the instance field instead of "*".
+- Variables start with "$" followed by a descriptive name (e.g. "$op", "$vmsize", "$region").
+- If two conditions share "$op", the rule only fires when both match facts with the same instance value.
+- Use "*" when the instance genuinely does not matter (e.g. a single global fact).
+- Variables can also appear in the value field (e.g. "value": "$vmsize") to capture and \
+reuse a value in the conclusion.
+- Variables in the "then" clause are substituted with the bound value when the rule fires.
+
+Example rule with variable binding:
+{
+  "type": "positive",
+  "conditions": {
+    "logic": "AND",
+    "items": [
+      {"noun": "Error", "instance": "$op", "property": "ResultCode", "operator": "==", "value": "ZonalAllocationFailed"},
+      {"noun": "Error", "instance": "$op", "property": "Message", "operator": "contains", "value": "insufficient capacity"}
+    ]
+  },
+  "then": {"noun": "RootCause", "instance": "$op", "property": "Name", "value": "Zonal capacity exhaustion"},
+  "because": "When the same operation has both a ZonalAllocationFailed code and an insufficient capacity message, the root cause is zonal capacity exhaustion"
+}
+
+Facts should NEVER use variables — only rules use them. Facts always use "*" or a specific instance name.
 """
 
 
