@@ -360,6 +360,132 @@ def _build_update_eta(app: "SFIReporterApp") -> Tool:
 
 
 # ---------------------------------------------------------------------------
+# Tool: web_fetch
+# ---------------------------------------------------------------------------
+
+def _build_web_fetch() -> Tool:
+    """Tool that lets the LLM fetch any URL (SPA-aware via CDP/Playwright)."""
+
+    def handler(args):
+        url = args.get("url", "").strip()
+        if not url:
+            return "Error: 'url' parameter is required."
+        if not url.lower().startswith(("http://", "https://")):
+            return "Error: only http/https URLs are supported."
+
+        from sfi_reporter.kpi_analyzer import fetch_url_content, _is_login_page
+
+        result = fetch_url_content(url)
+        content = result.get("content", "")
+        error = result.get("error", "")
+        method = result.get("method", "urllib")
+        discovered = result.get("discovered_urls", [])
+
+        parts: list[str] = []
+        if content and _is_login_page(content):
+            parts.append(
+                f"Authentication wall detected ({method}). This URL requires "
+                "interactive login — content is not available for analysis."
+            )
+        elif content:
+            parts.append(f"Fetched via {method} ({len(content)} chars):\n{content}")
+        elif error:
+            parts.append(f"Failed to fetch ({method}): {error}")
+        else:
+            parts.append(f"No content returned ({method}).")
+
+        if discovered:
+            parts.append("\nDiscovered links on page:")
+            for durl in discovered[:20]:
+                parts.append(f"  - {durl}")
+
+        return "\n".join(parts)
+
+    return _make_tool(
+        "web_fetch",
+        "Fetch and extract text content from a URL. Supports SPAs and "
+        "JavaScript-rendered dashboards via headless Chromium (CDP). "
+        "Falls back to plain HTTP if Chromium is unavailable. "
+        "Also reports any links discovered on the page.",
+        handler,
+        {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "The HTTP/HTTPS URL to fetch.",
+                },
+            },
+            "required": ["url"],
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# Tool: read_fetched_doc
+# ---------------------------------------------------------------------------
+
+# Tracks the most recent docs_dir set by send_analysis_prompt
+_current_docs_dir: str = ""
+
+
+def set_current_docs_dir(docs_dir: str) -> None:
+    """Set the current docs directory for read_fetched_doc lookups."""
+    global _current_docs_dir
+    _current_docs_dir = docs_dir
+
+
+def _build_read_fetched_doc() -> Tool:
+    """Tool that lets the LLM read a pre-fetched document saved to disk."""
+
+    def handler(args):
+        import os
+        filename = args.get("filename", "").strip()
+        if not filename:
+            return "Error: 'filename' parameter is required."
+
+        if not _current_docs_dir:
+            return "Error: No docs directory is set. Run an analysis first."
+
+        # Security: prevent path traversal
+        if os.sep in filename or "/" in filename or ".." in filename:
+            return "Error: filename must be a plain filename, not a path."
+
+        filepath = os.path.join(_current_docs_dir, filename)
+        if not os.path.isfile(filepath):
+            # List available files to help the LLM
+            available = [f for f in os.listdir(_current_docs_dir)
+                         if not f.startswith("_") and f.endswith(".txt")]
+            return (f"File '{filename}' not found.\n"
+                    f"Available docs: {', '.join(available[:20])}")
+
+        try:
+            with open(filepath, encoding="utf-8") as f:
+                content = f.read()
+            return content
+        except Exception as exc:
+            return f"Error reading file: {exc}"
+
+    return _make_tool(
+        "read_fetched_doc",
+        "Read a pre-fetched documentation file saved to disk during KPI analysis. "
+        "Pass the filename from the documentation manifest shown in the analysis prompt. "
+        "Returns the full text content of the saved document.",
+        handler,
+        {
+            "type": "object",
+            "properties": {
+                "filename": {
+                    "type": "string",
+                    "description": "The filename of the saved document (e.g. 'lens_msftcloudes_com__dashboard__a1b2c3d4.txt').",
+                },
+            },
+            "required": ["filename"],
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
 # Public: build all tools + system message
 # ---------------------------------------------------------------------------
 
@@ -373,14 +499,26 @@ SYSTEM_MESSAGE = (
     "- get_item_detail: full details for one item by ID\n"
     "- list_services: list all services with stats\n"
     "- items_for_service: items for a specific service\n"
-    "- update_eta: update the ETA date for an action item via the S360 API\n\n"
+    "- update_eta: update the ETA date for an action item via the S360 API\n"
+    "- web_fetch: fetch and extract text from a URL (supports SPAs/dashboards)\n"
+    "- read_fetched_doc: read a pre-fetched document saved to disk during analysis\n\n"
     "Guidelines:\n"
     "- Use tools to answer data questions — don't guess.\n"
     "- If no data is loaded, tell the user to click 'Refresh Data'.\n"
     "- Be concise. OutOfSla = overdue, InSla = on track.\n"
     "- For simple greetings, respond without calling tools.\n"
     "- When updating ETAs, always confirm the item ID and date with the user first.\n"
-    "- ETA dates must be in YYYY-MM-DD format, today or later, within 1 year.\n"
+    "- ETA dates must be in YYYY-MM-DD format, today or later, within 1 year.\n\n"
+    "KPI analysis workflow:\n"
+    "- When analyzing a KPI, documentation URLs are pre-fetched and saved to disk.\n"
+    "- The prompt includes a manifest of saved files with filenames and char counts.\n"
+    "- Use read_fetched_doc to read the most relevant files on demand.\n"
+    "- Start with the largest/most relevant docs; skip FAILED entries.\n"
+    "- You do NOT need to read every file — focus on what answers the questions.\n\n"
+    "URL exploration (interactive chat):\n"
+    "- Use web_fetch to visit URLs the user provides or that you discover.\n"
+    "- If access is blocked (auth/iframe/network), report the limitation, "
+    "request alternate data or screenshots, and proceed with partial analysis.\n"
 )
 
 
@@ -393,4 +531,6 @@ def build_tools(app: "SFIReporterApp") -> list:
         _build_list_services(app),
         _build_items_for_service(app),
         _build_update_eta(app),
+        _build_web_fetch(),
+        _build_read_fetched_doc(),
     ]

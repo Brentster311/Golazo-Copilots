@@ -1214,9 +1214,13 @@ def _launch_llm_analysis(parent, item: dict):
     def _bg_analyze():
         from sfi_reporter.kpi_analyzer import analyze_kpi
         try:
-            prompt = analyze_kpi(app, kpi_id)
-            # Send to panel on Tk main thread
-            panel.send_analysis_prompt(prompt, kpi_label=kpi_name)
+            result = analyze_kpi(app, kpi_id)
+            # Send to panel on Tk main thread (with provenance metadata)
+            panel.send_analysis_prompt(
+                result.prompt,
+                kpi_label=kpi_name,
+                sources_metadata=result,
+            )
         except Exception as exc:
             logger.error("KPI analysis failed: %s", exc)
             app.root.after(0, lambda: messagebox.showerror(

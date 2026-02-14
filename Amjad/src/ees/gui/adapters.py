@@ -7,6 +7,27 @@ from __future__ import annotations
 
 from ees.models import EvaluationResult, Fact, OntologyNoun, Rule, RuleOutput
 
+_CHAINING_NOUNS = frozenset({"ruled_out", "change_state", "gap", "diagnosticstate"})
+
+
+def facts_used_by_rules(facts: list[Fact], rules: list[Rule]) -> set[int]:
+    """Return indices of *facts* whose (noun, property) appears in any rule condition.
+
+    Chaining conditions (RULED_OUT, CHANGE_STATE, GAP) are excluded — they
+    are synthetic outputs, not user-submitted facts.
+    """
+    # Collect (noun.lower, property.lower) pairs from all rule conditions
+    used_keys: set[tuple[str, str]] = set()
+    for rule in rules:
+        for item in rule.conditions.items:
+            if item.noun.lower() not in _CHAINING_NOUNS:
+                used_keys.add((item.noun.lower(), item.property.lower()))
+
+    return {
+        i for i, f in enumerate(facts)
+        if (f.noun.lower(), f.property.lower()) in used_keys
+    }
+
 
 def facts_to_rows(facts: list[Fact]) -> list[dict]:
     """Convert Fact objects to display-ready row dicts.

@@ -10,6 +10,7 @@ import logging
 import re
 import threading
 import tkinter as tk
+import webbrowser
 from tkinter import scrolledtext, ttk
 
 logger = logging.getLogger(__name__)
@@ -74,7 +75,7 @@ class CopilotPanel(tk.Frame):
     HEADER_BG = "#e1e4e8"
 
     def __init__(self, parent, *, app=None, on_close):
-        super().__init__(parent, bg=self.BG_COLOR, width=350)
+        super().__init__(parent, bg=self.BG_COLOR)
         self._on_close = on_close
         self._app = app
 
@@ -89,6 +90,7 @@ class CopilotPanel(tk.Frame):
         self._is_sending = False
         self._got_content = False       # session-level: any turn had content
         self._turn_has_content = False   # per-turn: current turn has content
+        self._turn_timeout_id = None    # Tk after-id for turn timeout
 
         self._build_ui()
 
@@ -178,6 +180,12 @@ class CopilotPanel(tk.Frame):
                                          lmargin1=20, lmargin2=20, rmargin=10)
         self._chat_display.tag_configure("md_bullet", foreground=self.ASSISTANT_COLOR,
                                          lmargin1=16, lmargin2=28)
+        self._chat_display.tag_configure("md_link", foreground="#0969da",
+                                         underline=True,
+                                         font=("Segoe UI", 10))
+
+        # Track link tag counter for unique click bindings
+        self._link_counter = 0
 
         # Input bar
         input_frame = tk.Frame(self, bg=self.BG_COLOR)
@@ -210,6 +218,9 @@ class CopilotPanel(tk.Frame):
             "Ensure the Copilot CLI is installed and authenticated.\n",
         )
 
+    # -- URL regex (used for linkification) ---------------------------------
+    _URL_RE = re.compile(r"(https?://[^\s)>\]]+)")
+
     # -- Chat display helpers -----------------------------------------------
 
     def _append_message(self, role: str, text: str, *, newline: bool = True):
@@ -222,7 +233,10 @@ class CopilotPanel(tk.Frame):
         tag = role
         if prefix:
             self._chat_display.insert(tk.END, prefix, tag)
-        self._chat_display.insert(tk.END, text + ("\n\n" if newline else ""), tag if role != "user" else "")
+        # Insert text with URLs linkified
+        content = text + ("\n\n" if newline else "")
+        display_tag = tag if role != "user" else ""
+        self._insert_with_links(content, display_tag)
         self._chat_display.configure(state=tk.DISABLED)
         self._chat_display.see(tk.END)
 
@@ -336,6 +350,41 @@ class CopilotPanel(tk.Frame):
         if last < len(text):
             w.insert(tk.END, text[last:], base_tag)
 
+    def _insert_with_links(self, text: str, tag: str):
+        """Insert text, converting any URLs into clickable links."""
+        w = self._chat_display
+        last = 0
+        for m in self._URL_RE.finditer(text):
+            if m.start() > last:
+                w.insert(tk.END, text[last:m.start()], tag)
+            self._insert_link(m.group(1))
+            last = m.end()
+        if last < len(text):
+            w.insert(tk.END, text[last:], tag)
+
+    def _insert_link(self, url: str):
+        """Insert a single clickable URL into the chat display."""
+        w = self._chat_display
+        self._link_counter += 1
+        link_tag = f"link_{self._link_counter}"
+        w.tag_configure(link_tag, foreground="#0969da", underline=True,
+                        font=("Segoe UI", 10))
+        w.insert(tk.END, url, link_tag)
+        # Bind click to open in browser
+        _url = url  # capture for closure
+        w.tag_bind(link_tag, "<Button-1>", lambda e, u=_url: self._on_link_click(u))
+        w.tag_bind(link_tag, "<Enter>",
+                   lambda e: w.configure(cursor="hand2"))
+        w.tag_bind(link_tag, "<Leave>",
+                   lambda e: w.configure(cursor=""))
+
+    def _on_link_click(self, url: str):
+        """Open a URL in the default browser."""
+        try:
+            webbrowser.open(url)
+        except Exception as exc:
+            logger.warning("Failed to open URL %s: %s", url, exc)
+
     def _set_status(self, text: str, color: str | None = None):
         self._status_label.configure(text=text, fg=color or self.SYSTEM_COLOR)
 
@@ -344,6 +393,7 @@ class CopilotPanel(tk.Frame):
         if not self._is_sending or not self._session:
             return
         logger.info("User requested stop")
+        self._cancel_turn_timeout()
         self._stop_btn.configure(state=tk.DISABLED)
 
         async def _do_abort():
@@ -407,9 +457,15 @@ class CopilotPanel(tk.Frame):
         if etype == "assistant.turn_start":
             self._turn_has_content = False  # reset per-turn flag
             self.after(0, self._set_status, "\u25cf Thinking\u2026", "#b5651d")
+            # Start a turn timeout — if no content in 90s, force-complete
+            self._cancel_turn_timeout()
+            self._turn_timeout_id = self.after(
+                90_000, self._on_turn_timeout,
+            )
         elif etype == "assistant.message_delta":
             delta = getattr(event.data, "delta_content", None) or ""
             if delta:
+                self._cancel_turn_timeout()  # content arriving, no timeout needed
                 if not self._got_content:
                     self.after(0, self._set_status, "\u25cf Responding\u2026", self.ASSISTANT_COLOR)
                 self._got_content = True
@@ -436,6 +492,7 @@ class CopilotPanel(tk.Frame):
             # turns before the model is done.  Wait for session.idle.
             pass
         elif etype == "session.idle":
+            self._cancel_turn_timeout()
             self.after(0, self._on_response_complete)
         elif etype == "session.error":
             msg = getattr(event.data, "message", None) or "Unknown session error"
@@ -445,6 +502,24 @@ class CopilotPanel(tk.Frame):
             self.after(0, self._on_response_complete)
         else:
             logger.debug("Unhandled Copilot event type: %s", etype)
+
+    def _cancel_turn_timeout(self):
+        """Cancel any pending turn-timeout callback."""
+        if self._turn_timeout_id is not None:
+            self.after_cancel(self._turn_timeout_id)
+            self._turn_timeout_id = None
+
+    def _on_turn_timeout(self):
+        """Force-complete after 90 s of no content on a turn."""
+        self._turn_timeout_id = None
+        if not self._is_sending:
+            return
+        logger.warning("Turn timeout — forcing response completion")
+        if not self._got_content:
+            self._append_delta("(Response timed out — the model may be unable to answer. Try rephrasing.)")
+            self._finish_assistant_message()
+            self._got_content = True
+        self._on_response_complete()
 
     def _on_response_complete(self):
         """Re-enable input after a response completes."""
@@ -500,16 +575,21 @@ class CopilotPanel(tk.Frame):
             self.after(0, self._append_message, "error", str(exc))
             self.after(0, self._on_response_complete)
 
-    def send_analysis_prompt(self, prompt: str, *, kpi_label: str = ""):
+    def send_analysis_prompt(self, prompt: str, *, kpi_label: str = "", sources_metadata=None):
         """Programmatically send a pre-built analysis prompt.
 
         Handles connection lifecycle and thread marshaling.  Safe to call
         from any thread — internally marshals to the Tk main thread.
+
+        Args:
+            prompt: The LLM prompt string.
+            kpi_label: Display label for the KPI being analyzed.
+            sources_metadata: Optional AnalysisResult with provenance data.
         """
         # Marshal to Tk main thread
-        self.after(0, self._do_send_analysis, prompt, kpi_label)
+        self.after(0, self._do_send_analysis, prompt, kpi_label, sources_metadata)
 
-    def _do_send_analysis(self, prompt: str, kpi_label: str = ""):
+    def _do_send_analysis(self, prompt: str, kpi_label: str = "", sources_metadata=None):
         """Send analysis prompt on the Tk main thread."""
         if self._is_sending or self._is_connecting:
             self._append_message("system", "Please wait — a request is already in progress.")
@@ -518,6 +598,15 @@ class CopilotPanel(tk.Frame):
         # Show which KPI is being analyzed
         display = kpi_label or "KPI"
         self._append_message("user", f"\U0001f916 Analyze: {display}")
+
+        # Show Sources provenance card before LLM response (SFI-035)
+        if sources_metadata is not None:
+            self._show_sources_card(sources_metadata)
+            # Set docs_dir so read_fetched_doc tool knows where files are
+            docs_dir = getattr(sources_metadata, "docs_dir", "")
+            if docs_dir:
+                from sfi_reporter.copilot_tools import set_current_docs_dir
+                set_current_docs_dir(docs_dir)
         self._is_sending = True
         self._got_content = False
         self._set_input_enabled(False)
@@ -532,6 +621,19 @@ class CopilotPanel(tk.Frame):
         self._chat_display.configure(state=tk.DISABLED)
 
         self._bridge.run_coroutine(self._send_prompt(prompt))
+
+    def _show_sources_card(self, result):
+        """Render a Sources provenance card in the chat panel.
+
+        Shows which URLs were extracted and their fetch status so the
+        user can judge the trustworthiness of the LLM analysis.
+        """
+        try:
+            from sfi_reporter.kpi_analyzer import format_sources_card
+            card_text = format_sources_card(result)
+            self._append_message("system", card_text)
+        except Exception as exc:
+            logger.warning("Failed to render sources card: %s", exc)
 
     # -- Cleanup -------------------------------------------------------------
 

@@ -66,6 +66,7 @@ from ees.gap_detector import GapDetector
 from ees.gui.adapters import (
     eval_result_to_display,
     facts_to_rows,
+    facts_used_by_rules,
     filter_rules,
     ontology_to_tree,
     rules_to_rows,
@@ -205,6 +206,14 @@ class EESApp:
         self.facts_tree.pack(fill=tk.BOTH, expand=True)
         self.facts_tree.bind("<Double-1>", self._on_facts_double_click)
 
+        # Bold tag for facts used by rules
+        import tkinter.font as tkfont
+        default_font = tkfont.nametofont("TkDefaultFont")
+        bold_font = tkfont.Font(family=default_font.cget("family"),
+                                size=default_font.cget("size"),
+                                weight="bold")
+        self.facts_tree.tag_configure("used", font=bold_font)
+
         fact_btns = ttk.Frame(facts_frame)
         fact_btns.pack(fill=tk.X, pady=2)
         btn = ttk.Button(fact_btns, text="Confirm",
@@ -235,6 +244,12 @@ class EESApp:
         btn.pack(side=tk.LEFT, padx=2)
         _ToolTip(btn, "Change scope to 'context'. Context-scoped facts are\n"
                  "instance-specific and stored for documentation only.")
+
+        btn = ttk.Button(fact_btns, text="Confirm Used",
+                         command=self._confirm_used_facts)
+        btn.pack(side=tk.LEFT, padx=2)
+        _ToolTip(btn, "Confirm only facts that are referenced by at least\n"
+                 "one proposed rule condition (shown in bold).")
 
         # Rules/save frame
         rules_frame = ttk.LabelFrame(right, text="Proposed Rules")
@@ -366,14 +381,19 @@ class EESApp:
         self._pending_facts = llm_response.facts
         self._pending_rules = llm_response.rules
 
+        # Compute which facts are used by rule conditions
+        self._used_fact_indices = facts_used_by_rules(
+            self._pending_facts, self._pending_rules)
+
         # Populate facts tree
         self.facts_tree.delete(*self.facts_tree.get_children())
         for i, row in enumerate(facts_to_rows(self._pending_facts)):
+            tags = ("used",) if i in self._used_fact_indices else ()
             self.facts_tree.insert("", tk.END, iid=str(i), values=(
                 row["noun"], row["instance"], row["property"],
                 row["operator"], row["value"], row["status"],
                 row["scope"],
-            ))
+            ), tags=tags)
 
         # Populate rules tree
         self.rules_tree.delete(*self.rules_tree.get_children())
@@ -406,6 +426,15 @@ class EESApp:
             vals = list(self.facts_tree.item(str(i), "values"))
             vals[5] = "confirmed"
             self.facts_tree.item(str(i), values=vals)
+
+    def _confirm_used_facts(self) -> None:
+        """Confirm only facts that are referenced by rule conditions (bold)."""
+        used = getattr(self, "_used_fact_indices", set())
+        for idx in used:
+            self._pending_facts[idx].status = "confirmed"
+            vals = list(self.facts_tree.item(str(idx), "values"))
+            vals[5] = "confirmed"
+            self.facts_tree.item(str(idx), values=vals)
 
     def _set_fact_scope(self, scope: str) -> None:
         """Set the scope ('rule' or 'context') for selected facts."""

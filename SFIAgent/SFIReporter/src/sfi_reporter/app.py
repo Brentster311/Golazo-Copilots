@@ -65,11 +65,14 @@ class SFIReporterApp:
     def _build_ui(self):
         """Build the UI components."""
         # Container holds main content + optional copilot side panel
-        self._container = ttk.Frame(self.root)
+        self._container = tk.PanedWindow(
+            self.root, orient=tk.HORIZONTAL, sashwidth=6,
+            sashrelief=tk.RAISED, bg="#c0c0c0",
+        )
         self._container.pack(fill=tk.BOTH, expand=True)
 
         main_frame = ttk.Frame(self._container, padding="10")
-        main_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self._container.add(main_frame, stretch="always")
 
         header_label = ttk.Label(main_frame, text="\U0001f4ca SFI Reporter", font=("Segoe UI", 20, "bold"))
         header_label.pack(anchor=tk.W)
@@ -1007,12 +1010,13 @@ class SFIReporterApp:
         if self._copilot_panel.winfo_ismapped():
             self._hide_copilot_panel()
         else:
-            self._copilot_panel.pack(side=tk.RIGHT, fill=tk.Y, padx=(5, 0))
+            self._container.add(self._copilot_panel, width=420,
+                                stretch="never", minsize=250)
 
     def _hide_copilot_panel(self):
         """Hide the Copilot panel if visible."""
         if self._copilot_panel and self._copilot_panel.winfo_ismapped():
-            self._copilot_panel.pack_forget()
+            self._container.forget(self._copilot_panel)
 
 
 def main():
