@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from collections import Counter
 from typing import Any, Callable
 
 from azure.identity import (
@@ -293,13 +294,28 @@ class FactExtractor:
         total_tool_calls = 0
         total_rejections = 0
 
+        # Friendly descriptions for each tool
+        _TOOL_LABELS = {
+            "get_ontology": "Reading ontology",
+            "get_existing_rules": "Checking existing rules",
+            "submit_fact": "Submitting fact",
+            "submit_rule": "Submitting rule",
+            "set_root_cause": "Setting root cause",
+        }
+
         messages: list[dict[str, Any]] = [
             {"role": "system", "content": _SYSTEM_PROMPT},
             {"role": "user", "content": f"Incident report:\n{incident_text}"},
         ]
 
+        # Track what the LLM did last turn (for descriptive status)
+        last_turn_summary = "Analyzing incident"
+
         for turn in range(max_turns):
-            _emit(f"Turn {turn + 1}: calling LLM...")
+            _emit(
+                f"Turn {turn + 1}/{max_turns}: {last_turn_summary} "
+                f"({len(collected_facts)} facts, {len(collected_rules)} rules)..."
+            )
             try:
                 response = self.client.chat.completions.create(
                     model=self.deployment,
@@ -324,6 +340,9 @@ class FactExtractor:
             # Append the assistant message (with tool_calls) to history
             messages.append(assistant_msg)
 
+            # Build a summary of this turn's actions for the next status
+            turn_actions: list[str] = []
+
             # Process each tool call
             for tc in tool_calls:
                 total_tool_calls += 1
@@ -333,7 +352,22 @@ class FactExtractor:
                 except (json.JSONDecodeError, TypeError):
                     args = {}
 
-                _emit(f"Turn {turn + 1}: {fn_name}...")
+                # Build descriptive status for this tool call
+                label = _TOOL_LABELS.get(fn_name, fn_name)
+                if fn_name == "submit_fact":
+                    noun = args.get("noun", "?")
+                    prop = args.get("property", "?")
+                    _emit(f"Turn {turn + 1}: {label} — {noun}.{prop}")
+                elif fn_name == "submit_rule":
+                    kind = (args.get("then") or {}).get("kind", "?")
+                    _emit(f"Turn {turn + 1}: {label} — {kind}")
+                elif fn_name == "set_root_cause":
+                    name = args.get("name", "?")
+                    _emit(f"Turn {turn + 1}: {label} — {name}")
+                else:
+                    _emit(f"Turn {turn + 1}: {label}")
+
+                turn_actions.append(label)
 
                 # Dispatch to handler
                 result_str, accepted = self._dispatch_tool(
@@ -354,9 +388,18 @@ class FactExtractor:
                     "content": result_str,
                 })
 
+            # Summarize what happened for the next turn's "calling LLM" status
+            if turn_actions:
+                # Deduplicate and count: ["Submitting fact", "Submitting fact"] → "Submitting fact ×2"
+                counts = Counter(turn_actions)
+                parts = []
+                for action, count in counts.items():
+                    parts.append(f"{action} ×{count}" if count > 1 else action)
+                last_turn_summary = ", ".join(parts)
+
             _emit(
-                f"Turn {turn + 1}: {len(collected_facts)} facts, "
-                f"{len(collected_rules)} rules collected"
+                f"Turn {turn + 1}/{max_turns} done: "
+                f"{len(collected_facts)} facts, {len(collected_rules)} rules"
             )
         else:
             logger.warning(

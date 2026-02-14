@@ -749,7 +749,7 @@ class TestOnStatusCallback:
         assert any("2" in s for s in statuses), f"No turn 2 in {statuses}"
 
     def test_on_status_includes_tool_names(self):
-        """TC-13: on_status messages include tool names."""
+        """TC-13: on_status messages include descriptive tool labels."""
         ext = _make_extractor()
         statuses: list[str] = []
 
@@ -765,8 +765,10 @@ class TestOnStatusCallback:
         ext.extract("text", [], on_status=statuses.append)
 
         all_text = " ".join(statuses)
-        assert "get_ontology" in all_text
-        assert "submit_fact" in all_text
+        assert "Reading ontology" in all_text
+        assert "Submitting fact" in all_text
+        # submit_fact should include noun.property context
+        assert "X.Y" in all_text
 
     def test_on_status_none_no_crash(self):
         """TC-14: on_status=None (default) works without crash."""
