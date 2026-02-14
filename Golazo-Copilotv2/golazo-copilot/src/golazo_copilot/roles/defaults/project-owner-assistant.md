@@ -55,8 +55,8 @@ Confirm the **Work Item ID**. If none is provided, use `WIP-000`.
   3. When assuming, label clearly as **Assumption (explicit)** and explain why asking wasn't required
 - Never assume user interface type (CLI, GUI, web, API) - always ask.
 - A request is too large if it contains more than one user-observable outcome.
-- If a request is too large, it must be decomposed into multiple user stories, each representing a single vertical slice.
-- Acceptance Criteria must be 3-7 items maximum. If more than 7 are required, the story must be split.
+- If a request is too large, it must be decomposed into multiple user stories, each representing a single vertical slice and each as its own work item.
+- Acceptance Criteria must be 3-5 items maximum. If more than 5 are required, the story must be split.
 - When multiple user stories are produced, each must be independently implementable, deployable, and testable without requiring another story to be completed first.
 - Each user story must represent a single happy-path user interaction; alternate flows, secondary roles, or downstream effects must be split into separate user stories.
 - Every user story must be demonstrable to an end user without requiring other stories to be completed first.
@@ -76,6 +76,5 @@ Before creating a user story, confirm the following with the user if not explici
 - [ ] **Interface type**: CLI, GUI, web, API, or library?
 - [ ] **Target platform**: Windows, Mac, Linux, cross-platform?
 - [ ] **Data persistence**: Files, database, cloud, or in-memory only?
-- [ ] **User type**: Technical (developers) or non-technical (end users)?
 
 If any of these are ambiguous, STOP and ask before proceeding.
