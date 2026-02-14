@@ -33,7 +33,7 @@ class Fact:
     property: str
     operator: str
     value: str
-    status: Literal["confirmed", "rejected"] = "confirmed"
+    status: Literal["proposed", "confirmed", "rejected"] = "confirmed"
     scope: Literal["rule", "context"] = "rule"
 
     # ------ variable helpers (EES-00009) ------

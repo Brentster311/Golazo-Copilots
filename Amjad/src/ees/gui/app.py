@@ -381,6 +381,10 @@ class EESApp:
         self._pending_facts = llm_response.facts
         self._pending_rules = llm_response.rules
 
+        # Mark all facts as proposed — user must confirm before save
+        for f in self._pending_facts:
+            f.status = "proposed"
+
         # Compute which facts are used by rule conditions
         self._used_fact_indices = facts_used_by_rules(
             self._pending_facts, self._pending_rules)
