@@ -718,3 +718,109 @@ class TestTokenLogging:
         log_text = caplog.text
         # Should log token count (100 + 50 = 150)
         assert "150" in log_text or "token" in log_text.lower()
+
+
+# ---------------------------------------------------------------------------
+# TC-26..30: on_status callback (EES-00012)
+# ---------------------------------------------------------------------------
+class TestOnStatusCallback:
+    """TC-11 through TC-15 from EES-00012 test cases."""
+
+    def test_on_status_called_with_turn_info(self):
+        """TC-11/12: on_status receives messages with turn numbers."""
+        ext = _make_extractor()
+        statuses: list[str] = []
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("get_ontology", {}, "c1"),
+        ])
+        turn2 = _assistant_msg_with_tools([
+            _tool_call("submit_fact", {
+                "noun": "X", "property": "Y", "operator": "==", "value": "z",
+            }, "c2"),
+        ])
+        turn3 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2, turn3]
+
+        ext.extract("text", [], on_status=statuses.append)
+
+        # Should have status messages with turn numbers
+        assert any("1" in s for s in statuses), f"No turn 1 in {statuses}"
+        assert any("2" in s for s in statuses), f"No turn 2 in {statuses}"
+
+    def test_on_status_includes_tool_names(self):
+        """TC-13: on_status messages include tool names."""
+        ext = _make_extractor()
+        statuses: list[str] = []
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("get_ontology", {}, "c1"),
+            _tool_call("submit_fact", {
+                "noun": "X", "property": "Y", "operator": "==", "value": "z",
+            }, "c2"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+
+        ext.extract("text", [], on_status=statuses.append)
+
+        all_text = " ".join(statuses)
+        assert "get_ontology" in all_text
+        assert "submit_fact" in all_text
+
+    def test_on_status_none_no_crash(self):
+        """TC-14: on_status=None (default) works without crash."""
+        ext = _make_extractor()
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("submit_fact", {
+                "noun": "X", "property": "Y", "operator": "==", "value": "z",
+            }, "c1"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+
+        # Should not raise
+        result = ext.extract("text", [])
+        assert len(result.facts) == 1
+
+    def test_on_status_shows_summary_counts(self):
+        """TC-15: on_status includes accumulated fact/rule counts."""
+        ext = _make_extractor()
+        statuses: list[str] = []
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("submit_fact", {
+                "noun": "X", "property": "Y", "operator": "==", "value": "z",
+            }, "c1"),
+            _tool_call("submit_fact", {
+                "noun": "A", "property": "B", "operator": "==", "value": "c",
+            }, "c2"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+
+        ext.extract("text", [], on_status=statuses.append)
+
+        # After turn 1, should mention 2 facts
+        all_text = " ".join(statuses)
+        assert "2" in all_text  # 2 facts accumulated
+
+    def test_on_status_error_does_not_crash_extraction(self):
+        """on_status callback error is isolated from extraction logic."""
+        ext = _make_extractor()
+
+        def bad_callback(msg):
+            raise RuntimeError("callback crashed")
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("submit_fact", {
+                "noun": "X", "property": "Y", "operator": "==", "value": "z",
+            }, "c1"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+
+        # Should not raise despite bad callback
+        result = ext.extract("text", [], on_status=bad_callback)
+        assert len(result.facts) == 1

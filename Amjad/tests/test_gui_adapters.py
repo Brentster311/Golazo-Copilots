@@ -11,6 +11,7 @@ from ees.models import (
     OntologyProperty,
     Rule,
     RuleConditions,
+    RuleOutput,
     RuleThen,
 )
 from ees.gui.adapters import (
@@ -123,6 +124,98 @@ class TestRulesToRows:
     def test_rules_to_rows_empty(self):
         """Empty rules list returns empty rows."""
         assert rules_to_rows([]) == []
+
+
+# ── V2 rules_to_rows (EES-00012) ────────────────────────────
+
+def _v2_rule(
+    rule_id: str,
+    conditions: list[Fact],
+    then: RuleOutput,
+    *,
+    else_: RuleOutput | None = None,
+    because: str = "test",
+    logic: str = "AND",
+    status: str = "CONFIRMED",
+) -> Rule:
+    """Helper to create a v2 rule with RuleOutput then/else_."""
+    return Rule(
+        rule_id=rule_id,
+        status=status,
+        conditions=RuleConditions(logic=logic, items=conditions),
+        then=then,
+        else_=else_,
+        because=because,
+    )
+
+
+class TestRulesToRowsV2:
+    """TC-01 through TC-06: v2 RuleOutput display in rules_to_rows."""
+
+    def test_change_state_display(self):
+        """TC-01: CHANGE_STATE rule displays kind and description."""
+        rules = [_v2_rule(
+            "R-001",
+            [_fact("Server(*).CPUUsage > 90")],
+            RuleOutput(kind="CHANGE_STATE", description="ServerOverloaded"),
+        )]
+        rows = rules_to_rows(rules)
+        assert len(rows) == 1
+        assert 'CHANGE_STATE("ServerOverloaded")' in rows[0]["then"]
+
+    def test_ruled_out_display(self):
+        """TC-02: RULED_OUT rule displays correctly."""
+        rules = [_v2_rule(
+            "R-002",
+            [_fact("Network(*).Latency == normal")],
+            RuleOutput(kind="RULED_OUT", description="NetworkIssue"),
+        )]
+        rows = rules_to_rows(rules)
+        assert 'RULED_OUT("NetworkIssue")' in rows[0]["then"]
+
+    def test_gap_display(self):
+        """TC-03: GAP rule displays correctly."""
+        rules = [_v2_rule(
+            "R-003",
+            [_fact("Server(*).MemoryFree < 100")],
+            RuleOutput(kind="GAP", description="NeedMemoryData"),
+        )]
+        rows = rules_to_rows(rules)
+        assert 'GAP("NeedMemoryData")' in rows[0]["then"]
+
+    def test_else_branch_display(self):
+        """TC-04: Rule with ELSE shows else output."""
+        rules = [_v2_rule(
+            "R-004",
+            [_fact("Server(*).CPUUsage > 90")],
+            RuleOutput(kind="CHANGE_STATE", description="HighCPU"),
+            else_=RuleOutput(kind="RULED_OUT", description="CPUNormal"),
+        )]
+        rows = rules_to_rows(rules)
+        assert 'CHANGE_STATE("HighCPU")' in rows[0]["then"]
+        assert 'RULED_OUT("CPUNormal")' in rows[0]["else"]
+
+    def test_no_else_branch(self):
+        """TC-05: Rule without ELSE has empty else string."""
+        rules = [_v2_rule(
+            "R-005",
+            [_fact("Server(*).CPUUsage > 90")],
+            RuleOutput(kind="CHANGE_STATE", description="HighCPU"),
+        )]
+        rows = rules_to_rows(rules)
+        assert rows[0]["else"] == ""
+
+    def test_conditions_formatting_preserved(self):
+        """TC-06: V2 rule conditions still format with AND joiner."""
+        rules = [_v2_rule(
+            "R-006",
+            [_fact("Server(*).CPUUsage > 90"), _fact("Server(*).MemoryFree < 100")],
+            RuleOutput(kind="CHANGE_STATE", description="ResourceExhaustion"),
+        )]
+        rows = rules_to_rows(rules)
+        assert " AND " in rows[0]["conditions"]
+        assert "CPUUsage" in rows[0]["conditions"]
+        assert "MemoryFree" in rows[0]["conditions"]
 
 
 # ── AC-4: ontology_to_tree ───────────────────────────────────
@@ -252,6 +345,77 @@ class TestEvalResultToDisplay:
         assert display["ruled_out"] == []
         assert display["gap_rules"] == []
         assert display["fired_rules"] == []
+
+
+# ── V2 eval_result_to_display (EES-00012) ────────────────────
+
+class TestEvalResultToDisplayV2:
+    """TC-07 through TC-10: v2 outputs with branch info."""
+
+    def _make_v2_result(self, outputs=None, fired_rules=None):
+        return EvaluationResult(
+            input_facts=[_fact("Server(*).CPUUsage > 90")],
+            derived_facts=[],
+            fired_rules=fired_rules or [],
+            outputs=outputs or [],
+            rule_trace=[],
+        )
+
+    def test_change_state_in_outputs(self):
+        """TC-07: CHANGE_STATE outputs shown with branch info."""
+        o = RuleOutput(kind="CHANGE_STATE", description="HighCPU")
+        r = Rule(rule_id="R-CS-1", then=o)
+        result = self._make_v2_result(
+            outputs=[{"rule_id": "R-CS-1", "branch": "then", "output": o}],
+            fired_rules=[r],
+        )
+        display = eval_result_to_display(result)
+        assert any(
+            e["rule_id"] == "R-CS-1" and e["branch"] == "then"
+            for e in display["outputs"]
+        )
+
+    def test_else_branch_in_outputs(self):
+        """TC-08: ELSE branch shown in outputs."""
+        o = RuleOutput(kind="RULED_OUT", description="NotTheCause")
+        r = Rule(rule_id="R-RO-1", then=RuleOutput(kind="CHANGE_STATE", description="X"),
+                 else_=o)
+        result = self._make_v2_result(
+            outputs=[{"rule_id": "R-RO-1", "branch": "else", "output": o}],
+            fired_rules=[r],
+        )
+        display = eval_result_to_display(result)
+        assert any(
+            e["rule_id"] == "R-RO-1" and e["branch"] == "else"
+            for e in display["outputs"]
+        )
+
+    def test_mixed_output_kinds(self):
+        """TC-09: All v2 output kinds represented."""
+        cs = RuleOutput(kind="CHANGE_STATE", description="A")
+        ro = RuleOutput(kind="RULED_OUT", description="B")
+        gap = RuleOutput(kind="GAP", description="C")
+        result = self._make_v2_result(
+            outputs=[
+                {"rule_id": "R1", "branch": "then", "output": cs},
+                {"rule_id": "R2", "branch": "then", "output": ro},
+                {"rule_id": "R3", "branch": "then", "output": gap},
+            ],
+            fired_rules=[
+                Rule(rule_id="R1", then=cs),
+                Rule(rule_id="R2", then=ro),
+                Rule(rule_id="R3", then=gap),
+            ],
+        )
+        display = eval_result_to_display(result)
+        kinds = {e["kind"] for e in display["outputs"]}
+        assert kinds == {"CHANGE_STATE", "RULED_OUT", "GAP"}
+
+    def test_empty_outputs(self):
+        """TC-10: Empty outputs, no crash."""
+        result = self._make_v2_result()
+        display = eval_result_to_display(result)
+        assert display["outputs"] == []
 
 
 # ── Worker tests ──────────────────────────────────────────────

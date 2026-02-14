@@ -28,10 +28,21 @@ def facts_to_rows(facts: list[Fact]) -> list[dict]:
     ]
 
 
+def _then_display(then: RuleOutput | object) -> str:
+    """Format a rule's then/else branch for display.
+
+    Handles both v2 RuleOutput and v1 RuleThen objects.
+    """
+    if isinstance(then, RuleOutput):
+        return f'{then.kind}("{then.description}")'
+    # v1 backward compat
+    return getattr(then, "value", str(then))
+
+
 def rules_to_rows(rules: list[Rule]) -> list[dict]:
     """Convert Rule objects to display-ready row dicts.
 
-    Each row: {rule_id, status, type, conditions, then, because, sources}
+    Each row: {rule_id, status, type, conditions, then, else, because, sources}
     """
     rows = []
     for r in rules:
@@ -43,12 +54,9 @@ def rules_to_rows(rules: list[Rule]) -> list[dict]:
         joiner = f" {r.conditions.logic} "
         conditions_str = joiner.join(parts)
 
-        # Format then clause
-        if r.type == "ruleout":
-            then_str = f"RULEOUT {r.then.value}"
-        else:
-            then_str = (f"{r.then.noun}({r.then.instance}).{r.then.property} "
-                        f"= {r.then.value}")
+        # Format then/else using v2-aware helper
+        then_str = _then_display(r.then)
+        else_str = _then_display(r.else_) if r.else_ else ""
 
         rows.append({
             "rule_id": r.rule_id,
@@ -56,6 +64,7 @@ def rules_to_rows(rules: list[Rule]) -> list[dict]:
             "type": r.type,
             "conditions": conditions_str,
             "then": then_str,
+            "else": else_str,
             "because": r.because,
             "sources": r.sources,
         })
@@ -82,13 +91,8 @@ def ontology_to_tree(nouns: list[OntologyNoun]) -> list[dict]:
 def eval_result_to_display(result: EvaluationResult) -> dict:
     """Convert EvaluationResult to a display-ready dict.
 
-    Keys: input_facts, fired_rules, root_causes, ruled_out, gap_rules, trace
+    Keys: input_facts, fired_rules, outputs, root_causes, ruled_out, gap_rules, trace
     """
-    def _then_display(rule):
-        if isinstance(rule.then, RuleOutput):
-            return f"{rule.then.kind}(\"{rule.then.description}\")"
-        return rule.then.value  # v1 backward compat
-
     return {
         "input_facts": [f.to_display() for f in result.input_facts],
         "fired_rules": [
@@ -97,11 +101,21 @@ def eval_result_to_display(result: EvaluationResult) -> dict:
                 "conditions": " AND ".join(
                     item.to_display() for item in r.conditions.items
                 ),
-                "then": _then_display(r),
+                "then": _then_display(r.then),
                 "type": r.type,
             }
             for r in result.fired_rules
         ],
+        "outputs": [
+            {
+                "rule_id": o["rule_id"],
+                "branch": o["branch"],
+                "kind": o["output"].kind,
+                "description": o["output"].description,
+            }
+            for o in result.outputs
+        ],
+        # Backward-compat keys (derived from outputs)
         "root_causes": list(result.root_causes),
         "ruled_out": list(result.ruled_out),
         "gap_rules": [

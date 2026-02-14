@@ -186,7 +186,7 @@ class EESApp:
         rules_frame = ttk.LabelFrame(right, text="Proposed Rules")
         rules_frame.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
 
-        rule_cols = ("rule_id", "type", "conditions", "then")
+        rule_cols = ("rule_id", "type", "conditions", "then", "else")
         self.rules_tree = ttk.Treeview(rules_frame, columns=rule_cols,
                                        show="headings", height=6)
         for col in rule_cols:
@@ -195,6 +195,7 @@ class EESApp:
         self.rules_tree.column("type", width=80)
         self.rules_tree.column("conditions", width=250)
         self.rules_tree.column("then", width=200)
+        self.rules_tree.column("else", width=200)
         self.rules_tree.pack(fill=tk.BOTH, expand=True)
         self.rules_tree.bind("<Double-1>", self._on_rules_double_click)
 
@@ -281,6 +282,9 @@ class EESApp:
 
         ontology_nouns = self.store.load_ontology()
 
+        def _update_status(msg: str) -> None:
+            self.root.after(0, self.status_var.set, msg)
+
         def do_extract():
             settings = self.settings_mgr.load()
             extractor = FactExtractor(
@@ -288,7 +292,9 @@ class EESApp:
                 deployment=settings["deployment"],
                 api_version=settings["api_version"],
             )
-            return extractor.extract(self._incident_text, ontology_nouns)
+            return extractor.extract(
+                self._incident_text, ontology_nouns, on_status=_update_status,
+            )
 
         def on_complete(llm_response):
             self.root.after(0, self._on_extraction_complete, llm_response)
@@ -320,7 +326,8 @@ class EESApp:
         self.rules_tree.delete(*self.rules_tree.get_children())
         for i, row in enumerate(rules_to_rows(self._pending_rules)):
             self.rules_tree.insert("", tk.END, iid=str(i), values=(
-                row["rule_id"], row["type"], row["conditions"], row["then"],
+                row["rule_id"], row["type"], row["conditions"],
+                row["then"], row["else"],
             ))
 
         self.save_btn.config(state=tk.NORMAL)
@@ -458,7 +465,7 @@ class EESApp:
                    command=self._refresh_kb_rules).pack(side=tk.LEFT, padx=5)
 
         # Rules treeview
-        cols = ("rule_id", "status", "type", "conditions", "then", "because")
+        cols = ("rule_id", "status", "type", "conditions", "then", "else", "because")
         self.kb_rules_tree = ttk.Treeview(rules_frame, columns=cols,
                                           show="headings", height=15)
         for col in cols:
@@ -468,6 +475,7 @@ class EESApp:
         self.kb_rules_tree.column("type", width=80)
         self.kb_rules_tree.column("conditions", width=300)
         self.kb_rules_tree.column("then", width=200)
+        self.kb_rules_tree.column("else", width=200)
         self.kb_rules_tree.column("because", width=250)
         self.kb_rules_tree.pack(fill=tk.BOTH, expand=True, padx=5)
         self.kb_rules_tree.bind("<Double-1>", self._on_kb_rules_double_click)
@@ -505,7 +513,8 @@ class EESApp:
         for row in rules_to_rows(filtered):
             self.kb_rules_tree.insert("", tk.END, values=(
                 row["rule_id"], row["status"], row["type"],
-                row["conditions"], row["then"], row["because"],
+                row["conditions"], row["then"], row["else"],
+                row["because"],
             ))
         self.status_var.set(f"Rules: {len(filtered)} shown of {len(all_rules)} total")
 
@@ -631,7 +640,8 @@ class EESApp:
             f"Type:        {vals[2]}\n"
             f"Conditions:  {vals[3]}\n"
             f"Then:        {vals[4]}\n"
-            f"Because:     {vals[5]}"
+            f"Else:        {vals[5]}\n"
+            f"Because:     {vals[6]}"
         )
         _show_detail_dialog(self.root, f"Rule {vals[0]}", detail)
 
@@ -799,6 +809,8 @@ def _show_detail_dialog(parent: tk.Tk, title: str, text: str) -> None:
 
 def _show_rule_detail(parent: tk.Tk, rule) -> None:
     """Show full rule details in a dialog."""
+    from ees.gui.adapters import _then_display
+
     cond_parts = []
     for item in rule.conditions.items:
         cond_parts.append(
@@ -807,31 +819,18 @@ def _show_rule_detail(parent: tk.Tk, rule) -> None:
         )
     cond_str = f" {rule.conditions.logic}\n".join(cond_parts) or "(none)"
 
-    if rule.type == "ruleout":
-        then_str = f"RULEOUT {rule.then.value}"
-    else:
-        then_str = (
-            f"{rule.then.noun}({rule.then.instance}).{rule.then.property}"
-            f" = {rule.then.value}"
-        )
+    then_str = _then_display(rule.then)
 
     detail = (
         f"Rule ID:     {rule.rule_id}\n"
         f"Status:      {rule.status}\n"
-        f"Type:        {rule.type}\n"
         f"Sources:     {', '.join(rule.sources) if rule.sources else '(none)'}\n"
         f"\nConditions ({rule.conditions.logic}):\n{cond_str}\n"
         f"\nThen:        {then_str}\n"
-        f"\nBecause:\n  {rule.because or '(none)'}\n"
     )
-    if rule.requires:
-        req = "\n".join(f"  {r.to_display()}" for r in rule.requires)
-        detail += f"\nRequires:\n{req}\n"
-    if rule.produces:
-        prod = "\n".join(f"  {p.to_display()}" for p in rule.produces)
-        detail += f"\nProduces:\n{prod}\n"
-    if rule.note:
-        detail += f"\nNote:\n  {rule.note}\n"
+    if rule.else_:
+        detail += f"Else:        {_then_display(rule.else_)}\n"
+    detail += f"\nBecause:\n  {rule.because or '(none)'}\n"
 
     _show_detail_dialog(parent, f"Rule {rule.rule_id}", detail)
 
@@ -849,26 +848,35 @@ def _format_eval_display(display: dict, *, total_rules: int) -> str:
         for r in display["fired_rules"]:
             lines.append(f"  {r['rule_id']}: {r['conditions']} \u2192 {r['then']}")
 
-    if display["root_causes"]:
-        lines.append(f"\nRoot causes identified ({len(display['root_causes'])}):")
-        for rc in display["root_causes"]:
-            lines.append(f"  \u2713 {rc}")
+    # v2: Group outputs by kind with branch info
+    outputs = display.get("outputs", [])
+    cs = [o for o in outputs if o["kind"] == "CHANGE_STATE"]
+    ro = [o for o in outputs if o["kind"] == "RULED_OUT"]
+    gaps = [o for o in outputs if o["kind"] == "GAP"]
 
-    if display["ruled_out"]:
-        lines.append(f"\nRoot causes ruled out ({len(display['ruled_out'])}):")
-        for ro in display["ruled_out"]:
-            lines.append(f"  \u2717 {ro}")
+    if cs:
+        lines.append(f"\nCHANGE_STATE ({len(cs)}):")
+        for o in cs:
+            branch = f" ({o['branch'].upper()})" if o["branch"] != "then" else ""
+            lines.append(f"  \u2713 {o['rule_id']}: {o['description']}{branch}")
 
-    if display["gap_rules"]:
-        lines.append(f"\nGAP rules encountered ({len(display['gap_rules'])}):")
-        for g in display["gap_rules"]:
-            lines.append(f"  {g['rule_id']}: {g['requires']} \u2014 {g['note']}")
+    if ro:
+        lines.append(f"\nRULED_OUT ({len(ro)}):")
+        for o in ro:
+            branch = f" ({o['branch'].upper()})" if o["branch"] != "then" else ""
+            lines.append(f"  \u2717 {o['rule_id']}: {o['description']}{branch}")
+
+    if gaps:
+        lines.append(f"\nGAP ({len(gaps)}):")
+        for o in gaps:
+            branch = f" ({o['branch'].upper()})" if o["branch"] != "then" else ""
+            lines.append(f"  ? {o['rule_id']}: {o['description']}{branch}")
 
     lines.append(f"\nSummary: {total_rules} rules evaluated, "
                  f"{len(display['fired_rules'])} fired, "
-                 f"{len(display['root_causes'])} root causes, "
-                 f"{len(display['ruled_out'])} ruled out, "
-                 f"{len(display['gap_rules'])} GAPs")
+                 f"{len(cs)} change_state, "
+                 f"{len(ro)} ruled_out, "
+                 f"{len(gaps)} gaps")
     return "\n".join(lines)
 
 

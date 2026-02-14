@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import Any
+from typing import Any, Callable
 
 from azure.identity import (
     AzureCliCredential,
@@ -261,6 +261,7 @@ class FactExtractor:
         ontology: list[OntologyNoun],
         *,
         max_turns: int = 10,
+        on_status: Callable[[str], None] | None = None,
     ) -> LLMResponse:
         """Extract facts and rules from incident text via multi-turn tool calling.
 
@@ -268,6 +269,7 @@ class FactExtractor:
             incident_text: Raw incident report text.
             ontology: Current ontology nouns for context.
             max_turns: Maximum agentic loop iterations (default 10).
+            on_status: Optional callback for live status updates.
 
         Returns:
             LLMResponse with collected facts, rules, and root cause.
@@ -275,6 +277,14 @@ class FactExtractor:
         Raises:
             LLMError: On API failure.
         """
+
+        def _emit(msg: str) -> None:
+            """Safely emit a status message, isolating callback errors."""
+            if on_status is not None:
+                try:
+                    on_status(msg)
+                except Exception:
+                    logger.debug("on_status callback error (ignored)", exc_info=True)
         # State accumulators for the agentic loop
         collected_facts: list[Fact] = []
         collected_rules: list[Rule] = []
@@ -289,6 +299,7 @@ class FactExtractor:
         ]
 
         for turn in range(max_turns):
+            _emit(f"Turn {turn + 1}: calling LLM...")
             try:
                 response = self.client.chat.completions.create(
                     model=self.deployment,
@@ -322,6 +333,8 @@ class FactExtractor:
                 except (json.JSONDecodeError, TypeError):
                     args = {}
 
+                _emit(f"Turn {turn + 1}: {fn_name}...")
+
                 # Dispatch to handler
                 result_str, accepted = self._dispatch_tool(
                     fn_name, args, ontology, collected_facts, collected_rules,
@@ -340,6 +353,11 @@ class FactExtractor:
                     "tool_call_id": tc.id,
                     "content": result_str,
                 })
+
+            _emit(
+                f"Turn {turn + 1}: {len(collected_facts)} facts, "
+                f"{len(collected_rules)} rules collected"
+            )
         else:
             logger.warning(
                 "Max turns (%d) reached during extraction. "
