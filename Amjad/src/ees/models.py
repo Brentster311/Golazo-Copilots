@@ -57,8 +57,17 @@ class Fact:
 
     # ------ display / matching ------
 
+    # Chaining output kinds whose display should use dict syntax
+    _CHAINING_KINDS = frozenset({"RULED_OUT", "CHANGE_STATE", "GAP"})
+
     def to_display(self) -> str:
-        """Format as human-readable string: Noun(instance).Property operator value."""
+        """Format as human-readable string.
+
+        Chaining conditions display as RULED_OUT("User.adminRole").
+        Normal conditions display as Noun(instance).Property operator value.
+        """
+        if self.noun in self._CHAINING_KINDS:
+            return f'{self.noun}("{self.property}")'
         return f"{self.noun}({self.instance}).{self.property} {self.operator} {self.value}"
 
     def match_key(self) -> tuple[str, str, str, str, str]:
@@ -145,15 +154,17 @@ class RuleOutput:
     def to_fact(self) -> Fact:
         """Convert this output to a Fact for working-set matching.
 
-        CHANGE_STATE("X") -> Fact(noun="CHANGE_STATE", instance="*",
-                                  property="description", operator="==", value="X")
+        Treats RULED_OUT / CHANGE_STATE / GAP like a dict keyed by description:
+        RULED_OUT("User.adminRole") -> Fact(noun="RULED_OUT", instance="*",
+                                            property="User.adminRole",
+                                            operator="==", value="true")
         """
         return Fact(
             noun=self.kind,
             instance="*",
-            property="description",
+            property=self.description,
             operator="==",
-            value=self.description,
+            value="true",
         )
 
 

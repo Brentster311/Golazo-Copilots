@@ -65,7 +65,7 @@ class TestThenBranchFires:
         assert result.outputs[0]["output"].kind == "CHANGE_STATE"
         # Derived fact should be in working set
         assert any(
-            f.noun == "CHANGE_STATE" and f.value == "CPU is overloaded"
+            f.noun == "CHANGE_STATE" and f.property == "CPU is overloaded"
             for f in result.derived_facts
         )
 
@@ -82,7 +82,7 @@ class TestThenBranchFires:
         assert len(result.fired_rules) == 1
         assert result.outputs[0]["output"].kind == "RULED_OUT"
         assert any(
-            f.noun == "RULED_OUT" and f.value == "DNS is fine"
+            f.noun == "RULED_OUT" and f.property == "DNS is fine"
             for f in result.derived_facts
         )
 
@@ -135,7 +135,7 @@ class TestElseBranchFires:
         assert result.outputs[0]["branch"] == "else"
         assert result.outputs[0]["output"].kind == "RULED_OUT"
         assert any(
-            f.noun == "RULED_OUT" and f.value == "CPU ruled out"
+            f.noun == "RULED_OUT" and f.property == "CPU ruled out"
             for f in result.derived_facts
         )
 
@@ -190,14 +190,14 @@ class TestChainingRuledOut:
             _cond(("Memory", "OK")),
             then=RuleOutput(kind="RULED_OUT", description="Memory ruled out"),
         )
-        # R3 conditions require both RULED_OUTs
+        # R3 conditions require both RULED_OUTs (dict syntax)
         r3_cond = RuleConditions(
             logic="AND",
             items=[
-                Fact(noun="RULED_OUT", instance="*", property="description",
-                     operator="==", value="CPU ruled out"),
-                Fact(noun="RULED_OUT", instance="*", property="description",
-                     operator="==", value="Memory ruled out"),
+                Fact(noun="RULED_OUT", instance="*", property="CPU ruled out",
+                     operator="==", value="true"),
+                Fact(noun="RULED_OUT", instance="*", property="Memory ruled out",
+                     operator="==", value="true"),
             ],
         )
         r3 = _rule(
@@ -223,10 +223,10 @@ class TestChainingRuledOut:
         r3_cond = RuleConditions(
             logic="AND",
             items=[
-                Fact(noun="RULED_OUT", instance="*", property="description",
-                     operator="==", value="CPU ruled out"),
-                Fact(noun="RULED_OUT", instance="*", property="description",
-                     operator="==", value="Memory ruled out"),
+                Fact(noun="RULED_OUT", instance="*", property="CPU ruled out",
+                     operator="==", value="true"),
+                Fact(noun="RULED_OUT", instance="*", property="Memory ruled out",
+                     operator="==", value="true"),
             ],
         )
         r3 = _rule(
@@ -258,8 +258,8 @@ class TestChainingChangeState:
         r2_cond = RuleConditions(
             logic="AND",
             items=[
-                Fact(noun="CHANGE_STATE", instance="*", property="description",
-                     operator="==", value="Escalate to L2"),
+                Fact(noun="CHANGE_STATE", instance="*", property="Escalate to L2",
+                     operator="==", value="true"),
             ],
         )
         r2 = _rule(

@@ -157,15 +157,16 @@ class TestRuleOutput:
         f = o.to_fact()
         assert f.noun == "CHANGE_STATE"
         assert f.instance == "*"
-        assert f.property == "description"
+        assert f.property == "Enable feature X"
         assert f.operator == "=="
-        assert f.value == "Enable feature X"
+        assert f.value == "true"
 
     def test_to_fact_ruled_out(self):
         o = RuleOutput(kind="RULED_OUT", description="DNS ruled out")
         f = o.to_fact()
         assert f.noun == "RULED_OUT"
-        assert f.value == "DNS ruled out"
+        assert f.property == "DNS ruled out"
+        assert f.value == "true"
 
     def test_valid_output_kinds(self):
         assert VALID_OUTPUT_KINDS == ("CHANGE_STATE", "RULED_OUT", "GAP")

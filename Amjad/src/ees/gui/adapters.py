@@ -48,9 +48,13 @@ def rules_to_rows(rules: list[Rule]) -> list[dict]:
     for r in rules:
         # Format conditions as readable string
         parts = []
+        chaining_kinds = {"RULED_OUT", "CHANGE_STATE", "GAP"}
         for item in r.conditions.items:
-            parts.append(f"{item.noun}({item.instance}).{item.property} "
-                         f"{item.operator} {item.value}")
+            if item.noun in chaining_kinds:
+                parts.append(f'{item.noun}("{item.property}")')
+            else:
+                parts.append(f"{item.noun}({item.instance}).{item.property} "
+                             f"{item.operator} {item.value}")
         joiner = f" {r.conditions.logic} "
         conditions_str = joiner.join(parts)
 

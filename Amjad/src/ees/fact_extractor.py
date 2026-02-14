@@ -85,18 +85,15 @@ condition's noun.property. Examples:
   Wrong: "Team.engagement => Exchange team engaged"  (action, not state)
   Right: "Permission.mailAPI => granted"  (the property being tested, changed to new value)
   Right: "AppRegistration.adminConsent => granted"  (mirrors the condition property)
-- RULED_OUT description must reference the fact that was tested, using the format \
-"Noun.property" (e.g., "User.adminRole", "AppRegistration.adminConsent"). \
-Do NOT write narrative like "Admin consent is not the issue". \
-This makes the catch-all rule's conditions machine-readable.
-- Limit hypothesis rules to 3-5 core diagnostic causes. Do NOT create a hypothesis \
+- RULED_OUT description must be the Noun.property being tested \
+(e.g., \"User.adminRole\", \"AppRegistration.adminConsent\"). \
+Treat RULED_OUT like a dict: RULED_OUT(\"User.adminRole\") means \"User.adminRole is ruled out\".\n- Limit hypothesis rules to 3-5 core diagnostic causes. Do NOT create a hypothesis \
 rule for every single fact. Focus on the primary root-cause candidates.
 - Build a CHAIN of diagnostic rules: \
   (a) Individual hypothesis rules (R1, R2, R3...) that each test one condition and \
   produce CHANGE_STATE in THEN + RULED_OUT in ELSE. \
-  (b) A FINAL catch-all rule that chains the RULED_OUT outputs from the earlier \
-  rules as its conditions. The catch-all condition nouns must be RULED_OUT with operator \
-  "contains" matching the RULED_OUT descriptions from earlier rules. \
+  (b) A FINAL catch-all rule that references the RULED_OUT outputs from earlier rules \
+  using dict syntax: RULED_OUT(\"Noun.property\"). \
   The catch-all fires GAP("All known causes eliminated") with NO ELSE branch.
 - Do NOT submit duplicate rules. Each rule must have unique conditions.
 
@@ -115,10 +112,10 @@ Example — Jira/AAD app-registration incident:
   R3: IF Permission($p).mailAPI == "required"
       THEN CHANGE_STATE("Permission.mailAPI => granted")
       ELSE RULED_OUT("Permission.mailAPI")
-  R4 (catch-all — NO ELSE, conditions use RULED_OUT noun):
-      IF RULED_OUT(*).description contains "User.adminRole" \
-      AND RULED_OUT(*).description contains "AppRegistration.adminConsent" \
-      AND RULED_OUT(*).description contains "Permission.mailAPI"
+  R4 (catch-all — NO ELSE):
+      IF RULED_OUT("User.adminRole") \
+      AND RULED_OUT("AppRegistration.adminConsent") \
+      AND RULED_OUT("Permission.mailAPI")
       THEN GAP("All known causes eliminated — investigate further")
 Follow this exact pattern. Only 3-5 hypothesis rules + 1 catch-all.
 """
@@ -588,17 +585,35 @@ class FactExtractor:
             if op not in VALID_OPERATORS:
                 return f"Invalid operator '{op}' in condition {i + 1}. Valid: {', '.join(VALID_OPERATORS)}", False
 
-        # Build condition items
-        condition_facts = [
-            Fact(
-                noun=it.get("noun", ""),
-                instance=it.get("instance", "*"),
-                property=it.get("property", ""),
-                operator=it.get("operator", ""),
-                value=it.get("value", ""),
-            )
-            for it in items_data
-        ]
+        # Build condition items, normalizing chaining conditions to dict syntax
+        chaining_nouns = {"ruled_out", "change_state", "gap", "diagnosticstate"}
+        condition_facts = []
+        for it in items_data:
+            noun = it.get("noun", "")
+            if noun.lower() in chaining_nouns:
+                # Normalize chaining condition to dict syntax:
+                # RULED_OUT("User.adminRole") stored as
+                # Fact(noun="RULED_OUT", property="User.adminRole", operator="==", value="true")
+                # The LLM may send the description in "value" or "property"
+                desc = it.get("value", "") or it.get("property", "")
+                # Strip "description" if LLM used old-style property="description"
+                if it.get("property", "").lower() == "description":
+                    desc = it.get("value", "")
+                condition_facts.append(Fact(
+                    noun=noun.upper() if noun.lower() in {"ruled_out", "change_state", "gap"} else noun,
+                    instance="*",
+                    property=desc,
+                    operator="==",
+                    value="true",
+                ))
+            else:
+                condition_facts.append(Fact(
+                    noun=noun,
+                    instance=it.get("instance", "*"),
+                    property=it.get("property", ""),
+                    operator=it.get("operator", ""),
+                    value=it.get("value", ""),
+                ))
 
         # Validate that condition nouns+properties reference submitted facts
         # (skip RULED_OUT/CHANGE_STATE/GAP conditions used for chaining)
