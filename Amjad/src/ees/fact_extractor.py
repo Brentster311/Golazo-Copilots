@@ -604,11 +604,19 @@ class FactExtractor:
                 # Normalize chaining condition to dict syntax:
                 # RULED_OUT("User.adminRole") stored as
                 # Fact(noun="RULED_OUT", property="User.adminRole", operator="==", value="true")
-                # The LLM may send the description in "value" or "property"
-                desc = it.get("value", "") or it.get("property", "")
-                # Strip "description" if LLM used old-style property="description"
-                if it.get("property", "").lower() == "description":
-                    desc = it.get("value", "")
+                # The LLM may send the description in "property" (correct dict
+                # style) or in "value" with property="description" (old style).
+                prop_raw = it.get("property", "")
+                val_raw = it.get("value", "")
+                if prop_raw.lower() == "description":
+                    # Old style: property="description", value="User.adminRole"
+                    desc = val_raw
+                elif prop_raw and prop_raw.lower() != "true":
+                    # Dict style: property="User.adminRole", value="true"
+                    desc = prop_raw
+                else:
+                    # Fallback: use value
+                    desc = val_raw
                 condition_facts.append(Fact(
                     noun=noun.upper() if noun.lower() in {"ruled_out", "change_state", "gap"} else noun,
                     instance="*",
