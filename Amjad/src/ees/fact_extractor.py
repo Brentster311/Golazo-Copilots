@@ -51,16 +51,39 @@ Guidelines:
 - Do NOT extract GUIDs, timestamps, resource names, or subscription IDs as rule-scoped facts.
 - Rules use variables ($op, $vm, etc.) in instance fields when conditions must match the same entity.
 - Facts never use variables — only rules do.
-- Use CHANGE_STATE for positive identification, RULED_OUT for elimination, GAP for missing information.
-- You MUST always submit at least one rule. If the root cause is clear, use CHANGE_STATE. \
-If something can be eliminated, use RULED_OUT. If information is missing, use GAP. \
-There is no scenario where facts exist but no rules apply.
 - Prefer reusing existing ontology nouns/properties (case-insensitive match).
 - Default instance to "*" unless a specific instance is required.
 - Valid operators: ==, !=, >, <, >=, <=, contains, !contains
 - Use flat AND or flat OR logic only (never mix).
 - EFFICIENCY: Submit ALL facts in a single turn by calling submit_fact() multiple times \
 in parallel. Do the same for rules. Do NOT submit one fact per turn.
+
+Rule Quality Requirements:
+- EVERY rule MUST have an ELSE branch. Use ELSE RULED_OUT("...") to eliminate causes \
+when the condition is NOT met.
+- Conditions must test SPECIFIC properties (e.g., User.role == "non-admin"), NOT vague \
+text matching on error messages.
+- Build a CHAIN of diagnostic rules: \
+  (a) individual hypothesis rules that each produce CHANGE_STATE or RULED_OUT, \
+  (b) a final catch-all rule whose conditions check that earlier hypotheses were all \
+  ruled out, then fires GAP("All known causes eliminated — investigate further").
+- Do NOT submit duplicate rules.
+
+Example — Jira/AAD app-registration incident:
+  R1: IF User($u).role == "non-admin"
+      THEN CHANGE_STATE("User.role => admin-escalated")
+      ELSE RULED_OUT("User access is not the issue")
+  R2: IF AppRegistration($app).adminConsent == "not granted"
+      THEN CHANGE_STATE("AppRegistration.adminConsent => granted")
+      ELSE RULED_OUT("Admin consent is not the issue")
+  R3: IF AppRegistration($app).permissions !contains "Mail.Send"
+      THEN CHANGE_STATE("Mail.Send permission => true")
+      ELSE RULED_OUT("Mail.Send permission is already present")
+  R4: IF RULED_OUT("User access is not the issue") \
+      AND RULED_OUT("Admin consent is not the issue") \
+      AND RULED_OUT("Mail.Send permission is already present")
+      THEN GAP("All known causes eliminated — investigate further")
+Follow this exact pattern: specific property tests, ELSE branches, and chaining.
 """
 
 # ---------------------------------------------------------------------------
