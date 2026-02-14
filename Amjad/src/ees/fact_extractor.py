@@ -73,18 +73,21 @@ Guidelines:
 in parallel. Do the same for rules. Do NOT submit one fact per turn.
 
 Rule Quality Requirements:
-- EVERY rule MUST have an ELSE branch. Use ELSE RULED_OUT("...") to eliminate causes \
-when the condition is NOT met.
+- Every hypothesis rule MUST have an ELSE RULED_OUT("...") branch to eliminate that \
+cause when the condition is NOT met.
 - Conditions must ONLY reference Noun.Property pairs that you already submitted as facts. \
 Do NOT invent new nouns or properties in rule conditions that have no corresponding fact.
-- CHANGE_STATE description must be a concise state assignment in the form \
-"Noun.property => new_value" (e.g., "User.role => admin-escalated"). \
-Do NOT write narrative explanations or instructions as the description.
+- CHANGE_STATE description must be a concise state assignment: "Noun.property => new_value" \
+(e.g., "User.role => admin-escalated"). It describes WHAT STATE CHANGES, not what action \
+to take or who to engage. Wrong: "Exchange team engaged". Right: "Permission.mailSend => granted".
 - RULED_OUT description must be a concise elimination statement.
 - Build a CHAIN of diagnostic rules: \
-  (a) individual hypothesis rules that each produce CHANGE_STATE or RULED_OUT, \
-  (b) a final catch-all rule whose conditions check that earlier hypotheses were all \
-  ruled out, then fires GAP("All known causes eliminated — investigate further").
+  (a) Individual hypothesis rules (R1, R2, R3...) that each test one condition and \
+  produce CHANGE_STATE in THEN + RULED_OUT in ELSE. \
+  (b) A FINAL catch-all rule (R4) that chains the RULED_OUT outputs from the earlier \
+  rules as its conditions. The catch-all condition nouns must be RULED_OUT with operator \
+  "contains" matching the RULED_OUT descriptions from earlier rules. \
+  The catch-all fires GAP("All known causes eliminated") with NO ELSE branch.
 - Do NOT submit duplicate rules. Each rule must have unique conditions.
 
 Example — Jira/AAD app-registration incident:
@@ -100,13 +103,14 @@ Example — Jira/AAD app-registration incident:
       THEN CHANGE_STATE("AppRegistration.adminConsent => granted")
       ELSE RULED_OUT("Admin consent is not the issue")
   R3: IF AppRegistration($app).permissions !contains "Mail.Send"
-      THEN CHANGE_STATE("AppRegistration.permissions => Mail.Send added")
+      THEN CHANGE_STATE("AppRegistration.permissions => Mail.Send granted")
       ELSE RULED_OUT("Mail.Send permission is already present")
-  R4: IF RULED_OUT("User access is not the issue") \
-      AND RULED_OUT("Admin consent is not the issue") \
-      AND RULED_OUT("Mail.Send permission is already present")
+  R4 (catch-all — NO ELSE, conditions use RULED_OUT noun):
+      IF RULED_OUT(*).description contains "User access is not the issue" \
+      AND RULED_OUT(*).description contains "Admin consent is not the issue" \
+      AND RULED_OUT(*).description contains "Mail.Send permission is already present"
       THEN GAP("All known causes eliminated — investigate further")
-Follow this exact pattern: facts first, then rules that reference those facts.
+Follow this exact pattern. R4 must reference RULED_OUT outputs, not original facts.
 """
 
 # ---------------------------------------------------------------------------
