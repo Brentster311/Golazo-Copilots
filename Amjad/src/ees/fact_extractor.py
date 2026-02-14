@@ -117,6 +117,13 @@ Example — Jira/AAD app-registration incident:
       AND RULED_OUT("AppRegistration.adminConsent") \
       AND RULED_OUT("Permission.mailAPI")
       THEN GAP("All known causes eliminated — investigate further")
+
+CATCH-ALL RULE REQUIREMENTS (CRITICAL):
+  - The catch-all's conditions MUST use RULED_OUT("Noun.property") — \
+never raw facts like User(*).adminRole.
+  - The catch-all MUST NOT have an ELSE branch.
+  Wrong catch-all: IF User(*).adminRole == "not confirmed" AND ... THEN GAP(...)
+  Right catch-all: IF RULED_OUT("User.adminRole") AND ... THEN GAP(...)
 Follow this exact pattern. Only 3-5 hypothesis rules + 1 catch-all.
 """
 
@@ -181,7 +188,10 @@ _TOOLS: list[dict[str, Any]] = [
             "description": (
                 "Submit a troubleshooting rule with v2 grammar. "
                 "The THEN branch is required (CHANGE_STATE, RULED_OUT, or GAP). "
-                "An optional ELSE branch fires when conditions are NOT met."
+                "An optional ELSE branch fires when conditions are NOT met. "
+                "For the catch-all rule (THEN: GAP), ALL conditions MUST use "
+                "noun='RULED_OUT' with property='Noun.property' and value='true'. "
+                "The catch-all must NOT have an ELSE branch."
             ),
             "parameters": {
                 "type": "object",
@@ -645,6 +655,22 @@ class FactExtractor:
         if err:
             return err, False
 
+        # GAP rules (catch-all) must only reference chaining conditions
+        if then_output.kind == "GAP":
+            non_chaining = [
+                cf for cf in condition_facts
+                if cf.noun.lower() not in chaining_nouns
+            ]
+            if non_chaining:
+                bad = ", ".join(f"{cf.noun}.{cf.property}" for cf in non_chaining)
+                return (
+                    f"Catch-all rule (GAP) conditions must use RULED_OUT "
+                    f"chaining, not raw facts. Wrong conditions: {bad}. "
+                    f"Use noun='RULED_OUT', property='Noun.property', "
+                    f"operator='==', value='true' for each condition.",
+                    False,
+                )
+
         # Validate optional else branch
         else_output: RuleOutput | None = None
         else_data = args.get("else")
@@ -652,6 +678,14 @@ class FactExtractor:
             else_output, err = _validate_output_branch(else_data, "ELSE")
             if err:
                 return err, False
+
+        # GAP rules (catch-all) must not have an ELSE branch
+        if then_output.kind == "GAP" and else_output is not None:
+            return (
+                "Catch-all rule (GAP) must NOT have an ELSE branch. "
+                "Remove the ELSE and resubmit.",
+                False,
+            )
 
         rule = Rule(
             rule_id="",  # assigned later by rule_generator

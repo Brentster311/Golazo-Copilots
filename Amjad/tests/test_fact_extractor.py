@@ -364,7 +364,25 @@ class TestRuleValidation:
         assert result.rules[0].then.kind == "RULED_OUT"
 
     def test_rule_gap(self):
-        """TC-09: Rule with GAP kind."""
+        """TC-09: Rule with GAP kind — must use RULED_OUT chaining conditions."""
+        ext = _make_extractor()
+
+        turn0 = _assistant_msg_with_tools([
+            _tool_call("submit_rule", {
+                "conditions": {"logic": "AND", "items": [
+                    {"noun": "RULED_OUT", "property": "S.P", "operator": "==", "value": "true"},
+                ]},
+                "then": {"kind": "GAP", "description": "Missing disk usage data"},
+            }, "c1"),
+        ])
+        turn1 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn0, turn1]
+
+        result = ext.extract("text", [])
+        assert result.rules[0].then.kind == "GAP"
+
+    def test_gap_rule_rejects_raw_fact_conditions(self):
+        """GAP rules must use RULED_OUT chaining, not raw facts."""
         ext = _make_extractor()
 
         turn0 = _assistant_msg_with_tools([
@@ -377,14 +395,33 @@ class TestRuleValidation:
                 "conditions": {"logic": "AND", "items": [
                     {"noun": "S", "property": "P", "operator": "==", "value": "X"},
                 ]},
-                "then": {"kind": "GAP", "description": "Missing disk usage data"},
+                "then": {"kind": "GAP", "description": "All causes eliminated"},
             }, "c1"),
         ])
         turn2 = _assistant_msg_done()
         ext.client.chat.completions.create.side_effect = [turn0, turn1, turn2]
 
         result = ext.extract("text", [])
-        assert result.rules[0].then.kind == "GAP"
+        assert len(result.rules) == 0  # rejected
+
+    def test_gap_rule_rejects_else_branch(self):
+        """GAP rules (catch-all) must not have an ELSE branch."""
+        ext = _make_extractor()
+
+        turn0 = _assistant_msg_with_tools([
+            _tool_call("submit_rule", {
+                "conditions": {"logic": "AND", "items": [
+                    {"noun": "RULED_OUT", "property": "S.P", "operator": "==", "value": "true"},
+                ]},
+                "then": {"kind": "GAP", "description": "All causes eliminated"},
+                "else": {"kind": "RULED_OUT", "description": "invalid"},
+            }, "c1"),
+        ])
+        turn1 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn0, turn1]
+
+        result = ext.extract("text", [])
+        assert len(result.rules) == 0  # rejected
 
     def test_empty_conditions_rejected(self):
         """TC-18: Rule with empty conditions.items rejected."""
