@@ -59,6 +59,8 @@ There is no scenario where facts exist but no rules apply.
 - Default instance to "*" unless a specific instance is required.
 - Valid operators: ==, !=, >, <, >=, <=, contains, !contains
 - Use flat AND or flat OR logic only (never mix).
+- EFFICIENCY: Submit ALL facts in a single turn by calling submit_fact() multiple times \
+in parallel. Do the same for rules. Do NOT submit one fact per turn.
 """
 
 # ---------------------------------------------------------------------------
@@ -304,6 +306,7 @@ class FactExtractor:
                     messages=messages,
                     tools=_TOOLS,
                     tool_choice="auto",
+                    parallel_tool_calls=True,
                 )
             except Exception as e:
                 raise LLMError(f"LLM API call failed: {e}") from e
