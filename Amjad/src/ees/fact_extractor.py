@@ -33,6 +33,20 @@ from ees.models import (
 
 logger = logging.getLogger(__name__)
 
+
+def _conditions_key(conditions: RuleConditions) -> tuple:
+    """Return a hashable key for conditions to detect duplicates.
+
+    Normalises noun/property/operator to lowercase and sorts items so
+    that the same set of conditions in different order still matches.
+    """
+    items = tuple(sorted(
+        (f.noun.lower(), f.property.lower(), f.operator.lower(), f.value.lower())
+        for f in conditions.items
+    ))
+    return (conditions.logic.upper(), items)
+
+
 # ---------------------------------------------------------------------------
 # System prompt — intentionally brief; schema is enforced by tool parameters
 # ---------------------------------------------------------------------------
@@ -61,15 +75,24 @@ in parallel. Do the same for rules. Do NOT submit one fact per turn.
 Rule Quality Requirements:
 - EVERY rule MUST have an ELSE branch. Use ELSE RULED_OUT("...") to eliminate causes \
 when the condition is NOT met.
-- Conditions must test SPECIFIC properties (e.g., User.role == "non-admin"), NOT vague \
-text matching on error messages.
+- Conditions must ONLY reference Noun.Property pairs that you already submitted as facts. \
+Do NOT invent new nouns or properties in rule conditions that have no corresponding fact.
+- CHANGE_STATE description must be a concise state assignment in the form \
+"Noun.property => new_value" (e.g., "User.role => admin-escalated"). \
+Do NOT write narrative explanations or instructions as the description.
+- RULED_OUT description must be a concise elimination statement.
 - Build a CHAIN of diagnostic rules: \
   (a) individual hypothesis rules that each produce CHANGE_STATE or RULED_OUT, \
   (b) a final catch-all rule whose conditions check that earlier hypotheses were all \
   ruled out, then fires GAP("All known causes eliminated — investigate further").
-- Do NOT submit duplicate rules.
+- Do NOT submit duplicate rules. Each rule must have unique conditions.
 
 Example — Jira/AAD app-registration incident:
+  Facts submitted first:
+    User(*).role == "non-admin" [rule]
+    AppRegistration(*).adminConsent == "not granted" [rule]
+    AppRegistration(*).permissions !contains "Mail.Send" [rule]
+  Then rules referencing those exact facts:
   R1: IF User($u).role == "non-admin"
       THEN CHANGE_STATE("User.role => admin-escalated")
       ELSE RULED_OUT("User access is not the issue")
@@ -77,13 +100,13 @@ Example — Jira/AAD app-registration incident:
       THEN CHANGE_STATE("AppRegistration.adminConsent => granted")
       ELSE RULED_OUT("Admin consent is not the issue")
   R3: IF AppRegistration($app).permissions !contains "Mail.Send"
-      THEN CHANGE_STATE("Mail.Send permission => true")
+      THEN CHANGE_STATE("AppRegistration.permissions => Mail.Send added")
       ELSE RULED_OUT("Mail.Send permission is already present")
   R4: IF RULED_OUT("User access is not the issue") \
       AND RULED_OUT("Admin consent is not the issue") \
       AND RULED_OUT("Mail.Send permission is already present")
       THEN GAP("All known causes eliminated — investigate further")
-Follow this exact pattern: specific property tests, ELSE branches, and chaining.
+Follow this exact pattern: facts first, then rules that reference those facts.
 """
 
 # ---------------------------------------------------------------------------
@@ -450,7 +473,7 @@ class FactExtractor:
             elif name == "submit_fact":
                 return self._handle_submit_fact(args, ontology, collected_facts)
             elif name == "submit_rule":
-                return self._handle_submit_rule(args, collected_rules)
+                return self._handle_submit_rule(args, collected_facts, collected_rules)
             else:
                 return (
                     f"Unknown tool: '{name}'. Available tools: "
@@ -535,6 +558,7 @@ class FactExtractor:
     @staticmethod
     def _handle_submit_rule(
         args: dict,
+        collected_facts: list[Fact],
         collected_rules: list[Rule],
     ) -> tuple[str, bool]:
         """Validate and collect a rule with v2 grammar."""
@@ -561,6 +585,29 @@ class FactExtractor:
             )
             for it in items_data
         ]
+
+        # Validate that condition nouns+properties reference submitted facts
+        # (skip RULED_OUT/CHANGE_STATE/GAP conditions used for chaining)
+        known_np = {
+            (f.noun.lower(), f.property.lower())
+            for f in collected_facts
+        }
+        chaining_nouns = {"ruled_out", "change_state", "gap",
+                         "diagnosticstate"}
+        warnings: list[str] = []
+        for cf in condition_facts:
+            if cf.noun.lower() in chaining_nouns:
+                continue  # chaining condition — no fact needed
+            key = (cf.noun.lower(), cf.property.lower())
+            if key not in known_np:
+                warnings.append(
+                    f"Condition '{cf.noun}.{cf.property}' has no matching "
+                    f"submitted fact. Submit the fact first, then resubmit "
+                    f"this rule."
+                )
+        if warnings:
+            return " | ".join(warnings), False
+
         conditions = RuleConditions(logic=cond_data.get("logic", "AND"), items=condition_facts)
 
         # Validate then branch
@@ -583,5 +630,16 @@ class FactExtractor:
             then=then_output,
             else_=else_output,
         )
+
+        # Dedup: reject if conditions match an existing rule
+        new_cond_key = _conditions_key(conditions)
+        for existing in collected_rules:
+            if _conditions_key(existing.conditions) == new_cond_key:
+                return (
+                    f"Duplicate rule rejected — a rule with the same "
+                    f"conditions already exists. Do not resubmit.",
+                    False,
+                )
+
         collected_rules.append(rule)
-        return f"Rule accepted: IF ... THEN {then_kind}('{then_desc}')", True
+        return f"Rule accepted: IF ... THEN {then_output.kind}('{then_output.description}')", True

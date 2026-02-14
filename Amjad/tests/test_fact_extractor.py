@@ -266,6 +266,12 @@ class TestRuleValidation:
         """TC-03: Invalid kind POSITIVE rejected, retry with CHANGE_STATE succeeds."""
         ext = _make_extractor()
 
+        # First submit the fact that rules will reference
+        turn0 = _assistant_msg_with_tools([
+            _tool_call("submit_fact", {
+                "noun": "S", "property": "P", "operator": ">", "value": "1",
+            }, "f1"),
+        ])
         turn1 = _assistant_msg_with_tools([
             _tool_call("submit_rule", {
                 "conditions": {"logic": "AND", "items": [
@@ -283,7 +289,7 @@ class TestRuleValidation:
             }, "c2"),
         ])
         turn3 = _assistant_msg_done()
-        ext.client.chat.completions.create.side_effect = [turn1, turn2, turn3]
+        ext.client.chat.completions.create.side_effect = [turn0, turn1, turn2, turn3]
 
         result = ext.extract("text", [])
         assert len(result.rules) == 1
@@ -311,6 +317,11 @@ class TestRuleValidation:
         """TC-07: Rule with THEN and ELSE branches."""
         ext = _make_extractor()
 
+        turn0 = _assistant_msg_with_tools([
+            _tool_call("submit_fact", {
+                "noun": "S", "property": "P", "operator": "==", "value": "X",
+            }, "f1"),
+        ])
         turn1 = _assistant_msg_with_tools([
             _tool_call("submit_rule", {
                 "conditions": {"logic": "AND", "items": [
@@ -321,7 +332,7 @@ class TestRuleValidation:
             }, "c1"),
         ])
         turn2 = _assistant_msg_done()
-        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+        ext.client.chat.completions.create.side_effect = [turn0, turn1, turn2]
 
         result = ext.extract("text", [])
         assert len(result.rules) == 1
@@ -333,6 +344,11 @@ class TestRuleValidation:
         """TC-08: Rule with RULED_OUT kind."""
         ext = _make_extractor()
 
+        turn0 = _assistant_msg_with_tools([
+            _tool_call("submit_fact", {
+                "noun": "Net", "property": "Latency", "operator": "==", "value": "normal",
+            }, "f1"),
+        ])
         turn1 = _assistant_msg_with_tools([
             _tool_call("submit_rule", {
                 "conditions": {"logic": "AND", "items": [
@@ -342,7 +358,7 @@ class TestRuleValidation:
             }, "c1"),
         ])
         turn2 = _assistant_msg_done()
-        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+        ext.client.chat.completions.create.side_effect = [turn0, turn1, turn2]
 
         result = ext.extract("text", [])
         assert result.rules[0].then.kind == "RULED_OUT"
@@ -351,6 +367,11 @@ class TestRuleValidation:
         """TC-09: Rule with GAP kind."""
         ext = _make_extractor()
 
+        turn0 = _assistant_msg_with_tools([
+            _tool_call("submit_fact", {
+                "noun": "S", "property": "P", "operator": "==", "value": "X",
+            }, "f1"),
+        ])
         turn1 = _assistant_msg_with_tools([
             _tool_call("submit_rule", {
                 "conditions": {"logic": "AND", "items": [
@@ -360,7 +381,7 @@ class TestRuleValidation:
             }, "c1"),
         ])
         turn2 = _assistant_msg_done()
-        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+        ext.client.chat.completions.create.side_effect = [turn0, turn1, turn2]
 
         result = ext.extract("text", [])
         assert result.rules[0].then.kind == "GAP"
@@ -403,6 +424,11 @@ class TestRuleValidation:
         """TC-27: Variables allowed in rule conditions (not facts)."""
         ext = _make_extractor()
 
+        turn0 = _assistant_msg_with_tools([
+            _tool_call("submit_fact", {
+                "noun": "Error", "property": "Code", "operator": "==", "value": "Fail",
+            }, "f1"),
+        ])
         turn1 = _assistant_msg_with_tools([
             _tool_call("submit_rule", {
                 "conditions": {"logic": "AND", "items": [
@@ -412,7 +438,7 @@ class TestRuleValidation:
             }, "c1"),
         ])
         turn2 = _assistant_msg_done()
-        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+        ext.client.chat.completions.create.side_effect = [turn0, turn1, turn2]
 
         result = ext.extract("text", [])
         assert len(result.rules) == 1
@@ -436,6 +462,70 @@ class TestRuleValidation:
 
         result = ext.extract("text", [])
         assert len(result.rules) == 0
+
+    def test_duplicate_rule_rejected(self):
+        """Duplicate rule (same conditions) rejected on second submission."""
+        ext = _make_extractor()
+
+        rule_args = {
+            "conditions": {"logic": "AND", "items": [
+                {"noun": "S", "property": "P", "operator": "==", "value": "X"},
+            ]},
+            "then": {"kind": "CHANGE_STATE", "description": "test"},
+        }
+        turn0 = _assistant_msg_with_tools([
+            _tool_call("submit_fact", {
+                "noun": "S", "property": "P", "operator": "==", "value": "X",
+            }, "f1"),
+        ])
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("submit_rule", rule_args, "c1"),
+        ])
+        turn2 = _assistant_msg_with_tools([
+            _tool_call("submit_rule", rule_args, "c2"),
+        ])
+        turn3 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn0, turn1, turn2, turn3]
+
+        result = ext.extract("text", [])
+        assert len(result.rules) == 1  # second was rejected as duplicate
+
+    def test_rule_without_matching_fact_rejected(self):
+        """Rule referencing nouns/properties not in submitted facts is rejected."""
+        ext = _make_extractor()
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("submit_rule", {
+                "conditions": {"logic": "AND", "items": [
+                    {"noun": "Unknown", "property": "Thing", "operator": "==", "value": "X"},
+                ]},
+                "then": {"kind": "CHANGE_STATE", "description": "test"},
+            }, "c1"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+
+        result = ext.extract("text", [])
+        assert len(result.rules) == 0  # rejected because no matching fact
+
+    def test_chaining_rule_with_ruled_out_conditions(self):
+        """Chaining rule using RULED_OUT conditions accepted without matching facts."""
+        ext = _make_extractor()
+
+        turn1 = _assistant_msg_with_tools([
+            _tool_call("submit_rule", {
+                "conditions": {"logic": "AND", "items": [
+                    {"noun": "RULED_OUT", "property": "description", "operator": "==",
+                     "value": "X is not the issue"},
+                ]},
+                "then": {"kind": "GAP", "description": "All causes eliminated"},
+            }, "c1"),
+        ])
+        turn2 = _assistant_msg_done()
+        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+
+        result = ext.extract("text", [])
+        assert len(result.rules) == 1  # chaining conditions bypass fact check
 
 
 # ---------------------------------------------------------------------------
@@ -580,6 +670,11 @@ class TestBackwardCompat:
         """TC-20: Rules use RuleOutput, not RuleThen."""
         ext = _make_extractor()
 
+        turn0 = _assistant_msg_with_tools([
+            _tool_call("submit_fact", {
+                "noun": "S", "property": "P", "operator": "==", "value": "X",
+            }, "f1"),
+        ])
         turn1 = _assistant_msg_with_tools([
             _tool_call("submit_rule", {
                 "conditions": {"logic": "AND", "items": [
@@ -589,7 +684,7 @@ class TestBackwardCompat:
             }, "c1"),
         ])
         turn2 = _assistant_msg_done()
-        ext.client.chat.completions.create.side_effect = [turn1, turn2]
+        ext.client.chat.completions.create.side_effect = [turn0, turn1, turn2]
 
         result = ext.extract("text", [])
         assert isinstance(result, LLMResponse)
