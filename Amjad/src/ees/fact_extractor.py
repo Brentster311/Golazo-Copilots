@@ -190,6 +190,25 @@ _TOOLS: list[dict[str, Any]] = [
 _KNOWN_TOOLS = {t["function"]["name"] for t in _TOOLS}
 
 
+def _validate_output_branch(
+    data: dict, label: str
+) -> tuple[RuleOutput | None, str | None]:
+    """Validate a THEN or ELSE branch dict.
+
+    Returns (RuleOutput, None) on success or (None, error_message) on failure.
+    """
+    kind = data.get("kind", "")
+    desc = data.get("description", "")
+    if kind not in VALID_OUTPUT_KINDS:
+        return None, (
+            f"Invalid kind '{kind}' in {label} branch. "
+            f"Valid: {', '.join(VALID_OUTPUT_KINDS)}"
+        )
+    if not desc:
+        return None, f"{label} description must not be empty."
+    return RuleOutput(kind=kind, description=desc), None
+
+
 class FactExtractor:
     """Extracts facts and rules from incident text using Azure OpenAI tool calling."""
 
@@ -492,35 +511,17 @@ class FactExtractor:
 
         # Validate then branch
         then_data = args.get("then", {})
-        then_kind = then_data.get("kind", "")
-        then_desc = then_data.get("description", "")
-
-        if then_kind not in VALID_OUTPUT_KINDS:
-            return (
-                f"Invalid kind '{then_kind}' in THEN branch. "
-                f"Valid: {', '.join(VALID_OUTPUT_KINDS)}",
-                False,
-            )
-        if not then_desc:
-            return "THEN description must not be empty.", False
-
-        then_output = RuleOutput(kind=then_kind, description=then_desc)
+        then_output, err = _validate_output_branch(then_data, "THEN")
+        if err:
+            return err, False
 
         # Validate optional else branch
         else_output: RuleOutput | None = None
         else_data = args.get("else")
         if else_data:
-            else_kind = else_data.get("kind", "")
-            else_desc = else_data.get("description", "")
-            if else_kind not in VALID_OUTPUT_KINDS:
-                return (
-                    f"Invalid kind '{else_kind}' in ELSE branch. "
-                    f"Valid: {', '.join(VALID_OUTPUT_KINDS)}",
-                    False,
-                )
-            if not else_desc:
-                return "ELSE description must not be empty.", False
-            else_output = RuleOutput(kind=else_kind, description=else_desc)
+            else_output, err = _validate_output_branch(else_data, "ELSE")
+            if err:
+                return err, False
 
         rule = Rule(
             rule_id="",  # assigned later by rule_generator
