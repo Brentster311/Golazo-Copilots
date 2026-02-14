@@ -499,6 +499,12 @@ class EESApp:
         self.save_btn.config(state=tk.DISABLED)
         self.status_var.set(
             f"Saved: {incident_id}, {len(filtered)} rules, {len(gaps)} GAPs")
+
+        # Auto-refresh Knowledge Base tabs so data is visible immediately
+        self._refresh_kb_rules()
+        self._refresh_ontology()
+        self._refresh_root_causes()
+
         messagebox.showinfo("Saved",
                             f"Incident {incident_id} saved.\n"
                             f"Rules: {len(filtered)}\nGAPs: {len(gaps)}")
