@@ -83,13 +83,18 @@ to take or who to engage. The noun.property in the description should match the 
 condition's noun.property. Examples:
   Wrong: "Escalation.team => Exchange-engaged"  (describes a process, not system state)
   Wrong: "Team.engagement => Exchange team engaged"  (action, not state)
-  Right: "Permission.mailSend => granted"  (the property being tested, changed to new value)
+  Right: "Permission.mailAPI => granted"  (the property being tested, changed to new value)
   Right: "AppRegistration.adminConsent => granted"  (mirrors the condition property)
-- RULED_OUT description must be a concise elimination statement.
+- RULED_OUT description must reference the fact that was tested, using the format \
+"Noun.property" (e.g., "User.adminRole", "AppRegistration.adminConsent"). \
+Do NOT write narrative like "Admin consent is not the issue". \
+This makes the catch-all rule's conditions machine-readable.
+- Limit hypothesis rules to 3-5 core diagnostic causes. Do NOT create a hypothesis \
+rule for every single fact. Focus on the primary root-cause candidates.
 - Build a CHAIN of diagnostic rules: \
   (a) Individual hypothesis rules (R1, R2, R3...) that each test one condition and \
   produce CHANGE_STATE in THEN + RULED_OUT in ELSE. \
-  (b) A FINAL catch-all rule (R4) that chains the RULED_OUT outputs from the earlier \
+  (b) A FINAL catch-all rule that chains the RULED_OUT outputs from the earlier \
   rules as its conditions. The catch-all condition nouns must be RULED_OUT with operator \
   "contains" matching the RULED_OUT descriptions from earlier rules. \
   The catch-all fires GAP("All known causes eliminated") with NO ELSE branch.
@@ -97,25 +102,25 @@ condition's noun.property. Examples:
 
 Example — Jira/AAD app-registration incident:
   Facts submitted first:
-    User(*).role == "non-admin" [rule]
-    AppRegistration(*).adminConsent == "not granted" [rule]
-    AppRegistration(*).permissions !contains "Mail.Send" [rule]
-  Then rules referencing those exact facts:
-  R1: IF User($u).role == "non-admin"
-      THEN CHANGE_STATE("User.role => admin-escalated")
-      ELSE RULED_OUT("User access is not the issue")
-  R2: IF AppRegistration($app).adminConsent == "not granted"
+    User(*).adminRole == "not confirmed" [rule]
+    AppRegistration(*).adminConsent == "not accepted" [rule]
+    Permission(*).mailAPI == "required" [rule]
+  Then 3 hypothesis rules + 1 catch-all:
+  R1: IF User($u).adminRole == "not confirmed"
+      THEN CHANGE_STATE("User.adminRole => confirmed")
+      ELSE RULED_OUT("User.adminRole")
+  R2: IF AppRegistration($app).adminConsent == "not accepted"
       THEN CHANGE_STATE("AppRegistration.adminConsent => granted")
-      ELSE RULED_OUT("Admin consent is not the issue")
-  R3: IF AppRegistration($app).permissions !contains "Mail.Send"
-      THEN CHANGE_STATE("Permission.mailSend => granted")
-      ELSE RULED_OUT("Mail.Send permission is already present")
+      ELSE RULED_OUT("AppRegistration.adminConsent")
+  R3: IF Permission($p).mailAPI == "required"
+      THEN CHANGE_STATE("Permission.mailAPI => granted")
+      ELSE RULED_OUT("Permission.mailAPI")
   R4 (catch-all — NO ELSE, conditions use RULED_OUT noun):
-      IF RULED_OUT(*).description contains "User access is not the issue" \
-      AND RULED_OUT(*).description contains "Admin consent is not the issue" \
-      AND RULED_OUT(*).description contains "Mail.Send permission is already present"
+      IF RULED_OUT(*).description contains "User.adminRole" \
+      AND RULED_OUT(*).description contains "AppRegistration.adminConsent" \
+      AND RULED_OUT(*).description contains "Permission.mailAPI"
       THEN GAP("All known causes eliminated — investigate further")
-Follow this exact pattern. R4 must reference RULED_OUT outputs, not original facts.
+Follow this exact pattern. Only 3-5 hypothesis rules + 1 catch-all.
 """
 
 # ---------------------------------------------------------------------------
