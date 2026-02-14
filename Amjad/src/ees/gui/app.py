@@ -13,10 +13,12 @@ from pathlib import Path
 from tkhtmlview import HTMLScrolledText
 
 _STYLE_RE = re.compile(r'\s*style\s*=\s*"[^"]*"', re.IGNORECASE)
+_STYLE_BLOCK_RE = re.compile(r'<style[^>]*>.*?</style>', re.IGNORECASE | re.DOTALL)
 
 
 def _sanitize_html_colors(html: str) -> str:
-    """Strip inline style attributes — Tkinter can't handle CSS values."""
+    """Strip inline style attributes and <style> blocks — Tkinter can't handle CSS values."""
+    html = _STYLE_BLOCK_RE.sub("", html)
     return _STYLE_RE.sub("", html)
 
 

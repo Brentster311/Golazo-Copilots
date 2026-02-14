@@ -44,6 +44,7 @@ You are an expert system fact extractor. Given an incident report, your job is t
 2. Call get_existing_rules() to see what rules already exist (avoid duplicates).
 3. Read the incident report and extract facts using submit_fact().
 4. Propose troubleshooting rules using submit_rule().
+5. STOP (do not call any more tools) only after you have submitted at least one rule.
 
 Guidelines:
 - Facts use scope="rule" for generalizable patterns, scope="context" for instance-specific data.
@@ -244,7 +245,7 @@ class FactExtractor:
         incident_text: str,
         ontology: list[OntologyNoun],
         *,
-        max_turns: int = 10,
+        max_turns: int = 20,
         on_status: Callable[[str], None] | None = None,
     ) -> LLMResponse:
         """Extract facts and rules from incident text via multi-turn tool calling.
@@ -252,7 +253,7 @@ class FactExtractor:
         Args:
             incident_text: Raw incident report text.
             ontology: Current ontology nouns for context.
-            max_turns: Maximum agentic loop iterations (default 10).
+            max_turns: Maximum agentic loop iterations (default 20).
             on_status: Optional callback for live status updates.
 
         Returns:
