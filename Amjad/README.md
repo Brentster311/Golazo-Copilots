@@ -122,6 +122,21 @@ BECAUSE Human-readable explanation
 
 Rules use flat AND or flat OR logic only (no nesting).
 
+### Variable Binding
+
+Rule conditions can use variables (`$varname`) in instance or value fields to express cross-condition relationships:
+
+```
+IF Error($op).ResultCode == ZonalAllocationFailed AND VMSeries($op).Name == $vmsize
+THEN RootCause($op).Name == Zonal capacity exhaustion
+BECASE ...
+```
+
+- `$op` binds consistently: both conditions must match facts with the **same** instance
+- `$vmsize` captures whatever value matches and can be substituted into the conclusion
+- Variables are rule-local (each rule evaluation starts with a fresh binding context)
+- `*` remains a literal match — variables are a separate mechanism
+
 ### GAP Rule Format
 
 When confirmed facts exist but don't connect to the root cause through known rules, a GAP rule is created:
@@ -161,7 +176,7 @@ RULEOUT rules:
 pytest tests/ -v
 ```
 
-226 tests covering models, YAML persistence, ontology management, incident loading, LLM integration (mocked), rule generation, GAP detection, GAP refinement, RULEOUT rule handling, rule evaluation engine, GUI adapters/workers, settings management, and Kusto client integration.
+262 tests covering models, YAML persistence, ontology management, incident loading, LLM integration (mocked), rule generation, GAP detection, GAP refinement, RULEOUT rule handling, rule evaluation engine (including variable binding), GUI adapters/workers, settings management, and Kusto client integration.
 
 ## Project Structure
 
