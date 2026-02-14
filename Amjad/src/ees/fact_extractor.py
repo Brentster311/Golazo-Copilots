@@ -51,6 +51,9 @@ Guidelines:
 - Rules use variables ($op, $vm, etc.) in instance fields when conditions must match the same entity.
 - Facts never use variables — only rules do.
 - Use CHANGE_STATE for positive identification, RULED_OUT for elimination, GAP for missing information.
+- You MUST always submit at least one rule. If the root cause is clear, use CHANGE_STATE. \
+If something can be eliminated, use RULED_OUT. If information is missing, use GAP. \
+There is no scenario where facts exist but no rules apply.
 - Prefer reusing existing ontology nouns/properties (case-insensitive match).
 - Default instance to "*" unless a specific instance is required.
 - Valid operators: ==, !=, >, <, >=, <=, contains, !contains
