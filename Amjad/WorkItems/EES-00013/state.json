@@ -3,9 +3,9 @@
   "work_item_id": "EES-00013",
   "profile": "complete",
   "current_phase": "definition",
-  "current_role": "quality-assurance",
+  "current_role": "architect",
   "created_at": "2026-02-14T15:55:08.941946Z",
-  "updated_at": "2026-02-14T16:04:19.971121Z",
+  "updated_at": "2026-02-14T16:06:15.559245Z",
   "role_history": [
     {
       "role": "project-owner-assistant",
@@ -20,6 +20,11 @@
     {
       "role": "quality-assurance",
       "entered_at": "2026-02-14T16:04:19.971121Z",
+      "exited_at": "2026-02-14T16:06:15.559245Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-02-14T16:06:15.559245Z",
       "exited_at": null
     }
   ],

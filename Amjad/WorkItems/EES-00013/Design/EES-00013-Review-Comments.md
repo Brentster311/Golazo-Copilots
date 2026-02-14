@@ -52,3 +52,60 @@ The design is well-structured and feasible. The tool-calling approach is a clear
 ## Verdict
 
 **Approved with minor comments.** None of the comments are blocking — implement C-1 through C-7 inline during development. No scope changes required.
+
+---
+
+## Architect Notes
+
+### A-1: Contract Preservation — `fact-extraction` Capability
+
+**Capability**: `fact-extraction`  
+**Contract**: `FactExtractor.extract(text, ontology_nouns) -> LLMResponse`  
+**Assessment**: ✅ Contract preserved. Signature unchanged, return type unchanged. Transitive dependents (`cli-orchestration`, `gui`) need no changes.
+
+### A-2: Tool Schema Serialization — Use `openai` SDK Types
+
+**Concern**: Tool definitions should use `ChatCompletionToolParam` typed dicts from the `openai` SDK rather than raw dicts, for type safety and forward compatibility.  
+**Recommendation**: Define tools using the typed dict pattern:
+```python
+tools = [
+    {"type": "function", "function": {"name": "...", "parameters": {...}}}
+]
+```
+The `openai` SDK accepts this shape as `Iterable[ChatCompletionToolParam]`. No need to import the type explicitly — plain dicts with correct structure work.
+
+### A-3: Error Isolation — Tool Handlers Must Not Raise
+
+**Concern**: If a tool handler raises an unhandled exception, it could crash the loop.  
+**Recommendation**: Wrap each handler dispatch in try/except. Return the exception message as the tool result string. Only `LLMError` from the API call itself should propagate.
+
+### A-4: Security — No Secrets in Tool Results
+
+**Concern**: `get_ontology()` and `get_existing_rules()` return domain data. Verify no secrets/credentials leak into tool result strings.  
+**Assessment**: ✅ Ontology nouns and rules contain only domain knowledge (noun names, properties, rule conditions). No PII, credentials, or connection strings. Safe.
+
+### A-5: Dependency Review
+
+| Dependency | Status | Risk |
+|-----------|--------|------|
+| `openai>=1.0` | ✅ Already installed | None — tool calling is stable API |
+| `azure.identity` | ✅ Already installed | None — unchanged |
+| No new deps | ✅ | None |
+
+### A-6: Rollback Safety
+
+**Assessment**: ✅ Single-file change (`fact_extractor.py`). Git revert restores previous behavior. No database migrations, config changes, or infrastructure changes.
+
+### A-7: `tool_choice="auto"` Default Behavior
+
+**Concern**: OpenAI's `tool_choice="auto"` means the model *may* choose not to call tools. This is intentional (TC-11 covers it), but worth noting that different model versions may behave differently.  
+**Recommendation**: If `get_ontology` is never called on first turn, consider `tool_choice="required"` for the first turn only, then `"auto"` for subsequent turns. Decision: **defer to implementation** — start with `"auto"` throughout, add `"required"` if empirically needed.
+
+### A-8: Token Logging — Guard Against Missing `usage`
+
+**Concern**: Per QA comment C-2, `response.usage` may be `None` in edge cases.  
+**Recommendation**: `total_tokens += response.usage.total_tokens if response.usage else 0`. Simple guard.
+
+### Architect Verdict
+
+**Approved.** Architecture is sound. Single-file refactor with preserved contract. No coupling risks. Address A-3 (handler error isolation) and A-8 (usage guard) during implementation.
