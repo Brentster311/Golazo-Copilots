@@ -464,15 +464,119 @@ def _get_edge_user_data_dir() -> str | None:
     return candidate if os.path.isdir(candidate) else None
 
 
+# Directories to skip when copying an Edge profile (large/unnecessary)
+_EDGE_PROFILE_SKIP_DIRS = frozenset({
+    "Cache", "Code Cache", "Service Worker", "GPUCache",
+    "blob_storage", "File System", "IndexedDB", "Sessions",
+    "Extension State", "Extension Rules", "Extensions",
+    "Local Extension Settings", "Sync Extension Settings",
+    "GCM Store", "optimization_guide_prediction_model_downloads",
+    "Download Service", "BudgetDatabase", "DawnCache",
+    "DawnGraphiteCache", "GrShaderCache", "ShaderCache",
+    "Storage", "ScriptCache", "WebStorage",
+    "JumpListIconsMostVisited", "JumpListIconsRecentClosed",
+    "Feature Engagement Tracker", "Segmentation Platform",
+})
+
+
+def _find_edge_work_profile(user_data_dir: str) -> str | None:
+    """Return the profile directory name for a 'Work' or managed profile.
+
+    Reads Edge's ``Local State`` file and looks for a profile whose name
+    contains *work*, or that has a ``hosted_domain`` (managed account).
+    Falls back to the ``last_used`` profile if no explicit work profile
+    is found.
+    """
+    import json as _json
+
+    local_state_path = os.path.join(user_data_dir, "Local State")
+    if not os.path.isfile(local_state_path):
+        return None
+    try:
+        with open(local_state_path, "r", encoding="utf-8") as fh:
+            data = _json.load(fh)
+        info_cache = data.get("profile", {}).get("info_cache", {})
+        for profile_dir, info in info_cache.items():
+            name = (info.get("name") or "").lower()
+            if "work" in name:
+                return profile_dir
+            if info.get("hosted_domain") or info.get("managed_user_id"):
+                return profile_dir
+        last_used = data.get("profile", {}).get("last_used")
+        if last_used and last_used in info_cache:
+            return last_used
+    except (ValueError, KeyError, OSError):
+        pass
+    return None
+
+
+def _copy_edge_profile(user_data_dir: str, profile_name: str) -> str | None:
+    """Copy essential Edge profile files to a temporary directory.
+
+    Copies ``Local State`` plus the named profile's files (skipping large
+    cache/storage directories) into ``<temp>/Default/`` so that Playwright
+    picks them up as the default profile.
+
+    Returns the temp directory path, or ``None`` on failure.
+    """
+    import shutil
+    import tempfile
+
+    src_profile = os.path.join(user_data_dir, profile_name)
+    if not os.path.isdir(src_profile):
+        return None
+
+    temp_dir = tempfile.mkdtemp(prefix="sfi_edge_")
+
+    # Copy Local State (contains cookie-encryption key)
+    local_state = os.path.join(user_data_dir, "Local State")
+    if os.path.isfile(local_state):
+        try:
+            shutil.copy2(local_state, os.path.join(temp_dir, "Local State"))
+        except OSError:
+            pass
+
+    # Copy profile into Default/ inside the temp dir
+    dst_profile = os.path.join(temp_dir, "Default")
+    os.makedirs(dst_profile, exist_ok=True)
+
+    try:
+        for item in os.listdir(src_profile):
+            if item in _EDGE_PROFILE_SKIP_DIRS:
+                continue
+            src_path = os.path.join(src_profile, item)
+            dst_path = os.path.join(dst_profile, item)
+            try:
+                if os.path.isdir(src_path):
+                    shutil.copytree(
+                        src_path, dst_path, dirs_exist_ok=True,
+                        ignore=shutil.ignore_patterns("Cache*", "*.log"),
+                    )
+                else:
+                    shutil.copy2(src_path, dst_path)
+            except (PermissionError, OSError):
+                continue  # skip locked files
+    except OSError as exc:
+        logger.debug("Profile copy failed: %s", exc)
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        return None
+
+    logger.debug("Copied Edge profile '%s' → %s", profile_name, temp_dir)
+    return temp_dir
+
+
 def _fetch_via_edge_cdp(url: str, timeout: int = _URL_FETCH_TIMEOUT) -> dict:
     """Fetch a URL using Playwright with the Edge channel + user profile.
 
-    Launches Edge (headless) reusing the user's profile directory so that
-    existing cookies / SSO sessions are available.  This lets us bypass
-    authentication walls that the user has already signed in to via Edge.
+    Copies the user's Edge profile to a temporary directory (to avoid the
+    lock held by a running Edge process), then launches Edge headless
+    against that copy.  The user's cookies / SSO sessions are preserved,
+    letting us bypass auth walls the user has already signed in to.
 
     Returns ``{"url": ..., "content": ..., "error": ..., "method": "edge_cdp"}``.
     """
+    import shutil
+
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
@@ -485,11 +589,18 @@ def _fetch_via_edge_cdp(url: str, timeout: int = _URL_FETCH_TIMEOUT) -> dict:
                 "error": "edge_profile_not_found",
                 "method": "edge_cdp"}
 
+    # Find the work profile and copy it to a temp dir
+    profile_name = _find_edge_work_profile(user_data) or "Default"
+    temp_dir = _copy_edge_profile(user_data, profile_name)
+    if not temp_dir:
+        return {"url": url, "content": "",
+                "error": "edge_profile_copy_failed",
+                "method": "edge_cdp"}
+
     try:
         with sync_playwright() as pw:
-            # Use msedge channel so Playwright picks up the installed Edge
             browser = pw.chromium.launch_persistent_context(
-                user_data_dir=user_data,
+                user_data_dir=temp_dir,
                 channel="msedge",
                 headless=True,
                 args=["--no-first-run", "--disable-extensions"],
@@ -514,12 +625,18 @@ def _fetch_via_edge_cdp(url: str, timeout: int = _URL_FETCH_TIMEOUT) -> dict:
             return {"url": url, "content": "",
                     "error": "edge_auth_wall",
                     "method": "edge_cdp"}
+        if _is_js_shell(text):
+            return {"url": url, "content": "",
+                    "error": "edge_js_shell",
+                    "method": "edge_cdp"}
         text = truncate_content(text)
         return {"url": url, "content": text, "error": "",
                 "method": "edge_cdp"}
     except Exception as exc:
         return {"url": url, "content": "", "error": str(exc),
                 "method": "edge_cdp"}
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 def fetch_url_content(

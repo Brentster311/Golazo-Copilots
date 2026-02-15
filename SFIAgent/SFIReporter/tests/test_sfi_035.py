@@ -16,6 +16,8 @@ from sfi_reporter.kpi_analyzer import (
     _AUTH_BLOCKED_MSG,
     _AUTH_HINT_MSG,
     _MIN_USEFUL_CHARS,
+    _copy_edge_profile,
+    _find_edge_work_profile,
     _is_js_shell,
     _is_login_page,
     _fetch_with_bearer_token,
@@ -747,3 +749,157 @@ class TestJsShellDetection:
             for i in range(15)
         )
         assert len(text) < _MIN_USEFUL_CHARS or _is_js_shell(text) is False
+
+
+# ---------------------------------------------------------------------------
+# Edge Profile Copy Tests
+# ---------------------------------------------------------------------------
+
+class TestFindEdgeWorkProfile:
+    """Tests for _find_edge_work_profile()."""
+
+    def test_finds_work_profile_by_name(self, tmp_path):
+        """Should return the profile dir whose name contains 'work'."""
+        import json
+        local_state = {
+            "profile": {
+                "info_cache": {
+                    "Default": {"name": "Personal"},
+                    "Profile 1": {"name": "Work"},
+                },
+                "last_used": "Default",
+            }
+        }
+        (tmp_path / "Local State").write_text(json.dumps(local_state), encoding="utf-8")
+        assert _find_edge_work_profile(str(tmp_path)) == "Profile 1"
+
+    def test_finds_managed_profile(self, tmp_path):
+        """Should return a profile with hosted_domain."""
+        import json
+        local_state = {
+            "profile": {
+                "info_cache": {
+                    "Default": {"name": "Brent"},
+                    "Profile 2": {"name": "Brent", "hosted_domain": "microsoft.com"},
+                },
+            }
+        }
+        (tmp_path / "Local State").write_text(json.dumps(local_state), encoding="utf-8")
+        assert _find_edge_work_profile(str(tmp_path)) == "Profile 2"
+
+    def test_falls_back_to_last_used(self, tmp_path):
+        """Should return last_used if no work/managed profile found."""
+        import json
+        local_state = {
+            "profile": {
+                "info_cache": {
+                    "Default": {"name": "Personal"},
+                    "Profile 1": {"name": "Gaming"},
+                },
+                "last_used": "Profile 1",
+            }
+        }
+        (tmp_path / "Local State").write_text(json.dumps(local_state), encoding="utf-8")
+        assert _find_edge_work_profile(str(tmp_path)) == "Profile 1"
+
+    def test_returns_none_without_local_state(self, tmp_path):
+        """Should return None if Local State doesn't exist."""
+        assert _find_edge_work_profile(str(tmp_path)) is None
+
+    def test_returns_none_on_malformed_json(self, tmp_path):
+        """Should return None if Local State is malformed."""
+        (tmp_path / "Local State").write_text("not json", encoding="utf-8")
+        assert _find_edge_work_profile(str(tmp_path)) is None
+
+
+class TestCopyEdgeProfile:
+    """Tests for _copy_edge_profile()."""
+
+    def test_copies_essential_files(self, tmp_path):
+        """Should copy Cookies and Preferences but skip Cache."""
+        import shutil
+        profile = tmp_path / "Work"
+        profile.mkdir()
+        (profile / "Cookies").write_text("cookie data")
+        (profile / "Preferences").write_text("{}")
+        cache = profile / "Cache"
+        cache.mkdir()
+        (cache / "big_file.bin").write_bytes(b"\x00" * 1000)
+
+        result = _copy_edge_profile(str(tmp_path), "Work")
+        assert result is not None
+        # Files should be in Default/ subfolder
+        default_dir = os.path.join(result, "Default")
+        assert os.path.isfile(os.path.join(default_dir, "Cookies"))
+        assert os.path.isfile(os.path.join(default_dir, "Preferences"))
+        # Cache should NOT be copied
+        assert not os.path.isdir(os.path.join(default_dir, "Cache"))
+        # Cleanup
+        shutil.rmtree(result, ignore_errors=True)
+
+    def test_copies_local_state(self, tmp_path):
+        """Should copy Local State from the user data root."""
+        import shutil
+        (tmp_path / "Local State").write_text('{"os_crypt": {}}')
+        profile = tmp_path / "Default"
+        profile.mkdir()
+        (profile / "Cookies").write_text("data")
+
+        result = _copy_edge_profile(str(tmp_path), "Default")
+        assert result is not None
+        assert os.path.isfile(os.path.join(result, "Local State"))
+        shutil.rmtree(result, ignore_errors=True)
+
+    def test_returns_none_for_missing_profile(self, tmp_path):
+        """Should return None if the profile directory doesn't exist."""
+        result = _copy_edge_profile(str(tmp_path), "NonExistent")
+        assert result is None
+
+    def test_skips_locked_files_gracefully(self, tmp_path, monkeypatch):
+        """Should continue even if some files can't be copied."""
+        import shutil as _shutil
+        profile = tmp_path / "Default"
+        profile.mkdir()
+        (profile / "Cookies").write_text("data")
+        (profile / "Locked").write_text("secret")
+
+        original_copy2 = _shutil.copy2
+
+        def failing_copy2(src, dst, **kwargs):
+            if "Locked" in str(src):
+                raise PermissionError("file locked")
+            return original_copy2(src, dst, **kwargs)
+
+        monkeypatch.setattr("shutil.copy2", failing_copy2)
+        result = _copy_edge_profile(str(tmp_path), "Default")
+        assert result is not None
+        default_dir = os.path.join(result, "Default")
+        assert os.path.isfile(os.path.join(default_dir, "Cookies"))
+        _shutil.rmtree(result, ignore_errors=True)
+
+
+class TestEdgeCdpProfileCopy:
+    """Tests that _fetch_via_edge_cdp uses profile copy approach."""
+
+    def test_profile_copy_failure_returns_error(self, monkeypatch):
+        """If profile copy fails, should return edge_profile_copy_failed."""
+        from types import SimpleNamespace
+        fake_pw_mod = SimpleNamespace(sync_playwright=lambda: None)
+        monkeypatch.setitem(
+            __import__("sys").modules, "playwright.sync_api", fake_pw_mod,
+        )
+        monkeypatch.setattr(
+            "sfi_reporter.kpi_analyzer._get_edge_user_data_dir",
+            lambda: "/fake/edge/path",
+        )
+        monkeypatch.setattr(
+            "sfi_reporter.kpi_analyzer._find_edge_work_profile",
+            lambda d: "Default",
+        )
+        monkeypatch.setattr(
+            "sfi_reporter.kpi_analyzer._copy_edge_profile",
+            lambda d, p: None,
+        )
+        result = _fetch_via_edge_cdp("https://example.com")
+        assert result["method"] == "edge_cdp"
+        assert result["error"] == "edge_profile_copy_failed"

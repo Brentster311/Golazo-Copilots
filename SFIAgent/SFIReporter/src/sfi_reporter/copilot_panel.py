@@ -495,11 +495,18 @@ class CopilotPanel(tk.Frame):
             self._cancel_turn_timeout()
             self.after(0, self._on_response_complete)
         elif etype == "session.error":
+            self._cancel_turn_timeout()
             msg = getattr(event.data, "message", None) or "Unknown session error"
             logger.error("Copilot session error: %s", msg)
+            # Force-reset — the session is broken; drop it so the next
+            # send creates a fresh one.
+            self._session = None
+            self._is_sending = False
+            self._got_content = False
             self.after(0, self._finish_assistant_message)
             self.after(0, self._append_message, "error", msg)
-            self.after(0, self._on_response_complete)
+            self.after(0, self._set_status, "\u25cf Disconnected \u2014 will reconnect", "#c0392b")
+            self.after(0, self._set_input_enabled, True)
         else:
             logger.debug("Unhandled Copilot event type: %s", etype)
 
