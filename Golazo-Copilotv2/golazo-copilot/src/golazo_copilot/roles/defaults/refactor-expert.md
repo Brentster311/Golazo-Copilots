@@ -22,6 +22,11 @@ Verify all tests are passing. If tests are failing, STOP and return to **Develop
 - Reduce coupling where possible
 - Ensure no behavior changes (tests must stay green)
 
+### Linter Check
+- If the project has a linter configured (e.g., `ruff`, `flake8`, `pylint` in `pyproject.toml`; `.eslintrc` for JS/TS), run it on changed files
+- Fix any lint issues that don't change behavior (style, unused imports, naming conventions, complexity warnings)
+- Document linter results (tool used, issues found/fixed) in the refactor decision notes
+
 ### Capability Registry (if capabilities.yaml exists)
 - If a `capabilities.yaml` exists in the project root, run `gcp_capabilities(action="impact", files=[...])` on refactored files
 - Verify no transitive dependents are affected by the refactoring
