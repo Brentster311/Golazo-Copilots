@@ -25,11 +25,14 @@ from ees.models import (
     LLMResponse,
     OntologyNoun,
     Rule,
+    RuleBlock,
     RuleConditions,
     RuleOutput,
     VALID_OPERATORS,
     VALID_OUTPUT_KINDS,
+    parse_rule,
 )
+from ees.exceptions import ParseError
 
 logger = logging.getLogger(__name__)
 
@@ -511,13 +514,26 @@ class FactExtractor:
 
     @staticmethod
     def _handle_get_ontology(ontology: list[OntologyNoun]) -> str:
-        """Return ontology as JSON."""
+        """Return ontology as JSON — includes types, values, and goal annotations."""
         if not ontology:
             return json.dumps({"nouns": [], "message": "No ontology exists yet. You may create new nouns."})
-        data = [
-            {"name": n.name, "properties": [p.name for p in n.properties]}
-            for n in ontology
-        ]
+        data = []
+        for n in ontology:
+            props = []
+            for p in n.properties:
+                pd: dict[str, Any] = {"name": p.name, "type": p.type}
+                if p.values:
+                    pd["values"] = list(p.values)
+                if p.default is not None:
+                    pd["default"] = p.default
+                if p.is_goal:
+                    pd["is_goal"] = True
+                if p.initial is not None:
+                    pd["initial"] = p.initial
+                if p.terminal:
+                    pd["terminal"] = list(p.terminal)
+                props.append(pd)
+            data.append({"name": n.name, "properties": props})
         return json.dumps({"nouns": data})
 
     @staticmethod
@@ -714,3 +730,34 @@ class FactExtractor:
 
         collected_rules.append(rule)
         return f"Rule accepted: IF ... THEN {then_output.kind}('{then_output.description}')", True
+
+    # ------------------------------------------------------------------
+    # AST-based rule submission (EES-00019)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _handle_submit_rule_ast(
+        args: dict,
+        collected_rules: list[RuleBlock],
+    ) -> tuple[str, bool]:
+        """Validate and collect an AST-based rule.
+
+        Uses ``parse_rule()`` for structural validation.
+        Returns (result_string, accepted).
+        """
+        try:
+            rule = parse_rule(args)
+        except ParseError as e:
+            return str(e), False
+
+        # Dedup: reject if rule_id already exists
+        existing_ids = {r.rule_id for r in collected_rules}
+        if rule.rule_id in existing_ids:
+            return (
+                f"Duplicate rule rejected — rule_id '{rule.rule_id}' already exists. "
+                f"Do not resubmit.",
+                False,
+            )
+
+        collected_rules.append(rule)
+        return f"Rule accepted: {rule.rule_id}", True

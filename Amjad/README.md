@@ -4,7 +4,7 @@ An expert system that reverse-engineers documented incidents into structured tro
 
 ## Overview
 
-EES processes free-text incident reports through an LLM to extract structured facts in `Noun(instance).Property operator value` format, then generates IF/THEN troubleshooting rules. All data is persisted as human-readable YAML.
+EES processes free-text incident reports through an LLM to extract structured facts in `Noun(instance).Property operator value` format, then generates diagnostic rules using a deterministic expert system language. All data is persisted as human-readable YAML.
 
 ## Prerequisites
 
@@ -112,7 +112,7 @@ Noun(instance).Property operator value
 - Instance defaults to `*` (generalized); specialize during confirmation
 - Operators: `==`, `!=`, `>`, `<`, `>=`, `<=`, `contains`, `!contains`
 
-### Rule Format
+### Rule Format (Legacy)
 
 ```
 IF Noun(*).Property operator value AND Noun(*).Property operator value
@@ -121,6 +121,35 @@ BECAUSE Human-readable explanation
 ```
 
 Rules use flat AND or flat OR logic only (no nesting).
+
+### Rule Format (AST — EES-00019)
+
+The current rule grammar uses a structured AST with 10 keywords:
+
+```yaml
+rule_id: R-001
+block:
+  - check:
+      noun: User
+      instance: $u
+      property: adminRole
+      operator: ==
+      value: unknown
+    decide:
+      then:
+        - assert:
+            noun: User
+            instance: $u
+            property: adminRole
+            operator: ==
+            value: confirmed
+      else:
+        - gap: "Admin role could not be confirmed"
+```
+
+**Keywords**: `CHECK` (test a fact), `DECIDE` (branch on CHECK result), `ASSERT` (add fact to working memory), `RETRACT` (remove fact), `ACT` (side-effect action), `NOOP` (no-op), `GAP` (declare missing information).
+
+**Evaluation**: Forward-chaining — all rules execute sequentially per iteration, repeating until working memory stabilizes (fixed-point) or a goal terminal value is reached.
 
 ### Variable Binding
 
@@ -176,7 +205,7 @@ RULEOUT rules:
 pytest tests/ -v
 ```
 
-262 tests covering models, YAML persistence, ontology management, incident loading, LLM integration (mocked), rule generation, GAP detection, GAP refinement, RULEOUT rule handling, rule evaluation engine (including variable binding), GUI adapters/workers, settings management, and Kusto client integration.
+262 tests covering models, YAML persistence, ontology management, incident loading, LLM integration (mocked), rule generation, GAP detection, GAP refinement, RULEOUT rule handling, rule evaluation engine (including variable binding), GUI adapters/workers, settings management, Kusto client integration, and the structured AST rule language (parsing, evaluation, LLM validation, GUI display).
 
 ## Project Structure
 

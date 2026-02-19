@@ -1,0 +1,9 @@
+{
+    "servers": {
+        "golazo-copilot": {
+            "type": "stdio",
+            "command": "python",
+            "args": ["-m", "golazo_copilot.server"]
+        }
+    }
+}

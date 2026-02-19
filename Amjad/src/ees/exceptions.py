@@ -13,4 +13,8 @@ class LLMError(Exception):
 
 class ConfigError(Exception):
     """Raised when required configuration is missing."""
+
+
+class ParseError(Exception):
+    """Raised when a rule AST cannot be parsed from input data."""
     pass

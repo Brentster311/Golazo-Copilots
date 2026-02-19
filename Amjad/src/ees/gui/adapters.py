@@ -5,7 +5,22 @@ making them fully testable without a GUI event loop.
 """
 from __future__ import annotations
 
-from ees.models import EvaluationResult, Fact, OntologyNoun, Rule, RuleOutput
+from ees.models import (
+    AssertStmt,
+    ActStmt,
+    Block,
+    CheckExpr,
+    DecideStmt,
+    EvaluationResult,
+    Fact,
+    GapStmt,
+    NoopStmt,
+    OntologyNoun,
+    RetractStmt,
+    Rule,
+    RuleBlock,
+    RuleOutput,
+)
 
 _CHAINING_NOUNS = frozenset({"ruled_out", "change_state", "gap", "diagnosticstate"})
 
@@ -166,3 +181,53 @@ def filter_rules(
     if rule_type is not None:
         result = [r for r in result if r.type == rule_type]
     return result
+
+
+# ── AST-based rule display (EES-00019) ────────────────────────────────
+
+
+def _summarize_stmt(stmt, depth: int = 0) -> str:
+    """Produce a concise one-line summary for an AST statement."""
+    indent = "  " * depth
+    if isinstance(stmt, DecideStmt):
+        check_str = (
+            f"{stmt.check.noun}({stmt.check.instance}).{stmt.check.property} "
+            f"{stmt.check.operator} {stmt.check.value}"
+        )
+        parts = [f"{indent}CHECK {check_str}"]
+        then_parts = [_summarize_stmt(s, depth + 1) for s in stmt.then_block.stmts]
+        else_parts = [_summarize_stmt(s, depth + 1) for s in stmt.else_block.stmts]
+        parts.append(f"{'  ' * (depth + 1)}THEN: {'; '.join(then_parts)}" if then_parts else "")
+        parts.append(f"{'  ' * (depth + 1)}ELSE: {'; '.join(else_parts)}" if else_parts else "")
+        return " | ".join(p for p in parts if p)
+    if isinstance(stmt, AssertStmt):
+        return f"{indent}ASSERT {stmt.noun}({stmt.instance}).{stmt.property} {stmt.operator} {stmt.value}"
+    if isinstance(stmt, RetractStmt):
+        return f"{indent}RETRACT {stmt.noun}({stmt.instance}).{stmt.property}"
+    if isinstance(stmt, ActStmt):
+        return f"{indent}ACT \"{stmt.description}\""
+    if isinstance(stmt, NoopStmt):
+        return f"{indent}NOOP"
+    if isinstance(stmt, GapStmt):
+        return f"{indent}GAP \"{stmt.description}\""
+    return f"{indent}???"
+
+
+def ast_rules_to_rows(rules: list[RuleBlock]) -> list[dict]:
+    """Convert RuleBlock AST objects to display-ready row dicts.
+
+    Each row: {rule_id, summary, status}
+    """
+    rows = []
+    for r in rules:
+        if not r.block.stmts:
+            summary = "(empty rule)"
+        else:
+            parts = [_summarize_stmt(s) for s in r.block.stmts]
+            summary = " | ".join(parts)
+        rows.append({
+            "rule_id": r.rule_id,
+            "summary": summary,
+            "status": "proposed",
+        })
+    return rows

@@ -26,6 +26,31 @@ class OntologyManager:
                 return noun
         return None
 
+    def validate_fact(self, fact: Fact) -> list[str]:
+        """Return validation errors for a fact against the ontology. Empty = valid."""
+        # Skip chaining pseudo-nouns (uses canonical set from the model)
+        if fact.noun in OntologyProperty._CHAINING_KINDS:
+            return []
+
+        noun = self.find_noun(fact.noun)
+        if noun is None:
+            return [f"Unknown noun: {fact.noun}"]
+
+        # Find property (case-insensitive)
+        prop = None
+        for p in noun.properties:
+            if p.name.lower() == fact.property.lower():
+                prop = p
+                break
+        if prop is None:
+            return [f"Unknown property '{fact.property}' on noun '{noun.name}'"]
+
+        if not prop.validate_value(fact.value):
+            legal = ", ".join(prop.values) if prop.values else prop.type
+            return [f"Invalid value '{fact.value}' for {noun.name}.{prop.name} (legal: {legal})"]
+
+        return []
+
     def update_from_facts(self, facts: list[Fact]) -> list[tuple[str, str]]:
         """Update ontology from confirmed facts. Returns list of (noun, property) pairs added.
 

@@ -5,6 +5,7 @@ import pytest
 from ees.models import (
     EvaluationResult,
     Fact,
+    Goal,
     Rule,
     RuleConditions,
     RuleOutput,
@@ -531,3 +532,266 @@ class TestEdgeCases:
         result = RuleEvaluator([r]).evaluate([])
         assert len(result.fired_rules) == 1
         assert result.outputs[0]["branch"] == "else"
+
+
+# ============================================================================
+# EES-00018: Goal-based evaluation termination
+# ============================================================================
+
+
+def _goal_fact(noun: str, instance: str, prop: str, value: str) -> Fact:
+    """Shorthand for goal-related facts."""
+    return Fact(noun=noun, instance=instance, property=prop, operator="==", value=value)
+
+
+class TestGoalResolved:
+    """TC-18-14: Goal resolved — evaluation stops early."""
+
+    def test_goal_resolved_stops_early(self):
+        """TC-18-14: When goal reaches terminal value, evaluation stops and remaining rules don't fire."""
+        goal = Goal(
+            noun="Incident", instance="$inc", property="rootCause",
+            initial="unknown", terminal=["admin_role_missing"],
+        )
+        # R1: conditions met → structured CHANGE_STATE sets rootCause to terminal value
+        r1 = _rule(
+            "R1",
+            _cond(("Token", "expired")),
+            then=RuleOutput(
+                kind="CHANGE_STATE", description="Root cause found",
+                target_noun="Incident", target_instance="$inc",
+                target_property="rootCause", value="admin_role_missing",
+            ),
+        )
+        # R2: would fire after R1 chains, but should NOT because goal resolved
+        r2_cond = RuleConditions(
+            logic="AND",
+            items=[_goal_fact("Incident", "$inc", "rootCause", "admin_role_missing")],
+        )
+        r2 = _rule(
+            "R2",
+            r2_cond,
+            then=RuleOutput(kind="CHANGE_STATE", description="Should not fire"),
+        )
+
+        facts = [
+            _goal_fact("Incident", "$inc", "rootCause", "unknown"),
+            _fact("Token", "expired"),
+        ]
+        result = RuleEvaluator([r1, r2]).evaluate(facts, goal=goal)
+
+        assert result.goal_status == "resolved"
+        assert any(r.rule_id == "R1" for r in result.fired_rules)
+        assert not any(r.rule_id == "R2" for r in result.fired_rules)
+
+
+class TestGoalEscalated:
+    """TC-18-15: Goal escalated — GAP fires."""
+
+    def test_gap_fires_escalates(self):
+        """TC-18-15: GAP fires while goal in_progress → escalated."""
+        goal = Goal(
+            noun="Incident", instance="$inc", property="rootCause",
+            initial="unknown", terminal=["admin_role_missing"],
+        )
+        # R1: condition NOT met → ELSE fires GAP
+        r1 = _rule(
+            "R1",
+            _cond(("Token", "expired")),
+            then=RuleOutput(kind="CHANGE_STATE", description="Token issue"),
+            else_=RuleOutput(kind="GAP", description="Need token data"),
+        )
+
+        facts = [_goal_fact("Incident", "$inc", "rootCause", "unknown")]
+        result = RuleEvaluator([r1]).evaluate(facts, goal=goal)
+
+        assert result.goal_status == "escalated"
+
+
+class TestGoalInProgress:
+    """TC-18-16: Goal in_progress — max iterations without resolution."""
+
+    def test_non_terminal_value_remains_in_progress(self):
+        """TC-18-16: Rule writes non-terminal value → goal_status='in_progress'."""
+        goal = Goal(
+            noun="Incident", instance="$inc", property="rootCause",
+            initial="unknown", terminal=["admin_role_missing"],
+        )
+        # R1: writes a non-terminal value "pending"
+        r1 = _rule(
+            "R1",
+            _cond(("Token", "expired")),
+            then=RuleOutput(
+                kind="CHANGE_STATE", description="Intermediate state",
+                target_noun="Incident", target_instance="$inc",
+                target_property="rootCause", value="pending",
+            ),
+        )
+
+        facts = [
+            _goal_fact("Incident", "$inc", "rootCause", "unknown"),
+            _fact("Token", "expired"),
+        ]
+        result = RuleEvaluator([r1]).evaluate(facts, goal=goal)
+
+        assert result.goal_status == "in_progress"
+
+
+class TestGoalBackwardCompat:
+    """TC-18-17: No goal — backward compat."""
+
+    def test_no_goal_returns_none(self):
+        """TC-18-17: evaluate() without goal → goal_status is None."""
+        r1 = _rule(
+            "R1",
+            _cond(("CPU", "High")),
+            then=RuleOutput(kind="CHANGE_STATE", description="CPU issue"),
+        )
+        facts = [_fact("CPU", "High")]
+
+        result_default = RuleEvaluator([r1]).evaluate(facts)
+        assert result_default.goal_status is None
+
+        result_explicit = RuleEvaluator([r1]).evaluate(facts, goal=None)
+        assert result_explicit.goal_status is None
+
+    def test_no_goal_all_rules_fire(self):
+        """TC-18-17 cont: Without goal, no early termination — all rules fire as before."""
+        r1 = _rule(
+            "R1",
+            _cond(("A", "1")),
+            then=RuleOutput(kind="CHANGE_STATE", description="first"),
+        )
+        r2 = _rule(
+            "R2",
+            _cond(("B", "2")),
+            then=RuleOutput(kind="CHANGE_STATE", description="second"),
+        )
+        facts = [_fact("A", "1"), _fact("B", "2")]
+        result = RuleEvaluator([r1, r2]).evaluate(facts)
+
+        assert len(result.fired_rules) == 2
+        assert result.goal_status is None
+
+
+class TestGoalInitialFactSeeded:
+    """TC-18-18: Goal initial fact seeded into working set."""
+
+    def test_initial_fact_seeded(self):
+        """TC-18-18: When goal declares initial value and input_facts don't contain it, seed it."""
+        goal = Goal(
+            noun="Incident", instance="$inc", property="rootCause",
+            initial="unknown", terminal=["admin_role_missing"],
+        )
+        # R1 conditions check for rootCause == unknown → should fire because seeded
+        r1_cond = RuleConditions(
+            logic="AND",
+            items=[_goal_fact("Incident", "$inc", "rootCause", "unknown")],
+        )
+        r1 = _rule(
+            "R1",
+            r1_cond,
+            then=RuleOutput(
+                kind="CHANGE_STATE", description="Found root cause",
+                target_noun="Incident", target_instance="$inc",
+                target_property="rootCause", value="admin_role_missing",
+            ),
+        )
+
+        # Do NOT include rootCause fact in input — should be seeded by goal
+        facts = [_fact("Token", "expired")]
+        result = RuleEvaluator([r1]).evaluate(facts, goal=goal)
+
+        assert any(r.rule_id == "R1" for r in result.fired_rules)
+        assert result.goal_status == "resolved"
+
+
+class TestGoalImmediatelyResolved:
+    """TC-18-19: Goal immediately resolved when initial value is terminal."""
+
+    def test_initial_in_terminal(self):
+        """TC-18-19: initial value in terminal set → resolved, no rules fire."""
+        goal = Goal(
+            noun="Incident", instance="$inc", property="rootCause",
+            initial="done", terminal=["done"],
+        )
+        r1 = _rule(
+            "R1",
+            _cond(("A", "1")),
+            then=RuleOutput(kind="CHANGE_STATE", description="Should not fire"),
+        )
+
+        facts = [
+            _goal_fact("Incident", "$inc", "rootCause", "done"),
+            _fact("A", "1"),
+        ]
+        result = RuleEvaluator([r1]).evaluate(facts, goal=goal)
+
+        assert result.goal_status == "resolved"
+
+
+class TestGoalMultipleGaps:
+    """TC-18-20: Multiple GAPs in same iteration → escalated."""
+
+    def test_multiple_gaps_escalated(self):
+        """TC-18-20: Two rules fire GAP in same iteration → escalated, both outputs recorded."""
+        goal = Goal(
+            noun="Incident", instance="$inc", property="rootCause",
+            initial="unknown", terminal=["admin_role_missing"],
+        )
+        # R1: ELSE fires GAP
+        r1 = _rule(
+            "R1",
+            _cond(("Token", "expired")),
+            then=RuleOutput(kind="CHANGE_STATE", description="Token issue"),
+            else_=RuleOutput(kind="GAP", description="Need token data"),
+        )
+        # R2: ELSE fires GAP
+        r2 = _rule(
+            "R2",
+            _cond(("Cert", "expired")),
+            then=RuleOutput(kind="CHANGE_STATE", description="Cert issue"),
+            else_=RuleOutput(kind="GAP", description="Need cert data"),
+        )
+
+        facts = [_goal_fact("Incident", "$inc", "rootCause", "unknown")]
+        result = RuleEvaluator([r1, r2]).evaluate(facts, goal=goal)
+
+        assert result.goal_status == "escalated"
+        gap_descs = [o["output"].description for o in result.outputs if o["output"].kind == "GAP"]
+        assert "Need token data" in gap_descs
+        assert "Need cert data" in gap_descs
+
+
+class TestGoalStructuredResolution:
+    """TC-18-21: Resolution via structured CHANGE_STATE target."""
+
+    def test_structured_change_state_resolves_goal(self):
+        """TC-18-21: Structured CHANGE_STATE writes terminal value → resolved."""
+        goal = Goal(
+            noun="Incident", instance="$inc", property="rootCause",
+            initial="unknown", terminal=["admin_role_missing"],
+        )
+        r1 = _rule(
+            "R1",
+            _cond(("Token", "expired")),
+            then=RuleOutput(
+                kind="CHANGE_STATE", description="Found admin role issue",
+                target_noun="Incident", target_instance="$inc",
+                target_property="rootCause", value="admin_role_missing",
+            ),
+        )
+
+        facts = [
+            _goal_fact("Incident", "$inc", "rootCause", "unknown"),
+            _fact("Token", "expired"),
+        ]
+        result = RuleEvaluator([r1]).evaluate(facts, goal=goal)
+
+        assert result.goal_status == "resolved"
+        # Check derived fact is correct
+        assert any(
+            f.noun == "Incident" and f.instance == "$inc"
+            and f.property == "rootCause" and f.value == "admin_role_missing"
+            for f in result.derived_facts
+        )
