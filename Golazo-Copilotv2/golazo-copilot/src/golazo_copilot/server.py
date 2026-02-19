@@ -32,16 +32,17 @@ def resolve_work_items_dir(workspace_path: str | None) -> Path:
     Resolve workspace_path to an absolute work_items_dir Path.
     
     Args:
-        workspace_path: Optional workspace root path (string or None)
+        workspace_path: Workspace root path (required, must not be None or empty)
         
     Returns:
         Absolute Path to the WorkItems directory
+        
+    Raises:
+        ValueError: If workspace_path is None or empty
     """
-    if workspace_path:
-        base = Path(workspace_path)
-    else:
-        base = Path.cwd()
-    return (base / "WorkItems").resolve()
+    if not workspace_path:
+        raise ValueError("workspace_path is required — MCP servers cannot rely on cwd")
+    return (Path(workspace_path) / "WorkItems").resolve()
 
 
 @server.list_tools()
@@ -66,10 +67,10 @@ async def list_tools() -> list[Tool]:
                     },
                     "workspace_path": {
                         "type": "string",
-                        "description": "Workspace root path containing the WorkItems folder (auto-detected if not provided)"
+                        "description": "Workspace root path containing the WorkItems folder (required)"
                     }
                 },
-                "required": ["work_item_id"]
+                "required": ["work_item_id", "workspace_path"]
             }
         ),
         Tool(
@@ -95,10 +96,10 @@ async def list_tools() -> list[Tool]:
                     },
                     "workspace_path": {
                         "type": "string",
-                        "description": "Workspace root path containing the WorkItems folder (auto-detected if not provided)"
+                        "description": "Workspace root path containing the WorkItems folder (required)"
                     }
                 },
-                "required": ["work_item_id", "role"]
+                "required": ["work_item_id", "role", "workspace_path"]
             }
         ),
         Tool(
@@ -113,10 +114,10 @@ async def list_tools() -> list[Tool]:
                     },
                     "workspace_path": {
                         "type": "string",
-                        "description": "Workspace root path containing the WorkItems folder (auto-detected if not provided)"
+                        "description": "Workspace root path containing the WorkItems folder (required)"
                     }
                 },
-                "required": []
+                "required": ["workspace_path"]
             }
         ),
         Tool(
@@ -137,10 +138,10 @@ async def list_tools() -> list[Tool]:
                     },
                     "workspace_path": {
                         "type": "string",
-                        "description": "Workspace root path (auto-detected if not provided)"
+                        "description": "Workspace root path (required)"
                     }
                 },
-                "required": []
+                "required": ["workspace_path"]
             }
         ),
         Tool(
@@ -164,10 +165,10 @@ async def list_tools() -> list[Tool]:
                     },
                     "workspace_path": {
                         "type": "string",
-                        "description": "Workspace root path containing the WorkItems folder (auto-detected if not provided)"
+                        "description": "Workspace root path containing the WorkItems folder (required)"
                     }
                 },
-                "required": ["work_item_id", "action", "reason"]
+                "required": ["work_item_id", "action", "reason", "workspace_path"]
             }
         ),
         Tool(
@@ -192,10 +193,10 @@ async def list_tools() -> list[Tool]:
                     },
                     "workspace_path": {
                         "type": "string",
-                        "description": "Workspace root path containing capabilities.yaml (auto-detected if not provided)"
+                        "description": "Workspace root path containing capabilities.yaml (required)"
                     }
                 },
-                "required": ["action"]
+                "required": ["action", "workspace_path"]
             }
         ),
     ]
@@ -204,6 +205,14 @@ async def list_tools() -> list[Tool]:
 @server.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     """Handle tool calls."""
+    try:
+        return await _dispatch_tool(name, arguments)
+    except ValueError as exc:
+        return [TextContent(type="text", text=f"{ICON_FAIL} {exc}")]
+
+
+async def _dispatch_tool(name: str, arguments: dict) -> list[TextContent]:
+    """Internal dispatcher — separated so ValueError bubbles to call_tool."""
     if name == "gcp_create_workitem":
         work_items_dir = resolve_work_items_dir(arguments.get("workspace_path"))
         result = await gcp_create_workitem(
@@ -322,8 +331,11 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         return [TextContent(type="text", text=content)]
     
     elif name == "gcp_bootstrap":
+        ws = arguments.get("workspace_path")
+        if not ws:
+            return [TextContent(type="text", text=f"{ICON_FAIL} workspace_path is required")]
         result = await gcp_bootstrap(
-            workspace_path=arguments.get("workspace_path"),
+            workspace_path=ws,
             force=arguments.get("force", False),
             include_roles=arguments.get("include_roles", True)
         )
@@ -342,7 +354,15 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 {result['message']}
 """
         else:
-            content = f"{ICON_FAIL} Bootstrap failed: {result['error']}"
+            error_msg = result['error']
+            # Add guidance for empty/new workspace (no markers found)
+            if "No workspace markers found" in error_msg:
+                error_msg += (
+                    "\n\n**Next step:** Confirm with the user that the workspace_path is correct. "
+                    "If it is, create a `WorkItems` folder at that path (e.g. `mkdir <workspace_path>/WorkItems`) "
+                    "and then re-run `gcp_bootstrap`."
+                )
+            content = f"{ICON_FAIL} Bootstrap failed: {error_msg}"
         
         return [TextContent(type="text", text=content)]
     
@@ -369,12 +389,10 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         return [TextContent(type="text", text=content)]
     
     elif name == "gcp_capabilities":
-        workspace_path = arguments.get("workspace_path")
-        if workspace_path:
-            workspace_path = Path(workspace_path)
-        else:
-            # Try to find workspace root from work_items_dir parent
-            workspace_path = None
+        ws_cap = arguments.get("workspace_path")
+        if not ws_cap:
+            return [TextContent(type="text", text=f"{ICON_FAIL} workspace_path is required")]
+        workspace_path = Path(ws_cap)
         
         result = await gcp_capabilities(
             action=arguments["action"],
