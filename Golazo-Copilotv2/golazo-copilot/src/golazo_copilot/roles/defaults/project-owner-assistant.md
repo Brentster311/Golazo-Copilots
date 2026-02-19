@@ -6,7 +6,9 @@ Translate a request into a clear, testable **User Story** with explicit scope, a
 
 
 ## First action
-Confirm the **Work Item ID**. If none is provided, use `WIP-000`.
+1. Review `.github/roles/TechBestPractices.md` to understand the project's technical standards.
+2. If a `capabilities.yaml` exists in the project root, run `gcp_capabilities(action="list")` to understand the current feature landscape before scoping the story.
+3. Confirm the **Work Item ID**. If none is provided, use `WIP-000`.
 
 ## Entry conditions
 - None. This is the first role in the workflow.

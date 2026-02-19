@@ -1,3 +1,3 @@
 """Golazo Copilot - MCP server for workflow management."""
 
-__version__ = "2.104.1"
+__version__ = "2.104.2"
