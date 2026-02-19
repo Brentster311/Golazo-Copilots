@@ -56,7 +56,7 @@ async def list_tools() -> list[Tool]:
                 "properties": {
                     "work_item_id": {
                         "type": "string",
-                        "description": "Unique identifier for the work item (alphanumeric, hyphens, underscores)"
+                        "description": "Unique identifier for the work item. Format: 1-4 letters, dash, 3+ digits (e.g., GCP-0001, AB-001, TEST-1234)"
                     },
                     "profile": {
                         "type": "string",

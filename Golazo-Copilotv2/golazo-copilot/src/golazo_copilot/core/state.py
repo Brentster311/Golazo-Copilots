@@ -51,9 +51,13 @@ def validate_work_item_id(work_item_id: str) -> tuple[bool, str | None]:
     if len(work_item_id) > 100:
         return False, "Invalid work item ID. Must be 100 characters or less (too long)."
     
-    # Only allow alphanumeric, hyphens, underscores
-    if not re.match(r'^[a-zA-Z0-9_-]+$', work_item_id):
-        return False, "Invalid work item ID. Use alphanumeric, hyphens, underscores only."
+    # Enforce format: 1-4 letters, dash, 3+ digits (e.g., GCP-0001, AB-001)
+    if not re.fullmatch(r'[A-Za-z]{1,4}-\d{3,}', work_item_id):
+        return False, (
+            f"Invalid work item ID '{work_item_id}'. "
+            "Must be 1-4 letters, a dash, then 3 or more digits "
+            "(e.g., GCP-0001, AB-001, TEST-1234)."
+        )
     
     return True, None
 
