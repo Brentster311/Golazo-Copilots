@@ -1,4 +1,4 @@
-# GCP-0001: Documentor Decision Notes
+# GCP-0001: Documenter Decision Notes
 
 **Note**: This document was created retroactively to complete the artifact trail.
 

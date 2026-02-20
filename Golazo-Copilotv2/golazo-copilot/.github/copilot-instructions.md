@@ -53,7 +53,7 @@ If these files don't exist, transition will fail with a clear error message list
 4. architect
 5. developer
 6. refactor-expert
-7. documentor
+7. documenter
 8. builder
 9. retrospective
 

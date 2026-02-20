@@ -1,4 +1,4 @@
-# GCP-0033: Documentor Notes
+# GCP-0033: Documenter Notes
 
 ## Documentation Review
 - User Story status updated to IMPLEMENTED

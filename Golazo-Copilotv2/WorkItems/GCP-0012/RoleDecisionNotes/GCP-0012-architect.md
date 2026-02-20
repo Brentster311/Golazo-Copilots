@@ -12,7 +12,7 @@
 
 ```
 project-owner-assistant → program-manager → quality-assurance → 
-architect → developer → refactor-expert → builder → documentor → retrospective
+architect → developer → refactor-expert → builder → Documenter → retrospective
 ```
 
 ## Approved

@@ -39,4 +39,4 @@ python -m build --wheel
 ```
 
 ## Next Steps
-- Transition to documentor for docs update and user story status
+- Transition to Documenter for docs update and user story status

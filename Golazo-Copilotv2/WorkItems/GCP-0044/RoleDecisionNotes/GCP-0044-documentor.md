@@ -1,4 +1,4 @@
-# GCP-0044 — Documentor Decision Notes
+# GCP-0044 — Documenter Decision Notes
 
 ## Documentation Updates
 1. **README.md**: Updated all 6 `workspace_path` rows from "No" to "**Yes**" and removed "(auto-detected if not provided)" from descriptions

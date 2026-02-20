@@ -1,4 +1,4 @@
-# GCP-0023 Documentor Notes
+# GCP-0023 Documenter Notes
 
 ## Documentation Updates
 

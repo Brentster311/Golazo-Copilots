@@ -1,4 +1,4 @@
-# Documentor Notes — GCP-0037
+# Documenter Notes — GCP-0037
 
 ## Documentation Review
 - User story marked IMPLEMENTED

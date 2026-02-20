@@ -1,4 +1,4 @@
-# GCP-0020: Documentor Notes
+# GCP-0020: Documenter Notes
 
 ## Documentation Updates
 
@@ -28,7 +28,7 @@ All required notes exist in `WorkItems/GCP-0020/RoleDecisionNotes/`:
 - [x] `GCP-0020-developer.md`
 - [x] `GCP-0020-refactor.md`
 - [x] `GCP-0020-builder.md`
-- [x] `GCP-0020-documentor.md` (this file)
+- [x] `GCP-0020-Documenter.md` (this file)
 
 ### 4. Design Documents Verified
 - `WorkItems/GCP-0020/Design/GCP-0020-Design.md` - Complete

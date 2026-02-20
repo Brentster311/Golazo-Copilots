@@ -10,7 +10,7 @@ Evidence Requirements Enhancement & Role Order Update for Golazo Copilot v2.16.0
 
 1. **Remove N/A evidence option** - All DoD items must have concrete evidence
 2. **Add retroComplete DoD item** - Retrospective role needs tracking
-3. **Reorder roles** - Documentor before Builder for logical flow
+3. **Reorder roles** - Documenter before Builder for logical flow
 4. **Require Refactoring Plan** - Refactor Expert must produce artifact
 
 ## Artifacts Produced

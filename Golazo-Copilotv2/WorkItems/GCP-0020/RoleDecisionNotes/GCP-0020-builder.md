@@ -30,7 +30,7 @@ python -m pytest tests\ -q
 ```
 
 ## Git Operations
-Branch creation and commit to be done after Documentor role completes.
+Branch creation and commit to be done after Documenter role completes.
 
 ## Notes
 - Build stderr output is due to PowerShell handling of stderr redirection

@@ -1,4 +1,4 @@
-# GCP-0035 — Documentor Decision Notes
+# GCP-0035 — Documenter Decision Notes
 
 ## Documentation review
 The README *is* the deliverable for this work item. Verified:

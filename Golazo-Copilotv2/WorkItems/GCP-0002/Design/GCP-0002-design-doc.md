@@ -65,7 +65,7 @@ After initializing a work item with `gcp_init` (GCP-0001), users need a way to p
 - Update `currentPhase` when crossing phase boundaries:
   - `definition`: project-owner, program-manager, quality-assurance, architect
   - `development`: developer, refactor-expert, builder
-  - `completion`: documentor
+  - `completion`: Documenter
 
 ### FR5: Backward Transitions
 - Allow backward transitions with warning
@@ -117,8 +117,8 @@ TRANSITIONS = {
     "architect": ["developer", "quality-assurance"],
     "developer": ["refactor-expert", "architect"],
     "refactor-expert": ["builder", "developer"],
-    "builder": ["documentor", "refactor-expert"],
-    "documentor": ["builder"],
+    "builder": ["Documenter", "refactor-expert"],
+    "Documenter": ["builder"],
 }
 
 PHASE_MAP = {
@@ -129,7 +129,7 @@ PHASE_MAP = {
     "developer": "development",
     "refactor-expert": "development",
     "builder": "development",
-    "documentor": "completion",
+    "Documenter": "completion",
 }
 
 DOR_GATE_ROLE = "developer"  # Role that requires DoR complete

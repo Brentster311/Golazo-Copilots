@@ -21,7 +21,7 @@ TEST_WORKSPACE_ROOT = Path(__file__).parent
 # All roles that need empty role files for testing (no Required Outputs)
 ALL_ROLES = [
     "project-owner-assistant", "program-manager", "quality-assurance",
-    "architect", "developer", "refactor-expert", "builder", "documentor", "retrospective"
+    "architect", "developer", "refactor-expert", "builder", "documenter", "retrospective"
 ]
 
 
@@ -48,7 +48,7 @@ async def advance_to_role(work_item_id: str, target_role: str, work_items_dir: P
     """Helper to advance through roles with notes to reach target role."""
     role_sequence = [
         "project-owner-assistant", "program-manager", "quality-assurance", 
-        "architect", "developer", "refactor-expert", "builder", "documentor", "retrospective"
+        "architect", "developer", "refactor-expert", "builder", "documenter", "retrospective"
     ]
     
     # Find where we need to go

@@ -1,6 +1,6 @@
-# GCP-0027 Documentor Role Notes
+# GCP-0027 Documenter Role Notes
 
-## Role: Documentor
+## Role: Documenter
 ## Date: 2025-07-22
 
 ## Documentation Verification

@@ -80,7 +80,7 @@
 - [ ] Optional filter: `gcp_list({ filter: "active" })` shows only in-progress items
 
 ### AC8: Work Item Completion
-- [ ] When all DoD items complete and documentor role finished:
+- [ ] When all DoD items complete and Documenter role finished:
   - Work item can be marked complete: `gcp_complete()`
   - Completed items shown separately in list
   - State preserved but flagged as `completed: true`

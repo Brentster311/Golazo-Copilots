@@ -21,9 +21,9 @@ Backward compatible - old state files missing this key will get default.
 ### 3. Role Transition Graph
 Updated adjacency list in `TRANSITIONS`:
 ```
-refactor-expert → [documentor, developer]  # was [builder, developer]
-documentor → [builder, refactor-expert]     # was [retrospective, builder]
-builder → [retrospective, documentor]       # was [documentor, refactor-expert]
+refactor-expert → [Documenter, developer]  # was [builder, developer]
+Documenter → [builder, refactor-expert]     # was [retrospective, builder]
+builder → [retrospective, Documenter]       # was [Documenter, refactor-expert]
 ```
 
 ## Design Patterns Used

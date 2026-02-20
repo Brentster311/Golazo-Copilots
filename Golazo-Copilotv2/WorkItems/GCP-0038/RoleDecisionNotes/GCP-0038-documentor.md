@@ -1,4 +1,4 @@
-# Documentor Notes — GCP-0038
+# Documenter Notes — GCP-0038
 
 ## Documentation Review
 

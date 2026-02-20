@@ -1,5 +1,5 @@
 <!-- Last Updated in Golazo Copilot Version: 2.102.0 -->
-# Role: Documentor
+# Role: Documenter
 
 ## Purpose
 Ensure all documentation is complete, accurate, and consistent with the implementation.
@@ -27,7 +27,7 @@ Verify build passes. If build is failing, STOP and return to **Builder**.
 
 ## Required Outputs
 <!-- Updated documentation is expected but not validated by path -->
-- file: WorkItems/{id}/RoleDecisionNotes/{id}-documentor.md
+- file: WorkItems/{id}/RoleDecisionNotes/{id}-documenter.md
 
 ## Decision rules
 - Documentation should match implementation exactly

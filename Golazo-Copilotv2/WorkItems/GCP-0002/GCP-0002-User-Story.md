@@ -30,8 +30,8 @@
   architect -> developer (requires DoR complete)
   developer -> refactor-expert
   refactor-expert -> builder
-  builder -> documentor
-  documentor -> (complete)
+  builder -> Documenter
+  Documenter -> (complete)
   ```
 - [ ] Invalid transitions return error:
   - `"Cannot transition from 'project-owner' to 'developer'. Must go through program-manager, quality-assurance, architect first."`
@@ -46,7 +46,7 @@
 - [ ] Transitions update `currentPhase` when crossing phase boundaries:
   - `definition` phase: project-owner, program-manager, quality-assurance, architect
   - `development` phase: developer, refactor-expert, builder
-  - `completion` phase: documentor
+  - `completion` phase: Documenter
 - [ ] Phase stored in state for quick reference
 
 ### AC5: Role Instructions Returned
@@ -76,7 +76,7 @@
       role: {
         type: "string",
         enum: ["project-owner", "program-manager", "quality-assurance", 
-               "architect", "developer", "refactor-expert", "builder", "documentor"],
+               "architect", "developer", "refactor-expert", "builder", "Documenter"],
         description: "Target role to transition to"
       },
       force: {
@@ -99,8 +99,8 @@ const TRANSITIONS: Record<string, string[]> = {
   "architect": ["developer", "quality-assurance"],  // developer requires DoR
   "developer": ["refactor-expert", "architect"],
   "refactor-expert": ["builder", "developer"],
-  "builder": ["documentor", "refactor-expert"],
-  "documentor": ["builder"]  // can go back for fixes
+  "builder": ["Documenter", "refactor-expert"],
+  "Documenter": ["builder"]  // can go back for fixes
 };
 ```
 

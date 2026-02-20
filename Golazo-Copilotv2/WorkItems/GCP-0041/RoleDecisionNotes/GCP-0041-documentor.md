@@ -1,4 +1,4 @@
-# Documentor Notes — GCP-0041
+# Documenter Notes — GCP-0041
 
 ## Review Summary
 - User Story marked **IMPLEMENTED**

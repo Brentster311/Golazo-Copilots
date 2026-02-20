@@ -1,4 +1,4 @@
-# GCP-0028: Documentor Notes
+# GCP-0028: Documenter Notes
 
 ## Documentation Verification
 - User story has all acceptance criteria checked

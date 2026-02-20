@@ -9,9 +9,9 @@ TRANSITIONS: dict[str, list[str]] = {
     "quality-assurance": ["architect", "program-manager"],
     "architect": ["developer", "quality-assurance"],
     "developer": ["refactor-expert", "architect"],
-    "refactor-expert": ["documentor", "developer"],
-    "documentor": ["builder", "refactor-expert"],
-    "builder": ["retrospective", "documentor"],
+    "refactor-expert": ["documenter", "developer"],
+    "documenter": ["builder", "refactor-expert"],
+    "builder": ["retrospective", "documenter"],
     "retrospective": ["builder"],
 }
 
@@ -23,7 +23,7 @@ PHASE_MAP: dict[str, Literal["definition", "development", "completion"]] = {
     "architect": "definition",
     "developer": "development",
     "refactor-expert": "development",
-    "documentor": "completion",
+    "documenter": "completion",
     "builder": "completion",
     "retrospective": "completion",
 }
@@ -39,7 +39,7 @@ ROLE_ORDER = [
     "architect",
     "developer",
     "refactor-expert",
-    "documentor",
+    "documenter",
     "builder",
     "retrospective",
 ]

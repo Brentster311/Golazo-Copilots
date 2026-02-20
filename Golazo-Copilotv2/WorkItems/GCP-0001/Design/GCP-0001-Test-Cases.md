@@ -157,7 +157,7 @@ class TestDefaultRoleFiles:
         "developer",
         "refactor-expert",
         "builder",
-        "documentor"
+        "Documenter"
     ])
     def test_default_role_file_exists(self, role):
         """Should include default role instruction files."""
@@ -175,7 +175,7 @@ class TestDefaultRoleFiles:
         "developer",
         "refactor-expert",
         "builder",
-        "documentor"
+        "Documenter"
     ])
     def test_role_file_contains_required_sections(self, role):
         """Role file should contain purpose and outputs."""

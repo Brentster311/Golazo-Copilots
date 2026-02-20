@@ -18,7 +18,7 @@ TEST_WORKSPACE_ROOT = Path(__file__).parent
 
 ALL_ROLES = [
     "project-owner-assistant", "program-manager", "quality-assurance",
-    "architect", "developer", "refactor-expert", "builder", "documentor", "retrospective"
+    "architect", "developer", "refactor-expert", "builder", "documenter", "retrospective"
 ]
 
 

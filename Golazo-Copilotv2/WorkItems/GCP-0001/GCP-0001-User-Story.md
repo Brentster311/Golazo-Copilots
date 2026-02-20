@@ -46,7 +46,7 @@
   - `roles/developer.md`
   - `roles/refactor-expert.md`
   - `roles/builder.md`
-  - `roles/documentor.md`
+  - `roles/Documenter.md`
 - [ ] Each role file contains:
   - Role purpose/responsibilities
   - Key outputs expected
@@ -116,7 +116,7 @@ golazo_copilot/
 ?               ??? developer.md
 ?               ??? refactor-expert.md
 ?               ??? builder.md
-?               ??? documentor.md
+?               ??? Documenter.md
 ??? tests/
     ??? __init__.py
     ??? test_gcp_init.py

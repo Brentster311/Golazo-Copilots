@@ -1,4 +1,4 @@
-# GCP-0016: Documentor Decision Notes
+# GCP-0016: Documenter Decision Notes
 
 **Note**: This document was created retroactively to complete the artifact trail.
 

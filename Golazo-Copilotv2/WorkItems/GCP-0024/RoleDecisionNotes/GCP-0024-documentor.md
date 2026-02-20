@@ -1,4 +1,4 @@
-# GCP-0024: Documentor Notes
+# GCP-0024: Documenter Notes
 
 ## Session Date
 2026-02-07
@@ -15,8 +15,8 @@
 ## Key Documentation Changes
 
 1. **Role Order Updated**
-   - Old: Developer → Refactor Expert → Builder → Documentor → Retrospective
-   - New: Developer → Refactor Expert → Documentor → Builder → Retrospective
+   - Old: Developer → Refactor Expert → Builder → Documenter → Retrospective
+   - New: Developer → Refactor Expert → Documenter → Builder → Retrospective
 
 2. **Evidence Table Updated**
    - `refactorComplete`: Now requires file path (Refactoring Plan)

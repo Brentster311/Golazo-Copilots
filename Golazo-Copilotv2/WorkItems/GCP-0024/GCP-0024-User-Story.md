@@ -8,7 +8,7 @@
 
 ## Background
 
-The previous implementation allowed "N/A: reason" as valid evidence for `refactorComplete`, which provided an escape hatch that could be abused. Additionally, the role order had Builder before Documentor, which didn't match the natural flow where documentation should be updated before final build verification.
+The previous implementation allowed "N/A: reason" as valid evidence for `refactorComplete`, which provided an escape hatch that could be abused. Additionally, the role order had Builder before Documenter, which didn't match the natural flow where documentation should be updated before final build verification.
 
 ## Acceptance Criteria
 
@@ -29,7 +29,7 @@ The previous implementation allowed "N/A: reason" as valid evidence for `refacto
    - [ ] Evidence hint added
 
 4. **Role Order Updated**
-   - [ ] New order: Developer → Refactor Expert → Documentor → Builder → Retrospective
+   - [ ] New order: Developer → Refactor Expert → Documenter → Builder → Retrospective
    - [ ] `TRANSITIONS` dict updated
    - [ ] `PHASE_MAP` updated (Builder now in completion phase)
    - [ ] `ROLE_ORDER` list updated
@@ -63,7 +63,7 @@ The previous implementation allowed "N/A: reason" as valid evidence for `refacto
 | testsWrittenFirst | Developer | File paths |
 | testsPass | Developer | Command output |
 | refactorComplete | Refactor Expert | File path |
-| docsUpdated | Documentor | File paths |
+| docsUpdated | Documenter | File paths |
 | buildPasses | Builder | Command output |
 | committed | Builder | Git SHA |
 | retroComplete | Retrospective | File path |

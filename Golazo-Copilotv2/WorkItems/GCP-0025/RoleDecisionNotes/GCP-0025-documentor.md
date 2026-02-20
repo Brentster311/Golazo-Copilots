@@ -1,4 +1,4 @@
-# GCP-0025: Documentor Role Notes
+# GCP-0025: Documenter Role Notes
 
 ## Documentation Review
 

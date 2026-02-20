@@ -44,7 +44,7 @@ The Golazo workflow mandates that every role produces a written artifact, but th
    - `developer` → `developer`
    - `refactor-expert` → `refactor` (shortened)
    - `builder` → `builder`
-   - `documentor` → `documentor`
+   - `Documenter` → `Documenter`
    - `retrospective` → `retrospective`
 4. If file missing, add `warning` to response
 5. `gcp_status` includes `missing_notes` list

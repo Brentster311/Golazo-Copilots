@@ -279,7 +279,7 @@ class TestPhaseTransitions:
 
     @pytest.mark.asyncio
     async def test_enters_completion_phase(self):
-        """Should enter completion phase at documentor."""
+        """Should enter completion phase at Documenter."""
         # Setup: get to builder with DoR complete
         await gcp_init(work_item_id="phase-3", work_items_dir=TEST_DIR)
         for role in ["program-manager", "quality-assurance", "architect"]:
@@ -289,7 +289,7 @@ class TestPhaseTransitions:
         state.dor = {k: True for k in state.dor}
         save_state("phase-3", state, TEST_DIR)
         
-        for role in ["developer", "refactor-expert", "builder", "documentor"]:
+        for role in ["developer", "refactor-expert", "builder", "Documenter"]:
             await gcp_transition(work_item_id="phase-3", role=role, work_items_dir=TEST_DIR)
         
         state = load_state("phase-3", TEST_DIR)

@@ -1,4 +1,4 @@
-# GCP-0014: Documentor Decision Notes
+# GCP-0014: Documenter Decision Notes
 
 ## Documentation Verification
 

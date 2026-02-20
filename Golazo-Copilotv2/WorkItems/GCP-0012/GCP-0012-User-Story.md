@@ -18,7 +18,7 @@ gcp**Status**: IMPLEMENTED
 ## Assumptions
 - **Assumption (explicit)**: Backward transitions preserve all progress (DoR/DoD items remain marked). This is acceptable because the user may be going back to refine, not redo.
 - **Assumption (explicit)**: Any role can transition to any earlier role in the sequence. Rationale: If you can go forward sequentially, you should be able to return to any prior step.
-- **Assumption (explicit)**: The role sequence order is: project-owner-assistant ? program-manager ? quality-assurance ? architect ? developer ? refactor-expert ? builder ? documentor ? retrospective
+- **Assumption (explicit)**: The role sequence order is: project-owner-assistant ? program-manager ? quality-assurance ? architect ? developer ? refactor-expert ? builder ? Documenter ? retrospective
 
 ## Acceptance Criteria
 

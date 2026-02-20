@@ -9,7 +9,7 @@
 - README drifted significantly over 10+ work items without being updated — the DoR/DoD → output validation pivot touched many features but README wasn't updated incrementally
 
 ## Action items
-- Consider adding a "README accuracy check" to the documentor role instructions so README claims are cross-referenced after each feature change
+- Consider adding a "README accuracy check" to the Documenter role instructions so README claims are cross-referenced after each feature change
 - Future work items that change user-facing behavior should include "Update README" as an explicit acceptance criterion
 
 ## Metrics

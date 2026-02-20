@@ -9,7 +9,7 @@ Golazo is a structured development methodology that ensures high-quality softwar
 ## Features
 
 - **Persistent state tracking** – Workflow progress is saved to `state.json` files, surviving session restarts
-- **Automated role transitions** – Enforce the correct sequence: Project Owner → Program Manager → QA → Architect → Developer → Refactor Expert → Documentor → Builder → Retrospective
+- **Automated role transitions** – Enforce the correct sequence: Project Owner → Program Manager → QA → Architect → Developer → Refactor Expert → Documenter → Builder → Retrospective
 - **Role-based output validation** – Each role defines required outputs (files, directories) that are automatically validated on transition
 - **Multi-session support** – Switch between work items while preserving context
 - **Workflow profiles** – Choose `complete`, `express`, or `spike` modes based on task complexity
@@ -31,7 +31,7 @@ The Golazo workflow enforces a structured progression through roles:
 4. **Architect** – Validate architectural alignment, review contracts
 5. **Developer** – Implement the solution with TDD
 6. **Refactor Expert** – Improve code quality without changing behavior
-7. **Documentor** – Update documentation to reflect changes
+7. **Documenter** – Update documentation to reflect changes
 8. **Builder** – Verify builds pass, handle CI/CD concerns
 9. **Retrospective** – Review what worked and what didn't
 
@@ -247,7 +247,7 @@ Transition to a new role in the Golazo Copilot workflow.
 | Input | Type | Required | Description |
 |-------|------|----------|-------------|
 | `work_item_id` | string | **Yes** | Work item identifier |
-| `role` | string | **Yes** | Target role: `project-owner-assistant`, `program-manager`, `quality-assurance`, `architect`, `developer`, `refactor-expert`, `builder`, `documentor`, `retrospective` |
+| `role` | string | **Yes** | Target role: `project-owner-assistant`, `program-manager`, `quality-assurance`, `architect`, `developer`, `refactor-expert`, `builder`, `documenter`, `retrospective` |
 | `force` | boolean | No | Force transition even if gates not met (default: `false`, requires prior consent) |
 | `workspace_path` | string | **Yes** | Workspace root path containing the WorkItems folder |
 

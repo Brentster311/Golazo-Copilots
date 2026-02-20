@@ -4,7 +4,7 @@
 
 1. **Proper role transitions** - Every role produced its required decision notes
 2. **TDD compliance** - Tests written first, failed, then passed after implementation
-3. **Clear workflow** - Followed PO → PM → QA → Architect → Developer → Refactor → Builder → Documentor path
+3. **Clear workflow** - Followed PO → PM → QA → Architect → Developer → Refactor → Builder → Documenter path
 4. **Version management** - Builder role properly bumped version (2.9.0 → 2.10.0)
 5. **Self-healing** - This feature was created to fix the exact problem identified in GCP-0014
 

@@ -14,7 +14,7 @@
    - Consistent messaging across README, bootstrap-instructions, copilot-instructions
 
 3. **Logical Role Order**
-   - New order (Documentor → Builder) matches natural workflow
+   - New order (Documenter → Builder) matches natural workflow
 
 ## What Could Be Improved
 

@@ -17,7 +17,7 @@ TEST_WORKSPACE_ROOT = Path(__file__).parent
 
 ALL_ROLES = [
     "project-owner-assistant", "program-manager", "quality-assurance",
-    "architect", "developer", "refactor-expert", "builder", "documentor", "retrospective"
+    "architect", "developer", "refactor-expert", "builder", "documenter", "retrospective"
 ]
 
 
@@ -77,8 +77,8 @@ class TestBackwardTransitions:
         create_role_notes("back-1", "refactor-expert")
         await gcp_transition(work_item_id="back-1", role="builder", work_items_dir=TEST_WORKITEMS_DIR)
         create_role_notes("back-1", "builder")
-        await gcp_transition(work_item_id="back-1", role="documentor", work_items_dir=TEST_WORKITEMS_DIR)
-        create_role_notes("back-1", "documentor")
+        await gcp_transition(work_item_id="back-1", role="documenter", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("back-1", "documenter")
         await gcp_transition(work_item_id="back-1", role="retrospective", work_items_dir=TEST_WORKITEMS_DIR)
         
         # Now go backward to developer (already has notes from before)

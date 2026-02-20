@@ -31,16 +31,16 @@ This design documents the evidence requirements enhancement and role order updat
 
 ### 3. Update Role Order
 
-**Problem:** The previous order had Builder before Documentor:
+**Problem:** The previous order had Builder before Documenter:
 ```
-Developer → Refactor Expert → Builder → Documentor → Retrospective
+Developer → Refactor Expert → Builder → Documenter → Retrospective
 ```
 
 This didn't match natural workflow - documentation should be updated before final build verification.
 
-**Solution:** Swap Documentor and Builder:
+**Solution:** Swap Documenter and Builder:
 ```
-Developer → Refactor Expert → Documentor → Builder → Retrospective
+Developer → Refactor Expert → Documenter → Builder → Retrospective
 ```
 
 **Implementation:**
@@ -53,7 +53,7 @@ Developer → Refactor Expert → Documentor → Builder → Retrospective
 | File | Changes |
 |------|---------|
 | evidence.py | Remove NA_ALLOWED_ITEMS, delete validate_na_evidence(), add refactorComplete/retroComplete to FILE_EVIDENCE_ITEMS, update hints |
-| transitions.py | Swap documentor/builder in TRANSITIONS, PHASE_MAP, ROLE_ORDER |
+| transitions.py | Swap Documenter/builder in TRANSITIONS, PHASE_MAP, ROLE_ORDER |
 | checklists.py | Add "retroComplete" to VALID_DOD_ITEMS |
 | types.py | Add "retroComplete": ChecklistItem() to dod default |
 

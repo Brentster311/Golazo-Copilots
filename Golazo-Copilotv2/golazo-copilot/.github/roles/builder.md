@@ -6,7 +6,7 @@ Verify the system builds successfully, manage git operations, and ensure the wor
 
 ## First action
 **Before Developer role**: Ensure feature branch `<workitem-id>` exists.
-**After Documentor role**: Verify build and commit all changes.
+**After Documenter role**: Verify build and commit all changes.
 
 ## Entry conditions (Build Verification)
 - Tests exist
@@ -35,7 +35,7 @@ Verify the system builds successfully, manage git operations, and ensure the wor
 - If no `capabilities.yaml` exists in the project, skip this section
 - Document validation results in builder notes under a **Capability Registry** heading
 
-### Git Operations (Commit - after Documentor)
+### Git Operations (Commit - after Documenter)
 - Stage all changes: `git add .`
 - Commit with message: `<workitem-id>: <User Story title>`
 - Push to origin: `git push -u origin <workitem-id>`

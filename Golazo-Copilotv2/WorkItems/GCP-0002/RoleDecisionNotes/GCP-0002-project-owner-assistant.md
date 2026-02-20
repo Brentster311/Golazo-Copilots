@@ -35,7 +35,7 @@ The User Story contains:
 1. **Q**: Should backward transitions reset progress?
    **A**: No - User Story AC6 specifies "Does NOT reset DoR/DoD items"
 
-2. **Q**: What happens at "documentor" completion?
+2. **Q**: What happens at "Documenter" completion?
    **A**: Out of scope for this work item (workflow completion is future)
 
 ---

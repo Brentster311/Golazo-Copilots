@@ -1,4 +1,4 @@
-# GCP-0045 — Documentor Decision Notes
+# GCP-0045 — Documenter Decision Notes
 
 ## Work Item
 **GCP-0045**: Add Golazo Workflow Trigger Phrase Recognition to Copilot Instructions

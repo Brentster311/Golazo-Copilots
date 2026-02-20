@@ -1,4 +1,4 @@
-# GCP-0021: Documentor Notes
+# GCP-0021: Documenter Notes
 
 ## Documentation Updates
 
@@ -15,7 +15,7 @@ All required notes exist in `WorkItems/GCP-0021/RoleDecisionNotes/`:
 - [x] `GCP-0021-developer.md`
 - [x] `GCP-0021-refactor.md`
 - [x] `GCP-0021-builder.md`
-- [x] `GCP-0021-documentor.md` (this file)
+- [x] `GCP-0021-Documenter.md` (this file)
 
 ### Design Documents Verified
 - [x] `GCP-0021-Design.md`

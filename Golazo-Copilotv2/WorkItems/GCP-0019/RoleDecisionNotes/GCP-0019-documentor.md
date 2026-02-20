@@ -1,4 +1,4 @@
-# GCP-0019: Documentor Decision Notes
+# GCP-0019: Documenter Decision Notes
 
 ## Documentation Verification
 
@@ -15,7 +15,7 @@ All roles have produced their required notes:
 - ✅ developer
 - ✅ refactor
 - ✅ builder
-- ✅ documentor (this file)
+- ✅ Documenter (this file)
 - ⏳ retrospective (next)
 
 ### Design Documents

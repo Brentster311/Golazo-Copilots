@@ -19,7 +19,7 @@ DEFAULT_ROLES = [
     "developer.md",
     "refactor-expert.md",
     "builder.md",
-    "documentor.md",
+    "documenter.md",
     "retrospective.md",
     "TechBestPractices.md",
 ]

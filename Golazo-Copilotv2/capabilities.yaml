@@ -77,7 +77,7 @@ capabilities:
       - golazo-copilot/src/golazo_copilot/roles/defaults/developer.md
       - golazo-copilot/src/golazo_copilot/roles/defaults/refactor-expert.md
       - golazo-copilot/src/golazo_copilot/roles/defaults/builder.md
-      - golazo-copilot/src/golazo_copilot/roles/defaults/documentor.md
+      - golazo-copilot/src/golazo_copilot/roles/defaults/documenter.md
       - golazo-copilot/src/golazo_copilot/roles/defaults/retrospective.md
       - golazo-copilot/src/golazo_copilot/roles/defaults/TechBestPractices.md
     contracts:

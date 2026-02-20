@@ -14,10 +14,10 @@ The removal of N/A evidence for `refactorComplete` is correct. Every role should
 Adding a DoD item for Retrospective ensures this role isn't skipped. The Retro Plan artifact creates an audit trail.
 
 #### ✅ Approved: Role Order Change
-Moving Documentor before Builder makes sense:
+Moving Documenter before Builder makes sense:
 1. Developer implements
 2. Refactor Expert improves code quality
-3. Documentor updates docs to match final code
+3. Documenter updates docs to match final code
 4. Builder verifies everything builds
 5. Retrospective reviews process
 

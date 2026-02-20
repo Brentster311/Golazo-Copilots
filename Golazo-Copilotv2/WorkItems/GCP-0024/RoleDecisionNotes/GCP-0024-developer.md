@@ -27,7 +27,7 @@ FILE_EVIDENCE_ITEMS = {
 # transitions.py - New role order
 ROLE_ORDER = [
     "project-owner-assistant", "program-manager", "quality-assurance",
-    "architect", "developer", "refactor-expert", "documentor", 
+    "architect", "developer", "refactor-expert", "Documenter", 
     "builder", "retrospective"
 ]
 ```

@@ -1,4 +1,4 @@
-# GCP-0031: Documentor Notes
+# GCP-0031: Documenter Notes
 
 ## Documentation Review
 

@@ -94,7 +94,7 @@
             role: {
                 type: "string",
                 enum: ["project-owner", "program-manager", "quality-assurance",
-                       "architect", "developer", "refactor-expert", "builder", "documentor"],
+                       "architect", "developer", "refactor-expert", "builder", "Documenter"],
                 description: "Role to create notes for (defaults to current role)"
             },
             content: {

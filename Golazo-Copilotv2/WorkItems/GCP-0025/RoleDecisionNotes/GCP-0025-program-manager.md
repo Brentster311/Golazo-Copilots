@@ -23,7 +23,7 @@
 | developer | Source code changes, tests written, role notes |
 | refactor-expert | Refactoring complete, role notes |
 | builder | Build passes, role notes |
-| documentor | Docs updated, role notes |
+| Documenter | Docs updated, role notes |
 | retrospective | Retro notes |
 
 ### Open items resolved

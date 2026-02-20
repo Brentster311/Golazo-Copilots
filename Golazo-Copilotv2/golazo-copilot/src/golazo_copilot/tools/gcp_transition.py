@@ -25,7 +25,7 @@ ROLE_SUFFIX_MAP = {
     "developer": "developer",
     "refactor-expert": "refactor",  # Shortened
     "builder": "builder",
-    "documentor": "documentor",
+    "documenter": "documenter",
     "retrospective": "retrospective",
 }
 

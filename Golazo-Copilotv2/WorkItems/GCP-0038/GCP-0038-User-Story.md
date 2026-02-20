@@ -57,7 +57,7 @@
 | Spine | Mention tool in `bootstrap-instructions.md` | All roles (global) |
 | Status | Surface `capabilities_registry_found` and impact hints | gcp_status |
 
-Roles with **no benefit** from referencing capabilities: PO Assistant, Program Manager, Builder, Documentor, TechBestPractices.
+Roles with **no benefit** from referencing capabilities: PO Assistant, Program Manager, Builder, Documenter, TechBestPractices.
 
 ---
 

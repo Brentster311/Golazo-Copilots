@@ -1,4 +1,4 @@
-# GCP-0043 — Documentor Decision Notes
+# GCP-0043 — Documenter Decision Notes
 
 ## Documentation Changes
 
@@ -25,7 +25,7 @@ All role decision notes exist and are complete:
 - architect.md
 - developer.md
 - refactor.md
-- documentor.md (this file)
+- Documenter.md (this file)
 
 ## No Additional Documentation Updates Needed
 The change is internal tooling — no README or user-facing documentation requires updates.

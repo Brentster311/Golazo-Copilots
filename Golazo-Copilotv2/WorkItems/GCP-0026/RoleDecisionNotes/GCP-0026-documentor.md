@@ -1,4 +1,4 @@
-# GCP-0026: Documentor Notes
+# GCP-0026: Documenter Notes
 
 ## Documentation Verification
 - User story already marked IMPLEMENTED with all acceptance criteria checked

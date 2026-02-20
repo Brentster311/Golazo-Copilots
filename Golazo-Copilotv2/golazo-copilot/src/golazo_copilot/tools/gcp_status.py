@@ -26,7 +26,7 @@ _DEPLOYED_TO_SOURCE: list[tuple[str, str, str]] = [
     (".github/roles/developer.md", "golazo_copilot.roles.defaults", "developer.md"),
     (".github/roles/refactor-expert.md", "golazo_copilot.roles.defaults", "refactor-expert.md"),
     (".github/roles/builder.md", "golazo_copilot.roles.defaults", "builder.md"),
-    (".github/roles/documentor.md", "golazo_copilot.roles.defaults", "documentor.md"),
+    (".github/roles/documenter.md", "golazo_copilot.roles.defaults", "documenter.md"),
     (".github/roles/retrospective.md", "golazo_copilot.roles.defaults", "retrospective.md"),
     (".github/roles/TechBestPractices.md", "golazo_copilot.roles.defaults", "TechBestPractices.md"),
 ]
@@ -280,7 +280,7 @@ def _generate_next_steps(
             steps.append("Review code for refactoring opportunities")
     
     elif state.current_phase == "completion":
-        if state.current_role == "documentor":
+        if state.current_role == "documenter":
             steps.append("Update documentation")
         elif state.current_role == "builder":
             steps.append("Build and verify")

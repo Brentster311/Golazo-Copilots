@@ -22,7 +22,7 @@
 - [ ] All roles required in sequence:
   ```
   project-owner -> program-manager -> quality-assurance -> architect ->
-  developer -> refactor-expert -> builder -> documentor
+  developer -> refactor-expert -> builder -> Documenter
   ```
 - [ ] All DoR items required before development:
   - userStory, designDoc, reviewComments, testCases
@@ -119,7 +119,7 @@ const PROFILES: Record<string, WorkflowProfile> = {
     name: "complete",
     description: "Full Golazo Copilot workflow with all gates",
     roles: ["project-owner", "program-manager", "quality-assurance", "architect",
-            "developer", "refactor-expert", "builder", "documentor"],
+            "developer", "refactor-expert", "builder", "Documenter"],
     transitions: {
       "project-owner": ["program-manager"],
       "program-manager": ["quality-assurance"],
