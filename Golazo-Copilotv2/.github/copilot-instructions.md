@@ -15,6 +15,25 @@ This workspace uses Golazo Copilot MCP server for workflow management.
 
 ---
 
+## IMMEDIATE ACTION: Trigger Phrase Recognition (DO NOT SKIP)
+
+When the user's message contains **ANY** of these triggers, **IMMEDIATELY** call `gcp_create_workitem` — do **NOT** ask for confirmation, do **NOT** treat it as a conversational request:
+
+| Trigger | Action |
+|---------|--------|
+| **"new workitem"** or **"new work item"** | Call `gcp_create_workitem(work_item_id="<id>", profile="complete")` |
+| **A work-item ID** matching pattern `[A-Za-z]{1,4}-\d{3,}` (e.g., `GCP-0045`, `CVT-002`) | Use the provided ID in `gcp_create_workitem` |
+| **"complete mode"** | Call `gcp_create_workitem` with `profile="complete"` |
+
+**Rules:**
+1. If the user provides a work-item ID, use it **exactly**.
+2. If no ID is provided, ask the user for the work-item ID.
+3. If the work-item ID **already exists** (i.e., `WorkItems/<id>/` folder exists), call `gcp_status` instead of `gcp_create_workitem`.
+4. These are **workflow commands**, not conversational requests. Act on the **FIRST** response.
+5. After creating the work item, proceed immediately to the project-owner-assistant role.
+
+---
+
 ## REQUIRED: Before EVERY Response
 1. Call `gcp_status(work_item_id="<current-id>")` to get current state
 2. Display the Golazo Status header
