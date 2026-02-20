@@ -45,6 +45,191 @@ def resolve_work_items_dir(workspace_path: str | None) -> Path:
     return (Path(workspace_path) / "WorkItems").resolve()
 
 
+# ---------------------------------------------------------------------------
+# Pure formatting functions (no MCP or I/O dependencies)
+# ---------------------------------------------------------------------------
+
+def format_create_workitem_result(result: dict) -> str:
+    """Format gcp_create_workitem result dict into display text."""
+    if result["success"]:
+        return f"""{ICON_OK} Work item '{result['work_item_id']}' created!
+
+**Current Role:** {result['current_role']}
+
+---
+{result['role_instructions']}
+"""
+    return f"{ICON_FAIL} Failed to create work item: {result['error']}"
+
+
+def format_transition_result(result: dict) -> str:
+    """Format gcp_transition result dict into display text."""
+    if result["success"]:
+        warning = f"\n{ICON_WARN} {result['warning']}" if result.get("warning") else ""
+        return f"""{ICON_OK} Transitioned to '{result['current_role']}'!{warning}
+
+**Current Phase:** {result['current_phase']}
+
+---
+{result['role_instructions']}
+"""
+    return f"{ICON_FAIL} Transition failed: {result['error']}"
+
+
+def format_status_result(result: dict) -> str:
+    """Format gcp_status result dict into display text."""
+    if result.get("active", False):
+        # GCP-0032: Format version warning if present
+        version_warning = ""
+        if result.get("version_warning"):
+            version_warning = f"\n{ICON_WARN} {result['version_warning']}"
+
+        # GCP-0033: Format role progress
+        progress_section = ""
+        role_progress = result.get("role_progress", {})
+        if role_progress:
+            completed = role_progress.get("roles_completed", 0)
+            total = role_progress.get("roles_total", 9)
+            progress_section = f"\n- Role Progress: {completed}/{total} complete"
+
+        # GCP-0027: Format required outputs section
+        outputs_section = ""
+        req_outputs = result.get("required_outputs", {})
+        output_list = req_outputs.get("outputs", [])
+        if output_list:
+            out_valid = sum(1 for o in output_list if o["valid"])
+            out_total = len(output_list)
+            out_status = f"{ICON_OK} Complete" if req_outputs.get("complete") else f"{ICON_PENDING} {out_valid}/{out_total}"
+            out_lines = []
+            for o in output_list:
+                icon = ICON_CHECK if o["valid"] else ICON_EMPTY
+                out_lines.append(f"  {icon} {o['path']}")
+            outputs_section = f"\n- Required Outputs: {out_status}\n" + "\n".join(out_lines)
+
+        # GCP-0042: Format registry hint
+        registry_section = ""
+        if result.get("registry_hint"):
+            registry_section = f"\n- {result['registry_hint']}"
+
+        next_steps = "\n".join(f"- {step}" for step in result["next_steps"])
+
+        # Format deviations
+        deviations_section = ""
+        if result.get("deviations"):
+            deviations_lines = []
+            for d in result["deviations"]:
+                consumed = " (consumed)" if d["consumed"] else ""
+                deviations_lines.append(f"- {d['id']}: {d['action']} - \"{d['reason']}\"{consumed}")
+            deviations_section = "\n\n**Deviations:**\n" + "\n".join(deviations_lines)
+
+        return f"""**Golazo Status** (v{result['version']}){version_warning}
+- Work Item: {result['work_item_id']}
+- Current Role: **{result['current_role']}**
+- Phase: {result['current_phase']}{progress_section}{outputs_section}{registry_section}{deviations_section}
+
+**Next Steps:**
+{next_steps}
+
+---
+{result['role_instructions']}
+"""
+    version_info = f" (v{result.get('version', 'unknown')})" if 'version' in result else ""
+    return f"{ICON_WARN}{version_info} {result.get('message', 'No active work item')}"
+
+
+def format_bootstrap_result(result: dict) -> str:
+    """Format gcp_bootstrap result dict into display text."""
+    if result["success"]:
+        created = "\n".join(f"  {ICON_CHECK} {f}" for f in result["files_created"]) or "  (none)"
+        skipped = "\n".join(f"  {ICON_EMPTY} {f}" for f in result["files_skipped"]) or "  (none)"
+        return f"""{ICON_OK} Golazo Copilot bootstrapped!
+
+**Files Created:**
+{created}
+
+**Files Skipped (already exist):**
+{skipped}
+
+{result['message']}
+"""
+    error_msg = result['error']
+    if "No workspace markers found" in error_msg:
+        error_msg += (
+            "\n\n**Next step:** Confirm with the user that the workspace_path is correct. "
+            "If it is, create a `WorkItems` folder at that path (e.g. `mkdir <workspace_path>/WorkItems`) "
+            "and then re-run `gcp_bootstrap`."
+        )
+    return f"{ICON_FAIL} Bootstrap failed: {error_msg}"
+
+
+def format_consent_result(result: dict) -> str:
+    """Format gcp_consent result dict into display text."""
+    if result["success"]:
+        return f"""{ICON_OK} Consent recorded!
+
+**Deviation ID:** {result['deviation_id']}
+**Action:** {result['action']}
+
+{result['message']}
+"""
+    return f"{ICON_FAIL} Consent failed: {result['error']}"
+
+
+def format_capabilities_result(result: dict, action: str, files: list | None = None) -> str:
+    """Format gcp_capabilities result dict into display text."""
+    if not result["success"]:
+        return f"{ICON_FAIL} {result['error']}"
+    if result.get("message"):
+        return result["message"]
+    if action == "list":
+        caps = result["capabilities"]
+        if not caps:
+            return "**Capability Registry** (empty)"
+        lines = [f"**Capability Registry** ({len(caps)} capabilities)"]
+        for c in caps:
+            lines.append(f"- **{c['name']}**: {c['description']}")
+        return "\n".join(lines)
+    if action == "show":
+        cap = result["capability"]
+        key_files = ", ".join(cap["key_files"]) or "(none)"
+        contracts = "\n  ".join(f"- {c}" for c in cap["contracts"]) or "  (none)"
+        depends = ", ".join(cap["depends_on"]) or "(none)"
+        depended = ", ".join(cap["depended_on_by"]) or "(none)"
+        return f"""**Capability: {cap['name']}**
+- **Description**: {cap['description']}
+- **Key Files**: {key_files}
+- **Contracts**:
+  {contracts}
+- **Depends On**: {depends}
+- **Depended On By**: {depended}"""
+    if action == "impact":
+        direct = result["directly_affected"]
+        transitive = result["transitively_affected"]
+        total = len(direct) + len(transitive)
+        lines = [f"**Impact Analysis** ({len(files or [])} files -> {total} capabilities affected)"]
+        if direct:
+            lines.append("\n**Directly Affected:**")
+            for c in direct:
+                lines.append(f"- **{c['name']}**: {c['description']}")
+        if transitive:
+            lines.append("\n**Transitively Affected (dependents):**")
+            for c in transitive:
+                lines.append(f"- **{c['name']}**: {c['description']}")
+        if not direct and not transitive:
+            lines.append("\nNo capabilities affected by the given files.")
+        return "\n".join(lines)
+    if action == "validate":
+        lines = ["**Registry Validation**"]
+        for r in result["results"]:
+            if r["valid"]:
+                lines.append(f"{ICON_OK} **{r['name']}**: all key_files exist")
+            else:
+                missing = ", ".join(r["missing_files"])
+                lines.append(f"{ICON_FAIL} **{r['name']}**: missing {missing}")
+        return "\n".join(lines)
+    return str(result)
+
+
 @server.list_tools()
 async def list_tools() -> list[Tool]:
     """List available tools."""
@@ -220,20 +405,8 @@ async def _dispatch_tool(name: str, arguments: dict) -> list[TextContent]:
             profile=arguments.get("profile", "complete"),
             work_items_dir=work_items_dir
         )
-        
-        if result["success"]:
-            content = f"""{ICON_OK} Work item '{result['work_item_id']}' created!
+        return [TextContent(type="text", text=format_create_workitem_result(result))]
 
-**Current Role:** {result['current_role']}
-
----
-{result['role_instructions']}
-"""
-        else:
-            content = f"{ICON_FAIL} Failed to create work item: {result['error']}"
-        
-        return [TextContent(type="text", text=content)]
-    
     elif name == "gcp_transition":
         work_items_dir = resolve_work_items_dir(arguments.get("workspace_path"))
         result = await gcp_transition(
@@ -242,94 +415,20 @@ async def _dispatch_tool(name: str, arguments: dict) -> list[TextContent]:
             force=arguments.get("force", False),
             work_items_dir=work_items_dir
         )
-        
-        if result["success"]:
-            warning = f"\n{ICON_WARN} {result['warning']}" if result.get("warning") else ""
-            content = f"""{ICON_OK} Transitioned to '{result['current_role']}'!{warning}
+        return [TextContent(type="text", text=format_transition_result(result))]
 
-**Current Phase:** {result['current_phase']}
-
----
-{result['role_instructions']}
-"""
-        else:
-            content = f"{ICON_FAIL} Transition failed: {result['error']}"
-        
-        return [TextContent(type="text", text=content)]
-    
     elif name == "gcp_status":
         work_item_id = arguments.get("work_item_id", "").strip()
         if not work_item_id:
             from golazo_copilot import __version__ as ver
-            content = f"**Golazo Copilot** (v{ver})"
-            return [TextContent(type="text", text=content)]
+            return [TextContent(type="text", text=f"**Golazo Copilot** (v{ver})")]
         work_items_dir = resolve_work_items_dir(arguments.get("workspace_path"))
         result = await gcp_status(
             work_item_id=work_item_id,
             work_items_dir=work_items_dir
         )
-        
-        if result.get("active", False):
-            # GCP-0032: Format version warning if present
-            version_warning = ""
-            if result.get("version_warning"):
-                version_warning = f"\n{ICON_WARN} {result['version_warning']}"
-            
-            # GCP-0033: Format role progress
-            progress_section = ""
-            role_progress = result.get("role_progress", {})
-            if role_progress:
-                completed = role_progress.get("roles_completed", 0)
-                total = role_progress.get("roles_total", 9)
-                progress_section = f"\n- Role Progress: {completed}/{total} complete"
-            
-            # GCP-0027: Format required outputs section
-            outputs_section = ""
-            req_outputs = result.get("required_outputs", {})
-            output_list = req_outputs.get("outputs", [])
-            if output_list:
-                out_valid = sum(1 for o in output_list if o["valid"])
-                out_total = len(output_list)
-                out_status = f"{ICON_OK} Complete" if req_outputs.get("complete") else f"{ICON_PENDING} {out_valid}/{out_total}"
-                out_lines = []
-                for o in output_list:
-                    icon = ICON_CHECK if o["valid"] else ICON_EMPTY
-                    out_lines.append(f"  {icon} {o['path']}")
-                outputs_section = f"\n- Required Outputs: {out_status}\n" + "\n".join(out_lines)
-            
-            # GCP-0042: Format registry hint
-            registry_section = ""
-            if result.get("registry_hint"):
-                registry_section = f"\n- {result['registry_hint']}"
+        return [TextContent(type="text", text=format_status_result(result))]
 
-            next_steps = "\n".join(f"- {step}" for step in result["next_steps"])
-            
-            # Format deviations
-            deviations_section = ""
-            if result.get("deviations"):
-                deviations_lines = []
-                for d in result["deviations"]:
-                    consumed = " (consumed)" if d["consumed"] else ""
-                    deviations_lines.append(f"- {d['id']}: {d['action']} - \"{d['reason']}\"{consumed}")
-                deviations_section = "\n\n**Deviations:**\n" + "\n".join(deviations_lines)
-            
-            content = f"""**Golazo Status** (v{result['version']}){version_warning}
-- Work Item: {result['work_item_id']}
-- Current Role: **{result['current_role']}**
-- Phase: {result['current_phase']}{progress_section}{outputs_section}{registry_section}{deviations_section}
-
-**Next Steps:**
-{next_steps}
-
----
-{result['role_instructions']}
-"""
-        else:
-            version_info = f" (v{result.get('version', 'unknown')})" if 'version' in result else ""
-            content = f"{ICON_WARN}{version_info} {result.get('message', 'No active work item')}"
-        
-        return [TextContent(type="text", text=content)]
-    
     elif name == "gcp_bootstrap":
         ws = arguments.get("workspace_path")
         if not ws:
@@ -339,33 +438,8 @@ async def _dispatch_tool(name: str, arguments: dict) -> list[TextContent]:
             force=arguments.get("force", False),
             include_roles=arguments.get("include_roles", True)
         )
-        
-        if result["success"]:
-            created = "\n".join(f"  {ICON_CHECK} {f}" for f in result["files_created"]) or "  (none)"
-            skipped = "\n".join(f"  {ICON_EMPTY} {f}" for f in result["files_skipped"]) or "  (none)"
-            content = f"""{ICON_OK} Golazo Copilot bootstrapped!
+        return [TextContent(type="text", text=format_bootstrap_result(result))]
 
-**Files Created:**
-{created}
-
-**Files Skipped (already exist):**
-{skipped}
-
-{result['message']}
-"""
-        else:
-            error_msg = result['error']
-            # Add guidance for empty/new workspace (no markers found)
-            if "No workspace markers found" in error_msg:
-                error_msg += (
-                    "\n\n**Next step:** Confirm with the user that the workspace_path is correct. "
-                    "If it is, create a `WorkItems` folder at that path (e.g. `mkdir <workspace_path>/WorkItems`) "
-                    "and then re-run `gcp_bootstrap`."
-                )
-            content = f"{ICON_FAIL} Bootstrap failed: {error_msg}"
-        
-        return [TextContent(type="text", text=content)]
-    
     elif name == "gcp_consent":
         work_items_dir = resolve_work_items_dir(arguments.get("workspace_path"))
         result = await gcp_consent(
@@ -374,86 +448,23 @@ async def _dispatch_tool(name: str, arguments: dict) -> list[TextContent]:
             reason=arguments["reason"],
             work_items_dir=work_items_dir
         )
-        
-        if result["success"]:
-            content = f"""{ICON_OK} Consent recorded!
+        return [TextContent(type="text", text=format_consent_result(result))]
 
-**Deviation ID:** {result['deviation_id']}
-**Action:** {result['action']}
-
-{result['message']}
-"""
-        else:
-            content = f"{ICON_FAIL} Consent failed: {result['error']}"
-        
-        return [TextContent(type="text", text=content)]
-    
     elif name == "gcp_capabilities":
         ws_cap = arguments.get("workspace_path")
         if not ws_cap:
             return [TextContent(type="text", text=f"{ICON_FAIL} workspace_path is required")]
         workspace_path = Path(ws_cap)
-        
         result = await gcp_capabilities(
             action=arguments["action"],
             capability=arguments.get("capability"),
             files=arguments.get("files"),
             workspace_path=workspace_path,
         )
-        
-        if not result["success"]:
-            content = f"{ICON_FAIL} {result['error']}"
-        elif result.get("message"):
-            content = result["message"]
-        elif arguments["action"] == "list":
-            caps = result["capabilities"]
-            lines = [f"**Capability Registry** ({len(caps)} capabilities)"]
-            for c in caps:
-                lines.append(f"- **{c['name']}**: {c['description']}")
-            content = "\n".join(lines) if caps else "**Capability Registry** (empty)"
-        elif arguments["action"] == "show":
-            cap = result["capability"]
-            key_files = ", ".join(cap["key_files"]) or "(none)"
-            contracts = "\n  ".join(f"- {c}" for c in cap["contracts"]) or "  (none)"
-            depends = ", ".join(cap["depends_on"]) or "(none)"
-            depended = ", ".join(cap["depended_on_by"]) or "(none)"
-            content = f"""**Capability: {cap['name']}**
-- **Description**: {cap['description']}
-- **Key Files**: {key_files}
-- **Contracts**:
-  {contracts}
-- **Depends On**: {depends}
-- **Depended On By**: {depended}"""
-        elif arguments["action"] == "impact":
-            direct = result["directly_affected"]
-            transitive = result["transitively_affected"]
-            total = len(direct) + len(transitive)
-            lines = [f"**Impact Analysis** ({len(arguments.get('files', []))} files -> {total} capabilities affected)"]
-            if direct:
-                lines.append("\n**Directly Affected:**")
-                for c in direct:
-                    lines.append(f"- **{c['name']}**: {c['description']}")
-            if transitive:
-                lines.append("\n**Transitively Affected (dependents):**")
-                for c in transitive:
-                    lines.append(f"- **{c['name']}**: {c['description']}")
-            if not direct and not transitive:
-                lines.append("\nNo capabilities affected by the given files.")
-            content = "\n".join(lines)
-        elif arguments["action"] == "validate":
-            lines = ["**Registry Validation**"]
-            for r in result["results"]:
-                if r["valid"]:
-                    lines.append(f"{ICON_OK} **{r['name']}**: all key_files exist")
-                else:
-                    missing = ", ".join(r["missing_files"])
-                    lines.append(f"{ICON_FAIL} **{r['name']}**: missing {missing}")
-            content = "\n".join(lines)
-        else:
-            content = str(result)
-        
-        return [TextContent(type="text", text=content)]
-    
+        return [TextContent(type="text", text=format_capabilities_result(
+            result, arguments["action"], arguments.get("files")
+        ))]
+
     return [TextContent(type="text", text=f"Unknown tool: {name}")]
 
 
