@@ -35,7 +35,7 @@ DATE_OPERATORS = ["on or before", "on or after", "equals"]
 # Regex for @Today expressions
 TODAY_EXPR_RE = re.compile(r"^@Today\s*-\s*(\d+)$", re.IGNORECASE)
 
-# Display names for fields (reuse from tk_app where possible)
+# Display names for fields (reuse from models where possible)
 COLUMN_DISPLAY_NAMES = {
     'title': 'Title',
     'dueDate': 'Due Date',
@@ -691,7 +691,7 @@ class QueryBuilder(tk.Toplevel):
         result_frame.pack(fill=tk.BOTH, expand=True, pady=5)
 
         # Import SortableTreeview here to avoid circular import at module level
-        from sfi_reporter.tk_app import SortableTreeview
+        from sfi_reporter.dialogs import SortableTreeview
 
         self._result_tree = SortableTreeview(
             result_frame,
@@ -892,5 +892,5 @@ class QueryBuilder(tk.Toplevel):
         if not items:
             return
 
-        from sfi_reporter.tk_app import DetailModal
+        from sfi_reporter.dialogs import DetailModal
         DetailModal(self, f"Query Results: {program_name}", items, self._service_names)

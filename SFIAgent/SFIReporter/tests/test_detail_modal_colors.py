@@ -14,7 +14,8 @@ the group_item_fields() pure function.
 
 import inspect
 
-from sfi_reporter.tk_app import group_item_fields, FIELD_GROUPS
+from sfi_reporter.formatters import group_item_fields
+from sfi_reporter.models import FIELD_GROUPS
 
 
 # ── TC-001 through TC-004: Section header emoji verification ────────
@@ -30,7 +31,7 @@ class TestSectionHeaderEmojis:
     def _get_build_content_source() -> str:
         """Get the source code of ItemDetailsModal._build_content."""
         # Import inside to avoid tkinter initialization at module level
-        from sfi_reporter.tk_app import ItemDetailsModal
+        from sfi_reporter.dialogs import ItemDetailsModal
         return inspect.getsource(ItemDetailsModal._build_content)
 
     def test_status_header_has_red_circle(self):
@@ -159,7 +160,7 @@ class TestHeaderStyling:
 
     def test_header_tag_uses_segoe_ui_bold(self):
         """Header tag should use Segoe UI bold for emoji readability."""
-        from sfi_reporter.tk_app import ItemDetailsModal
+        from sfi_reporter.dialogs import ItemDetailsModal
         source = inspect.getsource(ItemDetailsModal._build_content)
         assert "tag_configure('header', font=(\"Segoe UI\"" in source
         assert '"bold"' in source

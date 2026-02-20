@@ -20,14 +20,14 @@ class TestDataFetching:
         mock_action_items = mocker.patch('sfi_reporter.data.get_action_items_summary')
         mock_detailed = mocker.patch('sfi_reporter.data.get_detailed_action_items')
         mock_programs = mocker.patch('sfi_reporter.data.get_all_programs')
-        mock_write = mocker.patch('sfi_reporter.tk_app.write_cache')
+        mock_write = mocker.patch('sfi_reporter.services.write_cache')
         
         mock_team_info.return_value = ([{'Name': 'Svc1', 'Id': '123'}], ['123'])
         mock_action_items.return_value = {'ActionItemSummaryList': []}
         mock_detailed.return_value = ([], [])  # (rows, failed_kpis)
         mock_programs.return_value = {}
         
-        from sfi_reporter.tk_app import do_refresh
+        from sfi_reporter.services import do_refresh
         
         result = do_refresh('testuser')
         
@@ -47,7 +47,7 @@ class TestDataFetching:
         mock_team_info = mocker.patch('sfi_reporter.data.get_user_team_info')
         mock_team_info.side_effect = Exception("API Error")
         
-        from sfi_reporter.tk_app import do_refresh
+        from sfi_reporter.services import do_refresh
         
         result = do_refresh('testuser')
         
@@ -66,7 +66,7 @@ class TestDataFetching:
         mock_action_items = mocker.patch('sfi_reporter.data.get_action_items_summary')
         mock_detailed = mocker.patch('sfi_reporter.data.get_detailed_action_items')
         mock_programs = mocker.patch('sfi_reporter.data.get_all_programs')
-        mock_write = mocker.patch('sfi_reporter.tk_app.write_cache')
+        mock_write = mocker.patch('sfi_reporter.services.write_cache')
         
         mock_team_info.return_value = ([{'Name': 'Svc1', 'Id': '123'}], ['123'])
         mock_action_items.return_value = {'ActionItemSummaryList': []}
@@ -77,7 +77,7 @@ class TestDataFetching:
         def on_status(msg):
             status_messages.append(msg)
         
-        from sfi_reporter.tk_app import do_refresh
+        from sfi_reporter.services import do_refresh
         
         result = do_refresh('testuser', on_status=on_status)
         
@@ -91,7 +91,7 @@ class TestDetailModal:
 
     def test_filter_by_service(self):
         """TC-004: Filter items by service ID."""
-        from sfi_reporter.tk_app import filter_items_by_service
+        from sfi_reporter.services import filter_items_by_service
         
         items = [
             {'id': '1', 'serviceTreeId': 'svc-a', 'title': 'Item 1'},
@@ -106,7 +106,7 @@ class TestDetailModal:
 
     def test_filter_by_program(self):
         """TC-005: Filter items by program ID."""
-        from sfi_reporter.tk_app import filter_items_by_program
+        from sfi_reporter.services import filter_items_by_program
         
         items = [
             {'id': '1', 'S360_ProgramIds': ['prog-a'], 'title': 'Item 1'},
@@ -122,7 +122,7 @@ class TestDetailModal:
 
     def test_filter_by_item_id(self):
         """TC-006: Filter to get single item by ID."""
-        from sfi_reporter.tk_app import filter_items_by_id
+        from sfi_reporter.services import filter_items_by_id
         
         items = [
             {'id': '1', 'title': 'Item 1'},
@@ -137,7 +137,7 @@ class TestDetailModal:
 
     def test_filter_empty_result(self):
         """TC-007: Filter that returns no items."""
-        from sfi_reporter.tk_app import filter_items_by_service
+        from sfi_reporter.services import filter_items_by_service
         
         items = [
             {'id': '1', 'serviceTreeId': 'svc-a', 'title': 'Item 1'},
@@ -153,7 +153,7 @@ class TestItemDetailsModal:
 
     def test_format_field_label_snake_case(self):
         """TC-006: Format snake_case field names to human-readable."""
-        from sfi_reporter.tk_app import format_field_label
+        from sfi_reporter.formatters import format_field_label
         
         assert format_field_label('serviceTreeId') == 'Service Tree Id'
         assert format_field_label('S360_AssignedTo') == 'S360 Assigned To'
@@ -162,7 +162,7 @@ class TestItemDetailsModal:
 
     def test_format_field_value_string(self):
         """TC-007: Format string values."""
-        from sfi_reporter.tk_app import format_field_value
+        from sfi_reporter.formatters import format_field_value
         
         assert format_field_value('simple text') == 'simple text'
         assert format_field_value('') == ''
@@ -170,21 +170,21 @@ class TestItemDetailsModal:
 
     def test_format_field_value_list(self):
         """TC-007: Format list values."""
-        from sfi_reporter.tk_app import format_field_value
+        from sfi_reporter.formatters import format_field_value
         
         assert format_field_value(['a', 'b', 'c']) == 'a, b, c'
         assert format_field_value([]) == ''
 
     def test_format_field_value_bool(self):
         """TC-007: Format boolean values."""
-        from sfi_reporter.tk_app import format_field_value
+        from sfi_reporter.formatters import format_field_value
         
         assert format_field_value(True) == 'Yes'
         assert format_field_value(False) == 'No'
 
     def test_group_item_fields(self):
         """TC-004: Group fields into categories."""
-        from sfi_reporter.tk_app import group_item_fields
+        from sfi_reporter.formatters import group_item_fields
         
         item = {
             'title': 'Test Item',
@@ -216,7 +216,7 @@ class TestItemDetailsModal:
 
     def test_group_item_fields_empty_excluded(self):
         """TC-005: Empty fields are excluded from groups."""
-        from sfi_reporter.tk_app import group_item_fields
+        from sfi_reporter.formatters import group_item_fields
         
         item = {
             'title': 'Test Item',
@@ -243,7 +243,7 @@ class TestUrlExtraction:
 
     def test_extract_plain_urls(self):
         """TC-008: Extract plain HTTP/HTTPS URLs from text."""
-        from sfi_reporter.tk_app import extract_urls_from_text
+        from sfi_reporter.formatters import extract_urls_from_text
         
         text = "Visit https://example.com for more info"
         urls = extract_urls_from_text(text)
@@ -254,7 +254,7 @@ class TestUrlExtraction:
 
     def test_extract_url_with_special_chars(self):
         """TC-008: Extract URLs with special characters like quotes in query params."""
-        from sfi_reporter.tk_app import extract_urls_from_text
+        from sfi_reporter.formatters import extract_urls_from_text
         
         # S360 lens URLs have single quotes in query parameters
         url = "https://lens.msftcloudes.com/v2/#/dashboard/123?params=(filters:!((k:ServiceOid,v:'abc-123'),(k:nCloud,v:public)))"
@@ -266,7 +266,7 @@ class TestUrlExtraction:
 
     def test_extract_html_anchor(self):
         """TC-008: Extract URL from HTML anchor tag."""
-        from sfi_reporter.tk_app import extract_urls_from_text
+        from sfi_reporter.formatters import extract_urls_from_text
         
         text = '<a target="_blank" href="https://aka.ms/test">Test Link</a>'
         urls = extract_urls_from_text(text)
@@ -277,7 +277,7 @@ class TestUrlExtraction:
 
     def test_extract_multiple_urls(self):
         """TC-008: Extract multiple URLs from text."""
-        from sfi_reporter.tk_app import extract_urls_from_text
+        from sfi_reporter.formatters import extract_urls_from_text
         
         text = "See https://one.com and https://two.com for details"
         urls = extract_urls_from_text(text)
@@ -289,7 +289,7 @@ class TestUrlExtraction:
 
     def test_extract_no_urls(self):
         """TC-008: Handle text with no URLs."""
-        from sfi_reporter.tk_app import extract_urls_from_text
+        from sfi_reporter.formatters import extract_urls_from_text
         
         assert extract_urls_from_text("no urls here") == []
         assert extract_urls_from_text("") == []
@@ -297,7 +297,7 @@ class TestUrlExtraction:
 
     def test_clean_html_from_title(self):
         """TC-009: Clean HTML anchor tags from title."""
-        from sfi_reporter.tk_app import clean_html_from_title
+        from sfi_reporter.formatters import clean_html_from_title
         
         title = '<a target="_blank" href="https://aka.ms/GDPRScanComplianceWiki"> GDPR Scan Compliance</a>'
         cleaned = clean_html_from_title(title)
@@ -308,7 +308,7 @@ class TestUrlExtraction:
 
     def test_clean_html_plain_text(self):
         """TC-009: Plain text passes through unchanged."""
-        from sfi_reporter.tk_app import clean_html_from_title
+        from sfi_reporter.formatters import clean_html_from_title
         
         assert clean_html_from_title("Plain Title") == "Plain Title"
         assert clean_html_from_title("") == ""
@@ -316,7 +316,7 @@ class TestUrlExtraction:
 
     def test_parse_resource_uris_json_string(self):
         """TC-010: Parse ResourceURIs JSON array string."""
-        from sfi_reporter.tk_app import parse_resource_uris
+        from sfi_reporter.formatters import parse_resource_uris
         
         json_str = '["https://kusto.windows.net/","https://storage.azure.com/"]'
         uris = parse_resource_uris(json_str)
@@ -327,7 +327,7 @@ class TestUrlExtraction:
 
     def test_parse_resource_uris_list(self):
         """TC-010: Parse ResourceURIs already as list."""
-        from sfi_reporter.tk_app import parse_resource_uris
+        from sfi_reporter.formatters import parse_resource_uris
         
         uris_list = ['https://a.com', 'https://b.com']
         uris = parse_resource_uris(uris_list)
@@ -336,7 +336,7 @@ class TestUrlExtraction:
 
     def test_parse_resource_uris_empty(self):
         """TC-010: Handle empty ResourceURIs."""
-        from sfi_reporter.tk_app import parse_resource_uris
+        from sfi_reporter.formatters import parse_resource_uris
         
         assert parse_resource_uris("") == []
         assert parse_resource_uris(None) == []
@@ -347,7 +347,7 @@ class TestSortableTreeview:
 
     def test_sort_by_columns_numeric(self):
         """TC-011: Multi-column sort with numeric columns."""
-        from sfi_reporter.tk_app import SortableTreeview
+        from sfi_reporter.dialogs import SortableTreeview
         import tkinter as tk
         
         # Create minimal root window (required for Treeview)
@@ -380,7 +380,7 @@ class TestSortableTreeview:
 
     def test_sort_by_columns_empty(self):
         """TC-011: Sort handles empty treeview gracefully."""
-        from sfi_reporter.tk_app import SortableTreeview
+        from sfi_reporter.dialogs import SortableTreeview
         import tkinter as tk
         
         try:
@@ -407,7 +407,7 @@ class TestHyperlinkIntegration:
 
     def test_url_field_in_group_item_fields(self):
         """TC-012: URL field is included in grouped fields."""
-        from sfi_reporter.tk_app import group_item_fields
+        from sfi_reporter.formatters import group_item_fields
         
         item = {
             'id': '123',
@@ -423,7 +423,7 @@ class TestHyperlinkIntegration:
 
     def test_url_field_detected_for_hyperlink(self):
         """TC-012: URL fields are detected for hyperlink rendering."""
-        from sfi_reporter.tk_app import extract_urls_from_text
+        from sfi_reporter.formatters import extract_urls_from_text
         
         # Test typical url field value with HTML anchor
         url_with_anchor = '<a target="_blank" href="https://s360.msftcloudes.com/ActionItem/Details/123">View Details</a>'
@@ -442,7 +442,7 @@ class TestHyperlinkIntegration:
 
     def test_hyperlink_condition_check(self):
         """TC-012: Verify hyperlink detection logic matches ItemDetailsModal."""
-        from sfi_reporter.tk_app import format_field_value
+        from sfi_reporter.formatters import format_field_value
         
         # The code checks: field_name in ('title', 'url', 'Details') or 'http' in formatted_value.lower()
         
@@ -462,7 +462,7 @@ class TestColumnToggle:
 
     def test_required_columns_defined(self):
         """TC03: Required columns list exists and contains essential fields."""
-        from sfi_reporter.tk_app import REQUIRED_COLUMNS
+        from sfi_reporter.models import REQUIRED_COLUMNS
         
         assert 'title' in REQUIRED_COLUMNS
         assert 'dueDate' in REQUIRED_COLUMNS
@@ -470,7 +470,7 @@ class TestColumnToggle:
 
     def test_get_available_columns(self):
         """TC02: Available columns are derived from data items."""
-        from sfi_reporter.tk_app import get_available_columns
+        from sfi_reporter.models import get_available_columns
         
         items = [
             {'title': 'A', 'dueDate': '2026-01-01', 'custom1': 'val'},
@@ -485,7 +485,7 @@ class TestColumnToggle:
 
     def test_filter_item_columns(self):
         """TC04: Items are filtered to only visible columns."""
-        from sfi_reporter.tk_app import filter_item_columns
+        from sfi_reporter.models import filter_item_columns
         
         item = {'title': 'Test', 'dueDate': '2026-01-01', 'extra': 'hidden'}
         visible = ['title', 'dueDate']
@@ -496,7 +496,7 @@ class TestColumnToggle:
 
     def test_select_all_columns(self):
         """TC06: Select All enables all columns."""
-        from sfi_reporter.tk_app import select_all_columns
+        from sfi_reporter.models import select_all_columns
         
         available = ['title', 'dueDate', 'SlaType', 'extra1', 'extra2']
         result = select_all_columns(available)
@@ -505,7 +505,7 @@ class TestColumnToggle:
 
     def test_clear_all_keeps_required(self):
         """TC07: Clear All keeps required columns checked."""
-        from sfi_reporter.tk_app import clear_all_columns, REQUIRED_COLUMNS
+        from sfi_reporter.models import clear_all_columns, REQUIRED_COLUMNS
         
         available = ['title', 'dueDate', 'SlaType', 'extra1', 'extra2']
         result = clear_all_columns(available)
@@ -519,7 +519,7 @@ class TestColumnToggle:
 
     def test_validate_visible_columns(self):
         """TC08: Required columns cannot be removed from visible list."""
-        from sfi_reporter.tk_app import validate_visible_columns, REQUIRED_COLUMNS
+        from sfi_reporter.models import validate_visible_columns, REQUIRED_COLUMNS
         
         # Try to hide all columns
         visible = []
@@ -531,7 +531,7 @@ class TestColumnToggle:
 
     def test_column_display_names(self):
         """Column display names are human-readable."""
-        from sfi_reporter.tk_app import COLUMN_DISPLAY_NAMES
+        from sfi_reporter.models import COLUMN_DISPLAY_NAMES
         
         assert COLUMN_DISPLAY_NAMES.get('title') == 'Title'
         assert COLUMN_DISPLAY_NAMES.get('dueDate') == 'Due Date'
@@ -543,7 +543,7 @@ class TestEmptyColumnDetection:
 
     def test_get_empty_columns_none_value(self):
         """TC01: Column with None value is detected as empty."""
-        from sfi_reporter.tk_app import get_empty_columns
+        from sfi_reporter.models import get_empty_columns
         
         item = {'col1': None, 'col2': 'value'}
         empty = get_empty_columns(item)
@@ -553,7 +553,7 @@ class TestEmptyColumnDetection:
 
     def test_get_empty_columns_empty_string(self):
         """TC02: Column with empty string is detected as empty."""
-        from sfi_reporter.tk_app import get_empty_columns
+        from sfi_reporter.models import get_empty_columns
         
         item = {'col1': '', 'col2': 'value'}
         empty = get_empty_columns(item)
@@ -563,7 +563,7 @@ class TestEmptyColumnDetection:
 
     def test_get_empty_columns_whitespace_string(self):
         """TC03: Column with whitespace-only string is detected as empty."""
-        from sfi_reporter.tk_app import get_empty_columns
+        from sfi_reporter.models import get_empty_columns
         
         item = {'col1': '   ', 'col2': 'value'}
         empty = get_empty_columns(item)
@@ -572,7 +572,7 @@ class TestEmptyColumnDetection:
 
     def test_get_empty_columns_empty_list(self):
         """TC04: Column with empty list is detected as empty."""
-        from sfi_reporter.tk_app import get_empty_columns
+        from sfi_reporter.models import get_empty_columns
         
         item = {'col1': [], 'col2': ['item']}
         empty = get_empty_columns(item)
@@ -582,7 +582,7 @@ class TestEmptyColumnDetection:
 
     def test_get_empty_columns_zero_not_empty(self):
         """TC05: Column with zero is NOT detected as empty (0 is valid data)."""
-        from sfi_reporter.tk_app import get_empty_columns
+        from sfi_reporter.models import get_empty_columns
         
         item = {'col1': 0, 'col2': 'value'}
         empty = get_empty_columns(item)
@@ -591,7 +591,7 @@ class TestEmptyColumnDetection:
 
     def test_get_empty_columns_false_not_empty(self):
         """TC06: Column with False is NOT detected as empty (False is valid data)."""
-        from sfi_reporter.tk_app import get_empty_columns
+        from sfi_reporter.models import get_empty_columns
         
         item = {'col1': False, 'col2': 'value'}
         empty = get_empty_columns(item)
@@ -600,7 +600,7 @@ class TestEmptyColumnDetection:
 
     def test_get_empty_columns_string_none(self):
         """TC07: Column with string 'None' is detected as empty."""
-        from sfi_reporter.tk_app import get_empty_columns
+        from sfi_reporter.models import get_empty_columns
         
         item = {'col1': 'None', 'col2': 'value'}
         empty = get_empty_columns(item)
@@ -613,27 +613,27 @@ class TestManagerDetection:
     
     def test_is_manager_view_true_for_team_group(self):
         """TC1.1: is_manager_view returns True for TeamGroup."""
-        from sfi_reporter.tk_app import is_manager_view
+        from sfi_reporter.services import is_manager_view
         
         landing_view = [{"Group": "TeamGroup", "Id": "xxx", "Name": "Team"}]
         assert is_manager_view(landing_view) is True
     
     def test_is_manager_view_false_for_services(self):
         """TC1.2: is_manager_view returns False for Services."""
-        from sfi_reporter.tk_app import is_manager_view
+        from sfi_reporter.services import is_manager_view
         
         landing_view = [{"Group": "Service", "Id": "xxx", "Name": "Svc"}]
         assert is_manager_view(landing_view) is False
     
     def test_is_manager_view_false_for_empty(self):
         """TC1.3: is_manager_view returns False for empty list."""
-        from sfi_reporter.tk_app import is_manager_view
+        from sfi_reporter.services import is_manager_view
         
         assert is_manager_view([]) is False
     
     def test_is_manager_view_true_for_mixed(self):
         """TC1.4: is_manager_view returns True when TeamGroup is present with others."""
-        from sfi_reporter.tk_app import is_manager_view
+        from sfi_reporter.services import is_manager_view
         
         landing_view = [
             {"Group": "Service", "Id": "svc1", "Name": "Svc"},
@@ -647,7 +647,7 @@ class TestServiceOwnerLookup:
     
     def test_get_service_owners_single_owner(self):
         """TC2.1: Parses single owner correctly."""
-        from sfi_reporter.tk_app import parse_owners_field
+        from sfi_reporter.services import parse_owners_field
         
         owners_json = '["John Doe"]'
         result = parse_owners_field(owners_json)
@@ -655,7 +655,7 @@ class TestServiceOwnerLookup:
     
     def test_get_service_owners_multiple_owners(self):
         """TC2.2: Parses multiple owners correctly."""
-        from sfi_reporter.tk_app import parse_owners_field
+        from sfi_reporter.services import parse_owners_field
         
         owners_json = '["John Doe","Jane Smith"]'
         result = parse_owners_field(owners_json)
@@ -663,14 +663,14 @@ class TestServiceOwnerLookup:
     
     def test_get_service_owners_null_owners(self):
         """TC2.3: Handles null owners field."""
-        from sfi_reporter.tk_app import parse_owners_field
+        from sfi_reporter.services import parse_owners_field
         
         assert parse_owners_field(None) == []
         assert parse_owners_field("null") == []
     
     def test_get_service_owners_empty_string(self):
         """TC2.4: Handles empty string owners field."""
-        from sfi_reporter.tk_app import parse_owners_field
+        from sfi_reporter.services import parse_owners_field
         
         assert parse_owners_field("") == []
         assert parse_owners_field("[]") == []
@@ -681,7 +681,7 @@ class TestOwnerAggregation:
     
     def test_aggregate_by_owner_single_owner(self):
         """TC3.1: Groups items under single owner correctly."""
-        from sfi_reporter.tk_app import aggregate_by_owner
+        from sfi_reporter.services import aggregate_by_owner
         
         items = [
             {"S360_ServiceTreeServiceName": "Service One", "SlaType": "InSLA"},
@@ -696,7 +696,7 @@ class TestOwnerAggregation:
     
     def test_aggregate_by_owner_multi_owner(self):
         """TC3.2: Counts item under each owner for multi-owner services."""
-        from sfi_reporter.tk_app import aggregate_by_owner
+        from sfi_reporter.services import aggregate_by_owner
         
         items = [{"S360_ServiceTreeServiceName": "Service One", "SlaType": "OutOfSla"}]
         service_owners = {"Service One": ["Owner A", "Owner B"]}
@@ -712,31 +712,31 @@ class TestOwnerAggregation:
     
     def test_aggregate_by_owner_unknown_service(self):
         """TC3.3: Handles items with unknown service ID."""
-        from sfi_reporter.tk_app import aggregate_by_owner
+        from sfi_reporter.services import aggregate_by_owner
         
         items = [{"S360_ServiceTreeServiceName": "Unknown Service", "SlaType": "InSLA"}]
         service_owners = {}  # No mapping
         
         result = aggregate_by_owner(items, service_owners)
         
-        assert "Unknown Owner" in result
-        assert result["Unknown Owner"]["count"] == 1
+        assert "No Owner in ST" in result
+        assert result["No Owner in ST"]["count"] == 1
     
     def test_aggregate_by_owner_empty_owners(self):
         """TC3.4: Handles services with empty owners list."""
-        from sfi_reporter.tk_app import aggregate_by_owner
+        from sfi_reporter.services import aggregate_by_owner
         
         items = [{"S360_ServiceTreeServiceName": "Service One", "SlaType": "InSLA"}]
         service_owners = {"Service One": []}  # Empty owners
         
         result = aggregate_by_owner(items, service_owners)
         
-        assert "No Owner" in result
-        assert result["No Owner"]["count"] == 1
+        assert "No Owner in ST" in result
+        assert result["No Owner in ST"]["count"] == 1
     
     def test_aggregate_by_owner_sla_calculation(self):
         """TC3.5: Calculates SLA and invalid ETA correctly."""
-        from sfi_reporter.tk_app import aggregate_by_owner
+        from sfi_reporter.services import aggregate_by_owner
         from sfi_reporter.data import is_invalid_eta
         
         items = [
@@ -757,7 +757,7 @@ class TestDirectReportFiltering:
     
     def test_extract_direct_reports_from_team_entries(self):
         """Should extract names from 'X's Team' entries only."""
-        from sfi_reporter.tk_app import extract_direct_reports
+        from sfi_reporter.services import extract_direct_reports
         
         service_owners = {
             "Gowri Bhaskara's Team": ["Gowri Bhaskara"],
@@ -774,7 +774,7 @@ class TestDirectReportFiltering:
     
     def test_extract_direct_reports_includes_manager(self):
         """Should include manager name when provided."""
-        from sfi_reporter.tk_app import extract_direct_reports
+        from sfi_reporter.services import extract_direct_reports
         
         service_owners = {
             "Gowri Bhaskara's Team": ["Gowri Bhaskara"],
@@ -789,7 +789,7 @@ class TestDirectReportFiltering:
     
     def test_extract_direct_reports_empty_when_no_teams(self):
         """Should return empty set when no team entries."""
-        from sfi_reporter.tk_app import extract_direct_reports
+        from sfi_reporter.services import extract_direct_reports
         
         service_owners = {
             "Service A": ["Person 1"],
@@ -802,7 +802,7 @@ class TestDirectReportFiltering:
     
     def test_aggregate_by_owner_picks_first_allowed(self):
         """Should pick first allowed owner, not count item multiple times."""
-        from sfi_reporter.tk_app import aggregate_by_owner
+        from sfi_reporter.services import aggregate_by_owner
         
         items = [
             {"S360_ServiceTreeServiceName": "Service One", "SlaType": "InSLA", "EtaDate": "2025-12-31"},
@@ -822,7 +822,7 @@ class TestDirectReportFiltering:
     
     def test_aggregate_by_owner_unknown_when_no_match(self):
         """Should use Unknown Owner when no allowed owner matches."""
-        from sfi_reporter.tk_app import aggregate_by_owner
+        from sfi_reporter.services import aggregate_by_owner
         
         items = [
             {"S360_ServiceTreeServiceName": "Service One", "SlaType": "InSLA", "EtaDate": "2025-12-31"},
@@ -842,7 +842,7 @@ class TestDirectReportFiltering:
 
     def test_aggregate_by_owner_with_org_mapping(self):
         """Should use org_mapping to roll up skip-levels to directs."""
-        from sfi_reporter.tk_app import aggregate_by_owner
+        from sfi_reporter.services import aggregate_by_owner
         
         items = [
             {"S360_ServiceTreeServiceName": "Service One", "SlaType": "InSLA", "EtaDate": "2025-12-31"},

@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['src\\sfi_reporter\\tk_app.py'],
+    ['src\\sfi_reporter\\app.py'],
     pathex=['..\\accia-s360\\src'],
     binaries=[],
     datas=[],

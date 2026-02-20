@@ -27,7 +27,7 @@ _REFRESH_CACHE: dict[str, dict | None] = {}
 def _get_data(alias: str) -> dict:
     """Run do_refresh for the alias, caching the result across tests."""
     if alias not in _REFRESH_CACHE:
-        from sfi_reporter.tk_app import do_refresh
+        from sfi_reporter.services import do_refresh
         result = do_refresh(alias, on_status=lambda msg: print(f"  [{alias}] {msg}"))
         _REFRESH_CACHE[alias] = result
     data = _REFRESH_CACHE[alias]
@@ -78,7 +78,7 @@ class TestBrentjIC:
     def test_cache_serialization(self):
         """The data dict should be JSON-serializable after _serialize_org_data_for_cache."""
         import json
-        from sfi_reporter.tk_app import _serialize_org_data_for_cache
+        from sfi_reporter.services import _serialize_org_data_for_cache
         data = _get_data("brentj")
         serialized = _serialize_org_data_for_cache(data)
         # Must not raise
@@ -113,7 +113,7 @@ class TestMuralic1LevelManager:
 
     def test_org_mapping_contains_org_ancestry(self):
         """Every org_mapping value should be an OrgAncestry."""
-        from sfi_reporter.tk_app import OrgAncestry
+        from sfi_reporter.models import OrgAncestry
         data = _get_data("muralic")
         om = data.get('org_mapping', {})
         for owner, ancestry in om.items():
@@ -124,7 +124,7 @@ class TestMuralic1LevelManager:
     def test_directs_have_short_paths(self):
         """For a 1-level manager, org_mapping entries should have short paths
         (length 1 for ICs under root, length 2 for ICs under a sub-manager)."""
-        from sfi_reporter.tk_app import OrgAncestry
+        from sfi_reporter.models import OrgAncestry
         data = _get_data("muralic")
         om = data.get('org_mapping', {})
         for owner, ancestry in om.items():
@@ -156,7 +156,7 @@ class TestMuralic1LevelManager:
     def test_cache_serialization(self):
         """The data dict should be JSON-serializable after serialize."""
         import json
-        from sfi_reporter.tk_app import _serialize_org_data_for_cache
+        from sfi_reporter.services import _serialize_org_data_for_cache
         data = _get_data("muralic")
         serialized = _serialize_org_data_for_cache(data)
         json.dumps(serialized, default=str)
@@ -164,9 +164,8 @@ class TestMuralic1LevelManager:
     def test_cache_round_trip_preserves_types(self):
         """Serialize → JSON → deserialize should restore OrgAncestry types."""
         import json
-        from sfi_reporter.tk_app import (
-            OrgAncestry, _serialize_org_data_for_cache, _deserialize_org_data_from_cache,
-        )
+        from sfi_reporter.models import OrgAncestry
+        from sfi_reporter.services import _serialize_org_data_for_cache, _deserialize_org_data_from_cache
         data = _get_data("muralic")
         serialized = _serialize_org_data_for_cache(data)
         json_str = json.dumps(serialized, default=str)
@@ -205,7 +204,7 @@ class TestAlexhowells2LevelManager:
 
     def test_org_mapping_has_deep_paths(self):
         """alexhowells has sub-reports — some org_mapping entries must have path depth >= 3."""
-        from sfi_reporter.tk_app import OrgAncestry
+        from sfi_reporter.models import OrgAncestry
         data = _get_data("alexhowells")
         om = data.get('org_mapping', {})
         has_deep = any(
@@ -219,7 +218,7 @@ class TestAlexhowells2LevelManager:
 
     def test_multi_level_paths_present(self):
         """2-level manager should produce org_mapping entries at multiple depths."""
-        from sfi_reporter.tk_app import OrgAncestry
+        from sfi_reporter.models import OrgAncestry
         data = _get_data("alexhowells")
         om = data.get('org_mapping', {})
         depths = set()
@@ -230,7 +229,7 @@ class TestAlexhowells2LevelManager:
 
     def test_muralic_appears_in_paths(self):
         """muralic is one of alexhowells' directs — should appear in paths at depth 1."""
-        from sfi_reporter.tk_app import OrgAncestry
+        from sfi_reporter.models import OrgAncestry
         data = _get_data("alexhowells")
         om = data.get('org_mapping', {})
         path_names = set()
@@ -243,7 +242,7 @@ class TestAlexhowells2LevelManager:
 
     def test_hierarchy_has_multiple_branches(self):
         """At least one path[1] manager should have owners under multiple path[2] sub-managers."""
-        from sfi_reporter.tk_app import OrgAncestry
+        from sfi_reporter.models import OrgAncestry
         from collections import defaultdict
         data = _get_data("alexhowells")
         om = data.get('org_mapping', {})
@@ -276,7 +275,7 @@ class TestAlexhowells2LevelManager:
     def test_cache_serialization(self):
         """The full data dict must be JSON-serializable."""
         import json
-        from sfi_reporter.tk_app import _serialize_org_data_for_cache
+        from sfi_reporter.services import _serialize_org_data_for_cache
         data = _get_data("alexhowells")
         serialized = _serialize_org_data_for_cache(data)
         # This is the exact line that was crashing — must not raise
@@ -285,9 +284,8 @@ class TestAlexhowells2LevelManager:
     def test_cache_round_trip_preserves_paths(self):
         """Serialize → JSON → deserialize should restore OrgAncestry with paths."""
         import json
-        from sfi_reporter.tk_app import (
-            OrgAncestry, _serialize_org_data_for_cache, _deserialize_org_data_from_cache,
-        )
+        from sfi_reporter.models import OrgAncestry
+        from sfi_reporter.services import _serialize_org_data_for_cache, _deserialize_org_data_from_cache
         data = _get_data("alexhowells")
         serialized = _serialize_org_data_for_cache(data)
         json_str = json.dumps(serialized, default=str)
@@ -303,7 +301,8 @@ class TestAlexhowells2LevelManager:
 
     def test_collect_services_for_direct(self):
         """collect_services_for_owner with a direct-report path prefix should return services."""
-        from sfi_reporter.tk_app import collect_services_for_owner, OrgAncestry
+        from sfi_reporter.models import OrgAncestry
+        from sfi_reporter.services import collect_services_for_owner
         data = _get_data("alexhowells")
         om = data.get('org_mapping', {})
         so = data.get('service_owners', {})
@@ -320,7 +319,8 @@ class TestAlexhowells2LevelManager:
 
     def test_collect_services_for_sub_manager(self):
         """collect_services_for_owner with a deeper path prefix should return services."""
-        from sfi_reporter.tk_app import collect_services_for_owner, OrgAncestry
+        from sfi_reporter.models import OrgAncestry
+        from sfi_reporter.services import collect_services_for_owner
         data = _get_data("alexhowells")
         om = data.get('org_mapping', {})
         so = data.get('service_owners', {})

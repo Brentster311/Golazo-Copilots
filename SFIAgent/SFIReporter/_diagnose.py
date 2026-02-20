@@ -44,7 +44,8 @@ print()
 print("=" * 60)
 print("STEP 3: get_service_owners for muralic's services")
 print("=" * 60)
-from sfi_reporter.tk_app import do_refresh, get_service_owners, get_org_mapping, OrgAncestry
+from sfi_reporter.models import OrgAncestry
+from sfi_reporter.services import do_refresh, get_service_owners, get_org_mapping
 
 # First get muralic's services
 landing = client.get_landing_view("muralic")

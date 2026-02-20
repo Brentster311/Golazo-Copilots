@@ -60,31 +60,31 @@ class TestSlaStatusMapping:
 
     def test_tc_c01_integer_sla_type(self):
         """TC-C01: SLA Status maps integer SlaType correctly."""
-        from sfi_reporter.tk_app import _resolve_sla_display
+        from sfi_reporter.models import _resolve_sla_display
         assert _resolve_sla_display(0) == "In SLA"
         assert _resolve_sla_display(1) == "Approaching"
         assert _resolve_sla_display(2) == "Out of SLA"
 
     def test_tc_c02_string_numeric_sla_type(self):
         """TC-C02: SLA Status maps string-numeric SlaType correctly."""
-        from sfi_reporter.tk_app import _resolve_sla_display
+        from sfi_reporter.models import _resolve_sla_display
         assert _resolve_sla_display("0") == "In SLA"
         assert _resolve_sla_display("2") == "Out of SLA"
 
     def test_tc_c03_none_sla_type(self):
         """TC-C03: SLA Status handles None SlaType."""
-        from sfi_reporter.tk_app import _resolve_sla_display
+        from sfi_reporter.models import _resolve_sla_display
         assert _resolve_sla_display(None) == ""
 
     def test_tc_c04_missing_sla_type(self):
         """TC-C04: SLA Status handles missing key (sentinel)."""
-        from sfi_reporter.tk_app import _resolve_sla_display
+        from sfi_reporter.models import _resolve_sla_display
         # If caller passes the result of item.get('SlaType'), missing key → None
         assert _resolve_sla_display(None) == ""
 
     def test_tc_c05_api_string_variants(self):
         """TC-C05: SLA Status maps API string variants like 'OutOfSla'."""
-        from sfi_reporter.tk_app import _resolve_sla_display
+        from sfi_reporter.models import _resolve_sla_display
         assert _resolve_sla_display("OutOfSla") == "Out of SLA"
         assert _resolve_sla_display("InSla") == "In SLA"
         assert _resolve_sla_display("Approaching") == "Approaching"
@@ -95,19 +95,19 @@ class TestEtaStatusColumn:
 
     def test_tc_c06_eta_status_column_present(self):
         """TC-C06: DetailModal column definitions include 'eta_status'."""
-        from sfi_reporter.tk_app import DetailModal
+        from sfi_reporter.dialogs import DetailModal
         # Inspect the column tuple that DetailModal uses
         # After the fix, columns should include 'eta_status'
         assert "eta_status" in DetailModal.COLUMNS
 
     def test_tc_c07_eta_status_shows_value(self):
         """TC-C07: ETA Status shows field value when populated."""
-        from sfi_reporter.tk_app import _resolve_eta_status
+        from sfi_reporter.models import _resolve_eta_status
         assert _resolve_eta_status("Updated 2026-01-15") == "Updated 2026-01-15"
 
     def test_tc_c08_eta_status_handles_none(self):
         """TC-C08: ETA Status handles None value gracefully."""
-        from sfi_reporter.tk_app import _resolve_eta_status
+        from sfi_reporter.models import _resolve_eta_status
         assert _resolve_eta_status(None) == ""
 
     def test_tc_c09_eta_status_updates_after_edit(self):
@@ -155,7 +155,7 @@ class TestHomeEtaButton:
 
     def test_tc_a03_dialog_shows_total_and_invalid(self):
         """TC-A03: EtaModeDialog shows total and invalid counts."""
-        from sfi_reporter.tk_app import EtaModeDialog
+        from sfi_reporter.dialogs import EtaModeDialog
         # EtaModeDialog signature now accepts total_count AND invalid_count
         # We verify the constructor takes both params
         import inspect
@@ -213,7 +213,7 @@ class TestHomeEtaButton:
         """TC-A07: Bulk button disabled when zero invalid ETAs."""
         # After the change, EtaModeDialog with invalid_count=0 should disable bulk
         # We verify via signature and a mock construction
-        from sfi_reporter.tk_app import EtaModeDialog
+        from sfi_reporter.dialogs import EtaModeDialog
         import inspect
         sig = inspect.signature(EtaModeDialog.__init__)
         # The dialog must accept invalid_count; with 0, bulk should be disabled
@@ -244,7 +244,7 @@ class TestDrillDownEtaButton:
 
     def test_tc_b01_eta_button_exists(self):
         """TC-B01: DetailModal has an 'Update ETAs' button attribute."""
-        from sfi_reporter.tk_app import DetailModal
+        from sfi_reporter.dialogs import DetailModal
         # DetailModal._create_widgets should create self.eta_btn
         assert hasattr(DetailModal, '_on_detail_update_etas'), (
             "DetailModal must have _on_detail_update_etas method"
@@ -253,20 +253,20 @@ class TestDrillDownEtaButton:
     def test_tc_b02_eta_button_opens_manual_dialog(self):
         """TC-B02: Clicking ETA button opens ManualEtaReviewDialog."""
         # We'll verify the method exists and is wired correctly
-        from sfi_reporter.tk_app import DetailModal
+        from sfi_reporter.dialogs import DetailModal
         import inspect
         assert callable(getattr(DetailModal, '_on_detail_update_etas', None))
 
     def test_tc_b03_detail_refreshes_after_save(self):
         """TC-B03: DetailModal tree is repopulated after ETA save."""
-        from sfi_reporter.tk_app import DetailModal
+        from sfi_reporter.dialogs import DetailModal
         assert callable(getattr(DetailModal, '_refresh_items', None)), (
             "DetailModal must have _refresh_items method"
         )
 
     def test_tc_b04_home_refreshes_after_drill_down_save(self):
         """TC-B04: DetailModal accepts on_eta_complete callback for parent refresh."""
-        from sfi_reporter.tk_app import DetailModal
+        from sfi_reporter.dialogs import DetailModal
         import inspect
         sig = inspect.signature(DetailModal.__init__)
         assert "on_eta_complete" in sig.parameters, (
@@ -277,7 +277,7 @@ class TestDrillDownEtaButton:
         """TC-B05: ETA button disabled when items list is empty."""
         # When items is empty, the button should be disabled or not shown
         # This is verified structurally by checking the code path
-        from sfi_reporter.tk_app import DetailModal
+        from sfi_reporter.dialogs import DetailModal
         # The empty-items path shows "No items found." and should not have eta_btn
         # We verify the method handles empty gracefully
         assert hasattr(DetailModal, '_on_detail_update_etas')

@@ -18,23 +18,23 @@ class TestOrgAncestry:
     """Verify the OrgAncestry type exists and behaves correctly."""
 
     def test_creation_with_two_levels(self):
-        from sfi_reporter.tk_app import OrgAncestry
+        from sfi_reporter.models import OrgAncestry
         a = OrgAncestry(path=("L1", "L2"))
         assert a.path == ("L1", "L2")
 
     def test_creation_single_element(self):
-        from sfi_reporter.tk_app import OrgAncestry
+        from sfi_reporter.models import OrgAncestry
         a = OrgAncestry(path=("Muralic Name",))
         assert a.path == ("Muralic Name",)
 
     def test_path_access(self):
-        from sfi_reporter.tk_app import OrgAncestry
+        from sfi_reporter.models import OrgAncestry
         a = OrgAncestry(path=("L1", "L2"))
         assert a.path[0] == "L1"
         assert a.path[1] == "L2"
 
     def test_unknown_owner(self):
-        from sfi_reporter.tk_app import OrgAncestry
+        from sfi_reporter.models import OrgAncestry
         a = OrgAncestry(path=("Unknown Owner",))
         assert a.path == ("Unknown Owner",)
 
@@ -48,7 +48,8 @@ class TestAggregateByOwnerWithOrgAncestry:
 
     def test_tc_2_1_level1_stats_are_sum_of_children(self):
         """TC-2.1: Level-1 stats equal sum of all children."""
-        from sfi_reporter.tk_app import aggregate_by_owner, OrgAncestry
+        from sfi_reporter.models import OrgAncestry
+        from sfi_reporter.services import aggregate_by_owner
 
         items = [
             {"S360_ServiceTreeServiceName": "Svc A", "SlaType": "InSLA", "EtaDate": "2030-01-01"},
@@ -76,7 +77,8 @@ class TestAggregateByOwnerWithOrgAncestry:
 
     def test_tc_2_2_sla_and_eta_rollup(self):
         """TC-2.2: SLA and invalid ETA roll up correctly."""
-        from sfi_reporter.tk_app import aggregate_by_owner, OrgAncestry
+        from sfi_reporter.models import OrgAncestry
+        from sfi_reporter.services import aggregate_by_owner
 
         items = [
             {"S360_ServiceTreeServiceName": "Svc A", "SlaType": "OutOfSla", "EtaDate": None},
@@ -98,7 +100,8 @@ class TestAggregateByOwnerWithOrgAncestry:
 
     def test_tc_2_3_unknown_owner_bucket(self):
         """TC-2.3: Unmapped owners fall into Unknown Owner."""
-        from sfi_reporter.tk_app import aggregate_by_owner, OrgAncestry
+        from sfi_reporter.models import OrgAncestry
+        from sfi_reporter.services import aggregate_by_owner
 
         items = [
             {"S360_ServiceTreeServiceName": "Svc A", "SlaType": "InSLA", "EtaDate": "2030-01-01"},
@@ -117,7 +120,8 @@ class TestAggregateByOwnerWithOrgAncestry:
 
     def test_tc_2_4_path_with_two_elements_uses_path1(self):
         """TC-2.4: When path has 2 elements, uses path[1] as group key."""
-        from sfi_reporter.tk_app import aggregate_by_owner, OrgAncestry
+        from sfi_reporter.models import OrgAncestry
+        from sfi_reporter.services import aggregate_by_owner
 
         items = [
             {"S360_ServiceTreeServiceName": "Svc A", "SlaType": "InSLA", "EtaDate": "2030-01-01"},
@@ -141,7 +145,7 @@ class TestAggregateByOwnerWithOrgAncestry:
 
     def test_existing_string_org_mapping_still_works(self):
         """Regression: Old-style string org_mapping must still work."""
-        from sfi_reporter.tk_app import aggregate_by_owner
+        from sfi_reporter.services import aggregate_by_owner
 
         items = [
             {"S360_ServiceTreeServiceName": "Svc A", "SlaType": "InSLA", "EtaDate": "2030-01-01"},
@@ -164,7 +168,8 @@ class TestDrillDownSubtree:
 
     def test_level1_drilldown_collects_entire_subtree(self):
         """TC-4.1: Level-1 drill-down includes ALL items in subtree."""
-        from sfi_reporter.tk_app import collect_services_for_owner, OrgAncestry
+        from sfi_reporter.models import OrgAncestry
+        from sfi_reporter.services import collect_services_for_owner
 
         org_mapping = {
             "Owner1": OrgAncestry(path=("Root", "Direct A", "Sub1")),
@@ -186,7 +191,8 @@ class TestDrillDownSubtree:
 
     def test_deeper_prefix_drilldown_collects_sub_report_only(self):
         """TC-4.2: Deeper prefix drill-down includes only that sub-report's items."""
-        from sfi_reporter.tk_app import collect_services_for_owner, OrgAncestry
+        from sfi_reporter.models import OrgAncestry
+        from sfi_reporter.services import collect_services_for_owner
 
         org_mapping = {
             "Owner1": OrgAncestry(path=("Root", "Direct A", "Sub1")),
@@ -205,7 +211,8 @@ class TestDrillDownSubtree:
 
     def test_level1_direct_owns_services_directly(self):
         """Level-1 owner who directly owns services includes them."""
-        from sfi_reporter.tk_app import collect_services_for_owner, OrgAncestry
+        from sfi_reporter.models import OrgAncestry
+        from sfi_reporter.services import collect_services_for_owner
 
         org_mapping = {
             "DirectOwner": OrgAncestry(path=("Root", "DirectOwner")),
@@ -231,7 +238,7 @@ class TestBackwardCompatibility:
 
     def test_aggregate_with_old_string_mapping(self):
         """Old-style string org_mapping must produce same results."""
-        from sfi_reporter.tk_app import aggregate_by_owner
+        from sfi_reporter.services import aggregate_by_owner
 
         items = [
             {"S360_ServiceTreeServiceName": "Svc A", "SlaType": "OutOfSla", "EtaDate": "2025-01-01"},
@@ -259,7 +266,7 @@ class TestBackwardCompatibility:
 
     def test_aggregate_no_org_mapping(self):
         """Without org_mapping, behaves as direct owner attribution."""
-        from sfi_reporter.tk_app import aggregate_by_owner
+        from sfi_reporter.services import aggregate_by_owner
 
         items = [
             {"S360_ServiceTreeServiceName": "Svc A", "SlaType": "InSLA", "EtaDate": "2030-01-01"},
@@ -273,7 +280,7 @@ class TestBackwardCompatibility:
 
     def test_aggregate_allowed_owners_legacy(self):
         """Legacy allowed_owners mode still works."""
-        from sfi_reporter.tk_app import aggregate_by_owner
+        from sfi_reporter.services import aggregate_by_owner
 
         items = [
             {"S360_ServiceTreeServiceName": "Svc A", "SlaType": "InSLA", "EtaDate": "2030-01-01"},
@@ -294,9 +301,8 @@ class TestCacheSerializationRoundTrip:
     """Verify OrgAncestry survives JSON cache round-trip."""
 
     def test_org_mapping_round_trip(self):
-        from sfi_reporter.tk_app import (
-            OrgAncestry, _serialize_org_data_for_cache, _deserialize_org_data_from_cache,
-        )
+        from sfi_reporter.models import OrgAncestry
+        from sfi_reporter.services import _serialize_org_data_for_cache, _deserialize_org_data_from_cache
         data = {
             'org_mapping': {
                 'brentj': OrgAncestry(path=('Muralic Name', 'Brent Jensen')),
@@ -313,9 +319,7 @@ class TestCacheSerializationRoundTrip:
         assert deserialized['org_mapping']['kehsieh'].path == ('Muralic Name',)
 
     def test_empty_data_round_trip(self):
-        from sfi_reporter.tk_app import (
-            _serialize_org_data_for_cache, _deserialize_org_data_from_cache,
-        )
+        from sfi_reporter.services import _serialize_org_data_for_cache, _deserialize_org_data_from_cache
         data = {'org_mapping': {}}
         serialized = _serialize_org_data_for_cache(data)
         json_str = json.dumps(serialized)
@@ -325,7 +329,7 @@ class TestCacheSerializationRoundTrip:
 
     def test_legacy_string_org_mapping_preserved(self):
         """Legacy string org_mapping (from older caches) is not corrupted."""
-        from sfi_reporter.tk_app import _deserialize_org_data_from_cache
+        from sfi_reporter.services import _deserialize_org_data_from_cache
         data = {
             'org_mapping': {'brentj': 'Muralic Name'},
         }

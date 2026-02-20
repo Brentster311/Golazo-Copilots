@@ -14,7 +14,7 @@ class TestGetServiceOwnersSimplified:
     @patch("sfi_reporter.data.get_client")
     def test_returns_dict(self, mock_get_client):
         """get_service_owners returns a dict (no longer a tuple)."""
-        from sfi_reporter.tk_app import get_service_owners
+        from sfi_reporter.services import get_service_owners
 
         mock_client = MagicMock()
         mock_client.search.return_value = [

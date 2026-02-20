@@ -3,7 +3,7 @@ import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 sys.stdout.reconfigure(encoding='utf-8')
 
-from sfi_reporter.tk_app import do_refresh
+from sfi_reporter.services import do_refresh
 
 print("Running do_refresh('muralic')...")
 data = do_refresh("muralic", on_status=lambda m: print(f"  {m}"))

@@ -57,7 +57,7 @@ class TestGetOrgMappingOrgTree:
     @patch("sfi_reporter.data.get_client")
     def test_tc01_calls_get_org_tree_once(self, mock_get_client):
         """TC-01: get_org_mapping calls get_org_tree once, not get_manager_chain."""
-        from sfi_reporter.tk_app import get_org_mapping
+        from sfi_reporter.services import get_org_mapping
 
         mock_client = MagicMock()
         mock_client.get_org_tree.return_value = _muralic_tree()
@@ -77,7 +77,8 @@ class TestGetOrgMappingOrgTree:
         Path should be ("Murali Chintalapati", "Karan Parkash") — root + nearest manager.
         Bhavya's name never appears in the path.
         """
-        from sfi_reporter.tk_app import get_org_mapping, OrgAncestry
+        from sfi_reporter.models import OrgAncestry
+        from sfi_reporter.services import get_org_mapping
 
         mock_client = MagicMock()
         mock_client.get_org_tree.return_value = _muralic_tree()
@@ -98,7 +99,8 @@ class TestGetOrgMappingOrgTree:
         Root IS a group (path[0]). Managers in chain = alex, muralic, brentj.
         Wei Zou's name never appears. Path = ("Alex Howells", "Murali Chintalapati", "Brent Jensen").
         """
-        from sfi_reporter.tk_app import get_org_mapping, OrgAncestry
+        from sfi_reporter.models import OrgAncestry
+        from sfi_reporter.services import get_org_mapping
 
         deep_tree = _tree("alexhowells", "Alex Howells", [
             _tree("muralic", "Murali Chintalapati", [
@@ -123,7 +125,8 @@ class TestGetOrgMappingOrgTree:
     @patch("sfi_reporter.data.get_client")
     def test_tc07_name_disambiguation(self, mock_get_client):
         """TC-07: Only the person in the tree matches, not external duplicates."""
-        from sfi_reporter.tk_app import get_org_mapping, OrgAncestry
+        from sfi_reporter.models import OrgAncestry
+        from sfi_reporter.services import get_org_mapping
 
         mock_client = MagicMock()
         mock_client.get_org_tree.return_value = _muralic_tree()
@@ -140,7 +143,8 @@ class TestGetOrgMappingOrgTree:
     @patch("sfi_reporter.data.get_client")
     def test_tc08_owner_is_manager(self, mock_get_client):
         """TC-08: When owner IS the root manager, path = (root_name,)."""
-        from sfi_reporter.tk_app import get_org_mapping, OrgAncestry
+        from sfi_reporter.models import OrgAncestry
+        from sfi_reporter.services import get_org_mapping
 
         mock_client = MagicMock()
         mock_client.get_org_tree.return_value = _muralic_tree()
@@ -156,7 +160,8 @@ class TestGetOrgMappingOrgTree:
     @patch("sfi_reporter.data.get_client")
     def test_tc09_owner_not_found(self, mock_get_client):
         """TC-09: Owner not in tree maps to Unknown Owner."""
-        from sfi_reporter.tk_app import get_org_mapping, OrgAncestry
+        from sfi_reporter.models import OrgAncestry
+        from sfi_reporter.services import get_org_mapping
 
         mock_client = MagicMock()
         mock_client.get_org_tree.return_value = _muralic_tree()
@@ -171,7 +176,8 @@ class TestGetOrgMappingOrgTree:
     @patch("sfi_reporter.data.get_client")
     def test_tc11_empty_tree(self, mock_get_client):
         """TC-11: Manager with no reports → all owners unknown."""
-        from sfi_reporter.tk_app import get_org_mapping, OrgAncestry
+        from sfi_reporter.models import OrgAncestry
+        from sfi_reporter.services import get_org_mapping
 
         empty_tree = _tree("solo", "Solo Manager")
         mock_client = MagicMock()
@@ -188,7 +194,8 @@ class TestGetOrgMappingOrgTree:
         He has no direct_reports → not a manager → no group header.
         Path = ("Murali Chintalapati",) — service under root's group.
         """
-        from sfi_reporter.tk_app import get_org_mapping, OrgAncestry
+        from sfi_reporter.models import OrgAncestry
+        from sfi_reporter.services import get_org_mapping
 
         mock_client = MagicMock()
         mock_client.get_org_tree.return_value = _muralic_tree()
@@ -204,7 +211,8 @@ class TestGetOrgMappingOrgTree:
     @patch("sfi_reporter.data.get_client")
     def test_case_insensitive_name_match(self, mock_get_client):
         """Owner name matching is case-insensitive."""
-        from sfi_reporter.tk_app import get_org_mapping, OrgAncestry
+        from sfi_reporter.models import OrgAncestry
+        from sfi_reporter.services import get_org_mapping
 
         mock_client = MagicMock()
         mock_client.get_org_tree.return_value = _muralic_tree()
@@ -219,7 +227,7 @@ class TestGetOrgMappingOrgTree:
     @patch("sfi_reporter.data.get_client")
     def test_no_owner_aliases_param(self, mock_get_client):
         """TC-03: get_org_mapping no longer accepts owner_aliases parameter."""
-        from sfi_reporter.tk_app import get_org_mapping
+        from sfi_reporter.services import get_org_mapping
         import inspect
 
         sig = inspect.signature(get_org_mapping)
@@ -232,7 +240,7 @@ class TestGetServiceOwnersSimplified:
     @patch("sfi_reporter.data.get_client")
     def test_returns_dict_not_tuple(self, mock_get_client):
         """get_service_owners returns dict[str, list[str]], not tuple."""
-        from sfi_reporter.tk_app import get_service_owners
+        from sfi_reporter.services import get_service_owners
 
         mock_client = MagicMock()
         mock_client.search.return_value = [{
@@ -250,7 +258,7 @@ class TestGetServiceOwnersSimplified:
     @patch("sfi_reporter.data.get_client")
     def test_no_resolve_alias_calls(self, mock_get_client):
         """No S360 search calls for alias resolution (only for service lookup)."""
-        from sfi_reporter.tk_app import get_service_owners
+        from sfi_reporter.services import get_service_owners
 
         mock_client = MagicMock()
         mock_client.search.return_value = [{
@@ -270,7 +278,8 @@ class TestAggregationNLevel:
 
     def test_aggregate_by_owner_uses_path(self):
         """aggregate_by_owner rolls up to path[0] (top-level manager)."""
-        from sfi_reporter.tk_app import aggregate_by_owner, OrgAncestry
+        from sfi_reporter.models import OrgAncestry
+        from sfi_reporter.services import aggregate_by_owner
 
         items = [
             {'S360_ServiceTreeServiceName': 'Svc1', 'SlaType': 'InSla', 'EtaDate': '2026-06-01'},

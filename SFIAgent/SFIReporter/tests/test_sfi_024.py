@@ -40,23 +40,23 @@ class TestSelectedItemEta:
 
     def test_tc_a01_detail_modal_has_selected_eta_button_method(self):
         """TC-A01: DetailModal has _on_selected_eta_update method."""
-        from sfi_reporter.tk_app import DetailModal
+        from sfi_reporter.dialogs import DetailModal
         assert callable(getattr(DetailModal, '_on_selected_eta_update', None))
 
     def test_tc_a01_detail_modal_has_selection_handler(self):
         """TC-A01: DetailModal has _on_tree_select method for selection changes."""
-        from sfi_reporter.tk_app import DetailModal
+        from sfi_reporter.dialogs import DetailModal
         assert callable(getattr(DetailModal, '_on_tree_select', None))
 
     def test_tc_a02_no_selection_disables_button(self):
         """TC-A02: When no selection, selected_eta_btn is conceptually disabled."""
         # Verified structurally — _on_tree_select checks selection count
-        from sfi_reporter.tk_app import DetailModal
+        from sfi_reporter.dialogs import DetailModal
         assert callable(getattr(DetailModal, '_on_tree_select', None))
 
     def test_tc_a03_selected_items_passed_to_manual_dialog(self):
         """TC-A03: _on_selected_eta_update uses tree selection to get items."""
-        from sfi_reporter.tk_app import DetailModal
+        from sfi_reporter.dialogs import DetailModal
         # Verify the method exists — it will pull from self.tree.selection()
         sig = inspect.signature(DetailModal._on_selected_eta_update)
         # Should be a no-arg instance method (self only)
@@ -65,7 +65,7 @@ class TestSelectedItemEta:
 
     def test_tc_a04_refresh_chain_intact(self):
         """TC-A04: DetailModal._on_detail_eta_complete still exists for refresh chain."""
-        from sfi_reporter.tk_app import DetailModal
+        from sfi_reporter.dialogs import DetailModal
         assert callable(getattr(DetailModal, '_on_detail_eta_complete', None))
 
 
@@ -78,12 +78,12 @@ class TestViewDetailsInManualReview:
 
     def test_tc_b01_manual_dialog_has_view_details_method(self):
         """TC-B01: ManualEtaReviewDialog has _view_details method."""
-        from sfi_reporter.tk_app import ManualEtaReviewDialog
+        from sfi_reporter.dialogs import ManualEtaReviewDialog
         assert callable(getattr(ManualEtaReviewDialog, '_view_details', None))
 
     def test_tc_b02_view_details_opens_item_details_modal(self):
         """TC-B02: _view_details is callable and takes no extra args (uses self._items[self._index])."""
-        from sfi_reporter.tk_app import ManualEtaReviewDialog
+        from sfi_reporter.dialogs import ManualEtaReviewDialog
         sig = inspect.signature(ManualEtaReviewDialog._view_details)
         params = list(sig.parameters.keys())
         assert params == ['self']
