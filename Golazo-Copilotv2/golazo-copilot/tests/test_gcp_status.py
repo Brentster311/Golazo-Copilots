@@ -69,23 +69,23 @@ class TestStatusBasic:
     @pytest.mark.asyncio
     async def test_returns_active_status(self):
         """Should return active=True for initialized work item."""
-        await gcp_create_workitem(work_item_id="status-1", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="STA-001", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_status(
-            work_item_id="status-1",
+            work_item_id="STA-001",
             work_items_dir=TEST_WORKITEMS_DIR
         )
         
         assert result["active"] is True
-        assert result["work_item_id"] == "status-1"
+        assert result["work_item_id"] == "STA-001"
 
     @pytest.mark.asyncio
     async def test_returns_current_role_and_phase(self):
         """Should return current role and phase."""
-        await gcp_create_workitem(work_item_id="status-2", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="STA-002", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_status(
-            work_item_id="status-2",
+            work_item_id="STA-002",
             work_items_dir=TEST_WORKITEMS_DIR
         )
         
@@ -95,10 +95,10 @@ class TestStatusBasic:
     @pytest.mark.asyncio
     async def test_returns_role_instructions(self):
         """Should return role instructions."""
-        await gcp_create_workitem(work_item_id="status-3", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="STA-003", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_status(
-            work_item_id="status-3",
+            work_item_id="STA-003",
             work_items_dir=TEST_WORKITEMS_DIR
         )
         
@@ -127,16 +127,16 @@ class TestStatusAfterTransition:
     @pytest.mark.asyncio
     async def test_status_reflects_transition(self):
         """Should reflect current role after transition."""
-        await gcp_create_workitem(work_item_id="trans-status", work_items_dir=TEST_WORKITEMS_DIR)
-        create_role_notes("trans-status", "project-owner-assistant")
+        await gcp_create_workitem(work_item_id="TST-001", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("TST-001", "project-owner-assistant")
         await gcp_transition(
-            work_item_id="trans-status",
+            work_item_id="TST-001",
             role="program-manager",
             work_items_dir=TEST_WORKITEMS_DIR
         )
         
         result = await gcp_status(
-            work_item_id="trans-status",
+            work_item_id="TST-001",
             work_items_dir=TEST_WORKITEMS_DIR
         )
         
@@ -151,16 +151,16 @@ class TestStatusDeviations:
         """Should include deviations in status."""
         from golazo_copilot.tools.gcp_consent import gcp_consent
         
-        await gcp_create_workitem(work_item_id="dev-status-1", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="DST-001", work_items_dir=TEST_WORKITEMS_DIR)
         await gcp_consent(
-            work_item_id="dev-status-1",
+            work_item_id="DST-001",
             action="skip_outputs",
             reason="PO approved spike exploration",
             work_items_dir=TEST_WORKITEMS_DIR
         )
         
         result = await gcp_status(
-            work_item_id="dev-status-1",
+            work_item_id="DST-001",
             work_items_dir=TEST_WORKITEMS_DIR
         )
         
@@ -172,10 +172,10 @@ class TestStatusDeviations:
     @pytest.mark.asyncio
     async def test_status_empty_deviations_list(self):
         """Should return empty list when no deviations."""
-        await gcp_create_workitem(work_item_id="dev-status-2", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="DST-002", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_status(
-            work_item_id="dev-status-2",
+            work_item_id="DST-002",
             work_items_dir=TEST_WORKITEMS_DIR
         )
         
@@ -187,16 +187,16 @@ class TestStatusDeviations:
         """Should include id, action, reason, timestamp, consumed."""
         from golazo_copilot.tools.gcp_consent import gcp_consent
         
-        await gcp_create_workitem(work_item_id="dev-status-3", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="DST-003", work_items_dir=TEST_WORKITEMS_DIR)
         await gcp_consent(
-            work_item_id="dev-status-3",
+            work_item_id="DST-003",
             action="skip_role",
             reason="Work already implemented - syncing state",
             work_items_dir=TEST_WORKITEMS_DIR
         )
         
         result = await gcp_status(
-            work_item_id="dev-status-3",
+            work_item_id="DST-003",
             work_items_dir=TEST_WORKITEMS_DIR
         )
         
@@ -214,17 +214,17 @@ class TestStatusMissingNotes:
     @pytest.mark.asyncio
     async def test_status_includes_missing_notes_list(self):
         """TC-04: Should list roles missing decision notes."""
-        await gcp_create_workitem(work_item_id="missing-notes-1", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="MN-001", work_items_dir=TEST_WORKITEMS_DIR)
         # Create PO notes before transition (required by blocking enforcement)
-        create_role_notes("missing-notes-1", "project-owner-assistant")
+        create_role_notes("MN-001", "project-owner-assistant")
         await gcp_transition(
-            work_item_id="missing-notes-1",
+            work_item_id="MN-001",
             role="program-manager",
             work_items_dir=TEST_WORKITEMS_DIR
         )
         
         result = await gcp_status(
-            work_item_id="missing-notes-1",
+            work_item_id="MN-001",
             work_items_dir=TEST_WORKITEMS_DIR
         )
         
@@ -235,15 +235,15 @@ class TestStatusMissingNotes:
     @pytest.mark.asyncio
     async def test_status_all_notes_present_empty_list(self):
         """TC-05: Should return empty list when all notes exist."""
-        await gcp_create_workitem(work_item_id="missing-notes-2", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="MN-002", work_items_dir=TEST_WORKITEMS_DIR)
         
         # Create PO notes
-        notes_dir = TEST_WORKITEMS_DIR / "missing-notes-2" / "RoleDecisionNotes"
+        notes_dir = TEST_WORKITEMS_DIR / "MN-002" / "RoleDecisionNotes"
         notes_dir.mkdir(parents=True, exist_ok=True)
-        (notes_dir / "missing-notes-2-project-owner-assistant.md").write_text("# PO Notes")
+        (notes_dir / "MN-002-project-owner-assistant.md").write_text("# PO Notes")
         
         result = await gcp_status(
-            work_item_id="missing-notes-2",
+            work_item_id="MN-002",
             work_items_dir=TEST_WORKITEMS_DIR
         )
         
@@ -371,7 +371,7 @@ class TestPerFileStaleReporting:
     async def test_status_includes_per_file_version_warning(self):
         """TC10: gcp_status version_warning lists specific stale files."""
         from golazo_copilot import __version__
-        await gcp_create_workitem(work_item_id="stale-pf-1", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="SP-001", work_items_dir=TEST_WORKITEMS_DIR)
 
         workspace_root = TEST_WORKITEMS_DIR.parent
         instructions_dir = workspace_root / ".github"
@@ -383,7 +383,7 @@ class TestPerFileStaleReporting:
 
         try:
             result = await gcp_status(
-                work_item_id="stale-pf-1",
+                work_item_id="SP-001",
                 work_items_dir=TEST_WORKITEMS_DIR
             )
             assert result.get("version_warning") is not None
@@ -400,19 +400,22 @@ class TestPerFileStaleReporting:
     @pytest.mark.asyncio
     async def test_status_no_warning_when_all_match(self):
         """TC2.2: gcp_status returns no version_warning when versions match."""
-        from golazo_copilot import __version__
-        await gcp_create_workitem(work_item_id="stale-pf-2", work_items_dir=TEST_WORKITEMS_DIR)
+        from importlib import resources as _res
+        _source_spine = _res.files("golazo_copilot").joinpath("bootstrap-instructions.md").read_text(encoding="utf-8")
+        _source_ver = _extract_version(_source_spine)
+
+        await gcp_create_workitem(work_item_id="SP-002", work_items_dir=TEST_WORKITEMS_DIR)
 
         workspace_root = TEST_WORKITEMS_DIR.parent
         instructions_dir = workspace_root / ".github"
         instructions_dir.mkdir(parents=True, exist_ok=True)
         instructions_file = instructions_dir / "copilot-instructions.md"
         instructions_file.write_text(
-            f"<!-- Last Updated in Golazo Copilot Version: {__version__} -->\n# Current"
+            f"<!-- Last Updated in Golazo Copilot Version: {_source_ver} -->\n# Current"
         )
 
         result = await gcp_status(
-            work_item_id="stale-pf-2",
+            work_item_id="SP-002",
             work_items_dir=TEST_WORKITEMS_DIR
         )
         assert result.get("version_warning") is None
@@ -424,10 +427,10 @@ class TestRoleProgress:
     @pytest.mark.asyncio
     async def test_fresh_work_item_zero_completed(self):
         """TC1.1: Fresh work item has 0 completed, PO in-progress."""
-        await gcp_create_workitem(work_item_id="progress-1", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="PRG-001", work_items_dir=TEST_WORKITEMS_DIR)
 
         result = await gcp_status(
-            work_item_id="progress-1",
+            work_item_id="PRG-001",
             work_items_dir=TEST_WORKITEMS_DIR
         )
         progress = result["role_progress"]
@@ -446,20 +449,20 @@ class TestRoleProgress:
     @pytest.mark.asyncio
     async def test_after_transitions_correct_count(self):
         """TC1.2: After transitions, completed count is correct."""
-        await gcp_create_workitem(work_item_id="progress-2", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="PRG-002", work_items_dir=TEST_WORKITEMS_DIR)
 
         # Create required outputs for PO role
-        create_role_notes("progress-2", "project-owner-assistant")
-        create_test_file("progress-2", "progress-2-User-Story.md")
+        create_role_notes("PRG-002", "project-owner-assistant")
+        create_test_file("PRG-002", "PRG-002-User-Story.md")
 
         # Transition to PM
         await gcp_transition(
-            work_item_id="progress-2", role="program-manager",
+            work_item_id="PRG-002", role="program-manager",
             work_items_dir=TEST_WORKITEMS_DIR
         )
 
         result = await gcp_status(
-            work_item_id="progress-2",
+            work_item_id="PRG-002",
             work_items_dir=TEST_WORKITEMS_DIR
         )
         progress = result["role_progress"]
@@ -474,10 +477,10 @@ class TestRoleProgress:
     @pytest.mark.asyncio
     async def test_role_progress_list_has_all_roles(self):
         """TC1.3: Progress list contains all 9 workflow roles."""
-        await gcp_create_workitem(work_item_id="progress-3", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="PRG-003", work_items_dir=TEST_WORKITEMS_DIR)
 
         result = await gcp_status(
-            work_item_id="progress-3",
+            work_item_id="PRG-003",
             work_items_dir=TEST_WORKITEMS_DIR
         )
         progress = result["role_progress"]
@@ -538,7 +541,7 @@ class TestRegistryHint:
     @pytest.mark.asyncio
     async def test_status_includes_registry_hint_key(self):
         """TC6: gcp_status includes registry_hint key when capabilities.yaml exists."""
-        wi_id = "reg-hint-1"
+        wi_id = "RH-001"
         await gcp_create_workitem(work_item_id=wi_id, work_items_dir=TEST_WORKITEMS_DIR)
         # Create capabilities.yaml in workspace root (parent of WorkItems)
         workspace_root = TEST_WORKITEMS_DIR.parent
@@ -555,7 +558,7 @@ class TestRegistryHint:
     @pytest.mark.asyncio
     async def test_status_registry_hint_none_when_absent(self):
         """TC7: gcp_status registry_hint is None when no capabilities.yaml."""
-        wi_id = "reg-hint-2"
+        wi_id = "RH-002"
         await gcp_create_workitem(work_item_id=wi_id, work_items_dir=TEST_WORKITEMS_DIR)
         result = await gcp_status(work_item_id=wi_id, work_items_dir=TEST_WORKITEMS_DIR)
         assert result.get("registry_hint") is None

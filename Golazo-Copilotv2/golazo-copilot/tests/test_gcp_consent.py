@@ -69,27 +69,27 @@ class TestConsentRecordsDeviation:
     @pytest.mark.asyncio
     async def test_consent_records_deviation(self):
         """Should record deviation in state."""
-        await gcp_create_workitem(work_item_id="consent-1", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="CON-001", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_consent(
-            work_item_id="consent-1",
+            work_item_id="CON-001",
             action="skip_outputs",
             reason="Spike exploration - will complete outputs after proof of concept",
             work_items_dir=TEST_WORKITEMS_DIR
         )
         
         assert result["success"] is True
-        state = load_state("consent-1", TEST_WORKITEMS_DIR)
+        state = load_state("CON-001", TEST_WORKITEMS_DIR)
         assert len(state.deviations) == 1
         assert state.deviations[0].action == "skip_outputs"
 
     @pytest.mark.asyncio
     async def test_consent_returns_deviation_id(self):
         """Should return deviation ID."""
-        await gcp_create_workitem(work_item_id="consent-2", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="CON-002", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_consent(
-            work_item_id="consent-2",
+            work_item_id="CON-002",
             action="skip_outputs",
             reason="Testing deviation ID return",
             work_items_dir=TEST_WORKITEMS_DIR
@@ -113,16 +113,16 @@ class TestConsentRequiredForForce:
         """Should fail force transition without prior consent."""
         TEST_CONSENT_WORKITEMS_DIR.mkdir(parents=True, exist_ok=True)
         self._create_role_file_with_output()
-        await gcp_create_workitem(work_item_id="force-1", work_items_dir=TEST_CONSENT_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="FRC-001", work_items_dir=TEST_CONSENT_WORKITEMS_DIR)
         
         # Create role notes but NOT the required output
-        notes_dir = TEST_CONSENT_WORKITEMS_DIR / "force-1" / "RoleDecisionNotes"
+        notes_dir = TEST_CONSENT_WORKITEMS_DIR / "FRC-001" / "RoleDecisionNotes"
         notes_dir.mkdir(parents=True, exist_ok=True)
-        (notes_dir / "force-1-project-owner-assistant.md").write_text("# Notes")
+        (notes_dir / "FRC-001-project-owner-assistant.md").write_text("# Notes")
         
         # Try to force without consent
         result = await gcp_transition(
-            work_item_id="force-1",
+            work_item_id="FRC-001",
             role="program-manager",
             force=True,
             work_items_dir=TEST_CONSENT_WORKITEMS_DIR,
@@ -137,16 +137,16 @@ class TestConsentRequiredForForce:
         """Should succeed force transition after consent."""
         TEST_CONSENT_WORKITEMS_DIR.mkdir(parents=True, exist_ok=True)
         self._create_role_file_with_output()
-        await gcp_create_workitem(work_item_id="force-2", work_items_dir=TEST_CONSENT_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="FRC-002", work_items_dir=TEST_CONSENT_WORKITEMS_DIR)
         
         # Create role notes but NOT the required output
-        notes_dir = TEST_CONSENT_WORKITEMS_DIR / "force-2" / "RoleDecisionNotes"
+        notes_dir = TEST_CONSENT_WORKITEMS_DIR / "FRC-002" / "RoleDecisionNotes"
         notes_dir.mkdir(parents=True, exist_ok=True)
-        (notes_dir / "force-2-project-owner-assistant.md").write_text("# Notes")
+        (notes_dir / "FRC-002-project-owner-assistant.md").write_text("# Notes")
         
         # Give consent first
         await gcp_consent(
-            work_item_id="force-2",
+            work_item_id="FRC-002",
             action="skip_outputs",
             reason="Spike exploration - completing outputs later",
             work_items_dir=TEST_CONSENT_WORKITEMS_DIR
@@ -154,7 +154,7 @@ class TestConsentRequiredForForce:
         
         # Now force should work
         result = await gcp_transition(
-            work_item_id="force-2",
+            work_item_id="FRC-002",
             role="program-manager",
             force=True,
             work_items_dir=TEST_CONSENT_WORKITEMS_DIR,
@@ -170,10 +170,10 @@ class TestConsentActions:
     @pytest.mark.asyncio
     async def test_skip_outputs_action(self):
         """Should accept skip_outputs action."""
-        await gcp_create_workitem(work_item_id="action-1", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="ACT-001", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_consent(
-            work_item_id="action-1",
+            work_item_id="ACT-001",
             action="skip_outputs",
             reason="Testing skip_outputs action",
             work_items_dir=TEST_WORKITEMS_DIR
@@ -184,10 +184,10 @@ class TestConsentActions:
     @pytest.mark.asyncio
     async def test_invalid_action_rejected(self):
         """Should reject invalid action."""
-        await gcp_create_workitem(work_item_id="action-2", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="ACT-002", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_consent(
-            work_item_id="action-2",
+            work_item_id="ACT-002",
             action="invalid_action",
             reason="Testing invalid action",
             work_items_dir=TEST_WORKITEMS_DIR
@@ -203,10 +203,10 @@ class TestReasonRequired:
     @pytest.mark.asyncio
     async def test_consent_without_reason_fails(self):
         """Should fail without reason."""
-        await gcp_create_workitem(work_item_id="reason-1", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="RSN-001", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_consent(
-            work_item_id="reason-1",
+            work_item_id="RSN-001",
             action="skip_outputs",
             reason="",
             work_items_dir=TEST_WORKITEMS_DIR
@@ -218,10 +218,10 @@ class TestReasonRequired:
     @pytest.mark.asyncio
     async def test_short_reason_fails(self):
         """Should fail with reason < 10 characters."""
-        await gcp_create_workitem(work_item_id="reason-2", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="RSN-002", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_consent(
-            work_item_id="reason-2",
+            work_item_id="RSN-002",
             action="skip_outputs",
             reason="short",
             work_items_dir=TEST_WORKITEMS_DIR
@@ -237,16 +237,16 @@ class TestDeviationAuditTrail:
     @pytest.mark.asyncio
     async def test_deviation_has_required_fields(self):
         """Should record all required fields."""
-        await gcp_create_workitem(work_item_id="audit-1", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="AUD-001", work_items_dir=TEST_WORKITEMS_DIR)
         
         await gcp_consent(
-            work_item_id="audit-1",
+            work_item_id="AUD-001",
             action="skip_outputs",
             reason="Spike exploration - will complete outputs later",
             work_items_dir=TEST_WORKITEMS_DIR
         )
         
-        state = load_state("audit-1", TEST_WORKITEMS_DIR)
+        state = load_state("AUD-001", TEST_WORKITEMS_DIR)
         deviation = state.deviations[0]
         
         assert deviation.id is not None
@@ -273,16 +273,16 @@ class TestConsentSingleUse:
         """Should consume consent after forced action."""
         TEST_CONSENT_WORKITEMS_DIR.mkdir(parents=True, exist_ok=True)
         self._create_role_file_with_output()
-        await gcp_create_workitem(work_item_id="single-1", work_items_dir=TEST_CONSENT_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="SNG-001", work_items_dir=TEST_CONSENT_WORKITEMS_DIR)
         
         # Create role notes but NOT the required output
-        notes_dir = TEST_CONSENT_WORKITEMS_DIR / "single-1" / "RoleDecisionNotes"
+        notes_dir = TEST_CONSENT_WORKITEMS_DIR / "SNG-001" / "RoleDecisionNotes"
         notes_dir.mkdir(parents=True, exist_ok=True)
-        (notes_dir / "single-1-project-owner-assistant.md").write_text("# Notes")
+        (notes_dir / "SNG-001-project-owner-assistant.md").write_text("# Notes")
         
         # Give consent
         await gcp_consent(
-            work_item_id="single-1",
+            work_item_id="SNG-001",
             action="skip_outputs",
             reason="First force - spike exploration",
             work_items_dir=TEST_CONSENT_WORKITEMS_DIR
@@ -290,7 +290,7 @@ class TestConsentSingleUse:
         
         # First force succeeds
         result1 = await gcp_transition(
-            work_item_id="single-1",
+            work_item_id="SNG-001",
             role="program-manager",
             force=True,
             work_items_dir=TEST_CONSENT_WORKITEMS_DIR,
@@ -299,18 +299,18 @@ class TestConsentSingleUse:
         assert result1["success"] is True
         
         # Create PM notes then go back to PO
-        (notes_dir / "single-1-program-manager.md").write_text("# PM Notes")
+        (notes_dir / "SNG-001-program-manager.md").write_text("# PM Notes")
         await gcp_transition(
-            work_item_id="single-1",
+            work_item_id="SNG-001",
             role="project-owner-assistant",
             work_items_dir=TEST_CONSENT_WORKITEMS_DIR,
             project_root=TEST_WORKSPACE,
         )
         
         # Second force fails (consent consumed)
-        (notes_dir / "single-1-project-owner-assistant.md").write_text("# PO Notes 2")
+        (notes_dir / "SNG-001-project-owner-assistant.md").write_text("# PO Notes 2")
         result2 = await gcp_transition(
-            work_item_id="single-1",
+            work_item_id="SNG-001",
             role="program-manager",
             force=True,
             work_items_dir=TEST_CONSENT_WORKITEMS_DIR,
@@ -326,10 +326,10 @@ class TestConsentMessageFormat:
     @pytest.mark.asyncio
     async def test_consent_message_mentions_project_owner(self):
         """Should include 'Project Owner' in success message."""
-        await gcp_create_workitem(work_item_id="po-msg-1", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="POM-001", work_items_dir=TEST_WORKITEMS_DIR)
         
         result = await gcp_consent(
-            work_item_id="po-msg-1",
+            work_item_id="POM-001",
             action="skip_outputs",
             reason="PO approved bypass for spike exploration",
             work_items_dir=TEST_WORKITEMS_DIR

@@ -60,31 +60,31 @@ class TestBackwardTransitions:
     @pytest.mark.asyncio
     async def test_backward_from_retrospective_to_developer(self):
         """AC1: Should allow backward transition from retrospective to developer."""
-        await gcp_create_workitem(work_item_id="back-1", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="BCK-001", work_items_dir=TEST_WORKITEMS_DIR)
         
         # Progress through roles to retrospective
-        create_role_notes("back-1", "project-owner-assistant")
-        await gcp_transition(work_item_id="back-1", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
-        create_role_notes("back-1", "program-manager")
-        await gcp_transition(work_item_id="back-1", role="quality-assurance", work_items_dir=TEST_WORKITEMS_DIR)
-        create_role_notes("back-1", "quality-assurance")
-        await gcp_transition(work_item_id="back-1", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("BCK-001", "project-owner-assistant")
+        await gcp_transition(work_item_id="BCK-001", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("BCK-001", "program-manager")
+        await gcp_transition(work_item_id="BCK-001", role="quality-assurance", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("BCK-001", "quality-assurance")
+        await gcp_transition(work_item_id="BCK-001", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
         
-        create_role_notes("back-1", "architect")
-        await gcp_transition(work_item_id="back-1", role="developer", work_items_dir=TEST_WORKITEMS_DIR)
-        create_role_notes("back-1", "developer")
-        await gcp_transition(work_item_id="back-1", role="refactor-expert", work_items_dir=TEST_WORKITEMS_DIR)
-        create_role_notes("back-1", "refactor-expert")
-        await gcp_transition(work_item_id="back-1", role="builder", work_items_dir=TEST_WORKITEMS_DIR)
-        create_role_notes("back-1", "builder")
-        await gcp_transition(work_item_id="back-1", role="documenter", work_items_dir=TEST_WORKITEMS_DIR)
-        create_role_notes("back-1", "documenter")
-        await gcp_transition(work_item_id="back-1", role="retrospective", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("BCK-001", "architect")
+        await gcp_transition(work_item_id="BCK-001", role="developer", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("BCK-001", "developer")
+        await gcp_transition(work_item_id="BCK-001", role="refactor-expert", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("BCK-001", "refactor-expert")
+        await gcp_transition(work_item_id="BCK-001", role="builder", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("BCK-001", "builder")
+        await gcp_transition(work_item_id="BCK-001", role="documenter", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("BCK-001", "documenter")
+        await gcp_transition(work_item_id="BCK-001", role="retrospective", work_items_dir=TEST_WORKITEMS_DIR)
         
         # Now go backward to developer (already has notes from before)
-        create_role_notes("back-1", "retrospective")
+        create_role_notes("BCK-001", "retrospective")
         result = await gcp_transition(
-            work_item_id="back-1",
+            work_item_id="BCK-001",
             role="developer",
             work_items_dir=TEST_WORKITEMS_DIR
         )
@@ -93,20 +93,20 @@ class TestBackwardTransitions:
         assert result["current_role"] == "developer"
         
         # Verify state is intact
-        state = load_state("back-1", TEST_WORKITEMS_DIR)
+        state = load_state("BCK-001", TEST_WORKITEMS_DIR)
         assert state.current_role == "developer"
 
     @pytest.mark.asyncio
     async def test_forward_skip_still_fails(self):
         """AC2: Forward transitions should still not allow skipping roles."""
-        await gcp_create_workitem(work_item_id="back-2", work_items_dir=TEST_WORKITEMS_DIR)
-        create_role_notes("back-2", "project-owner-assistant")
-        await gcp_transition(work_item_id="back-2", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="BCK-002", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("BCK-002", "project-owner-assistant")
+        await gcp_transition(work_item_id="BCK-002", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
         
         # Try to skip quality-assurance (role notes don't help here - sequence is wrong)
-        create_role_notes("back-2", "program-manager")
+        create_role_notes("BCK-002", "program-manager")
         result = await gcp_transition(
-            work_item_id="back-2",
+            work_item_id="BCK-002",
             role="architect",
             work_items_dir=TEST_WORKITEMS_DIR
         )
@@ -117,27 +117,27 @@ class TestBackwardTransitions:
     @pytest.mark.asyncio
     async def test_jump_multiple_roles_backward(self):
         """AC3: Should allow jumping multiple roles backward."""
-        await gcp_create_workitem(work_item_id="back-3", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="BCK-003", work_items_dir=TEST_WORKITEMS_DIR)
         
         # Progress to builder
-        create_role_notes("back-3", "project-owner-assistant")
-        await gcp_transition(work_item_id="back-3", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
-        create_role_notes("back-3", "program-manager")
-        await gcp_transition(work_item_id="back-3", role="quality-assurance", work_items_dir=TEST_WORKITEMS_DIR)
-        create_role_notes("back-3", "quality-assurance")
-        await gcp_transition(work_item_id="back-3", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("BCK-003", "project-owner-assistant")
+        await gcp_transition(work_item_id="BCK-003", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("BCK-003", "program-manager")
+        await gcp_transition(work_item_id="BCK-003", role="quality-assurance", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("BCK-003", "quality-assurance")
+        await gcp_transition(work_item_id="BCK-003", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
         
-        create_role_notes("back-3", "architect")
-        await gcp_transition(work_item_id="back-3", role="developer", work_items_dir=TEST_WORKITEMS_DIR)
-        create_role_notes("back-3", "developer")
-        await gcp_transition(work_item_id="back-3", role="refactor-expert", work_items_dir=TEST_WORKITEMS_DIR)
-        create_role_notes("back-3", "refactor-expert")
-        await gcp_transition(work_item_id="back-3", role="builder", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("BCK-003", "architect")
+        await gcp_transition(work_item_id="BCK-003", role="developer", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("BCK-003", "developer")
+        await gcp_transition(work_item_id="BCK-003", role="refactor-expert", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("BCK-003", "refactor-expert")
+        await gcp_transition(work_item_id="BCK-003", role="builder", work_items_dir=TEST_WORKITEMS_DIR)
         
         # Jump back 5 roles to program-manager
-        create_role_notes("back-3", "builder")
+        create_role_notes("BCK-003", "builder")
         result = await gcp_transition(
-            work_item_id="back-3",
+            work_item_id="BCK-003",
             role="program-manager",
             work_items_dir=TEST_WORKITEMS_DIR
         )
@@ -148,22 +148,22 @@ class TestBackwardTransitions:
     @pytest.mark.asyncio
     async def test_role_history_tracks_backward_transition(self):
         """AC4: Role history should track backward transitions."""
-        await gcp_create_workitem(work_item_id="back-4", work_items_dir=TEST_WORKITEMS_DIR)
-        create_role_notes("back-4", "project-owner-assistant")
-        await gcp_transition(work_item_id="back-4", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
-        create_role_notes("back-4", "program-manager")
-        await gcp_transition(work_item_id="back-4", role="quality-assurance", work_items_dir=TEST_WORKITEMS_DIR)
-        create_role_notes("back-4", "quality-assurance")
-        await gcp_transition(work_item_id="back-4", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_create_workitem(work_item_id="BCK-004", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("BCK-004", "project-owner-assistant")
+        await gcp_transition(work_item_id="BCK-004", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("BCK-004", "program-manager")
+        await gcp_transition(work_item_id="BCK-004", role="quality-assurance", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("BCK-004", "quality-assurance")
+        await gcp_transition(work_item_id="BCK-004", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
         
-        create_role_notes("back-4", "architect")
-        await gcp_transition(work_item_id="back-4", role="developer", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("BCK-004", "architect")
+        await gcp_transition(work_item_id="BCK-004", role="developer", work_items_dir=TEST_WORKITEMS_DIR)
         
         # Go backward
-        create_role_notes("back-4", "developer")
-        await gcp_transition(work_item_id="back-4", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("BCK-004", "developer")
+        await gcp_transition(work_item_id="BCK-004", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
         
-        state = load_state("back-4", TEST_WORKITEMS_DIR)
+        state = load_state("BCK-004", TEST_WORKITEMS_DIR)
         
         # Should have entries for: project-owner-assistant, program-manager, QA, architect, developer, architect (again)
         assert len(state.role_history) == 6
