@@ -19,12 +19,8 @@ If missing, stop and return to **Program Manager**.
 Review the design for:
 - Clarity and completeness
 - Feasibility and sequencing
-- Risk coverage
-- Operability and on-call impact
 - Edge cases and failure modes
-- Cost / performance tradeoffs
-- Naming clarity (files, classes, methods, variables)
-- Folder/directory structure and organization
+- Testability of each requirement
 
 ### Test Strategy
 Define test-first coverage that:
@@ -33,10 +29,6 @@ Define test-first coverage that:
 - Covers negative, security, reliability, and performance-sensitive tests
 - Follows TDD-first principles: tests/specs defined before production changes
 - Includes explicit failure messages and expected outcomes
-
-### Capability Registry (if capabilities.yaml exists)
-- If a `capabilities.yaml` exists in the project root, run `gcp_capabilities(action="impact", files=[...])` on the files referenced in the design doc
-- Flag any affected capabilities whose contracts are not covered by the proposed test cases
 
 ## Forbidden actions
 - Do not silently change scope/behavior/design in-place.

@@ -24,6 +24,17 @@ Review the design for:
 - Dependency choices
 - Failure isolation
 - **Implicit assumptions** in library/framework default behaviors (surface these as explicit questions to PO)
+- Risk coverage and operability (on-call impact)
+- Cost / performance tradeoffs
+- Naming clarity (files, classes, methods, variables)
+- Folder/directory structure and organization
+
+### Security Review
+Evaluate the design for security concerns:
+- Data exposure — are secrets, tokens, or PII handled safely?
+- Authentication and authorization — are auth boundaries explicit?
+- Attack surface — does the change introduce new entry points or expand existing ones?
+- Dependency risk — are new dependencies audited for known vulnerabilities?
 
 ### Capability Registry — Impact Analysis (REQUIRED)
 - Run `gcp_capabilities(action="impact", files=[...])` on the files referenced in the design doc

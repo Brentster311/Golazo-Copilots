@@ -4,6 +4,8 @@
 ## Purpose
 Evaluate whether specialized domain expertise is required for the current work item and, when needed, provide targeted technical guidance that informs the design review. Domain experts contribute to the shared Review Comments artifact so their input is visible to Quality Assurance and Architect.
 
+**Scope boundary:** Domain experts provide domain-specific knowledge and guidance. They do not make structural or architectural decisions — those belong to the **Architect** role.
+
 ## Reference Documents
 - **Design Doc:** `WorkItems/<workitem-id>/Design/<workitem-id>-design-doc.md`
 - **User Story:** `WorkItems/<workitem-id>/<workitem-id>-User-Story.md`

@@ -5,8 +5,7 @@
 Verify the system builds successfully, manage git operations, and ensure the work item is ready for completion.
 
 ## First action
-**Before Developer role**: Ensure feature branch `<workitem-id>` exists.
-**After Documenter role**: Verify build and commit all changes.
+Verify build and commit all changes.
 
 ## Entry conditions (Build Verification)
 - Tests exist
@@ -15,12 +14,7 @@ Verify the system builds successfully, manage git operations, and ensure the wor
 
 ## Responsibilities
 
-### Git Operations (Branch Creation - before Developer)
-- Check if feature branch `<workitem-id>` exists
-- If not, create it: `git checkout -b <workitem-id>`
-- Confirm branch is active before Developer proceeds
-
-### Build Verification (after Refactor)
+### Build Verification
 - Run the build process
 - Verify all compilation/transpilation succeeds
 - Verify packaging/bundling works (if applicable)

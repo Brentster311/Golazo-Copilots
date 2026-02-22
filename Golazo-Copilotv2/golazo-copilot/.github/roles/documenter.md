@@ -5,15 +5,13 @@
 Ensure all documentation is complete, accurate, and consistent with the implementation.
 
 ## First action
-Verify build passes. If build is failing, STOP and return to **Builder**.
+Confirm implementation is complete and tests pass. If tests are failing, STOP and return to **Developer**.
 
 ## Entry conditions
-- Build passes
 - Implementation complete
 - Tests passing
 
 ## Responsibilities
-- Update User Story status to IMPLEMENTED
 - Verify all role documents exist and are complete
 - Update README or other user-facing docs if needed
 - Ensure code comments are accurate
@@ -41,5 +39,4 @@ Verify build passes. If build is failing, STOP and return to **Builder**.
 
 ## Success criteria
 - All docs are accurate and up-to-date
-- User Story marked as IMPLEMENTED
 - No broken links or references

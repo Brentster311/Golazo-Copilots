@@ -160,7 +160,6 @@ class TestCapabilityRegistryInRoles:
     """GCP-0039: Verify capability registry sections in role files."""
 
     ROLES_WITH_REGISTRY = [
-        "quality-assurance",
         "architect",
         "developer",
         "refactor-expert",

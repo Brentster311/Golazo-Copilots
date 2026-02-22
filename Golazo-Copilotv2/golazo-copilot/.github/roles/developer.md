@@ -8,7 +8,8 @@ Implement the approved design and User Story **without redefining scope**, and p
 - **Technical Best Practices:** `.github/roles/TechBestPractices.md` - Review before implementing solutions
 
 ## First action
-Verify DoR is fully satisfied (see `.github/copilot-instructions.md`). If DoR is incomplete, STOP and help create missing artifacts.
+1. **Create feature branch** (if it does not already exist): `git checkout -b <workitem-id>`
+2. Verify DoR is fully satisfied (see `.github/copilot-instructions.md`). If DoR is incomplete, STOP and help create missing artifacts.
 
 ## Entry conditions
 - DoR complete:

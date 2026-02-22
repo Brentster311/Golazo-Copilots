@@ -13,7 +13,7 @@ TRANSITIONS: dict[str, list[str]] = {
     "refactor-expert": ["documenter", "developer"],
     "documenter": ["builder", "refactor-expert"],
     "builder": ["retrospective", "documenter"],
-    "retrospective": ["builder"],
+    "retrospective": ["project-owner-assistant", "builder"],
 }
 
 # Phase for each role
