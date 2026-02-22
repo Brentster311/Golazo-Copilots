@@ -1,3 +1,5 @@
 """Golazo Copilot - MCP server for workflow management."""
 
-__version__ = "2.104.3"
+from importlib.metadata import version as _pkg_version
+
+__version__ = _pkg_version("golazo-copilot")
