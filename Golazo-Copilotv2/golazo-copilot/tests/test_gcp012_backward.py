@@ -16,7 +16,7 @@ TEST_WORKITEMS_DIR = Path(__file__).parent / "test-workitems"
 TEST_WORKSPACE_ROOT = Path(__file__).parent
 
 ALL_ROLES = [
-    "project-owner-assistant", "program-manager", "quality-assurance",
+    "project-owner-assistant", "program-manager", "domain-expert", "quality-assurance",
     "architect", "developer", "refactor-expert", "builder", "documenter", "retrospective"
 ]
 
@@ -66,6 +66,8 @@ class TestBackwardTransitions:
         create_role_notes("BCK-001", "project-owner-assistant")
         await gcp_transition(work_item_id="BCK-001", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
         create_role_notes("BCK-001", "program-manager")
+        await gcp_transition(work_item_id="BCK-001", role="domain-expert", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("BCK-001", "domain-expert")
         await gcp_transition(work_item_id="BCK-001", role="quality-assurance", work_items_dir=TEST_WORKITEMS_DIR)
         create_role_notes("BCK-001", "quality-assurance")
         await gcp_transition(work_item_id="BCK-001", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
@@ -123,6 +125,8 @@ class TestBackwardTransitions:
         create_role_notes("BCK-003", "project-owner-assistant")
         await gcp_transition(work_item_id="BCK-003", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
         create_role_notes("BCK-003", "program-manager")
+        await gcp_transition(work_item_id="BCK-003", role="domain-expert", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("BCK-003", "domain-expert")
         await gcp_transition(work_item_id="BCK-003", role="quality-assurance", work_items_dir=TEST_WORKITEMS_DIR)
         create_role_notes("BCK-003", "quality-assurance")
         await gcp_transition(work_item_id="BCK-003", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
@@ -152,6 +156,8 @@ class TestBackwardTransitions:
         create_role_notes("BCK-004", "project-owner-assistant")
         await gcp_transition(work_item_id="BCK-004", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
         create_role_notes("BCK-004", "program-manager")
+        await gcp_transition(work_item_id="BCK-004", role="domain-expert", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("BCK-004", "domain-expert")
         await gcp_transition(work_item_id="BCK-004", role="quality-assurance", work_items_dir=TEST_WORKITEMS_DIR)
         create_role_notes("BCK-004", "quality-assurance")
         await gcp_transition(work_item_id="BCK-004", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
@@ -165,8 +171,8 @@ class TestBackwardTransitions:
         
         state = load_state("BCK-004", TEST_WORKITEMS_DIR)
         
-        # Should have entries for: project-owner-assistant, program-manager, QA, architect, developer, architect (again)
-        assert len(state.role_history) == 6
+        # Should have entries for: project-owner-assistant, program-manager, domain-expert, QA, architect, developer, architect (again)
+        assert len(state.role_history) == 7
         assert state.role_history[-1].role == "architect"
         assert state.role_history[-2].role == "developer"
         assert state.role_history[-2].exited_at is not None  # Developer entry should be closed

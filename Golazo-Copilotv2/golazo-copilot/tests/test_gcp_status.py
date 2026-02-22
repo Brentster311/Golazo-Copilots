@@ -17,7 +17,7 @@ TEST_WORKITEMS_DIR = Path(__file__).parent / "test-workitems"
 TEST_WORKSPACE_ROOT = Path(__file__).parent
 
 ALL_ROLES = [
-    "project-owner-assistant", "program-manager", "quality-assurance",
+    "project-owner-assistant", "program-manager", "domain-expert", "quality-assurance",
     "architect", "developer", "refactor-expert", "builder", "documenter", "retrospective"
 ]
 
@@ -435,7 +435,7 @@ class TestRoleProgress:
         )
         progress = result["role_progress"]
         assert progress["roles_completed"] == 0
-        assert progress["roles_total"] == 9
+        assert progress["roles_total"] == 10
 
         # PO should be in-progress
         po = next(r for r in progress["roles"] if r["role"] == "project-owner-assistant")
@@ -476,7 +476,7 @@ class TestRoleProgress:
 
     @pytest.mark.asyncio
     async def test_role_progress_list_has_all_roles(self):
-        """TC1.3: Progress list contains all 9 workflow roles."""
+        """TC1.3: Progress list contains all 10 workflow roles."""
         await gcp_create_workitem(work_item_id="PRG-003", work_items_dir=TEST_WORKITEMS_DIR)
 
         result = await gcp_status(
@@ -485,7 +485,7 @@ class TestRoleProgress:
         )
         progress = result["role_progress"]
         role_names = [r["role"] for r in progress["roles"]]
-        assert len(role_names) == 9
+        assert len(role_names) == 10
         assert "project-owner-assistant" in role_names
         assert "retrospective" in role_names
 

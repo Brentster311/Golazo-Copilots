@@ -5,8 +5,9 @@ from typing import Literal
 # Valid transitions from each role
 TRANSITIONS: dict[str, list[str]] = {
     "project-owner-assistant": ["program-manager"],
-    "program-manager": ["quality-assurance", "project-owner-assistant"],
-    "quality-assurance": ["architect", "program-manager"],
+    "program-manager": ["domain-expert", "project-owner-assistant"],
+    "domain-expert": ["quality-assurance", "program-manager"],
+    "quality-assurance": ["architect", "domain-expert"],
     "architect": ["developer", "quality-assurance"],
     "developer": ["refactor-expert", "architect"],
     "refactor-expert": ["documenter", "developer"],
@@ -19,6 +20,7 @@ TRANSITIONS: dict[str, list[str]] = {
 PHASE_MAP: dict[str, Literal["definition", "development", "completion"]] = {
     "project-owner-assistant": "definition",
     "program-manager": "definition",
+    "domain-expert": "definition",
     "quality-assurance": "definition",
     "architect": "definition",
     "developer": "development",
@@ -35,6 +37,7 @@ VALID_ROLES = set(TRANSITIONS.keys())
 ROLE_ORDER = [
     "project-owner-assistant",
     "program-manager",
+    "domain-expert",
     "quality-assurance",
     "architect",
     "developer",

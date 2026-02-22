@@ -20,7 +20,7 @@ TEST_WORKSPACE_ROOT = Path(__file__).parent
 
 # All roles that need empty role files for testing (no Required Outputs)
 ALL_ROLES = [
-    "project-owner-assistant", "program-manager", "quality-assurance",
+    "project-owner-assistant", "program-manager", "domain-expert", "quality-assurance",
     "architect", "developer", "refactor-expert", "builder", "documenter", "retrospective"
 ]
 
@@ -47,7 +47,7 @@ def create_role_notes(work_item_id: str, role: str, work_items_dir: Path = TEST_
 async def advance_to_role(work_item_id: str, target_role: str, work_items_dir: Path = TEST_WORKITEMS_DIR):
     """Helper to advance through roles with notes to reach target role."""
     role_sequence = [
-        "project-owner-assistant", "program-manager", "quality-assurance", 
+        "project-owner-assistant", "program-manager", "domain-expert", "quality-assurance", 
         "architect", "developer", "refactor-expert", "builder", "documenter", "retrospective"
     ]
     
@@ -160,8 +160,8 @@ class TestTransitionValidation:
     """AC2: Only valid transitions are allowed."""
 
     @pytest.mark.asyncio
-    async def test_valid_transition_program_manager_to_qa(self):
-        """Should allow program-manager to quality-assurance."""
+    async def test_valid_transition_program_manager_to_domain_expert(self):
+        """Should allow program-manager to domain-expert."""
         await gcp_create_workitem(work_item_id="VLD-001", work_items_dir=TEST_WORKITEMS_DIR)
         create_role_notes("VLD-001", "project-owner-assistant")
         await gcp_transition(work_item_id="VLD-001", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
@@ -169,7 +169,7 @@ class TestTransitionValidation:
         
         result = await gcp_transition(
             work_item_id="VLD-001",
-            role="quality-assurance",
+            role="domain-expert",
             work_items_dir=TEST_WORKITEMS_DIR
         )
         
@@ -226,7 +226,7 @@ class TestPhaseTransitions:
         await gcp_create_workitem(work_item_id="PH-001", work_items_dir=TEST_WORKITEMS_DIR)
         create_role_notes("PH-001", "project-owner-assistant")
         
-        for role in ["program-manager", "quality-assurance", "architect"]:
+        for role in ["program-manager", "domain-expert", "quality-assurance", "architect"]:
             await gcp_transition(work_item_id="PH-001", role=role, work_items_dir=TEST_WORKITEMS_DIR)
             create_role_notes("PH-001", role)
             state = load_state("PH-001", TEST_WORKITEMS_DIR)
@@ -239,6 +239,8 @@ class TestPhaseTransitions:
         create_role_notes("PH-002", "project-owner-assistant")
         await gcp_transition(work_item_id="PH-002", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
         create_role_notes("PH-002", "program-manager")
+        await gcp_transition(work_item_id="PH-002", role="domain-expert", work_items_dir=TEST_WORKITEMS_DIR)
+        create_role_notes("PH-002", "domain-expert")
         await gcp_transition(work_item_id="PH-002", role="quality-assurance", work_items_dir=TEST_WORKITEMS_DIR)
         create_role_notes("PH-002", "quality-assurance")
         await gcp_transition(work_item_id="PH-002", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
@@ -397,8 +399,8 @@ class TestBackwardTransitions:
         
         state = load_state("BCK-004", TEST_WORKITEMS_DIR)
         
-        # Should have entries for: project-owner-assistant, program-manager, QA, architect, developer, architect (again)
-        assert len(state.role_history) == 6
+        # Should have entries for: project-owner-assistant, program-manager, domain-expert, QA, architect, developer, architect (again)
+        assert len(state.role_history) == 7
         assert state.role_history[-1].role == "architect"
         assert state.role_history[-2].role == "developer"
         assert state.role_history[-2].exited_at is not None  # Developer entry should be closed
@@ -561,9 +563,11 @@ class TestBlockingRoleNotes:
         (notes_dir / "BLK-007-project-owner-assistant.md").write_text("# PO Notes")
         (notes_dir / "BLK-007-program-manager.md").write_text("# PM Notes")
         (notes_dir / "BLK-007-quality-assurance.md").write_text("# QA Notes")
+        (notes_dir / "BLK-007-domain-expert.md").write_text("# DE Notes")
         (notes_dir / "BLK-007-architect.md").write_text("# Arch Notes")
         
         await gcp_transition(work_item_id="BLK-007", role="program-manager", work_items_dir=TEST_WORKITEMS_DIR)
+        await gcp_transition(work_item_id="BLK-007", role="domain-expert", work_items_dir=TEST_WORKITEMS_DIR)
         await gcp_transition(work_item_id="BLK-007", role="quality-assurance", work_items_dir=TEST_WORKITEMS_DIR)
         await gcp_transition(work_item_id="BLK-007", role="architect", work_items_dir=TEST_WORKITEMS_DIR)
         

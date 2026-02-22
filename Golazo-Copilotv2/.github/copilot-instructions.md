@@ -68,13 +68,14 @@ If these files don't exist, transition will fail with a clear error message list
 **Valid roles in order:**
 1. project-owner-assistant
 2. program-manager
-3. quality-assurance
-4. architect
-5. developer
-6. refactor-expert
-7. documenter
-8. builder
-9. retrospective
+3. domain-expert
+4. quality-assurance
+5. architect
+6. developer
+7. refactor-expert
+8. documenter
+9. builder
+10. retrospective
 
 ---
 
