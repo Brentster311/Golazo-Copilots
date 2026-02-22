@@ -1,6 +1,6 @@
 # GCP-0047 User Story
 
-**Status**: IN PROGRESS
+**Status**: IMPLEMENTED
 
 ## User Story
 
