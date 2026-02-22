@@ -146,11 +146,14 @@ class TestPOAClosureSection:
         assert "do not transition" in text or "final role" in text or "end of the workflow" in text, \
             "POA Closure must explicitly state this is the end of the workflow"
 
-    def test_closure_required_output(self):
-        """TC-7: POA Required Outputs should include closure.md."""
+    def test_closure_updates_user_story(self):
+        """TC-7: POA Closure should update the User Story (not create a separate closure doc)."""
         content = _read_role("project-owner-assistant")
-        assert "closure.md" in content, \
-            "POA Required Outputs must include closure.md"
+        closure = re.search(r"## Closure\n(.*)", content, re.DOTALL)
+        assert closure, "POA missing Closure section"
+        text = closure.group(1).lower()
+        assert "update user story" in text or "user-story" in text, \
+            "POA Closure must instruct to update the User Story with closure info"
 
 
 # ---------------------------------------------------------------------------

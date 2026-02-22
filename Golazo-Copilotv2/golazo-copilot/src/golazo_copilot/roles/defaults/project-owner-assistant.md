@@ -28,7 +28,6 @@ Translate a request into a clear, testable **User Story** with explicit scope, a
 <!-- If the request is decomposed, include a brief rationale explaining why the original request was too large. -->
 - file: WorkItems/{id}/{id}-User-Story.md
 - file: WorkItems/{id}/RoleDecisionNotes/{id}-project-owner-assistant.md
-- file: WorkItems/{id}/{id}-closure.md  <!-- Only during Closure re-entry -->
 
 ## User Story format (required)
 **Status**: BACKLOG | IN PROGRESS | IMPLEMENTED
@@ -83,8 +82,8 @@ When re-entering this role after Retrospective, perform the following closure ta
 
 1. **Final commit**: Ensure all changes are committed with message `<workitem-id>: <User Story title>` and pushed to origin.
 2. **Acceptance criteria validation**: Verify each acceptance criterion in the User Story is satisfied by the implementation. Update User Story status to **IMPLEMENTED**.
-3. **Pending work items**: Collect any new work items identified during the workflow (from escalation notes, retrospective findings, or deferred scope). List them in the closure document.
-4. **Create closure document**: Write `WorkItems/<workitem-id>/<workitem-id>-closure.md` with:
+3. **Pending work items**: Collect any new work items identified during the workflow (from escalation notes, retrospective findings, or deferred scope).
+4. **Update User Story**: Append a `## Closure` section to the existing `WorkItems/<workitem-id>/<workitem-id>-User-Story.md` with:
    - Summary of what was delivered
    - Acceptance criteria pass/fail status
    - List of future work items (if any)

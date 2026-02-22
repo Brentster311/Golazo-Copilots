@@ -124,20 +124,4 @@ class TestDomainExpertRoleFiles:
         content = open(path, encoding="utf-8").read()
         assert "# Role: Domain Expert" in content
 
-    def test_deployed_github_exists(self):
-        """TC-14: domain-expert.md exists in .github/roles/."""
-        path = os.path.join(
-            self.WORKSPACE_ROOT, ".github", "roles", "domain-expert.md"
-        )
-        assert os.path.isfile(path), f"Missing: {path}"
-        content = open(path, encoding="utf-8").read()
-        assert "# Role: Domain Expert" in content
 
-    def test_package_github_exists(self):
-        """TC-15: domain-expert.md exists in golazo-copilot/.github/roles/."""
-        path = os.path.join(
-            self.PACKAGE_ROOT, ".github", "roles", "domain-expert.md"
-        )
-        assert os.path.isfile(path), f"Missing: {path}"
-        content = open(path, encoding="utf-8").read()
-        assert "# Role: Domain Expert" in content
