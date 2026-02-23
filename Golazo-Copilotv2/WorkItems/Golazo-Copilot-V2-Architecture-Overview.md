@@ -78,6 +78,7 @@ The package is published to Azure Artifacts as `golazo-copilot` and installed vi
 |   |                                                             |       |
 |   |   - Parses "## Required Outputs" from role markdown         |       |
 |   |   - Types: file, dir, git-branch, git-log                   |       |
+|   |   - Supports `<!-- closure-only -->` conditional outputs     |       |
 |   |   - Validates existence on disk/git before transition        |       |
 |   +-------------------------------------------------------------+       |
 |                              |                                          |
@@ -339,6 +340,7 @@ User           Copilot        MCP Server     Transition     State
 | `updated_at` | `datetime` | UTC last-modified timestamp |
 | `role_history` | `list[RoleHistoryEntry]` | Ordered entry/exit records |
 | `deviations` | `list[Deviation]` | Consent/deviation records |
+| `closure_pending` | `bool` | `True` when POA re-entered after retrospective in `complete` profile (default `False`) |
 
 **Note**: `ConfigDict(extra="ignore")` — legacy fields (e.g., old `dor`/`dod` dicts) are silently ignored on load.
 
@@ -650,6 +652,7 @@ Golazo Copilot V2 cleanly separates **what can be computed** from **what require
 
 | Version | Key Changes |
 |---------|-------------|
+| 2.106.x | POA closure gate for `complete` profile (`closure_pending` state, conditional outputs, retrospective→POA re-entry) |
 | 2.106.0 | Subagent orchestration spine, role context bundler, handoff protocol, parallel status I/O, self-contained roles |
 | 2.105.x | Role improvements, domain expert enhancements, workspace path handling |
 | 2.102.0 | Version comment standardization, stale file detection, capability registry |
