@@ -8,11 +8,11 @@
 
 The orchestrator (Copilot in the host chat window) owns the workflow loop. At each role boundary it:
 
-1. **Queries state** — `gcp_status(work_item_id)` returns current role, phase, progress, missing outputs.
-2. **Assembles context** — `gcp_role_context(work_item_id)` builds a self-contained bundle: role instructions, current state summary, input artifacts (from YAML front-matter), and previous role notes.
+1. **Queries state** — `golazo_status(work_item_id)` returns current role, phase, progress, missing outputs.
+2. **Assembles context** — `golazo_role_context(work_item_id)` builds a self-contained bundle: role instructions, current state summary, input artifacts (from YAML front-matter), and previous role notes.
 3. **Spawns subagent** — `runSubagent(description, prompt)` with the bundle as the prompt. The subagent performs the role's creative work.
 4. **Collects output** — Reads the subagent's return message (summary of files created, decisions made).
-5. **Verifies gate** — `gcp_transition(work_item_id, role)` validates Required Outputs exist and advances state.
+5. **Verifies gate** — `golazo_transition(work_item_id, role)` validates Required Outputs exist and advances state.
 6. **Displays summary** — Shows completed role, artifacts created, next role, any warnings.
 7. **Repeats** from step 1 until retrospective completes and POA closure is done.
 
@@ -32,7 +32,7 @@ Each subagent must:
 - Create all files listed in `## Required Outputs` of the role instructions
 - Follow role-specific decision rules and constraints
 - Return a brief summary (files created, key decisions)
-- **Never** call `gcp_transition` (orchestrator handles this)
+- **Never** call `golazo_transition` (orchestrator handles this)
 - **Never** ask the user questions (make documented assumptions)
 
 ---
@@ -56,7 +56,7 @@ The matrix below maps each role transition to (a) the direct bridge artifacts (r
 
 ### Key Observations
 
-- **Zero-bridge transitions** (3, 7, 8): The successor role has no inputs that the predecessor directly produced. It reaches back to earlier artifacts (User Story, Design Doc). `gcp_role_context` handles this transparently — it resolves all inputs listed in the successor's front-matter regardless of which role originally produced them.
+- **Zero-bridge transitions** (3, 7, 8): The successor role has no inputs that the predecessor directly produced. It reaches back to earlier artifacts (User Story, Design Doc). `golazo_role_context` handles this transparently — it resolves all inputs listed in the successor's front-matter regardless of which role originally produced them.
 - **Append pattern** (transition 5): Both QA and Architect list `Design/{id}-Review-Comments.md` as an output. Architect appends to the QA-created file. The Developer receives the combined content.
 - **Retrospective reach-back** (transition 9): Retrospective's front-matter lists all 9 prior role note files as inputs, providing a complete audit trail.
 - **POA Closure** (transition 10): POA has `inputs: []` in its front-matter. The closure re-entry is orchestrator-managed: the orchestrator reads the retrospective notes and creates the closure document directly.
@@ -67,7 +67,7 @@ The matrix below maps each role transition to (a) the direct bridge artifacts (r
 
 ### Subagent Fails to Create Required Output
 
-1. `gcp_transition` returns `success: false` with `missing_outputs` listing the expected file paths.
+1. `golazo_transition` returns `success: false` with `missing_outputs` listing the expected file paths.
 2. Orchestrator displays the error to the user.
 3. Orchestrator re-spawns the subagent for the same role with an updated prompt including the error message.
 4. If the second attempt fails, orchestrator switches to **inline mode** (performs the work itself).
@@ -87,15 +87,15 @@ The matrix below maps each role transition to (a) the direct bridge artifacts (r
 
 If a subagent (e.g., Developer) discovers a design flaw:
 1. The subagent reports the issue in its return summary.
-2. The orchestrator calls `gcp_transition` with a prior role (e.g., `architect`).
-3. State preserves all existing artifacts; the re-entered role receives updated context via `gcp_role_context`.
+2. The orchestrator calls `golazo_transition` with a prior role (e.g., `architect`).
+3. State preserves all existing artifacts; the re-entered role receives updated context via `golazo_role_context`.
 4. New artifacts overwrite the prior versions (e.g., updated Review-Comments).
 
 ---
 
 ## 5. Context Limits
 
-- `gcp_role_context` enforces a **100KB** max bundle size (configurable via `max_bundle_size`).
+- `golazo_role_context` enforces a **100KB** max bundle size (configurable via `max_bundle_size`).
 - If inputs exceed the limit, artifact contents are proportionally truncated with a `[TRUNCATED]` marker.
 - Role instructions and state summary are never truncated.
 - Large binary or generated files should not be listed in role front-matter `inputs:`.
@@ -106,10 +106,10 @@ If a subagent (e.g., Developer) discovers a design flaw:
 
 ```
 Orchestrator Loop:
-  gcp_status → gcp_role_context → runSubagent → verify outputs → gcp_transition → summary → repeat
+  golazo_status → golazo_role_context → runSubagent → verify outputs → golazo_transition → summary → repeat
 
 Subagent Rules:
-  ✓ Create Required Outputs    ✗ Call gcp_transition
+  ✓ Create Required Outputs    ✗ Call golazo_transition
   ✓ Follow role instructions   ✗ Ask user questions
   ✓ Return summary             ✗ Skip outputs
 ```

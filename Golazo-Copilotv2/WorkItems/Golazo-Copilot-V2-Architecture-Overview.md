@@ -44,10 +44,10 @@ The package is published to Azure Artifacts as `golazo-copilot` and installed vi
 |   |                      MCP Server (server.py)                 |       |
 |   |                                                             |       |
 |   |   Workflow Tools:              Query Tools:                 |       |
-|   |   - gcp_create_workitem        - gcp_status                 |       |
-|   |   - gcp_transition             - gcp_capabilities           |       |
-|   |   - gcp_consent                - gcp_role_context           |       |
-|   |   - gcp_bootstrap                                           |       |
+|   |   - golazo_create_workitem     - golazo_status              |       |
+|   |   - golazo_transition          - golazo_capabilities        |       |
+|   |   - golazo_consent             - golazo_role_context        |       |
+|   |   - golazo_bootstrap                                        |       |
 |   |                                                             |       |
 |   |   Entry point: golazo-copilot = golazo_copilot.server:run   |       |
 |   +-------------------------------------------------------------+       |
@@ -62,7 +62,7 @@ The package is published to Azure Artifacts as `golazo-copilot` and installed vi
 |   |   - Forward: strict sequential (no skipping)                |       |
 |   |   - Backward: allowed to any earlier role                   |       |
 |   |   - Gates: role notes + required outputs must exist         |       |
-|   |   - Force bypass: requires prior gcp_consent record         |       |
+|   |   - Force bypass: requires prior golazo_consent record      |       |
 |   +-------------------------------------------------------------+       |
 |                              |                                          |
 |   +-------------------------------------------------------------+       |
@@ -140,13 +140,13 @@ The package is published to Azure Artifacts as `golazo-copilot` and installed vi
 
 | Tool | Purpose | Key Parameters |
 |------|---------|----------------|
-| **gcp_create_workitem** | Create a new work item with initial state | `work_item_id`, `profile` (complete/express/spike) |
-| **gcp_transition** | Move to the next (or previous) role | `work_item_id`, `role`, `force` |
-| **gcp_status** | Comprehensive status with parallel I/O | `work_item_id` (optional — omit for version only) |
-| **gcp_bootstrap** | Deploy spine, roles, capabilities to workspace | `force`, `include_roles` |
-| **gcp_consent** | Record deviation consent (consumed by transition) | `work_item_id`, `action`, `reason` (min 10 chars) |
-| **gcp_capabilities** | Query capability registry | `action` (list/show/impact/validate) |
-| **gcp_role_context** | Assemble self-contained context bundle for subagent | `work_item_id`, `role` (defaults to current) |
+| **golazo_create_workitem** | Create a new work item with initial state | `work_item_id`, `profile` (complete/express/spike) |
+| **golazo_transition** | Move to the next (or previous) role | `work_item_id`, `role`, `force` |
+| **golazo_status** | Comprehensive status with parallel I/O | `work_item_id` (optional — omit for version only) |
+| **golazo_bootstrap** | Deploy spine, roles, capabilities to workspace | `force`, `include_roles` |
+| **golazo_consent** | Record deviation consent (consumed by transition) | `work_item_id`, `action`, `reason` (min 10 chars) |
+| **golazo_capabilities** | Query capability registry | `action` (list/show/impact/validate) |
+| **golazo_role_context** | Assemble self-contained context bundle for subagent | `work_item_id`, `role` (defaults to current) |
 
 All tools require `workspace_path` to locate the `WorkItems/` directory.
 
@@ -175,7 +175,7 @@ All tools require `workspace_path` to locate the `WorkItems/` directory.
 | **Same role** | No-op success |
 | **Gate: role notes** | Role decision notes file must exist for current role |
 | **Gate: required outputs** | Files declared in `## Required Outputs` must exist on disk |
-| **Force bypass** | Requires prior `gcp_consent` record; consent is consumed on use |
+| **Force bypass** | Requires prior `golazo_consent` record; consent is consumed on use |
 
 ### Workflow Profiles
 
@@ -197,7 +197,7 @@ Profile is stored in state; all roles are currently traversed regardless of prof
                     +-------------------+
                               |
                     +-------------------+
-                    |    MCP Server     |--- gcp_bootstrap --> .github/
+                    |    MCP Server     |--- golazo_bootstrap --> .github/
                     +-------------------+
                               |
            +------------------+------------------+
@@ -237,11 +237,11 @@ The default operating mode delegates each role's creative work to an isolated su
 
 ```
 For each role in the workflow:
-  1. gcp_status(work_item_id)       → current state, progress, version
-  2. gcp_role_context(work_item_id) → self-contained context bundle
-  3. runSubagent(prompt=bundle)     → subagent executes role work
+  1. golazo_status(work_item_id)       → current state, progress, version
+  2. golazo_role_context(work_item_id) → self-contained context bundle
+  3. runSubagent(prompt=bundle)        → subagent executes role work
   4. Verify required outputs exist
-  5. gcp_transition(next_role)      → advance (gates enforced)
+  5. golazo_transition(next_role)      → advance (gates enforced)
   6. Display between-role summary
   7. Repeat
 ```
@@ -250,11 +250,11 @@ For each role in the workflow:
 
 | Subagent MUST | Subagent MUST NOT |
 |---------------|-------------------|
-| Create all Required Outputs | Call `gcp_transition` |
+| Create all Required Outputs | Call `golazo_transition` |
 | Follow role instructions | Ask user questions |
 | Return a summary of work done | Modify `state.json` directly |
 
-### Context Bundle Contents (gcp_role_context)
+### Context Bundle Contents (golazo_role_context)
 
 | Section | Source | Truncatable? |
 |---------|--------|-------------|
@@ -278,7 +278,7 @@ User           Copilot        MCP Server     Transition     State
  |                |                |             |             |
  | "Start item"   |                |             |             |
  |--------------->|                |             |             |
- |                | gcp_create_    |             |             |
+ |                | golazo_create_ |             |             |
  |                | workitem()     |             |             |
  |                |--------------->|             |             |
  |                |                | validate_id |             |
@@ -290,7 +290,7 @@ User           Copilot        MCP Server     Transition     State
  |                |  role=POA"     |             |             |
  |                |<---------------|             |             |
  |                |                |             |             |
- |                | gcp_role_      |             |             |
+ |                | golazo_role_   |             |             |
  |                | context()      |             |             |
  |                |--------------->|             |             |
  |                |   [bundle]     |             |             |
@@ -303,7 +303,8 @@ User           Copilot        MCP Server     Transition     State
  |                |    | User-Story|             |             |
  |                |<---+           |             |             |
  |                |                |             |             |
- |                | gcp_transition |             |             |
+ |                | golazo_        |             |             |
+ |                | transition     |             |             |
  |                | ("program-     |             |             |
  |                |  manager")     |             |             |
  |                |--------------->|             |             |
@@ -416,13 +417,13 @@ golazo-copilot/
 │   │   └── defaults/                    # 10 role files + TechBestPractices.md
 │   └── tools/
 │       ├── __init__.py
-│       ├── gcp_create_workitem.py
-│       ├── gcp_transition.py
-│       ├── gcp_status.py                # Parallel I/O via asyncio.gather
-│       ├── gcp_bootstrap.py
-│       ├── gcp_consent.py
-│       ├── gcp_capabilities.py          # BFS impact analysis
-│       └── gcp_role_context.py          # Subagent context bundle assembly
+│       ├── golazo_create_workitem.py
+│       ├── golazo_transition.py
+│       ├── golazo_status.py             # Parallel I/O via asyncio.gather
+│       ├── golazo_bootstrap.py
+│       ├── golazo_consent.py
+│       ├── golazo_capabilities.py       # BFS impact analysis
+│       └── golazo_role_context.py       # Subagent context bundle assembly
 └── tests/                               # 18 test files, 391 tests
     ├── test_gcp_create_workitem.py
     ├── test_gcp_transition.py
@@ -457,7 +458,7 @@ golazo-copilot/
 |   VERSIONED * PUBLISHED TO AZURE ARTIFACTS * SAME FOR EVERYONE          |
 +-------------------------------------------------------------------------+
                                     |
-                                    | deploys via gcp_bootstrap
+                                    | deploys via golazo_bootstrap
                                     v
 +-------------------------------------------------------------------------+
 |                     PER-WORKSPACE (checked into repo)                   |
@@ -489,7 +490,7 @@ golazo-copilot/
 
 ## Bootstrap: What Gets Deployed
 
-When `gcp_bootstrap` runs, it creates:
+When `golazo_bootstrap` runs, it creates:
 
 | File | Source | Purpose |
 |------|--------|---------|
@@ -509,7 +510,7 @@ When `gcp_bootstrap` runs, it creates:
 ```
 User: "Start GCP-0053"
   |
-  +-> MCP: gcp_create_workitem(work_item_id="GCP-0053", profile="complete")
+  +-> MCP: golazo_create_workitem(work_item_id="GCP-0053", profile="complete")
   |     |
   |     +-> validate_work_item_id() -> matches [A-Za-z]{1,4}-\d{3,}
   |     +-> create_initial_state() -> WorkItemState Pydantic model
@@ -524,7 +525,7 @@ User: "Start GCP-0053"
 ### 2. Transitioning Roles (with Gate Enforcement)
 
 ```
-Copilot: gcp_transition(work_item_id="GCP-0053", role="program-manager")
+Copilot: golazo_transition(work_item_id="GCP-0053", role="program-manager")
   |
   +-> load_state() -> WorkItemState
   +-> validate_transition("project-owner-assistant" -> "program-manager")
@@ -541,10 +542,10 @@ Copilot: gcp_transition(work_item_id="GCP-0053", role="program-manager")
 ### 3. Forced Transition (with Consent)
 
 ```
-Copilot: gcp_transition(..., role="developer", force=True)
+Copilot: golazo_transition(..., role="developer", force=True)
   |
   +-> validate_transition() -> blocked (missing outputs)
-  +-> has_valid_consent("skip_outputs") -> True (from prior gcp_consent call)
+  +-> has_valid_consent("skip_outputs") -> True (from prior golazo_consent call)
   +-> consume_consent() -> marks deviation as consumed
   +-> Transition proceeds
   +-> save_state()
@@ -553,7 +554,7 @@ Copilot: gcp_transition(..., role="developer", force=True)
 ### 4. Subagent Delegation
 
 ```
-Copilot: gcp_role_context(work_item_id="GCP-0053", role="developer")
+Copilot: golazo_role_context(work_item_id="GCP-0053", role="developer")
   |
   +-> load_role_instructions("developer") -> markdown with YAML front-matter
   +-> Parse front-matter: inputs, outputs, tools
@@ -628,7 +629,7 @@ Golazo Copilot V2 cleanly separates **what can be computed** from **what require
 |---------|-------------|-----------|
 | "Can I go to developer?" | Code | `transitions.validate_transition()` |
 | "Do outputs exist?" | Code | `output_validator.validate()` |
-| "Record this skip" | Code | `gcp_consent()` → `deviations[]` |
+| "Record this skip" | Code | `golazo_consent()` → `deviations[]` |
 | "What role am I in?" | Code | `state.json` → `current_role` |
 | "How to write this design" | Role file | `.github/roles/architect.md` |
 | "Use subagents by default" | Spine | `bootstrap-instructions.md` |
