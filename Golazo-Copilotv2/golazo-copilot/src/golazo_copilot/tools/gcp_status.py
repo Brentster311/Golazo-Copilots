@@ -1,5 +1,10 @@
-"""gcp_status tool - Get comprehensive workflow status."""
+"""gcp_status tool - Get comprehensive workflow status.
 
+GCP-0051: Operations that gather independent data are run concurrently
+via asyncio.gather + asyncio.to_thread for reduced latency.
+"""
+
+import asyncio
 import re
 from importlib import resources
 from pathlib import Path
@@ -173,18 +178,98 @@ async def gcp_status(
     role_content = get_role_content(state.current_role, workspace_root)
     output_specs = parse_required_outputs(role_content, work_item_id)
     
-    required_outputs = []
-    outputs_complete = True
-    if output_specs:
-        validation_result = validate_all_outputs(output_specs, workspace_root)
-        outputs_complete = validation_result.valid
-        for output in validation_result.outputs:
-            required_outputs.append({
-                "path": output["spec"].path_or_pattern,
-                "type": output["spec"].type,
-                "valid": output["valid"],
-            })
-    
+    # ── GCP-0051: Parallel fan-out for independent operations ─────────
+    # Each helper is sync (file I/O), so we wrap with asyncio.to_thread.
+    # return_exceptions=True isolates failures per-operation.
+
+    async def _async_validate_outputs():
+        """Validate required outputs in a thread."""
+        def _validate():
+            results = []
+            all_valid = True
+            if output_specs:
+                validation_result = validate_all_outputs(output_specs, workspace_root)
+                all_valid = validation_result.valid
+                for output in validation_result.outputs:
+                    results.append({
+                        "path": output["spec"].path_or_pattern,
+                        "type": output["spec"].type,
+                        "valid": output["valid"],
+                    })
+            return all_valid, results
+        return await asyncio.to_thread(_validate)
+
+    async def _async_check_missing_notes():
+        """Check for missing role notes in a thread."""
+        def _check():
+            missing = []
+            seen = set()
+            for entry in state.role_history:
+                if entry.exited_at is not None:
+                    if entry.role not in seen:
+                        notes_path = get_role_notes_path(work_item_id, entry.role, work_items_dir)
+                        if not notes_path.exists():
+                            missing.append(entry.role)
+                        seen.add(entry.role)
+            return missing
+        return await asyncio.to_thread(_check)
+
+    async def _async_stale_files():
+        """Detect stale files in a thread."""
+        return await asyncio.to_thread(_get_stale_files, workspace_root)
+
+    async def _async_registry():
+        """Parse registry hint in a thread."""
+        return await asyncio.to_thread(_get_registry_hint, workspace_root)
+
+    async def _async_progress():
+        """Compute role progress in a thread."""
+        return await asyncio.to_thread(_compute_role_progress, state)
+
+    (
+        output_result,
+        missing_notes_result,
+        stale_files_result,
+        registry_result,
+        progress_result,
+    ) = await asyncio.gather(
+        _async_validate_outputs(),
+        _async_check_missing_notes(),
+        _async_stale_files(),
+        _async_registry(),
+        _async_progress(),
+        return_exceptions=True,
+    )
+
+    # ── Unwrap results with error isolation ───────────────────────────
+    # If an operation raised, use a safe default so other data still shows.
+
+    if isinstance(output_result, BaseException):
+        outputs_complete = True
+        required_outputs = []
+    else:
+        outputs_complete, required_outputs = output_result
+
+    missing_notes = (
+        [] if isinstance(missing_notes_result, BaseException) else missing_notes_result
+    )
+
+    stale_files = (
+        [] if isinstance(stale_files_result, BaseException) else stale_files_result
+    )
+
+    registry_hint = (
+        None if isinstance(registry_result, BaseException) else registry_result
+    )
+
+    role_progress = (
+        {"roles": [], "roles_completed": 0, "roles_total": len(ROLE_ORDER)}
+        if isinstance(progress_result, BaseException)
+        else progress_result
+    )
+
+    # ── Assemble result (unchanged structure) ─────────────────────────
+
     # Generate next steps (with output remediation — GCP-0027)
     next_steps = _generate_next_steps(state, required_outputs)
     
@@ -200,19 +285,7 @@ async def gcp_status(
         for d in state.deviations
     ]
     
-    # Check for missing role notes (completed roles only)
-    missing_notes = []
-    seen_roles = set()
-    for entry in state.role_history:
-        if entry.exited_at is not None:  # Role has been exited (completed)
-            if entry.role not in seen_roles:
-                notes_path = get_role_notes_path(work_item_id, entry.role, work_items_dir)
-                if not notes_path.exists():
-                    missing_notes.append(entry.role)
-                seen_roles.add(entry.role)
-    
     # GCP-0037: Per-file stale version reporting
-    stale_files = _get_stale_files(workspace_root)
     version_warning = None
     if stale_files:
         details = ", ".join(
@@ -222,12 +295,6 @@ async def gcp_status(
             f"{len(stale_files)} file(s) are stale: {details}. "
             f"Run gcp_bootstrap to update."
         )
-    
-    # GCP-0033: Compute role progress
-    role_progress = _compute_role_progress(state)
-
-    # GCP-0042: Capability registry hint
-    registry_hint = _get_registry_hint(workspace_root)
     
     return {
         "active": True,
