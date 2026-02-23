@@ -1,6 +1,6 @@
 ﻿# GCP-0049 User Story
 
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 ## User Story
 
