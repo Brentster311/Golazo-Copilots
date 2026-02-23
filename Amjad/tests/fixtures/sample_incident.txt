@@ -1,9 +1,0 @@
-On February 10th at 14:32, the monitoring system alerted that the web application hosted on server WebApp01 was experiencing high response times. Users reported that page loads were taking over 10 seconds.
-
-Investigation revealed that the server's CPU usage was at 95%, well above the normal 30-40% range. Memory usage was also critically high, with only 3% free memory remaining. The application logs showed multiple OutOfMemoryException errors starting around 14:15.
-
-The root cause was identified as a memory leak in the session handling module that had been deployed the previous day. The leak caused gradual memory exhaustion, which in turn caused the CPU to spike as the garbage collector worked overtime.
-
-Resolution: The faulty deployment was rolled back and the server was restarted. Normal performance was restored by 15:10.
-
-Root Cause: Resource Exhaustion due to memory leak in session handler.

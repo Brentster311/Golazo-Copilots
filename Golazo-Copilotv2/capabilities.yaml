@@ -171,7 +171,7 @@ capabilities:
       - golazo-copilot/src/golazo_copilot/server.py
       - golazo-copilot/src/golazo_copilot/__init__.py
     contracts:
-      - "list_tools() -> list[Tool]  # 6 tools registered"
+      - "list_tools() -> list[Tool]  # 7 tools registered"
       - "call_tool(name, arguments) -> list[TextContent]"
     depends_on:
       - tool-create-workitem
@@ -180,3 +180,17 @@ capabilities:
       - tool-bootstrap
       - tool-consent
       - tool-capabilities
+      - tool-role-context
+
+  - name: tool-role-context
+    description: "Assemble a self-contained context bundle for a role — instructions, state, input artifacts, previous notes"
+    key_files:
+      - golazo-copilot/src/golazo_copilot/tools/gcp_role_context.py
+    contracts:
+      - "gcp_role_context(work_item_id, role?, work_items_dir, project_root?, max_bundle_size?) -> dict"
+      - "Result keys: status, bundle, artifact_count, total_size, truncated, role, work_item_id"
+    depends_on:
+      - persistence
+      - role-loader
+      - transitions
+      - tool-transition

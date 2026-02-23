@@ -1,4 +1,4 @@
-# GCP-0050 User Story
+﻿# GCP-0050 User Story
 
 **Status**: BACKLOG
 
@@ -10,26 +10,26 @@
 - **So that:** Each role gets a clean context window with only its instructions and relevant artifacts, subagent outputs are higher quality due to reduced context pollution, and the orchestrator maintains a clear separation between workflow control (its job) and creative work (subagent jobs)
 
 - **Out of scope:**
-  - Changes to MCP tool Python code (no new tools — uses existing gcp_status, gcp_transition, and GCP-0049's gcp_role_context)
+  - Changes to MCP tool Python code (no new tools ΓÇö uses existing gcp_status, gcp_transition, and GCP-0049's gcp_role_context)
   - Changes to role file content (that's GCP-0048)
   - Changes to state machine logic or transitions
   - Multi-work-item parallel orchestration (future work)
 
 - **Assumptions:**
-  - **Assumption (explicit):** The orchestrator pattern works as: (1) call `gcp_status` to get current role, (2) call `gcp_role_context` to get the subagent's context bundle, (3) spawn a subagent with the bundle as its prompt, (4) collect the subagent's output, (5) call `gcp_transition` to advance, (6) repeat. The orchestrator never writes code, design docs, or test cases itself — it only manages the workflow.
-  - **Assumption (explicit):** The subagent spawning mechanism is Copilot's built-in `runSubagent` capability (available in VS Code Copilot Chat). The spine instructs Copilot to use it, but cannot enforce it programmatically — the instruction is behavioral guidance.
+  - **Assumption (explicit):** The orchestrator pattern works as: (1) call `gcp_status` to get current role, (2) call `gcp_role_context` to get the subagent's context bundle, (3) spawn a subagent with the bundle as its prompt, (4) collect the subagent's output, (5) call `gcp_transition` to advance, (6) repeat. The orchestrator never writes code, design docs, or test cases itself ΓÇö it only manages the workflow.
+  - **Assumption (explicit):** The subagent spawning mechanism is Copilot's built-in `runSubagent` capability (available in VS Code Copilot Chat). The spine instructs Copilot to use it, but cannot enforce it programmatically ΓÇö the instruction is behavioral guidance.
   - **Assumption (explicit):** The spine includes a fallback mode: if subagent spawning fails or is unavailable (e.g., older Copilot version), the orchestrator falls back to performing the role work inline (current V2 behavior). This is documented in the spine as a graceful degradation.
   - **Assumption (explicit):** The orchestrator displays a brief status summary between subagent invocations so the user has visibility into progress (which role just completed, what it produced, what's next).
-  - **Assumption (explicit):** The user can override the subagent pattern at any time by saying "do this inline" or "don't use subagents" — the spine includes a user-override escape hatch.
+  - **Assumption (explicit):** The user can override the subagent pattern at any time by saying "do this inline" or "don't use subagents" ΓÇö the spine includes a user-override escape hatch.
 
 - **Acceptance Criteria (bulleted, testable):**
-  - [ ] AC1: `bootstrap-instructions.md` describes the orchestrator pattern: call `gcp_status` → call `gcp_role_context` → spawn subagent → collect output → call `gcp_transition` → repeat
+  - [ ] AC1: `bootstrap-instructions.md` describes the orchestrator pattern: call `gcp_status` ΓåÆ call `gcp_role_context` ΓåÆ spawn subagent ΓåÆ collect output ΓåÆ call `gcp_transition` ΓåÆ repeat
   - [ ] AC2: The spine defines the orchestrator's responsibilities (workflow sequencing, gate enforcement, user communication) separately from the subagent's responsibilities (creative work per role instructions)
   - [ ] AC3: The spine includes a fallback mode section that describes inline execution when subagents are unavailable, with the trigger condition clearly stated
   - [ ] AC4: The spine includes a subagent prompt template showing how to compose the `runSubagent` call with the context bundle from `gcp_role_context`
   - [ ] AC5: The spine includes a "between-roles summary" instruction telling the orchestrator to display: completed role, artifacts produced, next role, and any warnings from gcp_transition
   - [ ] AC6: The spine includes a user-override mechanism (e.g., "work inline" / "no subagents") that switches to single-agent mode for the remainder of the session
-  - [ ] AC7: The updated spine is ≤ 150 lines (current is ~50 lines; the orchestrator pattern adds complexity but must remain concise enough for Copilot to follow reliably)
+  - [ ] AC7: The updated spine is Γëñ 150 lines (current is ~50 lines; the orchestrator pattern adds complexity but must remain concise enough for Copilot to follow reliably)
 
 - **Non-functional requirements:**
   - The spine must be clear enough that Copilot follows the orchestrator pattern without additional prompting at least 80% of the time

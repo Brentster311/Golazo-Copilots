@@ -1,2 +1,0 @@
-This is not valid JSON and should cause a parse failure {{{
-totally broken output from the LLM

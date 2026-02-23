@@ -14,6 +14,7 @@ from .tools.gcp_status import gcp_status
 from .tools.gcp_bootstrap import gcp_bootstrap
 from .tools.gcp_consent import gcp_consent
 from .tools.gcp_capabilities import gcp_capabilities
+from .tools.gcp_role_context import gcp_role_context
 
 # Create server instance with version in name
 server = Server(f"golazo-copilot v{__version__}")
@@ -230,6 +231,22 @@ def format_capabilities_result(result: dict, action: str, files: list | None = N
     return str(result)
 
 
+def format_role_context_result(result: dict) -> str:
+    """Format gcp_role_context result dict into display text."""
+    if result["status"] != "ok":
+        return f"{ICON_FAIL} {result['error']}"
+    meta = []
+    meta.append(f"Role: {result.get('role', 'unknown')}")
+    meta.append(f"Artifacts: {result.get('artifact_count', 0)}")
+    meta.append(f"Size: {result.get('total_size', 0)} bytes")
+    if result.get("truncated"):
+        meta.append(f"{ICON_WARN} Some artifacts were truncated")
+    header = " | ".join(meta)
+    return f"""{ICON_OK} Role context bundled ({header})
+
+{result['bundle']}"""
+
+
 @server.list_tools()
 async def list_tools() -> list[Tool]:
     """List available tools."""
@@ -384,6 +401,28 @@ async def list_tools() -> list[Tool]:
                 "required": ["action", "workspace_path"]
             }
         ),
+        Tool(
+            name="gcp_role_context",
+            description="Assemble a self-contained context bundle for a specific role in a work item. Returns role instructions, current state, input artifacts (file contents), and previous role notes — everything a subagent needs to perform the role.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "work_item_id": {
+                        "type": "string",
+                        "description": "Work item identifier (e.g. GCP-0049)"
+                    },
+                    "role": {
+                        "type": "string",
+                        "description": "Role name to bundle context for. If omitted, uses current_role from state.json."
+                    },
+                    "workspace_path": {
+                        "type": "string",
+                        "description": "Workspace root path containing the WorkItems folder (required)"
+                    }
+                },
+                "required": ["work_item_id", "workspace_path"]
+            }
+        ),
     ]
 
 
@@ -464,6 +503,18 @@ async def _dispatch_tool(name: str, arguments: dict) -> list[TextContent]:
         return [TextContent(type="text", text=format_capabilities_result(
             result, arguments["action"], arguments.get("files")
         ))]
+
+    elif name == "gcp_role_context":
+        work_items_dir = resolve_work_items_dir(arguments.get("workspace_path"))
+        ws = arguments.get("workspace_path")
+        project_root = Path(ws) if ws else None
+        result = await gcp_role_context(
+            work_item_id=arguments["work_item_id"],
+            role=arguments.get("role"),
+            work_items_dir=work_items_dir,
+            project_root=project_root,
+        )
+        return [TextContent(type="text", text=format_role_context_result(result))]
 
     return [TextContent(type="text", text=f"Unknown tool: {name}")]
 

@@ -13,13 +13,13 @@ from golazo_copilot.server import list_tools, call_tool, resolve_work_items_dir
 # TC1: Schema Validation
 # ---------------------------------------------------------------------------
 class TestSchemaRequiresWorkspacePath:
-    """TC1.1: All 6 tool schemas include workspace_path in required."""
+    """TC1.1: All tool schemas include workspace_path in required."""
 
     @pytest.mark.asyncio
     async def test_all_tools_require_workspace_path(self):
         """Every tool schema must list workspace_path as required."""
         tools = await list_tools()
-        assert len(tools) == 6, f"Expected 6 tools, got {len(tools)}"
+        assert len(tools) == 7, f"Expected 7 tools, got {len(tools)}"
         for tool in tools:
             required = tool.inputSchema.get("required", [])
             assert "workspace_path" in required, (
