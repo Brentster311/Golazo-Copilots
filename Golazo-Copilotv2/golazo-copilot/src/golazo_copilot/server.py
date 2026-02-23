@@ -114,6 +114,11 @@ def format_status_result(result: dict) -> str:
 
         next_steps = "\n".join(f"- {step}" for step in result["next_steps"])
 
+        # GCP-0053: Closure mode indicator
+        closure_label = ""
+        if result.get("closure_pending"):
+            closure_label = f" {ICON_WARN} **CLOSURE MODE**"
+
         # Format deviations
         deviations_section = ""
         if result.get("deviations"):
@@ -125,7 +130,7 @@ def format_status_result(result: dict) -> str:
 
         return f"""**Golazo Status** (v{result['version']}){version_warning}
 - Work Item: {result['work_item_id']}
-- Current Role: **{result['current_role']}**
+- Current Role: **{result['current_role']}**{closure_label}
 - Phase: {result['current_phase']}{progress_section}{outputs_section}{registry_section}{deviations_section}
 
 **Next Steps:**

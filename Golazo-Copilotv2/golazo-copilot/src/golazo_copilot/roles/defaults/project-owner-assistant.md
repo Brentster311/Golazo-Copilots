@@ -3,6 +3,7 @@ inputs: []
 outputs:
   - WorkItems/{id}/{id}-User-Story.md
   - WorkItems/{id}/RoleDecisionNotes/{id}-project-owner-assistant.md
+  - WorkItems/{id}/{id}-closure.md
 tools:
   - gcp_status
   - gcp_transition
@@ -39,6 +40,8 @@ Translate a request into a clear, testable **User Story** with explicit scope, a
 <!-- If the request is decomposed, include a brief rationale explaining why the original request was too large. -->
 - file: WorkItems/{id}/{id}-User-Story.md
 - file: WorkItems/{id}/RoleDecisionNotes/{id}-project-owner-assistant.md
+<!-- closure-only -->
+- file: WorkItems/{id}/{id}-closure.md
 
 ## User Story format (required)
 **Status**: BACKLOG | IN PROGRESS | IMPLEMENTED

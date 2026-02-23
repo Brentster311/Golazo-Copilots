@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0",
+  "work_item_id": "GCP-0053",
+  "profile": "complete",
+  "current_phase": "development",
+  "current_role": "developer",
+  "created_at": "2026-02-23T06:20:47.809477Z",
+  "updated_at": "2026-02-23T06:37:35.840738Z",
+  "role_history": [
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-02-23T06:20:47.809477Z",
+      "exited_at": "2026-02-23T06:22:38.604320Z"
+    },
+    {
+      "role": "program-manager",
+      "entered_at": "2026-02-23T06:22:38.604320Z",
+      "exited_at": "2026-02-23T06:26:31.227955Z"
+    },
+    {
+      "role": "domain-expert",
+      "entered_at": "2026-02-23T06:26:31.227955Z",
+      "exited_at": "2026-02-23T06:27:39.084732Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-02-23T06:27:39.084732Z",
+      "exited_at": "2026-02-23T06:32:03.624732Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-02-23T06:32:03.624732Z",
+      "exited_at": "2026-02-23T06:37:35.840738Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-02-23T06:37:35.840738Z",
+      "exited_at": null
+    }
+  ],
+  "deviations": [
+    {
+      "id": "dev-001",
+      "action": "skip_outputs",
+      "reason": "Closure output is only required on POA re-entry after retrospective, not on initial entry. This is the exact bug GCP-0053 will fix.",
+      "role": "project-owner-assistant",
+      "timestamp": "2026-02-23T06:22:33.442264Z",
+      "consumed": true,
+      "consumed_at": "2026-02-23T06:22:38.602860Z"
+    }
+  ]
+}

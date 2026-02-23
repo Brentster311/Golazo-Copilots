@@ -65,6 +65,10 @@ This role is triggered when:
 - Major process changes should be reviewed before adoption
 - Create a new work item for implementing process changes
 
+## Transition Guidance
+- **Complete profile:** After completing retrospective, transition to `project-owner-assistant` for formal closure. Use `gcp_transition(role="project-owner-assistant")`.
+- **Express / Spike profiles:** The workflow ends here. No further transition is required.
+
 ## Success criteria
 - Friction/failures are documented
 - Actionable improvements proposed

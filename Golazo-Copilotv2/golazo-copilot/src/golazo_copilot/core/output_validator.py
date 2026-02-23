@@ -15,6 +15,7 @@ class OutputSpec:
     """Specification for a required output."""
     type: str  # "file", "dir", "git-branch", "git-log"
     path_or_pattern: str
+    closure_only: bool = False
 
 
 @dataclass
@@ -49,11 +50,21 @@ def parse_required_outputs(role_content: str, work_item_id: str) -> list[OutputS
     section_content = match.group(1)
     
     # Parse each line that starts with "- type: value"
-    line_pattern = r'^\s*-\s*(file|dir|git-branch|git-log):\s*(.+?)\s*$'
+    # Belt-and-suspenders: also strip inline HTML comments from paths
+    line_pattern = r'^\s*-\s*(file|dir|git-branch|git-log):\s*(.+?)\s*(?:<!--.*?-->)?\s*$'
+    
+    next_is_closure_only = False
     
     for line in section_content.split('\n'):
-        # Skip HTML comments
-        if line.strip().startswith('<!--'):
+        stripped = line.strip()
+        
+        # Detect <!-- closure-only --> annotation on its own line
+        if stripped == '<!-- closure-only -->':
+            next_is_closure_only = True
+            continue
+        
+        # Skip other HTML comments
+        if stripped.startswith('<!--'):
             continue
             
         line_match = re.match(line_pattern, line, re.IGNORECASE)
@@ -64,7 +75,16 @@ def parse_required_outputs(role_content: str, work_item_id: str) -> list[OutputS
             # Substitute {id} placeholder
             path_or_pattern = path_or_pattern.replace('{id}', work_item_id)
             
-            outputs.append(OutputSpec(type=output_type, path_or_pattern=path_or_pattern))
+            outputs.append(OutputSpec(
+                type=output_type,
+                path_or_pattern=path_or_pattern,
+                closure_only=next_is_closure_only,
+            ))
+            next_is_closure_only = False
+        elif stripped:  # Non-empty non-matching line resets the annotation
+            next_is_closure_only = False
+        else:  # Blank line also resets annotation (must be immediately adjacent)
+            next_is_closure_only = False
     
     return outputs
 

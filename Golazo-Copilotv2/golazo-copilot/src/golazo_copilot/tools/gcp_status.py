@@ -178,6 +178,10 @@ async def gcp_status(
     role_content = get_role_content(state.current_role, workspace_root)
     output_specs = parse_required_outputs(role_content, work_item_id)
     
+    # GCP-0053: Filter closure-only outputs based on state
+    closure_mode = getattr(state, 'closure_pending', False)
+    output_specs = [s for s in output_specs if not s.closure_only or closure_mode]
+    
     # ── GCP-0051: Parallel fan-out for independent operations ─────────
     # Each helper is sync (file I/O), so we wrap with asyncio.to_thread.
     # return_exceptions=True isolates failures per-operation.
@@ -271,7 +275,7 @@ async def gcp_status(
     # ── Assemble result (unchanged structure) ─────────────────────────
 
     # Generate next steps (with output remediation — GCP-0027)
-    next_steps = _generate_next_steps(state, required_outputs)
+    next_steps = _generate_next_steps(state, required_outputs, closure_pending=closure_mode)
     
     # Build deviations list
     deviations = [
@@ -303,6 +307,7 @@ async def gcp_status(
         "profile": state.profile,
         "current_phase": state.current_phase,
         "current_role": state.current_role,
+        "closure_pending": closure_mode,
         "required_outputs": {
             "complete": outputs_complete,
             "outputs": required_outputs,
@@ -320,14 +325,29 @@ async def gcp_status(
 def _generate_next_steps(
     state,
     required_outputs: list[dict] | None = None,
+    closure_pending: bool = False,
 ) -> list[str]:
     """Generate intelligent next steps based on current state.
     
     Args:
         state: Current work item state
         required_outputs: List of output dicts with path/type/valid keys (GCP-0027)
+        closure_pending: Whether the work item is in closure mode (GCP-0053)
     """
     steps = []
+    
+    # GCP-0053: Closure-specific guidance takes priority
+    if closure_pending and state.current_role == "project-owner-assistant":
+        steps.append("Perform closure: verify acceptance criteria, confirm final commit, create closure.md")
+        steps.append("Update User Story status to IMPLEMENTED")
+        # Still include output remediation
+        _REMEDIATION_VERBS = {"file": "Create file", "dir": "Create directory"}
+        if required_outputs:
+            for output in required_outputs:
+                if not output["valid"]:
+                    verb = _REMEDIATION_VERBS.get(output["type"], f"Ensure {output['type']}")
+                    steps.append(f"{verb}: {output['path']}")
+        return steps
     
     # GCP-0027: Add remediation for missing required outputs
     _REMEDIATION_VERBS = {"file": "Create file", "dir": "Create directory"}

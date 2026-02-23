@@ -133,6 +133,11 @@ async def gcp_transition(
     role_content = get_role_content(current_role, workspace_root)
     output_specs = parse_required_outputs(role_content, work_item_id)
     
+    # GCP-0053: Filter closure-only outputs based on state
+    # Backward transitions skip closure-only gates (user is reworking before completing closure)
+    closure_mode = getattr(state, 'closure_pending', False) and not backward
+    output_specs = [s for s in output_specs if not s.closure_only or closure_mode]
+    
     if output_specs:
         validation_result = validate_all_outputs(output_specs, workspace_root)
         if not validation_result.valid:
@@ -176,6 +181,14 @@ async def gcp_transition(
     state.current_role = role
     state.current_phase = get_phase_for_role(role)
     state.updated_at = now
+    
+    # GCP-0053: Set closure_pending when retro→POA in complete profile
+    if (
+        state.profile == "complete"
+        and current_role == "retrospective"
+        and role == "project-owner-assistant"
+    ):
+        state.closure_pending = True
     
     # Save state
     save_state(work_item_id, state, work_items_dir)
