@@ -1,4 +1,4 @@
-"""gcp_capabilities tool - Query project capability registry for impact analysis."""
+"""golazo_capabilities tool - Query project capability registry for impact analysis."""
 
 from collections import defaultdict, deque
 from pathlib import Path
@@ -83,7 +83,7 @@ def _get_transitive_dependents(
     return result
 
 
-async def gcp_capabilities(
+async def golazo_capabilities(
     action: str,
     capability: str | None = None,
     files: list[str] | None = None,

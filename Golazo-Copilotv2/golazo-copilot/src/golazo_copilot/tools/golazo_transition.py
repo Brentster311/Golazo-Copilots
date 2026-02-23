@@ -1,4 +1,4 @@
-"""gcp_transition tool - Transition between workflow roles."""
+"""golazo_transition tool - Transition between workflow roles."""
 
 from datetime import datetime, timezone
 from pathlib import Path
@@ -13,7 +13,7 @@ from ..core.transitions import (
 )
 from ..core.output_validator import parse_required_outputs, validate_all_outputs
 from ..roles.loader import load_role_instructions, get_role_content
-from .gcp_consent import has_valid_consent, consume_consent
+from .golazo_consent import has_valid_consent, consume_consent
 
 
 # Role suffix mapping for notes files
@@ -42,7 +42,7 @@ def check_role_notes_exist(work_item_id: str, role: str, work_items_dir: Path) -
     return notes_path.exists()
 
 
-async def gcp_transition(
+async def golazo_transition(
     work_item_id: str,
     role: str,
     work_items_dir: Path = DEFAULT_WORKITEMS_DIR,
@@ -68,7 +68,7 @@ async def gcp_transition(
     if not work_item_exists(work_item_id, work_items_dir):
         return {
             "success": False,
-            "error": f"Work item '{work_item_id}' does not exist. Use gcp_create_workitem first.",
+            "error": f"Work item '{work_item_id}' does not exist. Use golazo_create_workitem first.",
         }
     
     # Validate role name
@@ -110,7 +110,7 @@ async def gcp_transition(
             if not has_valid_consent(state, "skip_role"):
                 return {
                     "success": False,
-                    "error": "Cannot force transition without recorded consent. Call gcp_consent with action='skip_role' first.",
+                    "error": "Cannot force transition without recorded consent. Call golazo_consent with action='skip_role' first.",
                     "missing_file": str(notes_path),
                 }
             # Consume the consent
@@ -124,7 +124,7 @@ async def gcp_transition(
                 "success": False,
                 "error": f"Cannot transition from '{current_role}': Missing role notes file at '{relative_path}'. Create this file to document your work in the '{current_role}' role before transitioning.",
                 "missing_file": relative_path,
-                "hint": f"Create the file first, or use force_without_notes=True with prior gcp_consent(action='skip_role')",
+                "hint": f"Create the file first, or use force_without_notes=True with prior golazo_consent(action='skip_role')",
             }
     
     # GCP-0025: Check required outputs for current role
@@ -147,7 +147,7 @@ async def gcp_transition(
                 if not has_valid_consent(state, "skip_outputs"):
                     return {
                         "success": False,
-                        "error": "Cannot force transition without recorded consent. Call gcp_consent(action='skip_outputs') first.",
+                        "error": "Cannot force transition without recorded consent. Call golazo_consent(action='skip_outputs') first.",
                         "missing_outputs": missing_outputs,
                     }
                 # Consume the consent
@@ -158,7 +158,7 @@ async def gcp_transition(
                     "success": False,
                     "error": f"Cannot transition from '{current_role}': {validation_result.message}",
                     "missing_outputs": missing_outputs,
-                    "hint": "Create the missing outputs, or use force=True with prior gcp_consent(action='skip_outputs')",
+                    "hint": "Create the missing outputs, or use force=True with prior golazo_consent(action='skip_outputs')",
                 }
     
     # Update state

@@ -47,11 +47,11 @@ For example, the `project-owner-assistant` role requires:
 - file: WorkItems/{id}/RoleDecisionNotes/{id}-project-owner-assistant.md
 ```
 
-When you call `gcp_transition`, the system:
+When you call `golazo_transition`, the system:
 1. Reads the current role's `## Required Outputs` section
 2. Checks that each listed file/directory exists in the workspace
 3. Blocks the transition if any output is missing, with a clear error message listing what's needed
-4. Allows bypass via `gcp_consent` + `force=True` when justified
+4. Allows bypass via `golazo_consent` + `force=True` when justified
 
 This replaces manual checklist marking with automated, file-based validation.
 
@@ -74,25 +74,25 @@ All profiles use the same output validation mechanism—role files define what's
 
 #### Deviation Recording
 When you need to bypass a gate (e.g., force a transition when outputs are missing), the system:
-1. Requires explicit consent via `gcp_consent` tool
+1. Requires explicit consent via `golazo_consent` tool
 2. Records the action, reason, timestamp, and current role
 3. Stores deviations in the work item's `state.json`
 4. Enables retrospective review of process deviations
 
 #### Role Notes Enforcement
 The Golazo workflow requires every role to produce a decision notes document. The system enforces this by:
-1. **Blocking on transition** – When you transition away from a role, `gcp_transition` checks if decision notes exist for that role. If missing, the transition **fails** with an error indicating the expected file path.
-2. **Force with consent** – If you need to bypass, use `gcp_consent(action='skip_role')` first, then `gcp_transition(..., force=True)`.
-3. **Status visibility** – `gcp_status` includes a `missing_notes` list showing which completed roles lack decision notes.
+1. **Blocking on transition** – When you transition away from a role, `golazo_transition` checks if decision notes exist for that role. If missing, the transition **fails** with an error indicating the expected file path.
+2. **Force with consent** – If you need to bypass, use `golazo_consent(action='skip_role')` first, then `golazo_transition(..., force=True)`.
+3. **Status visibility** – `golazo_status` includes a `missing_notes` list showing which completed roles lack decision notes.
 4. **Expected file naming** – Notes should be at `WorkItems/<id>/RoleDecisionNotes/<id>-<role>.md`
 
 This ensures an audit trail of decisions made at each workflow stage.
 
 #### Version Sync Warning
-When you call `gcp_status`, the system compares the running MCP server version against the version comment in your workspace's `.github/copilot-instructions.md`. If they differ, a warning is displayed so you know to re-bootstrap or update the package.
+When you call `golazo_status`, the system compares the running MCP server version against the version comment in your workspace's `.github/copilot-instructions.md`. If they differ, a warning is displayed so you know to re-bootstrap or update the package.
 
 #### Role Progress Display
-`gcp_status` shows how many of the 9 workflow roles have been completed for a work item (e.g., "Role Progress: 4/9 complete"), giving visibility into overall progress.
+`golazo_status` shows how many of the 9 workflow roles have been completed for a work item (e.g., "Role Progress: 4/9 complete"), giving visibility into overall progress.
 
 #### TechBestPractices Reference
 When bootstrapping a workspace, a `.github/roles/TechBestPractices.md` file is deployed alongside the role files. This shared reference document is referenced by the Architect, Developer, and Refactor Expert roles to ensure consistent technical standards.
@@ -129,7 +129,7 @@ pip install golazo-copilot --index-url https://msazure.pkgs.visualstudio.com/One
 
 In GitHub Copilot Chat, ask: **"GCP version?"**
 
-It will run `gcp_status` and display the running version (e.g., `v2.103.6`).
+It will run `golazo_status` and display the running version (e.g., `v2.103.6`).
 
 ## VS Code Configuration
 
@@ -173,11 +173,11 @@ After saving the configuration:
 In GitHub Copilot Chat, ask: *"What MCP tools do you have?"*
 
 You should see the Golazo Copilot tools listed:
-- `gcp_create_workitem` – Initialize a new work item
-- `gcp_status` – Check workflow status
-- `gcp_transition` – Move between roles
-- `gcp_consent` – Record consent for bypassing workflow gates
-- `gcp_bootstrap` – Bootstrap Golazo instructions in a workspace
+- `golazo_create_workitem` – Initialize a new work item
+- `golazo_status` – Check workflow status
+- `golazo_transition` – Move between roles
+- `golazo_consent` – Record consent for bypassing workflow gates
+- `golazo_bootstrap` – Bootstrap Golazo instructions in a workspace
 
 ### Step 5: Bootstrap Your Workspace
 
@@ -224,7 +224,7 @@ If it starts without errors (no output, waiting for input), the server is workin
 
 ### Available MCP Tools
 
-#### `gcp_create_workitem`
+#### `golazo_create_workitem`
 Create a new Golazo Copilot work item with persistent state tracking.
 
 | Input | Type | Required | Description |
@@ -233,7 +233,7 @@ Create a new Golazo Copilot work item with persistent state tracking.
 | `profile` | string | No | Workflow profile: `complete` (default), `express`, or `spike` |
 | `workspace_path` | string | **Yes** | Workspace root path containing the WorkItems folder |
 
-#### `gcp_status`
+#### `golazo_status`
 Get comprehensive workflow status for a work item. Returns current role, phase, required outputs, next steps, deviations, and the Golazo Copilot version number.
 
 | Input | Type | Required | Description |
@@ -241,7 +241,7 @@ Get comprehensive workflow status for a work item. Returns current role, phase, 
 | `work_item_id` | string | No | Work item identifier. If omitted or empty, only the version is returned |
 | `workspace_path` | string | **Yes** | Workspace root path containing the WorkItems folder |
 
-#### `gcp_transition`
+#### `golazo_transition`
 Transition to a new role in the Golazo Copilot workflow.
 
 | Input | Type | Required | Description |
@@ -251,7 +251,7 @@ Transition to a new role in the Golazo Copilot workflow.
 | `force` | boolean | No | Force transition even if gates not met (default: `false`, requires prior consent) |
 | `workspace_path` | string | **Yes** | Workspace root path containing the WorkItems folder |
 
-#### `gcp_consent`
+#### `golazo_consent`
 Record Project Owner consent for bypassing workflow gates. The rationale MUST be provided by the Project Owner (human), not generated by the assistant. Required before using `force=true`.
 
 | Input | Type | Required | Description |
@@ -261,7 +261,7 @@ Record Project Owner consent for bypassing workflow gates. The rationale MUST be
 | `reason` | string | **Yes** | Justification for the deviation (min 10 characters) |
 | `workspace_path` | string | **Yes** | Workspace root path containing the WorkItems folder |
 
-#### `gcp_bootstrap`
+#### `golazo_bootstrap`
 Bootstrap Golazo Copilot in a workspace — creates copilot instructions and directories.
 
 | Input | Type | Required | Description |
@@ -270,7 +270,7 @@ Bootstrap Golazo Copilot in a workspace — creates copilot instructions and dir
 | `include_roles` | boolean | No | Also copy default role files to `.github/roles/` (default: `true`) |
 | `workspace_path` | string | **Yes** | Workspace root path |
 
-#### `gcp_capabilities`
+#### `golazo_capabilities`
 Query the project capability registry for impact analysis. Reads `capabilities.yaml` to show features, dependencies, and which capabilities are affected by file changes.
 
 | Input | Type | Required | Description |

@@ -1,4 +1,4 @@
-"""gcp_consent tool - Record consent for workflow deviations."""
+"""golazo_consent tool - Record consent for workflow deviations."""
 
 from pathlib import Path
 from datetime import datetime, timezone
@@ -19,7 +19,7 @@ VALID_ACTIONS = {
 MINIMUM_REASON_LENGTH = 10
 
 
-async def gcp_consent(
+async def golazo_consent(
     work_item_id: str,
     action: str,
     reason: str,

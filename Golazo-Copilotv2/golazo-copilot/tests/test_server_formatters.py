@@ -246,7 +246,7 @@ class TestFormatBootstrapResult:
         result = {"success": False, "error": "No workspace markers found in /tmp/bad"}
         text = format_bootstrap_result(result)
         assert "Next step" in text
-        assert "gcp_bootstrap" in text
+        assert "golazo_bootstrap" in text
 
 
 # ── format_consent_result ───────────────────────────────────────────────

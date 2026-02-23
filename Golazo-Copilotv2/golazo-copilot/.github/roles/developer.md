@@ -27,7 +27,7 @@ Implement the approved design and User Story **without redefining scope**, and p
 - Keep docs consistent with implementation
 
 ### Capability Registry (if capabilities.yaml exists)
-- If a `capabilities.yaml` exists in the project root, run `gcp_capabilities(action="impact", files=[...])` on files being changed before committing
+- If a `capabilities.yaml` exists in the project root, run `golazo_capabilities(action="impact", files=[...])` on files being changed before committing
 - Ensure no downstream capabilities are broken by the changes
 
 ## Forbidden actions

@@ -192,10 +192,10 @@ class TestSpineCapabilityRegistryMention:
         files_pkg = resources.files("golazo_copilot")
         return files_pkg.joinpath("bootstrap-instructions.md").read_text(encoding="utf-8")
 
-    def test_spine_mentions_gcp_capabilities(self):
-        """TC1: Spine contains gcp_capabilities mention."""
+    def test_spine_mentions_golazo_capabilities(self):
+        """TC1: Spine contains golazo_capabilities mention."""
         content = self._read_spine()
-        assert "gcp_capabilities" in content, "Spine missing gcp_capabilities mention"
+        assert "golazo_capabilities" in content, "Spine missing golazo_capabilities mention"
 
     def test_spine_uses_conditional_phrasing(self):
         """TC2: Spine mention uses conditional phrasing about capabilities.yaml."""

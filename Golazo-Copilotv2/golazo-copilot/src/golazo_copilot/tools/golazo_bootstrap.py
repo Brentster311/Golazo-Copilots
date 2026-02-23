@@ -48,25 +48,25 @@ def _get_default_instructions() -> str:
 This workspace uses Golazo Copilot MCP server for workflow management.
 
 ## REQUIRED: Before EVERY Response
-1. Call `gcp_status(work_item_id="<current-id>")` to get current state
+1. Call `golazo_status(work_item_id="<current-id>")` to get current state
 2. Display the Golazo Status header
 3. Follow the role instructions returned
 
 ## Starting a New Work Item
 ```
-gcp_create_workitem(work_item_id="<id>", profile="complete")
+golazo_create_workitem(work_item_id="<id>", profile="complete")
 ```
 
 ## Role Transitions
 ```
-gcp_transition(work_item_id="<id>", role="program-manager")
+golazo_transition(work_item_id="<id>", role="program-manager")
 ```
 
 For full documentation, see the Golazo Copilot README.
 '''
 
 
-async def gcp_bootstrap(
+async def golazo_bootstrap(
     workspace_path: Path | str | None = None,
     force: bool = False,
     include_roles: bool = True,

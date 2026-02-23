@@ -37,7 +37,7 @@ Evaluate the design for security concerns:
 - Dependency risk — are new dependencies audited for known vulnerabilities?
 
 ### Capability Registry — Impact Analysis (REQUIRED)
-- Run `gcp_capabilities(action="impact", files=[...])` on the files referenced in the design doc
+- Run `golazo_capabilities(action="impact", files=[...])` on the files referenced in the design doc
 - Verify contract compatibility across all affected capabilities and their transitive dependents
 - Document results in `WorkItems/<workitem-id>/Design/<workitem-id>-Capability-Impact.md`:
   - **Directly affected** capabilities and their contracts

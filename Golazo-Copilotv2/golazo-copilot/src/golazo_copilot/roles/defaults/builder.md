@@ -4,9 +4,9 @@ inputs:
 outputs:
   - WorkItems/{id}/RoleDecisionNotes/{id}-builder.md
 tools:
-  - gcp_status
-  - gcp_transition
-  - gcp_capabilities
+  - golazo_status
+  - golazo_transition
+  - golazo_capabilities
 ---
 <!-- Last Updated in Golazo Copilot Version: 2.106.0 -->
 # Role: Builder
@@ -32,7 +32,7 @@ Verify build and commit all changes.
 - Report any build warnings or errors
 
 ### Capability Registry Validation (before final commit)
-- Run `gcp_capabilities(action="validate")` to confirm all `key_files` still exist
+- Run `golazo_capabilities(action="validate")` to confirm all `key_files` still exist
 - If new public functions, contracts, or test files were introduced by this work item:
   - Update `capabilities.yaml` — add new contracts, key_files, and dependency edges
   - Stage the updated `capabilities.yaml` with the commit

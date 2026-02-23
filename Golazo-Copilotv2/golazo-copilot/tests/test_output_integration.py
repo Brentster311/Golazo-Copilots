@@ -8,10 +8,10 @@ import pytest
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from golazo_copilot.tools.gcp_create_workitem import gcp_create_workitem
-from golazo_copilot.tools.gcp_transition import gcp_transition
-from golazo_copilot.tools.gcp_status import gcp_status
-from golazo_copilot.tools.gcp_consent import gcp_consent
+from golazo_copilot.tools.golazo_create_workitem import golazo_create_workitem
+from golazo_copilot.tools.golazo_transition import golazo_transition
+from golazo_copilot.tools.golazo_status import golazo_status
+from golazo_copilot.tools.golazo_consent import golazo_consent
 
 
 # Use a workspace structure that mirrors real use: workspace/WorkItems
@@ -52,7 +52,7 @@ class TestTransitionOutputValidation:
 """)
         
         # Create work item
-        await gcp_create_workitem(work_item_id="OUT-001", work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id="OUT-001", work_items_dir=TEST_WORKITEMS_DIR)
         
         # Create the required output file
         user_story = TEST_WORKITEMS_DIR / "OUT-001" / "OUT-001-User-Story.md"
@@ -64,7 +64,7 @@ class TestTransitionOutputValidation:
         (notes_dir / "OUT-001-project-owner-assistant.md").write_text("# Notes", encoding="utf-8")
         
         # Transition should succeed
-        result = await gcp_transition(
+        result = await golazo_transition(
             work_item_id="OUT-001",
             role="program-manager",
             work_items_dir=TEST_WORKITEMS_DIR,
@@ -86,7 +86,7 @@ class TestTransitionOutputValidation:
 """)
         
         # Create work item
-        await gcp_create_workitem(work_item_id="OUT-002", work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id="OUT-002", work_items_dir=TEST_WORKITEMS_DIR)
         
         # Create role notes but NOT the user story
         notes_dir = TEST_WORKITEMS_DIR / "OUT-002" / "RoleDecisionNotes"
@@ -94,7 +94,7 @@ class TestTransitionOutputValidation:
         (notes_dir / "OUT-002-project-owner-assistant.md").write_text("# Notes", encoding="utf-8")
         
         # Transition should fail
-        result = await gcp_transition(
+        result = await golazo_transition(
             work_item_id="OUT-002",
             role="program-manager",
             work_items_dir=TEST_WORKITEMS_DIR,
@@ -116,7 +116,7 @@ class TestTransitionOutputValidation:
 """)
         
         # Create work item
-        await gcp_create_workitem(work_item_id="OUT-003", work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id="OUT-003", work_items_dir=TEST_WORKITEMS_DIR)
         
         # Create role notes but NOT the user story
         notes_dir = TEST_WORKITEMS_DIR / "OUT-003" / "RoleDecisionNotes"
@@ -124,7 +124,7 @@ class TestTransitionOutputValidation:
         (notes_dir / "OUT-003-project-owner-assistant.md").write_text("# Notes", encoding="utf-8")
         
         # Record consent
-        await gcp_consent(
+        await golazo_consent(
             work_item_id="OUT-003",
             action="skip_outputs",
             reason="Testing force transition with consent",
@@ -132,7 +132,7 @@ class TestTransitionOutputValidation:
         )
         
         # Force transition should succeed
-        result = await gcp_transition(
+        result = await golazo_transition(
             work_item_id="OUT-003",
             role="program-manager",
             work_items_dir=TEST_WORKITEMS_DIR,
@@ -154,7 +154,7 @@ class TestTransitionOutputValidation:
 """)
         
         # Create work item
-        await gcp_create_workitem(work_item_id="OUT-004", work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id="OUT-004", work_items_dir=TEST_WORKITEMS_DIR)
         
         # Create role notes but NOT the user story
         notes_dir = TEST_WORKITEMS_DIR / "OUT-004" / "RoleDecisionNotes"
@@ -162,7 +162,7 @@ class TestTransitionOutputValidation:
         (notes_dir / "OUT-004-project-owner-assistant.md").write_text("# Notes", encoding="utf-8")
         
         # Force transition without consent should fail
-        result = await gcp_transition(
+        result = await golazo_transition(
             work_item_id="OUT-004",
             role="program-manager",
             work_items_dir=TEST_WORKITEMS_DIR,
@@ -190,10 +190,10 @@ class TestStatusOutputValidation:
 """)
         
         # Create work item
-        await gcp_create_workitem(work_item_id="STAT-001", work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id="STAT-001", work_items_dir=TEST_WORKITEMS_DIR)
         
         # Get status
-        result = await gcp_status(
+        result = await golazo_status(
             work_item_id="STAT-001",
             work_items_dir=TEST_WORKITEMS_DIR,
             project_root=TEST_WORKSPACE,
@@ -216,7 +216,7 @@ class TestStatusOutputValidation:
 """)
         
         # Create work item
-        await gcp_create_workitem(work_item_id="STAT-002", work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id="STAT-002", work_items_dir=TEST_WORKITEMS_DIR)
         
         # Create one output but not the other
         user_story = TEST_WORKITEMS_DIR / "STAT-002" / "STAT-002-User-Story.md"
@@ -224,7 +224,7 @@ class TestStatusOutputValidation:
         # Design dir NOT created
         
         # Get status
-        result = await gcp_status(
+        result = await golazo_status(
             work_item_id="STAT-002",
             work_items_dir=TEST_WORKITEMS_DIR,
             project_root=TEST_WORKSPACE,
@@ -254,10 +254,10 @@ class TestStatusOutputValidation:
 """)
 
         # Create work item
-        await gcp_create_workitem(work_item_id="REM-001", work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id="REM-001", work_items_dir=TEST_WORKITEMS_DIR)
 
         # Design dir NOT created, user story NOT created — both missing
-        result = await gcp_status(
+        result = await golazo_status(
             work_item_id="REM-001",
             work_items_dir=TEST_WORKITEMS_DIR,
             project_root=TEST_WORKSPACE,
@@ -286,7 +286,7 @@ class TestStatusOutputValidation:
 """)
 
         # Create work item
-        await gcp_create_workitem(work_item_id="REM-002", work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id="REM-002", work_items_dir=TEST_WORKITEMS_DIR)
 
         # Create BOTH required outputs
         user_story = TEST_WORKITEMS_DIR / "REM-002" / "REM-002-User-Story.md"
@@ -294,7 +294,7 @@ class TestStatusOutputValidation:
         design_dir = TEST_WORKITEMS_DIR / "REM-002" / "Design"
         design_dir.mkdir(parents=True, exist_ok=True)
 
-        result = await gcp_status(
+        result = await golazo_status(
             work_item_id="REM-002",
             work_items_dir=TEST_WORKITEMS_DIR,
             project_root=TEST_WORKSPACE,

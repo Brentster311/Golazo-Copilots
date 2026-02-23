@@ -40,7 +40,7 @@ class WorkItemState(BaseModel):
 
 
 class GcpInitResult(BaseModel):
-    """Result from gcp_init tool."""
+    """Result from golazo_init tool."""
     success: bool
     error: str | None = None
     work_item_id: str | None = None

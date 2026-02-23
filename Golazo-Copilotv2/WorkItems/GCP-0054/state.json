@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0",
+  "work_item_id": "GCP-0054",
+  "profile": "complete",
+  "current_phase": "development",
+  "current_role": "developer",
+  "created_at": "2026-02-23T15:11:46.974498Z",
+  "updated_at": "2026-02-23T15:23:46.407234Z",
+  "role_history": [
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-02-23T15:11:46.974498Z",
+      "exited_at": "2026-02-23T15:20:18.294033Z"
+    },
+    {
+      "role": "program-manager",
+      "entered_at": "2026-02-23T15:20:18.294033Z",
+      "exited_at": "2026-02-23T15:21:25.753446Z"
+    },
+    {
+      "role": "domain-expert",
+      "entered_at": "2026-02-23T15:21:25.753446Z",
+      "exited_at": "2026-02-23T15:21:36.214000Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-02-23T15:21:36.214000Z",
+      "exited_at": "2026-02-23T15:22:45.025621Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-02-23T15:22:45.025621Z",
+      "exited_at": "2026-02-23T15:23:46.407234Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-02-23T15:23:46.407234Z",
+      "exited_at": null
+    }
+  ],
+  "deviations": [
+    {
+      "id": "dev-001",
+      "action": "skip_outputs",
+      "reason": "MCP server process has stale code from before GCP-0053. The closure-only output filtering works correctly in the updated package (verified via pytest 409 pass) but the running server process hasn't been restarted to pick up the new closure_pending filtering logic.",
+      "role": "project-owner-assistant",
+      "timestamp": "2026-02-23T15:20:13.801198Z",
+      "consumed": true,
+      "consumed_at": "2026-02-23T15:20:18.292848Z"
+    }
+  ]
+}

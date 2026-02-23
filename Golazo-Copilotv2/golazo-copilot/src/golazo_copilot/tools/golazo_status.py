@@ -1,4 +1,4 @@
-"""gcp_status tool - Get comprehensive workflow status.
+"""golazo_status tool - Get comprehensive workflow status.
 
 GCP-0051: Operations that gather independent data are run concurrently
 via asyncio.gather + asyncio.to_thread for reduced latency.
@@ -16,7 +16,7 @@ from ..core.persistence import load_state, work_item_exists, DEFAULT_WORKITEMS_D
 from ..core.output_validator import parse_required_outputs, validate_all_outputs
 from ..core.transitions import ROLE_ORDER
 from ..roles.loader import load_role_instructions, get_role_content
-from .gcp_transition import get_role_notes_path
+from .golazo_transition import get_role_notes_path
 
 _VERSION_PATTERN = re.compile(r'<!-- Last Updated in Golazo Copilot Version: ([\d.]+) -->')
 
@@ -105,7 +105,7 @@ def _get_registry_hint(workspace_root: Path) -> str | None:
     count = len(caps) if isinstance(caps, list) else 0
     return (
         f"Capability Registry: {count} capability(ies) found. "
-        f"Use `gcp_capabilities(action='impact', files=[...])` to check affected features."
+        f"Use `golazo_capabilities(action='impact', files=[...])` to check affected features."
     )
 
 
@@ -142,7 +142,7 @@ def _compute_role_progress(state) -> dict:
     }
 
 
-async def gcp_status(
+async def golazo_status(
     work_item_id: str,
     work_items_dir: Path = DEFAULT_WORKITEMS_DIR,
     project_root: Path | None = None,
@@ -162,7 +162,7 @@ async def gcp_status(
     if not work_item_exists(work_item_id, work_items_dir):
         return {
             "active": False,
-            "message": f"No active work item '{work_item_id}'. Use gcp_create_workitem to start.",
+            "message": f"No active work item '{work_item_id}'. Use golazo_create_workitem to start.",
             "version": __version__,
         }
     
@@ -297,7 +297,7 @@ async def gcp_status(
         )
         version_warning = (
             f"{len(stale_files)} file(s) are stale: {details}. "
-            f"Run gcp_bootstrap to update."
+            f"Run golazo_bootstrap to update."
         )
     
     return {

@@ -237,14 +237,14 @@ def test_front_matter_outputs_match_required_outputs(role: str):
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize("role", ROLE_FILES)
 def test_universal_tools_in_front_matter(role: str):
-    """TC-7: Every role has gcp_status and gcp_transition in tools list."""
+    """TC-7: Every role has golazo_status and golazo_transition in tools list."""
     content = _load_role_content(role)
     fm, _ = _extract_front_matter(content)
     assert fm is not None, f"{role}.md has no front-matter"
 
     tools = fm.get("tools", [])
-    assert "gcp_status" in tools, f"{role}.md missing gcp_status in tools"
-    assert "gcp_transition" in tools, f"{role}.md missing gcp_transition in tools"
+    assert "golazo_status" in tools, f"{role}.md missing golazo_status in tools"
+    assert "golazo_transition" in tools, f"{role}.md missing golazo_transition in tools"
 
 
 # ---------------------------------------------------------------------------

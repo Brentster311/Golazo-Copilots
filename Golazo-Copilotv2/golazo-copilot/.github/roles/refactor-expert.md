@@ -35,7 +35,7 @@ Improve code quality, readability, and maintainability **without changing behavi
 - Common extraction patterns: separate data models from logic, extract formatting/display code, isolate I/O from pure computation
 
 ### Capability Registry (if capabilities.yaml exists)
-- If a `capabilities.yaml` exists in the project root, run `gcp_capabilities(action="impact", files=[...])` on refactored files
+- If a `capabilities.yaml` exists in the project root, run `golazo_capabilities(action="impact", files=[...])` on refactored files
 - Verify no transitive dependents are affected by the refactoring
 
 ## Forbidden actions

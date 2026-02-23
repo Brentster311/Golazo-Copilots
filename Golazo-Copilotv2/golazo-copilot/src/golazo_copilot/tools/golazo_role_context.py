@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""gcp_role_context tool — Assemble a self-contained context bundle for a role.
+"""golazo_role_context tool — Assemble a self-contained context bundle for a role.
 
 GCP-0049: Role Context Bundler MCP Tool
 """
@@ -14,7 +14,7 @@ import yaml
 from ..core.persistence import load_state, work_item_exists, DEFAULT_WORKITEMS_DIR
 from ..core.transitions import ROLE_ORDER
 from ..roles.loader import load_role_instructions
-from ..tools.gcp_transition import ROLE_SUFFIX_MAP, get_role_notes_path
+from ..tools.golazo_transition import ROLE_SUFFIX_MAP, get_role_notes_path
 
 
 # ---------------------------------------------------------------------------
@@ -85,7 +85,7 @@ def _resolve_artifact_path(
 # Main tool
 # ---------------------------------------------------------------------------
 
-async def gcp_role_context(
+async def golazo_role_context(
     work_item_id: str,
     role: str | None = None,
     work_items_dir: Path = DEFAULT_WORKITEMS_DIR,

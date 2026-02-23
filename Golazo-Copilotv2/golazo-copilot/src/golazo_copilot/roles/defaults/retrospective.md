@@ -12,8 +12,8 @@ inputs:
 outputs:
   - WorkItems/{id}/RoleDecisionNotes/{id}-retrospective.md
 tools:
-  - gcp_status
-  - gcp_transition
+  - golazo_status
+  - golazo_transition
 ---
 <!-- Last Updated in Golazo Copilot Version: 2.106.0 -->
 # Role: Retrospective
@@ -38,7 +38,7 @@ This role is triggered when:
 - Document lessons learned
 
 ### Capability Registry (if capabilities.yaml exists)
-- If a `capabilities.yaml` exists in the project root, check whether `gcp_capabilities` was consulted during this work item
+- If a `capabilities.yaml` exists in the project root, check whether `golazo_capabilities` was consulted during this work item
 - Flag missed opportunities where impact analysis could have caught issues earlier
 
 ## Forbidden actions
@@ -66,7 +66,7 @@ This role is triggered when:
 - Create a new work item for implementing process changes
 
 ## Transition Guidance
-- **Complete profile:** After completing retrospective, transition to `project-owner-assistant` for formal closure. Use `gcp_transition(role="project-owner-assistant")`.
+- **Complete profile:** After completing retrospective, transition to `project-owner-assistant` for formal closure. Use `golazo_transition(role="project-owner-assistant")`.
 - **Express / Spike profiles:** The workflow ends here. No further transition is required.
 
 ## Success criteria

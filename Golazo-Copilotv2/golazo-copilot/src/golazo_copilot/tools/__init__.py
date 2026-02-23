@@ -1,11 +1,11 @@
 """Tools module for Golazo Copilot."""
 
-from .gcp_create_workitem import gcp_create_workitem
-from .gcp_transition import gcp_transition
-from .gcp_status import gcp_status
-from .gcp_bootstrap import gcp_bootstrap
-from .gcp_consent import gcp_consent
-from .gcp_capabilities import gcp_capabilities
-from .gcp_role_context import gcp_role_context
+from .golazo_create_workitem import golazo_create_workitem
+from .golazo_transition import golazo_transition
+from .golazo_status import golazo_status
+from .golazo_bootstrap import golazo_bootstrap
+from .golazo_consent import golazo_consent
+from .golazo_capabilities import golazo_capabilities
+from .golazo_role_context import golazo_role_context
 
-__all__ = ["gcp_create_workitem", "gcp_transition", "gcp_status", "gcp_bootstrap", "gcp_consent", "gcp_capabilities", "gcp_role_context"]
+__all__ = ["golazo_create_workitem", "golazo_transition", "golazo_status", "golazo_bootstrap", "golazo_consent", "golazo_capabilities", "golazo_role_context"]

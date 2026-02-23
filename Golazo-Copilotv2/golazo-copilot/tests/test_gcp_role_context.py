@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Tests for gcp_role_context tool — GCP-0049."""
+"""Tests for golazo_role_context tool — GCP-0049."""
 
 import json
 import textwrap
@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 import pytest_asyncio
 
-from golazo_copilot.tools.gcp_role_context import gcp_role_context
+from golazo_copilot.tools.golazo_role_context import golazo_role_context
 
 
 # ---------------------------------------------------------------------------
@@ -68,9 +68,9 @@ async def test_bundle_has_all_sections(tmp_path):
     wid = "TST-001"
     work_items_dir = tmp_path / "WorkItems"
     _write_state(work_items_dir, wid, role="developer")
-    _write_role_file(tmp_path, "developer", "inputs:\n  - WorkItems/{id}/Design/{id}-design-doc.md\noutputs:\n  - WorkItems/{id}/RoleDecisionNotes/{id}-developer.md\ntools:\n  - gcp_status\n")
+    _write_role_file(tmp_path, "developer", "inputs:\n  - WorkItems/{id}/Design/{id}-design-doc.md\noutputs:\n  - WorkItems/{id}/RoleDecisionNotes/{id}-developer.md\ntools:\n  - golazo_status\n")
 
-    result = await gcp_role_context(
+    result = await golazo_role_context(
         work_item_id=wid,
         work_items_dir=work_items_dir,
         project_root=tmp_path,
@@ -98,7 +98,7 @@ async def test_input_artifacts_contain_content(tmp_path):
     )
     _write_artifact(work_items_dir, wid, "TST-001-User-Story.md", "# User Story Content\nThis is the story.")
 
-    result = await gcp_role_context(
+    result = await golazo_role_context(
         work_item_id=wid,
         role="program-manager",
         work_items_dir=work_items_dir,
@@ -127,7 +127,7 @@ async def test_missing_artifacts_marked(tmp_path):
     # Only create one artifact — the other should be marked missing
     _write_artifact(work_items_dir, wid, "TST-001-User-Story.md", "Story content")
 
-    result = await gcp_role_context(
+    result = await golazo_role_context(
         work_item_id=wid,
         role="program-manager",
         work_items_dir=work_items_dir,
@@ -152,7 +152,7 @@ async def test_size_guard_truncation(tmp_path):
     # Create a large artifact
     _write_artifact(work_items_dir, wid, "TST-001-User-Story.md", "X" * 5000)
 
-    result = await gcp_role_context(
+    result = await golazo_role_context(
         work_item_id=wid,
         role="developer",
         work_items_dir=work_items_dir,
@@ -179,7 +179,7 @@ async def test_default_role_from_state(tmp_path):
     _write_role_file(tmp_path, "architect", "inputs:\n  - WorkItems/{id}/Design/{id}-design-doc.md\noutputs: []\ntools: []\n",
                      body="# Role: Architect\n\nArchitect instructions here.")
 
-    result = await gcp_role_context(
+    result = await golazo_role_context(
         work_item_id=wid,
         # No role parameter — should default to "architect" from state
         work_items_dir=work_items_dir,
@@ -205,7 +205,7 @@ async def test_no_frontmatter_backward_compat(tmp_path):
     roles_dir.mkdir(parents=True, exist_ok=True)
     (roles_dir / "legacy-role.md").write_text("# Legacy Role\n\nNo front-matter here.", encoding="utf-8")
 
-    result = await gcp_role_context(
+    result = await golazo_role_context(
         work_item_id=wid,
         role="legacy-role",
         work_items_dir=work_items_dir,
@@ -236,7 +236,7 @@ async def test_role_instructions_never_truncated(tmp_path):
                      body=role_body)
     _write_artifact(work_items_dir, wid, "TST-001-User-Story.md", "Y" * 3000)
 
-    result = await gcp_role_context(
+    result = await golazo_role_context(
         work_item_id=wid,
         role="developer",
         work_items_dir=work_items_dir,
@@ -261,7 +261,7 @@ async def test_state_summary_fields(tmp_path):
     _write_state(work_items_dir, wid, role="developer", phase="development")
     _write_role_file(tmp_path, "developer", "inputs: []\noutputs: []\ntools: []\n")
 
-    result = await gcp_role_context(
+    result = await golazo_role_context(
         work_item_id=wid,
         work_items_dir=work_items_dir,
         project_root=tmp_path,
@@ -289,7 +289,7 @@ async def test_previous_role_notes_included(tmp_path):
     _write_artifact(work_items_dir, wid, "RoleDecisionNotes/TST-001-domain-expert.md",
                     "# Domain Expert Notes\nImportant domain guidance here.")
 
-    result = await gcp_role_context(
+    result = await golazo_role_context(
         work_item_id=wid,
         role="quality-assurance",
         work_items_dir=work_items_dir,
@@ -313,7 +313,7 @@ async def test_first_role_no_previous_notes(tmp_path):
     _write_state(work_items_dir, wid, role="project-owner-assistant", phase="definition")
     _write_role_file(tmp_path, "project-owner-assistant", "inputs: []\noutputs: []\ntools: []\n")
 
-    result = await gcp_role_context(
+    result = await golazo_role_context(
         work_item_id=wid,
         role="project-owner-assistant",
         work_items_dir=work_items_dir,
@@ -335,7 +335,7 @@ async def test_invalid_work_item(tmp_path):
     work_items_dir = tmp_path / "WorkItems"
     work_items_dir.mkdir(parents=True, exist_ok=True)
 
-    result = await gcp_role_context(
+    result = await golazo_role_context(
         work_item_id="FAKE-999",
         work_items_dir=work_items_dir,
         project_root=tmp_path,
@@ -356,7 +356,7 @@ async def test_invalid_role_name(tmp_path):
     work_items_dir = tmp_path / "WorkItems"
     _write_state(work_items_dir, wid, role="developer")
 
-    result = await gcp_role_context(
+    result = await golazo_role_context(
         work_item_id=wid,
         role="nonexistent-role",
         work_items_dir=work_items_dir,
@@ -386,7 +386,7 @@ async def test_multiple_input_artifacts(tmp_path):
     _write_artifact(work_items_dir, wid, "Design/TST-001-design-doc.md", "DESIGN_CONTENT_HERE")
     _write_artifact(work_items_dir, wid, "Design/TST-001-Review-Comments.md", "REVIEW_CONTENT_HERE")
 
-    result = await gcp_role_context(
+    result = await golazo_role_context(
         work_item_id=wid,
         role="architect",
         work_items_dir=work_items_dir,
@@ -413,7 +413,7 @@ async def test_result_metadata(tmp_path):
     _write_role_file(tmp_path, "developer", "inputs:\n  - WorkItems/{id}/{id}-User-Story.md\noutputs: []\ntools: []\n")
     _write_artifact(work_items_dir, wid, "TST-001-User-Story.md", "Content")
 
-    result = await gcp_role_context(
+    result = await golazo_role_context(
         work_item_id=wid,
         work_items_dir=work_items_dir,
         project_root=tmp_path,

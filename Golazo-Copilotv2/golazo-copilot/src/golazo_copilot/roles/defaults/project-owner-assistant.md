@@ -5,10 +5,10 @@ outputs:
   - WorkItems/{id}/RoleDecisionNotes/{id}-project-owner-assistant.md
   - WorkItems/{id}/{id}-closure.md
 tools:
-  - gcp_status
-  - gcp_transition
-  - gcp_capabilities
-  - gcp_create_workitem
+  - golazo_status
+  - golazo_transition
+  - golazo_capabilities
+  - golazo_create_workitem
 ---
 <!-- Last Updated in Golazo Copilot Version: 2.106.0 -->
 # Role: Project Owner Assistant
@@ -19,7 +19,7 @@ Translate a request into a clear, testable **User Story** with explicit scope, a
 
 ## First action
 1. Review `.github/roles/TechBestPractices.md` to understand the project's technical standards.
-2. If a `capabilities.yaml` exists in the project root, run `gcp_capabilities(action="list")` to understand the current feature landscape before scoping the story.
+2. If a `capabilities.yaml` exists in the project root, run `golazo_capabilities(action="list")` to understand the current feature landscape before scoping the story.
 3. Confirm the **Work Item ID**. If none is provided, use `WIP-000`.
 
 ## Entry conditions

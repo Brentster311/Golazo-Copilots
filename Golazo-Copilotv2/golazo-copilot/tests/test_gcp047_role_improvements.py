@@ -182,10 +182,10 @@ class TestQATestabilityFocus:
                 f"QA Design Review should not contain '{phrase}' (moved to Architect)"
 
     def test_qa_no_capability_registry(self):
-        """TC-14: QA should not contain gcp_capabilities instructions."""
+        """TC-14: QA should not contain golazo_capabilities instructions."""
         content = _read_role("quality-assurance")
-        assert "gcp_capabilities" not in content, \
-            "QA should not contain gcp_capabilities (consolidated to Architect)"
+        assert "golazo_capabilities" not in content, \
+            "QA should not contain golazo_capabilities (consolidated to Architect)"
 
 
 class TestArchitectDesignQuality:
@@ -261,7 +261,7 @@ class TestDomainExpertBoundary:
             "Domain Expert must contain boundary distinguishing domain knowledge from architectural decisions"
 
     def test_no_capability_registry(self):
-        """TC-13: Domain Expert should not contain gcp_capabilities."""
+        """TC-13: Domain Expert should not contain golazo_capabilities."""
         content = _read_role("domain-expert")
-        assert "gcp_capabilities" not in content, \
-            "Domain Expert should not contain gcp_capabilities (consolidated to Architect)"
+        assert "golazo_capabilities" not in content, \
+            "Domain Expert should not contain golazo_capabilities (consolidated to Architect)"

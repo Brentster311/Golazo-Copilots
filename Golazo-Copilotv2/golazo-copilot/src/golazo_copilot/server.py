@@ -8,13 +8,13 @@ from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
 from . import __version__
-from .tools.gcp_create_workitem import gcp_create_workitem
-from .tools.gcp_transition import gcp_transition
-from .tools.gcp_status import gcp_status
-from .tools.gcp_bootstrap import gcp_bootstrap
-from .tools.gcp_consent import gcp_consent
-from .tools.gcp_capabilities import gcp_capabilities
-from .tools.gcp_role_context import gcp_role_context
+from .tools.golazo_create_workitem import golazo_create_workitem
+from .tools.golazo_transition import golazo_transition
+from .tools.golazo_status import golazo_status
+from .tools.golazo_bootstrap import golazo_bootstrap
+from .tools.golazo_consent import golazo_consent
+from .tools.golazo_capabilities import golazo_capabilities
+from .tools.golazo_role_context import golazo_role_context
 
 # Create server instance with version in name
 server = Server(f"golazo-copilot v{__version__}")
@@ -51,7 +51,7 @@ def resolve_work_items_dir(workspace_path: str | None) -> Path:
 # ---------------------------------------------------------------------------
 
 def format_create_workitem_result(result: dict) -> str:
-    """Format gcp_create_workitem result dict into display text."""
+    """Format golazo_create_workitem result dict into display text."""
     if result["success"]:
         return f"""{ICON_OK} Work item '{result['work_item_id']}' created!
 
@@ -64,7 +64,7 @@ def format_create_workitem_result(result: dict) -> str:
 
 
 def format_transition_result(result: dict) -> str:
-    """Format gcp_transition result dict into display text."""
+    """Format golazo_transition result dict into display text."""
     if result["success"]:
         warning = f"\n{ICON_WARN} {result['warning']}" if result.get("warning") else ""
         return f"""{ICON_OK} Transitioned to '{result['current_role']}'!{warning}
@@ -78,7 +78,7 @@ def format_transition_result(result: dict) -> str:
 
 
 def format_status_result(result: dict) -> str:
-    """Format gcp_status result dict into display text."""
+    """Format golazo_status result dict into display text."""
     if result.get("active", False):
         # GCP-0032: Format version warning if present
         version_warning = ""
@@ -144,7 +144,7 @@ def format_status_result(result: dict) -> str:
 
 
 def format_bootstrap_result(result: dict) -> str:
-    """Format gcp_bootstrap result dict into display text."""
+    """Format golazo_bootstrap result dict into display text."""
     if result["success"]:
         created = "\n".join(f"  {ICON_CHECK} {f}" for f in result["files_created"]) or "  (none)"
         skipped = "\n".join(f"  {ICON_EMPTY} {f}" for f in result["files_skipped"]) or "  (none)"
@@ -163,13 +163,13 @@ def format_bootstrap_result(result: dict) -> str:
         error_msg += (
             "\n\n**Next step:** Confirm with the user that the workspace_path is correct. "
             "If it is, create a `WorkItems` folder at that path (e.g. `mkdir <workspace_path>/WorkItems`) "
-            "and then re-run `gcp_bootstrap`."
+            "and then re-run `golazo_bootstrap`."
         )
     return f"{ICON_FAIL} Bootstrap failed: {error_msg}"
 
 
 def format_consent_result(result: dict) -> str:
-    """Format gcp_consent result dict into display text."""
+    """Format golazo_consent result dict into display text."""
     if result["success"]:
         return f"""{ICON_OK} Consent recorded!
 
@@ -182,7 +182,7 @@ def format_consent_result(result: dict) -> str:
 
 
 def format_capabilities_result(result: dict, action: str, files: list | None = None) -> str:
-    """Format gcp_capabilities result dict into display text."""
+    """Format golazo_capabilities result dict into display text."""
     if not result["success"]:
         return f"{ICON_FAIL} {result['error']}"
     if result.get("message"):
@@ -237,7 +237,7 @@ def format_capabilities_result(result: dict, action: str, files: list | None = N
 
 
 def format_role_context_result(result: dict) -> str:
-    """Format gcp_role_context result dict into display text."""
+    """Format golazo_role_context result dict into display text."""
     if result["status"] != "ok":
         return f"{ICON_FAIL} {result['error']}"
     meta = []
@@ -257,7 +257,7 @@ async def list_tools() -> list[Tool]:
     """List available tools."""
     return [
         Tool(
-            name="gcp_create_workitem",
+            name="golazo_create_workitem",
             description="Create a new Golazo Copilot work item with persistent state tracking",
             inputSchema={
                 "type": "object",
@@ -281,7 +281,7 @@ async def list_tools() -> list[Tool]:
             }
         ),
         Tool(
-            name="gcp_transition",
+            name="golazo_transition",
             description="Transition to a new role in the Golazo Copilot workflow",
             inputSchema={
                 "type": "object",
@@ -310,7 +310,7 @@ async def list_tools() -> list[Tool]:
             }
         ),
         Tool(
-            name="gcp_status",
+            name="golazo_status",
             description="Get comprehensive workflow status for a work item. Returns current role, phase, required outputs, next steps, deviations, and the Golazo Copilot version number. Use this to check the installed Golazo version.",
             inputSchema={
                 "type": "object",
@@ -328,7 +328,7 @@ async def list_tools() -> list[Tool]:
             }
         ),
         Tool(
-            name="gcp_bootstrap",
+            name="golazo_bootstrap",
             description="Bootstrap Golazo Copilot in a workspace - creates copilot instructions and directories",
             inputSchema={
                 "type": "object",
@@ -352,7 +352,7 @@ async def list_tools() -> list[Tool]:
             }
         ),
         Tool(
-            name="gcp_consent",
+            name="golazo_consent",
             description="Record Project Owner consent for bypassing workflow gates. The rationale MUST be provided by the Project Owner (human), not generated by the assistant. Required before using force=True.",
             inputSchema={
                 "type": "object",
@@ -379,7 +379,7 @@ async def list_tools() -> list[Tool]:
             }
         ),
         Tool(
-            name="gcp_capabilities",
+            name="golazo_capabilities",
             description="Query the project capability registry for impact analysis. Reads capabilities.yaml to show features, dependencies, and which capabilities are affected by file changes.",
             inputSchema={
                 "type": "object",
@@ -407,7 +407,7 @@ async def list_tools() -> list[Tool]:
             }
         ),
         Tool(
-            name="gcp_role_context",
+            name="golazo_role_context",
             description="Assemble a self-contained context bundle for a specific role in a work item. Returns role instructions, current state, input artifacts (file contents), and previous role notes — everything a subagent needs to perform the role.",
             inputSchema={
                 "type": "object",
@@ -442,18 +442,18 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 
 async def _dispatch_tool(name: str, arguments: dict) -> list[TextContent]:
     """Internal dispatcher — separated so ValueError bubbles to call_tool."""
-    if name == "gcp_create_workitem":
+    if name == "golazo_create_workitem":
         work_items_dir = resolve_work_items_dir(arguments.get("workspace_path"))
-        result = await gcp_create_workitem(
+        result = await golazo_create_workitem(
             work_item_id=arguments["work_item_id"],
             profile=arguments.get("profile", "complete"),
             work_items_dir=work_items_dir
         )
         return [TextContent(type="text", text=format_create_workitem_result(result))]
 
-    elif name == "gcp_transition":
+    elif name == "golazo_transition":
         work_items_dir = resolve_work_items_dir(arguments.get("workspace_path"))
-        result = await gcp_transition(
+        result = await golazo_transition(
             work_item_id=arguments["work_item_id"],
             role=arguments["role"],
             force=arguments.get("force", False),
@@ -461,32 +461,32 @@ async def _dispatch_tool(name: str, arguments: dict) -> list[TextContent]:
         )
         return [TextContent(type="text", text=format_transition_result(result))]
 
-    elif name == "gcp_status":
+    elif name == "golazo_status":
         work_item_id = arguments.get("work_item_id", "").strip()
         if not work_item_id:
             from golazo_copilot import __version__ as ver
             return [TextContent(type="text", text=f"**Golazo Copilot** (v{ver})")]
         work_items_dir = resolve_work_items_dir(arguments.get("workspace_path"))
-        result = await gcp_status(
+        result = await golazo_status(
             work_item_id=work_item_id,
             work_items_dir=work_items_dir
         )
         return [TextContent(type="text", text=format_status_result(result))]
 
-    elif name == "gcp_bootstrap":
+    elif name == "golazo_bootstrap":
         ws = arguments.get("workspace_path")
         if not ws:
             return [TextContent(type="text", text=f"{ICON_FAIL} workspace_path is required")]
-        result = await gcp_bootstrap(
+        result = await golazo_bootstrap(
             workspace_path=ws,
             force=arguments.get("force", False),
             include_roles=arguments.get("include_roles", True)
         )
         return [TextContent(type="text", text=format_bootstrap_result(result))]
 
-    elif name == "gcp_consent":
+    elif name == "golazo_consent":
         work_items_dir = resolve_work_items_dir(arguments.get("workspace_path"))
-        result = await gcp_consent(
+        result = await golazo_consent(
             work_item_id=arguments["work_item_id"],
             action=arguments["action"],
             reason=arguments["reason"],
@@ -494,12 +494,12 @@ async def _dispatch_tool(name: str, arguments: dict) -> list[TextContent]:
         )
         return [TextContent(type="text", text=format_consent_result(result))]
 
-    elif name == "gcp_capabilities":
+    elif name == "golazo_capabilities":
         ws_cap = arguments.get("workspace_path")
         if not ws_cap:
             return [TextContent(type="text", text=f"{ICON_FAIL} workspace_path is required")]
         workspace_path = Path(ws_cap)
-        result = await gcp_capabilities(
+        result = await golazo_capabilities(
             action=arguments["action"],
             capability=arguments.get("capability"),
             files=arguments.get("files"),
@@ -509,11 +509,11 @@ async def _dispatch_tool(name: str, arguments: dict) -> list[TextContent]:
             result, arguments["action"], arguments.get("files")
         ))]
 
-    elif name == "gcp_role_context":
+    elif name == "golazo_role_context":
         work_items_dir = resolve_work_items_dir(arguments.get("workspace_path"))
         ws = arguments.get("workspace_path")
         project_root = Path(ws) if ws else None
-        result = await gcp_role_context(
+        result = await golazo_role_context(
             work_item_id=arguments["work_item_id"],
             role=arguments.get("role"),
             work_items_dir=work_items_dir,

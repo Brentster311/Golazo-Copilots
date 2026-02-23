@@ -2,7 +2,7 @@
 """Integration tests for subagent handoff protocol — GCP-0052.
 
 Validates the full orchestrator → subagent → artifacts → next-subagent flow
-using real gcp_transition and gcp_role_context calls with mocked file creation.
+using real golazo_transition and golazo_role_context calls with mocked file creation.
 """
 
 import json
@@ -12,9 +12,9 @@ from pathlib import Path
 
 import pytest
 
-from golazo_copilot.tools.gcp_create_workitem import gcp_create_workitem
-from golazo_copilot.tools.gcp_transition import gcp_transition, ROLE_SUFFIX_MAP
-from golazo_copilot.tools.gcp_role_context import gcp_role_context
+from golazo_copilot.tools.golazo_create_workitem import golazo_create_workitem
+from golazo_copilot.tools.golazo_transition import golazo_transition, ROLE_SUFFIX_MAP
+from golazo_copilot.tools.golazo_role_context import golazo_role_context
 from golazo_copilot.core.persistence import load_state
 
 
@@ -111,10 +111,10 @@ def workspace_setup():
         "  - \"{id}-User-Story.md\"\n"
         "  - \"RoleDecisionNotes/{id}-project-owner-assistant.md\"\n"
         "tools:\n"
-        "  - gcp_status\n"
-        "  - gcp_transition\n"
-        "  - gcp_capabilities\n"
-        "  - gcp_create_workitem\n"
+        "  - golazo_status\n"
+        "  - golazo_transition\n"
+        "  - golazo_capabilities\n"
+        "  - golazo_create_workitem\n"
         "---\n"
         "# Role: Project Owner Assistant\n\n"
         "## Required Outputs\n"
@@ -139,26 +139,26 @@ class TestFullWorkflowWalk:
     async def test_full_10_role_walk(self):
         """AC3: Walk POA → PM → DE → QA → Arch → Dev → Refactor → Doc → Builder → Retro."""
         wid = "INT-001"
-        await gcp_create_workitem(work_item_id=wid, work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id=wid, work_items_dir=TEST_WORKITEMS_DIR)
 
         for i, role in enumerate(ROLE_ORDER):
             # Create outputs the subagent would produce for this role
             _create_outputs_for_role(wid, role)
 
-            # Verify gcp_role_context returns a valid bundle for the current role
-            ctx = await gcp_role_context(
+            # Verify golazo_role_context returns a valid bundle for the current role
+            ctx = await golazo_role_context(
                 work_item_id=wid,
                 role=role,
                 work_items_dir=TEST_WORKITEMS_DIR,
                 project_root=TEST_WORKSPACE,
             )
-            assert ctx["status"] == "ok", f"gcp_role_context failed for {role}: {ctx}"
+            assert ctx["status"] == "ok", f"golazo_role_context failed for {role}: {ctx}"
             assert "## Role Instructions" in ctx["bundle"]
 
             # Transition to next role (except after retrospective)
             if i < len(ROLE_ORDER) - 1:
                 next_role = ROLE_ORDER[i + 1]
-                result = await gcp_transition(
+                result = await golazo_transition(
                     work_item_id=wid,
                     role=next_role,
                     work_items_dir=TEST_WORKITEMS_DIR,
@@ -175,19 +175,19 @@ class TestFullWorkflowWalk:
 
     @pytest.mark.asyncio
     async def test_role_context_includes_input_artifacts(self):
-        """AC3 supplement: gcp_role_context bundles input artifacts from prior roles."""
+        """AC3 supplement: golazo_role_context bundles input artifacts from prior roles."""
         wid = "INT-002"
-        await gcp_create_workitem(work_item_id=wid, work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id=wid, work_items_dir=TEST_WORKITEMS_DIR)
 
         # Create POA outputs and advance to PM
         _create_outputs_for_role(wid, "project-owner-assistant")
-        await gcp_transition(
+        await golazo_transition(
             work_item_id=wid, role="program-manager",
             work_items_dir=TEST_WORKITEMS_DIR, project_root=TEST_WORKSPACE,
         )
 
         # PM should see the User Story as an input artifact
-        ctx = await gcp_role_context(
+        ctx = await golazo_role_context(
             work_item_id=wid, role="program-manager",
             work_items_dir=TEST_WORKITEMS_DIR, project_root=TEST_WORKSPACE,
         )
@@ -198,17 +198,17 @@ class TestFullWorkflowWalk:
 
     @pytest.mark.asyncio
     async def test_role_context_includes_previous_role_notes(self):
-        """gcp_role_context includes previous role decision notes."""
+        """golazo_role_context includes previous role decision notes."""
         wid = "INT-003"
-        await gcp_create_workitem(work_item_id=wid, work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id=wid, work_items_dir=TEST_WORKITEMS_DIR)
 
         _create_outputs_for_role(wid, "project-owner-assistant")
-        await gcp_transition(
+        await golazo_transition(
             work_item_id=wid, role="program-manager",
             work_items_dir=TEST_WORKITEMS_DIR, project_root=TEST_WORKSPACE,
         )
 
-        ctx = await gcp_role_context(
+        ctx = await golazo_role_context(
             work_item_id=wid, role="program-manager",
             work_items_dir=TEST_WORKITEMS_DIR, project_root=TEST_WORKSPACE,
         )
@@ -221,13 +221,13 @@ class TestFullWorkflowWalk:
 # ---------------------------------------------------------------------------
 
 class TestMissingOutputBlocksTransition:
-    """Verify that gcp_transition blocks when a required output is missing."""
+    """Verify that golazo_transition blocks when a required output is missing."""
 
     @pytest.mark.asyncio
     async def test_missing_output_blocks_transition(self):
         """AC4: Subagent fails to create a required output; transition blocked."""
         wid = "INT-010"
-        await gcp_create_workitem(work_item_id=wid, work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id=wid, work_items_dir=TEST_WORKITEMS_DIR)
 
         # Create role notes but NOT User Story — the output gate should block
         notes_dir = _wi_dir(wid) / "RoleDecisionNotes"
@@ -235,7 +235,7 @@ class TestMissingOutputBlocksTransition:
         (notes_dir / f"{wid}-project-owner-assistant.md").write_text("# Notes", encoding="utf-8")
 
         # Transition should fail — missing User Story (required output)
-        result = await gcp_transition(
+        result = await golazo_transition(
             work_item_id=wid, role="program-manager",
             work_items_dir=TEST_WORKITEMS_DIR, project_root=TEST_WORKSPACE,
         )
@@ -246,11 +246,11 @@ class TestMissingOutputBlocksTransition:
     async def test_missing_design_doc_blocks_pm_transition(self):
         """PM cannot transition without creating its design doc."""
         wid = "INT-011"
-        await gcp_create_workitem(work_item_id=wid, work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id=wid, work_items_dir=TEST_WORKITEMS_DIR)
 
         # Complete POA properly
         _create_outputs_for_role(wid, "project-owner-assistant")
-        await gcp_transition(
+        await golazo_transition(
             work_item_id=wid, role="program-manager",
             work_items_dir=TEST_WORKITEMS_DIR, project_root=TEST_WORKSPACE,
         )
@@ -260,7 +260,7 @@ class TestMissingOutputBlocksTransition:
         notes_dir.mkdir(parents=True, exist_ok=True)
         (notes_dir / f"{wid}-program-manager.md").write_text("# PM Notes", encoding="utf-8")
 
-        result = await gcp_transition(
+        result = await golazo_transition(
             work_item_id=wid, role="domain-expert",
             work_items_dir=TEST_WORKITEMS_DIR, project_root=TEST_WORKSPACE,
         )
@@ -270,13 +270,13 @@ class TestMissingOutputBlocksTransition:
     async def test_missing_qa_test_cases_blocks_transition(self):
         """QA cannot transition without Test-Cases.md."""
         wid = "INT-012"
-        await gcp_create_workitem(work_item_id=wid, work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id=wid, work_items_dir=TEST_WORKITEMS_DIR)
 
         # Advance to QA
         for role in ROLE_ORDER[:3]:  # POA, PM, DE
             _create_outputs_for_role(wid, role)
             next_idx = ROLE_ORDER.index(role) + 1
-            await gcp_transition(
+            await golazo_transition(
                 work_item_id=wid, role=ROLE_ORDER[next_idx],
                 work_items_dir=TEST_WORKITEMS_DIR, project_root=TEST_WORKSPACE,
             )
@@ -289,7 +289,7 @@ class TestMissingOutputBlocksTransition:
         notes_dir.mkdir(parents=True, exist_ok=True)
         (notes_dir / f"{wid}-quality-assurance.md").write_text("# QA Notes", encoding="utf-8")
 
-        result = await gcp_transition(
+        result = await golazo_transition(
             work_item_id=wid, role="architect",
             work_items_dir=TEST_WORKITEMS_DIR, project_root=TEST_WORKSPACE,
         )
@@ -307,12 +307,12 @@ class TestBackwardTransition:
     async def test_developer_to_architect_backward(self):
         """AC5: After reaching developer, return to architect; context reflects updated artifacts."""
         wid = "INT-020"
-        await gcp_create_workitem(work_item_id=wid, work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id=wid, work_items_dir=TEST_WORKITEMS_DIR)
 
         # Advance to developer (through POA, PM, DE, QA, Architect)
         for role in ROLE_ORDER[:5]:  # POA through Architect
             _create_outputs_for_role(wid, role)
-            await gcp_transition(
+            await golazo_transition(
                 work_item_id=wid, role=ROLE_ORDER[ROLE_ORDER.index(role) + 1],
                 work_items_dir=TEST_WORKITEMS_DIR, project_root=TEST_WORKSPACE,
             )
@@ -321,7 +321,7 @@ class TestBackwardTransition:
         _create_outputs_for_role(wid, "developer")
 
         # Trigger backward transition to architect.
-        result = await gcp_transition(
+        result = await golazo_transition(
             work_item_id=wid, role="architect",
             work_items_dir=TEST_WORKITEMS_DIR, project_root=TEST_WORKSPACE,
         )
@@ -334,7 +334,7 @@ class TestBackwardTransition:
         review_path.write_text(updated_content, encoding="utf-8")
 
         # Role context for architect should include the updated content
-        ctx = await gcp_role_context(
+        ctx = await golazo_role_context(
             work_item_id=wid, role="architect",
             work_items_dir=TEST_WORKITEMS_DIR, project_root=TEST_WORKSPACE,
         )
@@ -346,12 +346,12 @@ class TestBackwardTransition:
     async def test_backward_preserves_state_history(self):
         """Backward transition preserves role history in state."""
         wid = "INT-021"
-        await gcp_create_workitem(work_item_id=wid, work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id=wid, work_items_dir=TEST_WORKITEMS_DIR)
 
         # Advance to developer
         for role in ROLE_ORDER[:5]:
             _create_outputs_for_role(wid, role)
-            await gcp_transition(
+            await golazo_transition(
                 work_item_id=wid, role=ROLE_ORDER[ROLE_ORDER.index(role) + 1],
                 work_items_dir=TEST_WORKITEMS_DIR, project_root=TEST_WORKSPACE,
             )
@@ -360,7 +360,7 @@ class TestBackwardTransition:
         _create_outputs_for_role(wid, "developer")
 
         # Go backward to architect
-        await gcp_transition(
+        await golazo_transition(
             work_item_id=wid, role="architect",
             work_items_dir=TEST_WORKITEMS_DIR, project_root=TEST_WORKSPACE,
         )
@@ -441,18 +441,18 @@ class TestZeroBridgeTransitions:
     async def test_de_to_qa_zero_bridge(self):
         """DE→QA: QA has no direct inputs from DE but reaches back to User Story and Design Doc."""
         wid = "INT-030"
-        await gcp_create_workitem(work_item_id=wid, work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id=wid, work_items_dir=TEST_WORKITEMS_DIR)
 
         # Advance through POA, PM, DE
         for role in ROLE_ORDER[:3]:
             _create_outputs_for_role(wid, role)
-            await gcp_transition(
+            await golazo_transition(
                 work_item_id=wid, role=ROLE_ORDER[ROLE_ORDER.index(role) + 1],
                 work_items_dir=TEST_WORKITEMS_DIR, project_root=TEST_WORKSPACE,
             )
 
         # Now at QA — get context
-        ctx = await gcp_role_context(
+        ctx = await golazo_role_context(
             work_item_id=wid, role="quality-assurance",
             work_items_dir=TEST_WORKITEMS_DIR, project_root=TEST_WORKSPACE,
         )
@@ -464,18 +464,18 @@ class TestZeroBridgeTransitions:
     async def test_refactor_to_documenter_zero_bridge(self):
         """Refactor→Documenter: Documenter reaches back to User Story and Design Doc."""
         wid = "INT-031"
-        await gcp_create_workitem(work_item_id=wid, work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id=wid, work_items_dir=TEST_WORKITEMS_DIR)
 
         # Advance through all roles up to documenter
         for role in ROLE_ORDER[:7]:  # POA through Refactor
             _create_outputs_for_role(wid, role)
-            await gcp_transition(
+            await golazo_transition(
                 work_item_id=wid, role=ROLE_ORDER[ROLE_ORDER.index(role) + 1],
                 work_items_dir=TEST_WORKITEMS_DIR, project_root=TEST_WORKSPACE,
             )
 
         # Now at documenter
-        ctx = await gcp_role_context(
+        ctx = await golazo_role_context(
             work_item_id=wid, role="documenter",
             work_items_dir=TEST_WORKITEMS_DIR, project_root=TEST_WORKSPACE,
         )
@@ -508,7 +508,7 @@ class TestRoleSuffixMapping:
     async def test_domain_expert_fallback_suffix(self):
         """domain-expert is not in ROLE_SUFFIX_MAP; falls back to role name."""
         wid = "INT-040"
-        await gcp_create_workitem(work_item_id=wid, work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id=wid, work_items_dir=TEST_WORKITEMS_DIR)
 
         # domain-expert is not explicitly in ROLE_SUFFIX_MAP
         suffix = ROLE_SUFFIX_MAP.get("domain-expert", "domain-expert")
@@ -516,12 +516,12 @@ class TestRoleSuffixMapping:
 
         # The actual notes file should use this suffix
         _create_outputs_for_role(wid, "project-owner-assistant")
-        await gcp_transition(
+        await golazo_transition(
             work_item_id=wid, role="program-manager",
             work_items_dir=TEST_WORKITEMS_DIR, project_root=TEST_WORKSPACE,
         )
         _create_outputs_for_role(wid, "program-manager")
-        await gcp_transition(
+        await golazo_transition(
             work_item_id=wid, role="domain-expert",
             work_items_dir=TEST_WORKITEMS_DIR, project_root=TEST_WORKSPACE,
         )

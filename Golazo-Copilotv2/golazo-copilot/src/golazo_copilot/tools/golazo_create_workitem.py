@@ -1,4 +1,4 @@
-"""gcp_create_workitem tool - Create a new work item."""
+"""golazo_create_workitem tool - Create a new work item."""
 
 from pathlib import Path
 from typing import Literal
@@ -13,7 +13,7 @@ Profile = Literal["complete", "express", "spike"]
 DEFAULT_PROFILE: Profile = "complete"
 
 
-async def gcp_create_workitem(
+async def golazo_create_workitem(
     work_item_id: str,
     profile: str = DEFAULT_PROFILE,
     work_items_dir: Path = DEFAULT_WORKITEMS_DIR,
@@ -45,7 +45,7 @@ async def gcp_create_workitem(
     if work_item_exists(work_item_id, work_items_dir):
         return {
             "success": False,
-            "error": f"Work item '{work_item_id}' already exists. Use gcp_switch to resume.",
+            "error": f"Work item '{work_item_id}' already exists. Use golazo_switch to resume.",
         }
     
     # Create initial state
@@ -72,4 +72,4 @@ async def gcp_create_workitem(
 
 
 # Alias for backward compatibility
-gcp_init = gcp_create_workitem
+golazo_init = golazo_create_workitem

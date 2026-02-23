@@ -4,10 +4,10 @@
 # and dependencies. The Golazo workflow uses it for impact analysis.
 #
 # Usage:
-#   gcp_capabilities(action="list")       — summary of all capabilities
-#   gcp_capabilities(action="show", capability="<name>")  — full card
-#   gcp_capabilities(action="impact", files=["path/to/file.py"])
-#   gcp_capabilities(action="validate")   — check key_files exist
+#   golazo_capabilities(action="list")       — summary of all capabilities
+#   golazo_capabilities(action="show", capability="<name>")  — full card
+#   golazo_capabilities(action="impact", files=["path/to/file.py"])
+#   golazo_capabilities(action="validate")   — check key_files exist
 #
 # Schema:
 #   capabilities:          (required) list of capability objects
@@ -90,9 +90,9 @@ capabilities:
   - name: tool-create-workitem
     description: "Create a new work item with initial state and role instructions"
     key_files:
-      - golazo-copilot/src/golazo_copilot/tools/gcp_create_workitem.py
+      - golazo-copilot/src/golazo_copilot/tools/golazo_create_workitem.py
     contracts:
-      - "gcp_create_workitem(work_item_id, profile, work_items_dir, project_root) -> dict"
+      - "golazo_create_workitem(work_item_id, profile, work_items_dir, project_root) -> dict"
     depends_on:
       - state-model
       - persistence
@@ -101,9 +101,9 @@ capabilities:
   - name: tool-transition
     description: "Transition between workflow roles with gate enforcement and consent checks"
     key_files:
-      - golazo-copilot/src/golazo_copilot/tools/gcp_transition.py
+      - golazo-copilot/src/golazo_copilot/tools/golazo_transition.py
     contracts:
-      - "gcp_transition(work_item_id, role, work_items_dir, project_root, force, force_without_notes) -> dict"
+      - "golazo_transition(work_item_id, role, work_items_dir, project_root, force, force_without_notes) -> dict"
       - "get_role_notes_path(work_item_id, role, work_items_dir) -> Path"
       - "check_role_notes_exist(work_item_id, role, work_items_dir) -> bool"
     depends_on:
@@ -116,9 +116,9 @@ capabilities:
   - name: tool-status
     description: "Comprehensive workflow status: progress, outputs, stale-file detection, registry hints"
     key_files:
-      - golazo-copilot/src/golazo_copilot/tools/gcp_status.py
+      - golazo-copilot/src/golazo_copilot/tools/golazo_status.py
     contracts:
-      - "gcp_status(work_item_id, work_items_dir, project_root) -> dict"
+      - "golazo_status(work_item_id, work_items_dir, project_root) -> dict"
       - "_get_stale_files(workspace_root) -> list[dict]"
       - "_get_registry_hint(workspace_root) -> str | None"
       - "_compute_role_progress(state) -> dict"
@@ -132,9 +132,9 @@ capabilities:
   - name: tool-consent
     description: "Record and validate Project Owner consent for workflow deviations"
     key_files:
-      - golazo-copilot/src/golazo_copilot/tools/gcp_consent.py
+      - golazo-copilot/src/golazo_copilot/tools/golazo_consent.py
     contracts:
-      - "gcp_consent(work_item_id, action, reason, work_items_dir) -> dict"
+      - "golazo_consent(work_item_id, action, reason, work_items_dir) -> dict"
       - "has_valid_consent(state, action) -> bool"
       - "consume_consent(state, action) -> str | None"
     depends_on:
@@ -144,20 +144,20 @@ capabilities:
   - name: tool-bootstrap
     description: "Scaffold a workspace with copilot instructions, role files, and capabilities template"
     key_files:
-      - golazo-copilot/src/golazo_copilot/tools/gcp_bootstrap.py
+      - golazo-copilot/src/golazo_copilot/tools/golazo_bootstrap.py
       - golazo-copilot/src/golazo_copilot/bootstrap-instructions.md
       - golazo-copilot/src/golazo_copilot/capabilities-template.yaml
     contracts:
-      - "gcp_bootstrap(workspace_path, force, include_roles) -> dict  # files_created, files_skipped"
+      - "golazo_bootstrap(workspace_path, force, include_roles) -> dict  # files_created, files_skipped"
     depends_on:
       - role-loader
 
   - name: tool-capabilities
     description: "Query the capability registry for listing, detail, impact analysis, and validation"
     key_files:
-      - golazo-copilot/src/golazo_copilot/tools/gcp_capabilities.py
+      - golazo-copilot/src/golazo_copilot/tools/golazo_capabilities.py
     contracts:
-      - "gcp_capabilities(action, capability, files, workspace_path) -> dict"
+      - "golazo_capabilities(action, capability, files, workspace_path) -> dict"
       - "action='list'   -> {capabilities: [{name, description}]}"
       - "action='show'   -> {capability: {name, description, key_files, contracts, depends_on, depended_on_by}}"
       - "action='impact' -> {directly_affected, transitively_affected}  # BFS transitive"
@@ -185,9 +185,9 @@ capabilities:
   - name: tool-role-context
     description: "Assemble a self-contained context bundle for a role — instructions, state, input artifacts, previous notes"
     key_files:
-      - golazo-copilot/src/golazo_copilot/tools/gcp_role_context.py
+      - golazo-copilot/src/golazo_copilot/tools/golazo_role_context.py
     contracts:
-      - "gcp_role_context(work_item_id, role?, work_items_dir, project_root?, max_bundle_size?) -> dict"
+      - "golazo_role_context(work_item_id, role?, work_items_dir, project_root?, max_bundle_size?) -> dict"
       - "Result keys: status, bundle, artifact_count, total_size, truncated, role, work_item_id"
     depends_on:
       - persistence

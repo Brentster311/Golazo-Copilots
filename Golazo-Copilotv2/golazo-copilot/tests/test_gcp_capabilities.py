@@ -1,4 +1,4 @@
-"""Tests for gcp_capabilities tool."""
+"""Tests for golazo_capabilities tool."""
 
 import sys
 import os
@@ -7,7 +7,7 @@ import pytest
 # Ensure project is importable
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from golazo_copilot.tools.gcp_capabilities import gcp_capabilities
+from golazo_copilot.tools.golazo_capabilities import golazo_capabilities
 
 # Test workspace directory
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -19,7 +19,7 @@ capabilities:
   - name: bootstrap
     description: Deploys instructions and role files to workspace
     key_files:
-      - src/tools/gcp_bootstrap.py
+      - src/tools/golazo_bootstrap.py
       - src/bootstrap-instructions.md
     contracts:
       - "Version comment format in all deployed files"
@@ -28,7 +28,7 @@ capabilities:
   - name: role-deployment
     description: Copies role files to .github/roles/
     key_files:
-      - src/tools/gcp_bootstrap.py
+      - src/tools/golazo_bootstrap.py
     contracts:
       - "Role file naming convention"
     depends_on:
@@ -37,7 +37,7 @@ capabilities:
   - name: stale-detection
     description: Detects stale deployed files by comparing version comments
     key_files:
-      - src/tools/gcp_status.py
+      - src/tools/golazo_status.py
     contracts:
       - "<!-- Last Updated in Golazo Copilot Version: X.Y.Z -->"
     depends_on:
@@ -115,9 +115,9 @@ def workspace(tmp_path):
     (tmp_path / "capabilities.yaml").write_text(SAMPLE_YAML, encoding="utf-8")
     # Create key_files so validate passes
     for f in [
-        "src/tools/gcp_bootstrap.py",
+        "src/tools/golazo_bootstrap.py",
         "src/bootstrap-instructions.md",
-        "src/tools/gcp_status.py",
+        "src/tools/golazo_status.py",
         "src/core/output_validator.py",
     ]:
         (tmp_path / f).parent.mkdir(parents=True, exist_ok=True)
@@ -157,7 +157,7 @@ class TestListAction:
     @pytest.mark.asyncio
     async def test_list_returns_all_capabilities(self, workspace):
         """TC-1.1: Returns all capability names + descriptions."""
-        result = await gcp_capabilities(action="list", workspace_path=workspace)
+        result = await golazo_capabilities(action="list", workspace_path=workspace)
         assert result["success"] is True
         caps = result["capabilities"]
         assert len(caps) == 4
@@ -171,7 +171,7 @@ class TestListAction:
         (tmp_path / "capabilities.yaml").write_text(
             "capabilities: []\n", encoding="utf-8"
         )
-        result = await gcp_capabilities(action="list", workspace_path=tmp_path)
+        result = await golazo_capabilities(action="list", workspace_path=tmp_path)
         assert result["success"] is True
         assert result["capabilities"] == []
 
@@ -182,14 +182,14 @@ class TestShowAction:
     @pytest.mark.asyncio
     async def test_show_returns_full_card(self, workspace):
         """TC-2.1: Returns full card including computed depended_on_by."""
-        result = await gcp_capabilities(
+        result = await golazo_capabilities(
             action="show", capability="bootstrap", workspace_path=workspace
         )
         assert result["success"] is True
         cap = result["capability"]
         assert cap["name"] == "bootstrap"
         assert cap["description"] == "Deploys instructions and role files to workspace"
-        assert "src/tools/gcp_bootstrap.py" in cap["key_files"]
+        assert "src/tools/golazo_bootstrap.py" in cap["key_files"]
         assert len(cap["contracts"]) > 0
         # bootstrap is depended on by role-deployment and stale-detection
         assert "role-deployment" in cap["depended_on_by"]
@@ -198,7 +198,7 @@ class TestShowAction:
     @pytest.mark.asyncio
     async def test_show_nonexistent_capability(self, workspace):
         """TC-2.2: Non-existent capability returns clear message."""
-        result = await gcp_capabilities(
+        result = await golazo_capabilities(
             action="show", capability="nonexistent", workspace_path=workspace
         )
         assert result["success"] is False
@@ -207,7 +207,7 @@ class TestShowAction:
     @pytest.mark.asyncio
     async def test_show_without_capability_param(self, workspace):
         """TC-2.3: Missing capability parameter returns error."""
-        result = await gcp_capabilities(
+        result = await golazo_capabilities(
             action="show", workspace_path=workspace
         )
         assert result["success"] is False
@@ -219,9 +219,9 @@ class TestImpactAction:
     @pytest.mark.asyncio
     async def test_impact_direct_match(self, workspace):
         """TC-3.1: Returns directly affected capabilities."""
-        result = await gcp_capabilities(
+        result = await golazo_capabilities(
             action="impact",
-            files=["src/tools/gcp_status.py"],
+            files=["src/tools/golazo_status.py"],
             workspace_path=workspace,
         )
         assert result["success"] is True
@@ -231,7 +231,7 @@ class TestImpactAction:
     @pytest.mark.asyncio
     async def test_impact_transitive_dependents(self, workspace):
         """TC-3.2: Returns transitive dependents."""
-        result = await gcp_capabilities(
+        result = await golazo_capabilities(
             action="impact",
             files=["src/bootstrap-instructions.md"],
             workspace_path=workspace,
@@ -249,7 +249,7 @@ class TestImpactAction:
     @pytest.mark.asyncio
     async def test_impact_diamond_no_duplicates(self, diamond_workspace):
         """TC-3.3: Diamond dependency returns all without duplicates."""
-        result = await gcp_capabilities(
+        result = await golazo_capabilities(
             action="impact",
             files=["src/base.py"],
             workspace_path=diamond_workspace,
@@ -267,7 +267,7 @@ class TestImpactAction:
     @pytest.mark.asyncio
     async def test_impact_no_matches(self, workspace):
         """TC-3.4: Files matching zero capabilities returns empty result."""
-        result = await gcp_capabilities(
+        result = await golazo_capabilities(
             action="impact",
             files=["src/nonexistent.py"],
             workspace_path=workspace,
@@ -279,9 +279,9 @@ class TestImpactAction:
     @pytest.mark.asyncio
     async def test_impact_suffix_matching(self, workspace):
         """TC-3.5: Suffix matching works."""
-        result = await gcp_capabilities(
+        result = await golazo_capabilities(
             action="impact",
-            files=["gcp_status.py"],
+            files=["golazo_status.py"],
             workspace_path=workspace,
         )
         assert result["success"] is True
@@ -291,9 +291,9 @@ class TestImpactAction:
     @pytest.mark.asyncio
     async def test_impact_exact_match_priority(self, workspace):
         """TC-3.6: Exact match takes priority over suffix match."""
-        result = await gcp_capabilities(
+        result = await golazo_capabilities(
             action="impact",
-            files=["src/tools/gcp_bootstrap.py"],
+            files=["src/tools/golazo_bootstrap.py"],
             workspace_path=workspace,
         )
         assert result["success"] is True
@@ -309,7 +309,7 @@ class TestValidateAction:
     @pytest.mark.asyncio
     async def test_validate_all_pass(self, workspace):
         """TC-4.1: All key_files exist → all pass."""
-        result = await gcp_capabilities(
+        result = await golazo_capabilities(
             action="validate", workspace_path=workspace
         )
         assert result["success"] is True
@@ -320,14 +320,14 @@ class TestValidateAction:
     async def test_validate_some_missing(self, workspace):
         """TC-4.2: Missing key_files → those capabilities fail."""
         # Remove a file
-        (workspace / "src" / "tools" / "gcp_status.py").unlink()
-        result = await gcp_capabilities(
+        (workspace / "src" / "tools" / "golazo_status.py").unlink()
+        result = await golazo_capabilities(
             action="validate", workspace_path=workspace
         )
         assert result["success"] is True
         stale = next(r for r in result["results"] if r["name"] == "stale-detection")
         assert stale["valid"] is False
-        assert "src/tools/gcp_status.py" in stale["missing_files"]
+        assert "src/tools/golazo_status.py" in stale["missing_files"]
 
 
 class TestMissingRegistry:
@@ -336,7 +336,7 @@ class TestMissingRegistry:
     @pytest.mark.asyncio
     async def test_no_registry(self, empty_workspace):
         """TC-5.1: No capabilities.yaml → clear message, success=true."""
-        result = await gcp_capabilities(
+        result = await golazo_capabilities(
             action="list", workspace_path=empty_workspace
         )
         assert result["success"] is True
@@ -348,7 +348,7 @@ class TestMissingRegistry:
         (tmp_path / "capabilities.yaml").write_text(
             "capabilities: [invalid: yaml: here", encoding="utf-8"
         )
-        result = await gcp_capabilities(
+        result = await golazo_capabilities(
             action="list", workspace_path=tmp_path
         )
         assert result["success"] is False
@@ -361,7 +361,7 @@ class TestDependedOnBy:
     @pytest.mark.asyncio
     async def test_depended_on_by_computed(self, workspace):
         """TC-6.1: A depends on B → B's card shows depended_on_by: [A]."""
-        result = await gcp_capabilities(
+        result = await golazo_capabilities(
             action="show", capability="bootstrap", workspace_path=workspace
         )
         cap = result["capability"]
@@ -371,7 +371,7 @@ class TestDependedOnBy:
     @pytest.mark.asyncio
     async def test_no_dependents(self, workspace):
         """TC-6.2: No dependents → depended_on_by is empty."""
-        result = await gcp_capabilities(
+        result = await golazo_capabilities(
             action="show", capability="output-validation", workspace_path=workspace
         )
         cap = result["capability"]
@@ -380,7 +380,7 @@ class TestDependedOnBy:
     @pytest.mark.asyncio
     async def test_circular_depended_on_by(self, circular_workspace):
         """TC-6.3: Circular → both show each other, no infinite loop."""
-        result = await gcp_capabilities(
+        result = await golazo_capabilities(
             action="show", capability="alpha", workspace_path=circular_workspace
         )
         cap = result["capability"]
@@ -393,7 +393,7 @@ class TestCycleHandling:
     @pytest.mark.asyncio
     async def test_circular_impact_no_infinite_loop(self, circular_workspace):
         """TC-7.1: Circular depends_on does not cause infinite loop."""
-        result = await gcp_capabilities(
+        result = await golazo_capabilities(
             action="impact",
             files=["src/alpha.py"],
             workspace_path=circular_workspace,

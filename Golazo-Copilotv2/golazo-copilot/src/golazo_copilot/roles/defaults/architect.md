@@ -8,9 +8,9 @@ outputs:
   - WorkItems/{id}/Design/{id}-Capability-Impact.md
   - WorkItems/{id}/RoleDecisionNotes/{id}-architect.md
 tools:
-  - gcp_status
-  - gcp_transition
-  - gcp_capabilities
+  - golazo_status
+  - golazo_transition
+  - golazo_capabilities
 ---
 <!-- Last Updated in Golazo Copilot Version: 2.106.0 -->
 # Role: Architect
@@ -51,7 +51,7 @@ Evaluate the design for security concerns:
 - Dependency risk — are new dependencies audited for known vulnerabilities?
 
 ### Capability Registry — Impact Analysis (REQUIRED)
-- Run `gcp_capabilities(action="impact", files=[...])` on the files referenced in the design doc
+- Run `golazo_capabilities(action="impact", files=[...])` on the files referenced in the design doc
 - Verify contract compatibility across all affected capabilities and their transitive dependents
 - Document results in `WorkItems/<workitem-id>/Design/<workitem-id>-Capability-Impact.md`:
   - **Directly affected** capabilities and their contracts

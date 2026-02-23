@@ -17,7 +17,7 @@ import pytest
 from golazo_copilot.core.types import WorkItemState, RoleHistoryEntry
 from golazo_copilot.core.output_validator import parse_required_outputs, OutputSpec
 from golazo_copilot.core.persistence import save_state, load_state
-from golazo_copilot.tools.gcp_transition import gcp_transition
+from golazo_copilot.tools.golazo_transition import golazo_transition
 
 
 # ── Helpers ──────────────────────────────────────────────────────────
@@ -56,7 +56,7 @@ def _make_state(
 
 def _setup_work_item(tmp_path: Path, state: WorkItemState) -> Path:
     """Set up a work item directory with state and all role notes."""
-    from golazo_copilot.tools.gcp_transition import ROLE_SUFFIX_MAP
+    from golazo_copilot.tools.golazo_transition import ROLE_SUFFIX_MAP
     wi_dir = tmp_path / "WorkItems"
     wi_dir.mkdir()
     item_dir = wi_dir / state.work_item_id
@@ -252,7 +252,7 @@ class TestClosureTransition:
     async def test_complete_retro_to_poa_sets_closure_pending(self, complete_at_retro):
         """TC-01/TC-04: In complete profile, retro→POA sets closure_pending=True."""
         wi_dir, project_root = complete_at_retro
-        result = await gcp_transition(
+        result = await golazo_transition(
             work_item_id="TST-001",
             role="project-owner-assistant",
             work_items_dir=wi_dir,
@@ -268,7 +268,7 @@ class TestClosureTransition:
     async def test_express_retro_to_poa_no_closure_pending(self, express_at_retro):
         """TC-02: In express profile, retro→POA does NOT set closure_pending."""
         wi_dir, project_root = express_at_retro
-        result = await gcp_transition(
+        result = await golazo_transition(
             work_item_id="TST-001",
             role="project-owner-assistant",
             work_items_dir=wi_dir,
@@ -282,7 +282,7 @@ class TestClosureTransition:
     async def test_spike_retro_to_poa_no_closure_pending(self, spike_at_retro):
         """TC-03: In spike profile, retro→POA does NOT set closure_pending."""
         wi_dir, project_root = spike_at_retro
-        result = await gcp_transition(
+        result = await golazo_transition(
             work_item_id="TST-001",
             role="project-owner-assistant",
             work_items_dir=wi_dir,
@@ -301,7 +301,7 @@ class TestClosureTransition:
         """
         wi_dir, project_root = complete_at_retro
         # First transition retro→POA to set closure_pending
-        await gcp_transition(
+        await golazo_transition(
             work_item_id="TST-001", role="project-owner-assistant",
             work_items_dir=wi_dir, project_root=project_root,
         )
@@ -309,7 +309,7 @@ class TestClosureTransition:
         assert state.closure_pending is True
 
         # Create POA notes and required outputs for forward transition
-        from golazo_copilot.tools.gcp_transition import ROLE_SUFFIX_MAP
+        from golazo_copilot.tools.golazo_transition import ROLE_SUFFIX_MAP
         notes_dir = wi_dir / "TST-001" / "RoleDecisionNotes"
         suffix = ROLE_SUFFIX_MAP["project-owner-assistant"]
         (notes_dir / f"TST-001-{suffix}.md").write_text("# Closure POA notes")
@@ -319,7 +319,7 @@ class TestClosureTransition:
         (wi_dir / "TST-001" / "TST-001-closure.md").write_text("# Closure")
 
         # Forward transition POA → PM
-        result = await gcp_transition(
+        result = await golazo_transition(
             work_item_id="TST-001", role="program-manager",
             work_items_dir=wi_dir, project_root=project_root,
         )
@@ -331,12 +331,12 @@ class TestClosureTransition:
 # ── TC-06/TC-07/TC-15: Status output ────────────────────────────────
 
 class TestClosureStatus:
-    """Tests for gcp_status closure_pending reporting."""
+    """Tests for golazo_status closure_pending reporting."""
 
     @pytest.mark.asyncio
     async def test_status_shows_closure_pending(self, tmp_path):
-        """TC-06: gcp_status includes closure_pending=True when set."""
-        from golazo_copilot.tools.gcp_status import gcp_status
+        """TC-06: golazo_status includes closure_pending=True when set."""
+        from golazo_copilot.tools.golazo_status import golazo_status
         state = _make_state(
             current_role="project-owner-assistant",
             current_phase="definition",
@@ -344,7 +344,7 @@ class TestClosureStatus:
             roles_up_to="project-owner-assistant",
         )
         wi_dir = _setup_work_item(tmp_path, state)
-        result = await gcp_status(
+        result = await golazo_status(
             work_item_id="TST-001",
             work_items_dir=wi_dir,
             project_root=tmp_path,
@@ -354,8 +354,8 @@ class TestClosureStatus:
 
     @pytest.mark.asyncio
     async def test_status_no_closure_on_initial_poa(self, tmp_path):
-        """TC-07: gcp_status shows closure_pending=False on initial POA entry."""
-        from golazo_copilot.tools.gcp_status import gcp_status
+        """TC-07: golazo_status shows closure_pending=False on initial POA entry."""
+        from golazo_copilot.tools.golazo_status import golazo_status
         state = _make_state(
             current_role="project-owner-assistant",
             current_phase="definition",
@@ -363,7 +363,7 @@ class TestClosureStatus:
             roles_up_to="project-owner-assistant",
         )
         wi_dir = _setup_work_item(tmp_path, state)
-        result = await gcp_status(
+        result = await golazo_status(
             work_item_id="TST-001",
             work_items_dir=wi_dir,
             project_root=tmp_path,

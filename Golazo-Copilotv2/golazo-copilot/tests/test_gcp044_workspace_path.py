@@ -35,32 +35,32 @@ class TestRuntimeMissingWorkspacePath:
 
     @pytest.mark.asyncio
     async def test_create_workitem_without_workspace_path(self):
-        """gcp_create_workitem should fail when workspace_path is missing."""
-        result = await call_tool("gcp_create_workitem", {"work_item_id": "TST-001"})
+        """golazo_create_workitem should fail when workspace_path is missing."""
+        result = await call_tool("golazo_create_workitem", {"work_item_id": "TST-001"})
         text = result[0].text
         assert "workspace_path" in text.lower() or "workspace_path is required" in text, (
-            f"gcp_create_workitem should fail when workspace_path is missing, got: {text}"
+            f"golazo_create_workitem should fail when workspace_path is missing, got: {text}"
         )
 
     @pytest.mark.asyncio
     async def test_transition_without_workspace_path(self):
-        """gcp_transition should fail when workspace_path is missing."""
-        result = await call_tool("gcp_transition", {
+        """golazo_transition should fail when workspace_path is missing."""
+        result = await call_tool("golazo_transition", {
             "work_item_id": "TST-001",
             "role": "program-manager"
         })
         text = result[0].text
         assert "workspace_path" in text.lower() or "workspace_path is required" in text, (
-            f"gcp_transition should fail when workspace_path is missing, got: {text}"
+            f"golazo_transition should fail when workspace_path is missing, got: {text}"
         )
 
     @pytest.mark.asyncio
     async def test_bootstrap_without_workspace_path(self):
-        """gcp_bootstrap should fail when workspace_path is missing."""
-        result = await call_tool("gcp_bootstrap", {})
+        """golazo_bootstrap should fail when workspace_path is missing."""
+        result = await call_tool("golazo_bootstrap", {})
         text = result[0].text
         assert "workspace_path" in text.lower() or "workspace_path is required" in text, (
-            f"gcp_bootstrap should fail when workspace_path is missing, got: {text}"
+            f"golazo_bootstrap should fail when workspace_path is missing, got: {text}"
         )
 
 

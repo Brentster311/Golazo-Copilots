@@ -7,8 +7,8 @@ outputs:
   - WorkItems/{id}/Design/{id}-Test-Cases.md
   - WorkItems/{id}/RoleDecisionNotes/{id}-quality-assurance.md
 tools:
-  - gcp_status
-  - gcp_transition
+  - golazo_status
+  - golazo_transition
 ---
 <!-- Last Updated in Golazo Copilot Version: 2.106.0 -->
 # Role: Quality Assurance

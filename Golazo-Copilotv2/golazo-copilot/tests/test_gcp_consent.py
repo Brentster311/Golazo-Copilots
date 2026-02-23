@@ -1,4 +1,4 @@
-"""Tests for gcp_consent tool."""
+"""Tests for golazo_consent tool."""
 
 import shutil
 from pathlib import Path
@@ -9,9 +9,9 @@ import pytest
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from golazo_copilot.tools.gcp_create_workitem import gcp_create_workitem
-from golazo_copilot.tools.gcp_transition import gcp_transition, ROLE_SUFFIX_MAP
-from golazo_copilot.tools.gcp_consent import gcp_consent
+from golazo_copilot.tools.golazo_create_workitem import golazo_create_workitem
+from golazo_copilot.tools.golazo_transition import golazo_transition, ROLE_SUFFIX_MAP
+from golazo_copilot.tools.golazo_consent import golazo_consent
 from golazo_copilot.core.persistence import load_state, save_state
 
 
@@ -64,14 +64,14 @@ def cleanup():
 
 
 class TestConsentRecordsDeviation:
-    """AC1: gcp_consent records deviation in state."""
+    """AC1: golazo_consent records deviation in state."""
 
     @pytest.mark.asyncio
     async def test_consent_records_deviation(self):
         """Should record deviation in state."""
-        await gcp_create_workitem(work_item_id="CON-001", work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id="CON-001", work_items_dir=TEST_WORKITEMS_DIR)
         
-        result = await gcp_consent(
+        result = await golazo_consent(
             work_item_id="CON-001",
             action="skip_outputs",
             reason="Spike exploration - will complete outputs after proof of concept",
@@ -86,9 +86,9 @@ class TestConsentRecordsDeviation:
     @pytest.mark.asyncio
     async def test_consent_returns_deviation_id(self):
         """Should return deviation ID."""
-        await gcp_create_workitem(work_item_id="CON-002", work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id="CON-002", work_items_dir=TEST_WORKITEMS_DIR)
         
-        result = await gcp_consent(
+        result = await golazo_consent(
             work_item_id="CON-002",
             action="skip_outputs",
             reason="Testing deviation ID return",
@@ -113,7 +113,7 @@ class TestConsentRequiredForForce:
         """Should fail force transition without prior consent."""
         TEST_CONSENT_WORKITEMS_DIR.mkdir(parents=True, exist_ok=True)
         self._create_role_file_with_output()
-        await gcp_create_workitem(work_item_id="FRC-001", work_items_dir=TEST_CONSENT_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id="FRC-001", work_items_dir=TEST_CONSENT_WORKITEMS_DIR)
         
         # Create role notes but NOT the required output
         notes_dir = TEST_CONSENT_WORKITEMS_DIR / "FRC-001" / "RoleDecisionNotes"
@@ -121,7 +121,7 @@ class TestConsentRequiredForForce:
         (notes_dir / "FRC-001-project-owner-assistant.md").write_text("# Notes")
         
         # Try to force without consent
-        result = await gcp_transition(
+        result = await golazo_transition(
             work_item_id="FRC-001",
             role="program-manager",
             force=True,
@@ -137,7 +137,7 @@ class TestConsentRequiredForForce:
         """Should succeed force transition after consent."""
         TEST_CONSENT_WORKITEMS_DIR.mkdir(parents=True, exist_ok=True)
         self._create_role_file_with_output()
-        await gcp_create_workitem(work_item_id="FRC-002", work_items_dir=TEST_CONSENT_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id="FRC-002", work_items_dir=TEST_CONSENT_WORKITEMS_DIR)
         
         # Create role notes but NOT the required output
         notes_dir = TEST_CONSENT_WORKITEMS_DIR / "FRC-002" / "RoleDecisionNotes"
@@ -145,7 +145,7 @@ class TestConsentRequiredForForce:
         (notes_dir / "FRC-002-project-owner-assistant.md").write_text("# Notes")
         
         # Give consent first
-        await gcp_consent(
+        await golazo_consent(
             work_item_id="FRC-002",
             action="skip_outputs",
             reason="Spike exploration - completing outputs later",
@@ -153,7 +153,7 @@ class TestConsentRequiredForForce:
         )
         
         # Now force should work
-        result = await gcp_transition(
+        result = await golazo_transition(
             work_item_id="FRC-002",
             role="program-manager",
             force=True,
@@ -170,9 +170,9 @@ class TestConsentActions:
     @pytest.mark.asyncio
     async def test_skip_outputs_action(self):
         """Should accept skip_outputs action."""
-        await gcp_create_workitem(work_item_id="ACT-001", work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id="ACT-001", work_items_dir=TEST_WORKITEMS_DIR)
         
-        result = await gcp_consent(
+        result = await golazo_consent(
             work_item_id="ACT-001",
             action="skip_outputs",
             reason="Testing skip_outputs action",
@@ -184,9 +184,9 @@ class TestConsentActions:
     @pytest.mark.asyncio
     async def test_invalid_action_rejected(self):
         """Should reject invalid action."""
-        await gcp_create_workitem(work_item_id="ACT-002", work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id="ACT-002", work_items_dir=TEST_WORKITEMS_DIR)
         
-        result = await gcp_consent(
+        result = await golazo_consent(
             work_item_id="ACT-002",
             action="invalid_action",
             reason="Testing invalid action",
@@ -203,9 +203,9 @@ class TestReasonRequired:
     @pytest.mark.asyncio
     async def test_consent_without_reason_fails(self):
         """Should fail without reason."""
-        await gcp_create_workitem(work_item_id="RSN-001", work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id="RSN-001", work_items_dir=TEST_WORKITEMS_DIR)
         
-        result = await gcp_consent(
+        result = await golazo_consent(
             work_item_id="RSN-001",
             action="skip_outputs",
             reason="",
@@ -218,9 +218,9 @@ class TestReasonRequired:
     @pytest.mark.asyncio
     async def test_short_reason_fails(self):
         """Should fail with reason < 10 characters."""
-        await gcp_create_workitem(work_item_id="RSN-002", work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id="RSN-002", work_items_dir=TEST_WORKITEMS_DIR)
         
-        result = await gcp_consent(
+        result = await golazo_consent(
             work_item_id="RSN-002",
             action="skip_outputs",
             reason="short",
@@ -237,9 +237,9 @@ class TestDeviationAuditTrail:
     @pytest.mark.asyncio
     async def test_deviation_has_required_fields(self):
         """Should record all required fields."""
-        await gcp_create_workitem(work_item_id="AUD-001", work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id="AUD-001", work_items_dir=TEST_WORKITEMS_DIR)
         
-        await gcp_consent(
+        await golazo_consent(
             work_item_id="AUD-001",
             action="skip_outputs",
             reason="Spike exploration - will complete outputs later",
@@ -273,7 +273,7 @@ class TestConsentSingleUse:
         """Should consume consent after forced action."""
         TEST_CONSENT_WORKITEMS_DIR.mkdir(parents=True, exist_ok=True)
         self._create_role_file_with_output()
-        await gcp_create_workitem(work_item_id="SNG-001", work_items_dir=TEST_CONSENT_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id="SNG-001", work_items_dir=TEST_CONSENT_WORKITEMS_DIR)
         
         # Create role notes but NOT the required output
         notes_dir = TEST_CONSENT_WORKITEMS_DIR / "SNG-001" / "RoleDecisionNotes"
@@ -281,7 +281,7 @@ class TestConsentSingleUse:
         (notes_dir / "SNG-001-project-owner-assistant.md").write_text("# Notes")
         
         # Give consent
-        await gcp_consent(
+        await golazo_consent(
             work_item_id="SNG-001",
             action="skip_outputs",
             reason="First force - spike exploration",
@@ -289,7 +289,7 @@ class TestConsentSingleUse:
         )
         
         # First force succeeds
-        result1 = await gcp_transition(
+        result1 = await golazo_transition(
             work_item_id="SNG-001",
             role="program-manager",
             force=True,
@@ -300,7 +300,7 @@ class TestConsentSingleUse:
         
         # Create PM notes then go back to PO
         (notes_dir / "SNG-001-program-manager.md").write_text("# PM Notes")
-        await gcp_transition(
+        await golazo_transition(
             work_item_id="SNG-001",
             role="project-owner-assistant",
             work_items_dir=TEST_CONSENT_WORKITEMS_DIR,
@@ -309,7 +309,7 @@ class TestConsentSingleUse:
         
         # Second force fails (consent consumed)
         (notes_dir / "SNG-001-project-owner-assistant.md").write_text("# PO Notes 2")
-        result2 = await gcp_transition(
+        result2 = await golazo_transition(
             work_item_id="SNG-001",
             role="program-manager",
             force=True,
@@ -326,9 +326,9 @@ class TestConsentMessageFormat:
     @pytest.mark.asyncio
     async def test_consent_message_mentions_project_owner(self):
         """Should include 'Project Owner' in success message."""
-        await gcp_create_workitem(work_item_id="POM-001", work_items_dir=TEST_WORKITEMS_DIR)
+        await golazo_create_workitem(work_item_id="POM-001", work_items_dir=TEST_WORKITEMS_DIR)
         
-        result = await gcp_consent(
+        result = await golazo_consent(
             work_item_id="POM-001",
             action="skip_outputs",
             reason="PO approved bypass for spike exploration",

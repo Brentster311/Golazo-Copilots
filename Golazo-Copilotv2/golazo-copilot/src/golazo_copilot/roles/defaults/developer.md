@@ -7,9 +7,9 @@ inputs:
 outputs:
   - WorkItems/{id}/RoleDecisionNotes/{id}-developer.md
 tools:
-  - gcp_status
-  - gcp_transition
-  - gcp_capabilities
+  - golazo_status
+  - golazo_transition
+  - golazo_capabilities
 ---
 <!-- Last Updated in Golazo Copilot Version: 2.106.0 -->
 # Role: Developer
@@ -40,7 +40,7 @@ Implement the approved design and User Story **without redefining scope**, and p
 - Keep docs consistent with implementation
 
 ### Capability Registry (if capabilities.yaml exists)
-- If a `capabilities.yaml` exists in the project root, run `gcp_capabilities(action="impact", files=[...])` on files being changed before committing
+- If a `capabilities.yaml` exists in the project root, run `golazo_capabilities(action="impact", files=[...])` on files being changed before committing
 - Ensure no downstream capabilities are broken by the changes
 
 ## Forbidden actions

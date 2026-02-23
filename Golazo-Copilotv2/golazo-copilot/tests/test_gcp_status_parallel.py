@@ -1,4 +1,4 @@
-"""Tests for GCP-0051: Parallel gcp_status aggregation.
+"""Tests for GCP-0051: Parallel golazo_status aggregation.
 
 Validates:
 - TC-2: Concurrent execution timing
@@ -20,9 +20,9 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from golazo_copilot.tools.gcp_create_workitem import gcp_create_workitem
-from golazo_copilot.tools.gcp_status import (
-    gcp_status,
+from golazo_copilot.tools.golazo_create_workitem import golazo_create_workitem
+from golazo_copilot.tools.golazo_status import (
+    golazo_status,
     _get_stale_files,
     _get_registry_hint,
     _compute_role_progress,
@@ -64,7 +64,7 @@ def cleanup():
 
 async def _create_test_work_item(work_item_id: str = "TST-051"):
     """Helper: create a work item for testing."""
-    result = await gcp_create_workitem(
+    result = await golazo_create_workitem(
         work_item_id=work_item_id,
         work_items_dir=TEST_WORKITEMS_DIR,
     )
@@ -98,14 +98,14 @@ async def test_parallel_execution_faster_than_sequential():
         return original_progress(state)
 
     with patch(
-        "golazo_copilot.tools.gcp_status._get_stale_files", side_effect=slow_stale_files
+        "golazo_copilot.tools.golazo_status._get_stale_files", side_effect=slow_stale_files
     ), patch(
-        "golazo_copilot.tools.gcp_status._get_registry_hint", side_effect=slow_registry_hint
+        "golazo_copilot.tools.golazo_status._get_registry_hint", side_effect=slow_registry_hint
     ), patch(
-        "golazo_copilot.tools.gcp_status._compute_role_progress", side_effect=slow_compute_progress
+        "golazo_copilot.tools.golazo_status._compute_role_progress", side_effect=slow_compute_progress
     ):
         start = time.monotonic()
-        result = await gcp_status(
+        result = await golazo_status(
             work_item_id="TST-051",
             work_items_dir=TEST_WORKITEMS_DIR,
         )
@@ -115,7 +115,7 @@ async def test_parallel_execution_faster_than_sequential():
     # If 3 operations each take 100ms sequentially = 300ms.
     # If parallel, should be ~100ms. Allow generous margin: < 250ms.
     assert elapsed < 0.25, (
-        f"gcp_status took {elapsed:.2f}s — expected <0.25s if operations ran in parallel"
+        f"golazo_status took {elapsed:.2f}s — expected <0.25s if operations ran in parallel"
     )
 
 
@@ -124,22 +124,22 @@ async def test_parallel_execution_faster_than_sequential():
 # ---------------------------------------------------------------------------
 @pytest.mark.asyncio
 async def test_error_isolation_stale_files():
-    """Stale file check failure doesn't crash the entire gcp_status call."""
+    """Stale file check failure doesn't crash the entire golazo_status call."""
     await _create_test_work_item()
 
     def exploding_stale_files(workspace_root):
         raise RuntimeError("disk read failed")
 
     with patch(
-        "golazo_copilot.tools.gcp_status._get_stale_files", side_effect=exploding_stale_files
+        "golazo_copilot.tools.golazo_status._get_stale_files", side_effect=exploding_stale_files
     ):
-        result = await gcp_status(
+        result = await golazo_status(
             work_item_id="TST-051",
             work_items_dir=TEST_WORKITEMS_DIR,
         )
 
     assert result["active"] is True, (
-        "gcp_status should not fail entirely when stale-file check fails"
+        "golazo_status should not fail entirely when stale-file check fails"
     )
     # Other fields should still be populated
     assert "required_outputs" in result
@@ -159,9 +159,9 @@ async def test_error_isolation_registry_hint():
         raise Exception("parse fail")
 
     with patch(
-        "golazo_copilot.tools.gcp_status._get_registry_hint", side_effect=exploding_registry
+        "golazo_copilot.tools.golazo_status._get_registry_hint", side_effect=exploding_registry
     ):
-        result = await gcp_status(
+        result = await golazo_status(
             work_item_id="TST-051",
             work_items_dir=TEST_WORKITEMS_DIR,
         )
@@ -182,16 +182,16 @@ async def test_error_isolation_output_validation():
     await _create_test_work_item()
 
     with patch(
-        "golazo_copilot.tools.gcp_status.validate_all_outputs",
+        "golazo_copilot.tools.golazo_status.validate_all_outputs",
         side_effect=Exception("validator crash"),
     ):
-        result = await gcp_status(
+        result = await golazo_status(
             work_item_id="TST-051",
             work_items_dir=TEST_WORKITEMS_DIR,
         )
 
     assert result["active"] is True, (
-        "Output validation failure should not crash gcp_status"
+        "Output validation failure should not crash golazo_status"
     )
     # required_outputs should have a safe fallback
     assert "required_outputs" in result
@@ -255,7 +255,7 @@ async def test_response_structure_unchanged():
     """Response dict has all expected keys after parallelization."""
     await _create_test_work_item()
 
-    result = await gcp_status(
+    result = await golazo_status(
         work_item_id="TST-051",
         work_items_dir=TEST_WORKITEMS_DIR,
     )

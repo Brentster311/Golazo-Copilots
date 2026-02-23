@@ -4,9 +4,9 @@ inputs:
 outputs:
   - WorkItems/{id}/RoleDecisionNotes/{id}-refactor.md
 tools:
-  - gcp_status
-  - gcp_transition
-  - gcp_capabilities
+  - golazo_status
+  - golazo_transition
+  - golazo_capabilities
 ---
 <!-- Last Updated in Golazo Copilot Version: 2.106.0 -->
 # Role: Refactor Expert
@@ -50,7 +50,7 @@ Improve code quality, readability, and maintainability **without changing behavi
 - Document linter results (tool used, issues found/fixed) in the refactor decision notes
 
 ### Capability Registry (if capabilities.yaml exists)
-- If a `capabilities.yaml` exists in the project root, run `gcp_capabilities(action="impact", files=[...])` on refactored files
+- If a `capabilities.yaml` exists in the project root, run `golazo_capabilities(action="impact", files=[...])` on refactored files
 - Verify no transitive dependents are affected by the refactoring
 
 ## Forbidden actions
