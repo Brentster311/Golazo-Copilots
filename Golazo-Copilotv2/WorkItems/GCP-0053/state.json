@@ -2,10 +2,10 @@
   "schema_version": "1.0",
   "work_item_id": "GCP-0053",
   "profile": "complete",
-  "current_phase": "completion",
-  "current_role": "builder",
+  "current_phase": "definition",
+  "current_role": "project-owner-assistant",
   "created_at": "2026-02-23T06:20:47.809477Z",
-  "updated_at": "2026-02-23T06:51:39.269119Z",
+  "updated_at": "2026-02-23T06:55:56.121766Z",
   "role_history": [
     {
       "role": "project-owner-assistant",
@@ -50,6 +50,16 @@
     {
       "role": "builder",
       "entered_at": "2026-02-23T06:51:39.269119Z",
+      "exited_at": "2026-02-23T06:54:21.747116Z"
+    },
+    {
+      "role": "retrospective",
+      "entered_at": "2026-02-23T06:54:21.747116Z",
+      "exited_at": "2026-02-23T06:55:56.121766Z"
+    },
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-02-23T06:55:56.121766Z",
       "exited_at": null
     }
   ],

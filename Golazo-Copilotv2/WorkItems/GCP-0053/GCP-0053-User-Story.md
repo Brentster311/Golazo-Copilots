@@ -1,4 +1,4 @@
-**Status**: IN PROGRESS
+**Status**: IMPLEMENTED
 
 **User Story**
 - **Title**: POA Closure Gate — Enforce POA Re-entry After Retrospective in Complete Mode
@@ -33,3 +33,24 @@
 - **Rollout / rollback notes**:
   - Existing work items with `complete` profile that are already at retrospective will not retroactively require closure — the enforcement only applies to forward transitions from retrospective.
   - Version bump required after implementation.
+
+## Closure
+
+### Summary of What Was Delivered
+POA Closure Gate enforcing POA re-entry after retrospective in complete-profile work items. Implementation adds `closure_pending` state field, `<!-- closure-only -->` annotation support in the output validator, profile-gated transition logic, and closure-aware status reporting with CLOSURE MODE indicator.
+
+### Acceptance Criteria Validation
+- [x] **AC1**: `gcp_transition` from retro→POA sets `closure_pending=True` in complete profile. Retrospective role file contains Transition Guidance section. *(Verified by TC-01, TC-04, TC-14)*
+- [x] **AC2**: `gcp_status` reports `closure_pending` in response dict. Status formatter shows `CLOSURE MODE` indicator. Next steps include closure guidance. *(Verified by TC-06, TC-07, TC-15)*
+- [x] **AC3**: Output validator recognizes `<!-- closure-only -->` annotation. Closure.md only required when `closure_pending=True`. Inline HTML comments stripped from paths. *(Verified by TC-08, TC-09, TC-11, TC-12, TC-16, TC-17, TC-18)*
+- [x] **AC4**: Express and spike profiles do NOT set `closure_pending`. *(Verified by TC-02, TC-03)*
+- [x] **AC5**: 409 tests pass (18 new + 391 existing), zero regressions. *(Verified by TC-19)*
+
+### Future Work Items
+- **Retrospective A1**: Add `ROLE_ORDER` awareness to QA test case design (TC-13 assumed impossible backward transitions from index-0 role)
+- **Retrospective A2**: Harden output validator regex (pre-existing fragility)
+- **Retrospective A3**: Require lifecycle statements for new state fields in PM designs
+- **Retrospective A4**: Document the `gcp_consent + force=True` bootstrap pattern
+
+### Final Status
+**IMPLEMENTED** — All acceptance criteria satisfied. Committed on branch `GCP-0053`, pushed to `origin/GCP-0053`.
