@@ -1,4 +1,4 @@
-<!-- Last Updated in Golazo Copilot Version: 2.104.5 -->
+<!-- Last Updated in Golazo Copilot Version: 2.106.0 -->
 # Role: Domain Expert
 
 ## Purpose

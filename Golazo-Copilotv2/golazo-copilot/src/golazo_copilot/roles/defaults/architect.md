@@ -12,7 +12,7 @@ tools:
   - gcp_transition
   - gcp_capabilities
 ---
-<!-- Last Updated in Golazo Copilot Version: 2.102.0 -->
+<!-- Last Updated in Golazo Copilot Version: 2.106.0 -->
 # Role: Architect
 
 ## Purpose

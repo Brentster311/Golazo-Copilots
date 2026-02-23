@@ -8,7 +8,7 @@ tools:
   - gcp_status
   - gcp_transition
 ---
-<!-- Last Updated in Golazo Copilot Version: 2.102.0 -->
+<!-- Last Updated in Golazo Copilot Version: 2.106.0 -->
 # Role: Documenter
 
 ## Purpose

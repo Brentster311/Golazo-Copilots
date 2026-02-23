@@ -9,7 +9,7 @@ tools:
   - gcp_capabilities
   - gcp_create_workitem
 ---
-<!-- Last Updated in Golazo Copilot Version: 2.102.0 -->
+<!-- Last Updated in Golazo Copilot Version: 2.106.0 -->
 # Role: Project Owner Assistant
 
 ## Purpose
