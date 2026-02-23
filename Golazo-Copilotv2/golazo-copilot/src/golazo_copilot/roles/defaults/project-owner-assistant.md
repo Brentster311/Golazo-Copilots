@@ -1,3 +1,14 @@
+---
+inputs: []
+outputs:
+  - WorkItems/{id}/{id}-User-Story.md
+  - WorkItems/{id}/RoleDecisionNotes/{id}-project-owner-assistant.md
+tools:
+  - gcp_status
+  - gcp_transition
+  - gcp_capabilities
+  - gcp_create_workitem
+---
 <!-- Last Updated in Golazo Copilot Version: 2.102.0 -->
 # Role: Project Owner Assistant
 

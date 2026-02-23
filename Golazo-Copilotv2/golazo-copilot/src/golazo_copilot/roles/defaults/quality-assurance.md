@@ -1,3 +1,15 @@
+---
+inputs:
+  - WorkItems/{id}/{id}-User-Story.md
+  - WorkItems/{id}/Design/{id}-design-doc.md
+outputs:
+  - WorkItems/{id}/Design/{id}-Review-Comments.md
+  - WorkItems/{id}/Design/{id}-Test-Cases.md
+  - WorkItems/{id}/RoleDecisionNotes/{id}-quality-assurance.md
+tools:
+  - gcp_status
+  - gcp_transition
+---
 <!-- Last Updated in Golazo Copilot Version: 2.102.0 -->
 # Role: Quality Assurance
 

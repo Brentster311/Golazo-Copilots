@@ -1,6 +1,6 @@
 # GCP-0048 User Story
 
-**Status**: BACKLOG
+**Status**: IN PROGRESS
 
 ## User Story
 

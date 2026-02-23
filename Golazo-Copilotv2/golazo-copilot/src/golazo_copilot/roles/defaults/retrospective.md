@@ -1,3 +1,20 @@
+---
+inputs:
+  - WorkItems/{id}/RoleDecisionNotes/{id}-project-owner-assistant.md
+  - WorkItems/{id}/RoleDecisionNotes/{id}-program-manager.md
+  - WorkItems/{id}/RoleDecisionNotes/{id}-domain-expert.md
+  - WorkItems/{id}/RoleDecisionNotes/{id}-quality-assurance.md
+  - WorkItems/{id}/RoleDecisionNotes/{id}-architect.md
+  - WorkItems/{id}/RoleDecisionNotes/{id}-developer.md
+  - WorkItems/{id}/RoleDecisionNotes/{id}-refactor.md
+  - WorkItems/{id}/RoleDecisionNotes/{id}-documenter.md
+  - WorkItems/{id}/RoleDecisionNotes/{id}-builder.md
+outputs:
+  - WorkItems/{id}/RoleDecisionNotes/{id}-retrospective.md
+tools:
+  - gcp_status
+  - gcp_transition
+---
 <!-- Last Updated in Golazo Copilot Version: 2.102.0 -->
 # Role: Retrospective
 

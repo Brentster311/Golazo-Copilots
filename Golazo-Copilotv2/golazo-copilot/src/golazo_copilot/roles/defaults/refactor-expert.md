@@ -1,3 +1,13 @@
+---
+inputs:
+  - WorkItems/{id}/RoleDecisionNotes/{id}-developer.md
+outputs:
+  - WorkItems/{id}/RoleDecisionNotes/{id}-refactor.md
+tools:
+  - gcp_status
+  - gcp_transition
+  - gcp_capabilities
+---
 <!-- Last Updated in Golazo Copilot Version: 2.102.0 -->
 # Role: Refactor Expert
 
