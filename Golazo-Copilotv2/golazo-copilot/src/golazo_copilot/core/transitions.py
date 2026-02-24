@@ -17,7 +17,7 @@ TRANSITIONS: dict[str, list[str]] = {
 }
 
 # Phase for each role
-PHASE_MAP: dict[str, Literal["definition", "development", "completion"]] = {
+PHASE_MAP: dict[str, Literal["definition", "development", "completion", "closure"]] = {
     "project-owner-assistant": "definition",
     "program-manager": "definition",
     "domain-expert": "definition",
@@ -104,6 +104,6 @@ def is_backward_transition(current_role: str, target_role: str) -> bool:
     return target_idx < current_idx
 
 
-def get_phase_for_role(role: str) -> Literal["definition", "development", "completion"]:
+def get_phase_for_role(role: str) -> Literal["definition", "development", "completion", "closure"]:
     """Get the phase for a given role."""
     return PHASE_MAP.get(role, "definition")

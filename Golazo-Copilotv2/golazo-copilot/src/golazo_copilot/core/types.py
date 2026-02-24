@@ -30,7 +30,7 @@ class WorkItemState(BaseModel):
     schema_version: Literal["1.0"] = "1.0"
     work_item_id: str
     profile: Literal["complete", "express", "spike"]
-    current_phase: Literal["definition", "development", "completion"]
+    current_phase: Literal["definition", "development", "completion", "closure"]
     current_role: str
     created_at: datetime
     updated_at: datetime

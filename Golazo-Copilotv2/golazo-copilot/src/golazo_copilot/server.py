@@ -67,9 +67,11 @@ def format_transition_result(result: dict) -> str:
     """Format golazo_transition result dict into display text."""
     if result["success"]:
         warning = f"\n{ICON_WARN} {result['warning']}" if result.get("warning") else ""
+        # GCP-0053: Closure mode indicator on transition
+        closure_label = f" {ICON_WARN} **CLOSURE MODE**" if result.get("closure_pending") else ""
         return f"""{ICON_OK} Transitioned to '{result['current_role']}'!{warning}
 
-**Current Phase:** {result['current_phase']}
+**Current Phase:** {result['current_phase']}{closure_label}
 
 ---
 {result['role_instructions']}

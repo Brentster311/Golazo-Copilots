@@ -189,6 +189,9 @@ async def golazo_transition(
         and role == "project-owner-assistant"
     ):
         state.closure_pending = True
+        state.current_phase = "closure"
+        # Override backward-transition warning — this is closure, not rework
+        warning = "Entering CLOSURE MODE. Perform acceptance validation and create closure.md."
     
     # Save state
     save_state(work_item_id, state, work_items_dir)
@@ -202,6 +205,9 @@ async def golazo_transition(
         "current_phase": state.current_phase,
         "role_instructions": role_instructions,
     }
+    
+    if getattr(state, 'closure_pending', False):
+        result["closure_pending"] = True
     
     if warning:
         result["warning"] = warning
