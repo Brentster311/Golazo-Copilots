@@ -15,6 +15,7 @@ from sfi_reporter.cache import (
 from sfi_reporter.data import get_current_user_alias
 from sfi_reporter.logging_config import setup_logging, get_log_path, patch_subprocess_windows
 from sfi_reporter.models import OrgAncestry
+from sfi_reporter.data import format_cost
 from sfi_reporter.services import (
     _deserialize_org_data_from_cache,
     _load_setting,
@@ -173,17 +174,19 @@ class SFIReporterApp:
         services_frame.pack(fill=tk.BOTH, expand=True, pady=5)
 
         self.services_tree = SortableTreeview(
-            services_frame, columns=("name", "count", "sla", "invalid_eta"), show="tree headings", height=6)
+            services_frame, columns=("name", "count", "sla", "invalid_eta", "cost"), show="tree headings", height=6)
         self.services_tree.heading("#0", text="")
         self.services_tree.heading("name", text="Name")
         self.services_tree.heading("count", text="Total")
         self.services_tree.heading("sla", text="Out of SLA")
         self.services_tree.heading("invalid_eta", text="Invalid ETA")
+        self.services_tree.heading("cost", text="Cost (min)")
         self.services_tree.column("#0", width=40, stretch=False)
         self.services_tree.column("name", width=180, anchor=tk.W)
         self.services_tree.column("count", width=60, anchor=tk.CENTER)
         self.services_tree.column("sla", width=80, anchor=tk.CENTER)
         self.services_tree.column("invalid_eta", width=80, anchor=tk.CENTER)
+        self.services_tree.column("cost", width=80, anchor=tk.CENTER)
 
         self._group_path_map = {}
 
@@ -205,15 +208,17 @@ class SFIReporterApp:
         program_frame.pack(fill=tk.BOTH, expand=True, pady=5)
 
         self.program_tree = SortableTreeview(
-            program_frame, columns=("program", "count", "sla", "invalid_eta"), show="headings", height=6)
+            program_frame, columns=("program", "count", "sla", "invalid_eta", "cost"), show="headings", height=6)
         self.program_tree.heading("program", text="Program")
         self.program_tree.heading("count", text="Total")
         self.program_tree.heading("sla", text="Out of SLA")
         self.program_tree.heading("invalid_eta", text="Invalid ETA")
+        self.program_tree.heading("cost", text="Cost (min)")
         self.program_tree.column("program", width=230, anchor=tk.W)
         self.program_tree.column("count", width=60, anchor=tk.CENTER)
         self.program_tree.column("sla", width=70, anchor=tk.CENTER)
         self.program_tree.column("invalid_eta", width=70, anchor=tk.CENTER)
+        self.program_tree.column("cost", width=80, anchor=tk.CENTER)
 
         program_scroll = ttk.Scrollbar(program_frame, orient=tk.VERTICAL, command=self.program_tree.yview)
         self.program_tree.configure(yscrollcommand=program_scroll.set)
@@ -232,15 +237,17 @@ class SFIReporterApp:
         action_frame.pack(fill=tk.BOTH, expand=True, pady=5)
 
         self.action_tree = SortableTreeview(
-            action_frame, columns=("name", "count", "sla", "invalid_eta"), show="headings")
+            action_frame, columns=("name", "count", "sla", "invalid_eta", "cost"), show="headings")
         self.action_tree.heading("name", text="Action Item (KPI)")
         self.action_tree.heading("count", text="Total")
         self.action_tree.heading("sla", text="Out of SLA")
         self.action_tree.heading("invalid_eta", text="Invalid ETA")
+        self.action_tree.heading("cost", text="Cost (min)")
         self.action_tree.column("name", width=450, anchor=tk.W)
         self.action_tree.column("count", width=80, anchor=tk.CENTER)
         self.action_tree.column("sla", width=80, anchor=tk.CENTER)
         self.action_tree.column("invalid_eta", width=80, anchor=tk.CENTER)
+        self.action_tree.column("cost", width=80, anchor=tk.CENTER)
 
         action_scroll = ttk.Scrollbar(action_frame, orient=tk.VERTICAL, command=self.action_tree.yview)
         self.action_tree.configure(yscrollcommand=action_scroll.set)
@@ -304,7 +311,7 @@ class SFIReporterApp:
         # Update program summary table
         for program_name, stats in sorted(program_stats.items(), key=lambda x: x[1].get('count', 0), reverse=True):
             iid = self.program_tree.insert("", tk.END, values=(
-                program_name, stats.get('count', 0), stats.get('sla', 0), stats.get('invalid_eta', 0),
+                program_name, stats.get('count', 0), stats.get('sla', 0), stats.get('invalid_eta', 0), format_cost(stats.get('cost')),
             ))
             program_id = stats.get('id', program_name)
             self._program_id_map[iid] = program_id
@@ -360,16 +367,18 @@ class SFIReporterApp:
                     current['services'].append((svc_id, svc_name, stats))
 
             def _compute_group_stats(group: dict) -> dict:
-                total = {'count': 0, 'sla': 0, 'invalid_eta': 0}
+                total = {'count': 0, 'sla': 0, 'invalid_eta': 0, 'cost': 0.0}
                 for _, _, s in group['services']:
                     total['count'] += s.get('count', 0)
                     total['sla'] += s.get('sla', 0)
                     total['invalid_eta'] += s.get('invalid_eta', 0)
+                    total['cost'] += s.get('cost', 0.0)
                 for child in group['children'].values():
                     child_stats = _compute_group_stats(child)
                     total['count'] += child_stats['count']
                     total['sla'] += child_stats['sla']
                     total['invalid_eta'] += child_stats['invalid_eta']
+                    total['cost'] += child_stats['cost']
                 group['_stats'] = total
                 return total
 
@@ -383,9 +392,9 @@ class SFIReporterApp:
                     break
 
             def _insert_group(parent_iid, name, group, depth, full_path):
-                grp_stats = group.get('_stats', {'count': 0, 'sla': 0, 'invalid_eta': 0})
+                grp_stats = group.get('_stats', {'count': 0, 'sla': 0, 'invalid_eta': 0, 'cost': 0.0})
                 iid = self.services_tree.insert(parent_iid, tk.END, values=(
-                    f"\U0001f464 {name}", grp_stats['count'], grp_stats['sla'], grp_stats['invalid_eta'],
+                    f"\U0001f464 {name}", grp_stats['count'], grp_stats['sla'], grp_stats['invalid_eta'], format_cost(grp_stats.get('cost')),
                 ), open=(depth == 0))
                 self._group_path_map[iid] = full_path
 
@@ -399,7 +408,7 @@ class SFIReporterApp:
 
                 for svc_id, svc_name, s in sorted(group['services'], key=lambda x: x[2].get('count', 0), reverse=True):
                     child_iid = self.services_tree.insert(iid, tk.END, values=(
-                        svc_name, s.get('count', 0), s.get('sla', 0), s.get('invalid_eta', 0),
+                        svc_name, s.get('count', 0), s.get('sla', 0), s.get('invalid_eta', 0), format_cost(s.get('cost')),
                     ))
                     self._service_id_map[child_iid] = svc_id
                     self._service_name_map[svc_id] = svc_name
@@ -408,15 +417,16 @@ class SFIReporterApp:
             # a single collapsible row containing all direct-report groups.
             if root_name:
                 # Compute aggregate stats across all groups (excluding Unknown/No Owner)
-                root_stats = {'count': 0, 'sla': 0, 'invalid_eta': 0}
+                root_stats = {'count': 0, 'sla': 0, 'invalid_eta': 0, 'cost': 0.0}
                 for n, g in root_groups.items():
-                    gs = g.get('_stats', {'count': 0, 'sla': 0, 'invalid_eta': 0})
+                    gs = g.get('_stats', {'count': 0, 'sla': 0, 'invalid_eta': 0, 'cost': 0.0})
                     root_stats['count'] += gs['count']
                     root_stats['sla'] += gs['sla']
                     root_stats['invalid_eta'] += gs['invalid_eta']
+                    root_stats['cost'] += gs.get('cost', 0.0)
 
                 root_iid = self.services_tree.insert("", tk.END, values=(
-                    f"\U0001f464 {root_name}", root_stats['count'], root_stats['sla'], root_stats['invalid_eta'],
+                    f"\U0001f464 {root_name}", root_stats['count'], root_stats['sla'], root_stats['invalid_eta'], format_cost(root_stats.get('cost')),
                 ), open=True)
                 self._group_path_map[root_iid] = (root_name,)
             else:
@@ -436,7 +446,7 @@ class SFIReporterApp:
                         _insert_group(root_iid, child_name, group['children'][child_name], 0, child_full_path)
                     for svc_id, svc_name, s in sorted(group['services'], key=lambda x: x[2].get('count', 0), reverse=True):
                         child_iid = self.services_tree.insert(root_iid, tk.END, values=(
-                            svc_name, s.get('count', 0), s.get('sla', 0), s.get('invalid_eta', 0),
+                            svc_name, s.get('count', 0), s.get('sla', 0), s.get('invalid_eta', 0), format_cost(s.get('cost')),
                         ))
                         self._service_id_map[child_iid] = svc_id
                         self._service_name_map[svc_id] = svc_name
@@ -451,14 +461,14 @@ class SFIReporterApp:
                 svc_id = s.get('Id', '')
                 stats = service_stats.get(svc_id, {})
                 iid = self.services_tree.insert("", tk.END, values=(
-                    s.get('Name', 'Unknown'), stats.get('count', 0), stats.get('sla', 0), stats.get('invalid_eta', 0),
+                    s.get('Name', 'Unknown'), stats.get('count', 0), stats.get('sla', 0), stats.get('invalid_eta', 0), format_cost(stats.get('cost')),
                 ))
                 self._service_id_map[iid] = svc_id
                 self._service_name_map[svc_id] = s.get('Name', 'Unknown')
         elif service_stats:
             for svc_id, stats in sorted(service_stats.items(), key=lambda x: x[1].get('count', 0), reverse=True):
                 iid = self.services_tree.insert("", tk.END, values=(
-                    stats.get('name', svc_id), stats.get('count', 0), stats.get('sla', 0), stats.get('invalid_eta', 0),
+                    stats.get('name', svc_id), stats.get('count', 0), stats.get('sla', 0), stats.get('invalid_eta', 0), format_cost(stats.get('cost')),
                 ))
                 self._service_id_map[iid] = svc_id
                 self._service_name_map[svc_id] = stats.get('name', svc_id)
@@ -467,7 +477,7 @@ class SFIReporterApp:
 
         for kpi_id, stats in sorted(kpi_stats.items(), key=lambda x: x[1].get('count', 0), reverse=True):
             iid = self.action_tree.insert("", tk.END, values=(
-                stats.get('name', kpi_id), stats.get('count', 0), stats.get('sla', 0), stats.get('invalid_eta', 0),
+                stats.get('name', kpi_id), stats.get('count', 0), stats.get('sla', 0), stats.get('invalid_eta', 0), format_cost(stats.get('cost')),
             ))
             self._kpi_id_map[iid] = kpi_id
 

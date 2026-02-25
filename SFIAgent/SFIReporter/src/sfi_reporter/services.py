@@ -410,6 +410,7 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
             is_invalid_eta,
             get_all_programs,
             get_client,
+            fetch_kpi_costs,
         )
         from datetime import datetime
 
@@ -473,6 +474,11 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
             if kpi_id:
                 kpi_names[kpi_id] = kpi.get('KpiName', 'Unknown')
 
+        # Fetch KPI cost data (non-blocking — returns {} on failure)
+        if on_status:
+            on_status("Fetching KPI cost data...")
+        kpi_cost_map = fetch_kpi_costs(kpi_ids)
+
         # Fetch ALL detailed action items (includes S360_ProgramIds per item)
         detailed_items, failed_kpis = get_detailed_action_items(audience_ids, kpi_ids, on_status, kpi_names)
 
@@ -499,10 +505,13 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
             is_out_of_sla = sla_type == 'OutOfSla'
             is_invalid = is_invalid_eta(eta_date)
 
+            item_cost = kpi_cost_map.get(kpi_id, 0.0) if kpi_cost_map else 0.0
+
             # Update service stats
             if svc_id not in service_stats:
-                service_stats[svc_id] = {'name': svc_name, 'count': 0, 'sla': 0, 'invalid_eta': 0}
+                service_stats[svc_id] = {'name': svc_name, 'count': 0, 'sla': 0, 'invalid_eta': 0, 'cost': 0.0}
             service_stats[svc_id]['count'] += 1
+            service_stats[svc_id]['cost'] += item_cost
             if is_out_of_sla:
                 service_stats[svc_id]['sla'] += 1
             if is_invalid:
@@ -510,8 +519,9 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
 
             # Update KPI stats
             if kpi_id not in kpi_stats:
-                kpi_stats[kpi_id] = {'name': kpi_names.get(kpi_id, kpi_id), 'count': 0, 'sla': 0, 'invalid_eta': 0}
+                kpi_stats[kpi_id] = {'name': kpi_names.get(kpi_id, kpi_id), 'count': 0, 'sla': 0, 'invalid_eta': 0, 'cost': 0.0}
             kpi_stats[kpi_id]['count'] += 1
+            kpi_stats[kpi_id]['cost'] += item_cost
             if is_out_of_sla:
                 kpi_stats[kpi_id]['sla'] += 1
             if is_invalid:
@@ -524,16 +534,18 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
                 if not program_name:
                     program_name = 'Other Program'
                 if program_name not in program_stats:
-                    program_stats[program_name] = {'count': 0, 'sla': 0, 'invalid_eta': 0, 'id': pid}
+                    program_stats[program_name] = {'count': 0, 'sla': 0, 'invalid_eta': 0, 'cost': 0.0, 'id': pid}
                 program_stats[program_name]['count'] += 1
+                program_stats[program_name]['cost'] += item_cost
                 if is_out_of_sla:
                     program_stats[program_name]['sla'] += 1
                 if is_invalid:
                     program_stats[program_name]['invalid_eta'] += 1
             else:
                 if 'Unassigned' not in program_stats:
-                    program_stats['Unassigned'] = {'count': 0, 'sla': 0, 'invalid_eta': 0, 'id': 'unassigned'}
+                    program_stats['Unassigned'] = {'count': 0, 'sla': 0, 'invalid_eta': 0, 'cost': 0.0, 'id': 'unassigned'}
                 program_stats['Unassigned']['count'] += 1
+                program_stats['Unassigned']['cost'] += item_cost
                 if is_out_of_sla:
                     program_stats['Unassigned']['sla'] += 1
                 if is_invalid:
@@ -584,6 +596,7 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
             'programs_lookup': program_names,
             'failed_kpis': failed_kpis,
             'audience_ids': audience_ids,
+            'kpi_cost_map': kpi_cost_map,
             'kpi_names': kpi_names,
             'timestamp': datetime.now().isoformat(),
         }

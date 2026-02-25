@@ -554,6 +554,79 @@ def get_all_programs() -> dict[str, str]:
         return {}
 
 
+def fetch_kpi_costs(kpi_ids: list[str]) -> dict[str, float]:
+    """Fetch KPI cost map from S360 API.
+
+    Args:
+        kpi_ids: List of KPI IDs to query costs for.
+
+    Returns:
+        Dict mapping KpiId → AverageCostInMin. Returns empty dict on
+        failure or when *kpi_ids* is empty (never raises).
+    """
+    if not kpi_ids:
+        return {}
+    try:
+        client = get_client()
+        raw = client.query_kpi_costs(kpi_ids)
+        cost_map: dict[str, float] = {}
+        for entry in raw:
+            kpi_id = entry.get("KpiId")
+            cost = entry.get("AverageCostInMin")
+            if kpi_id and cost is not None:
+                cost_map[kpi_id] = float(cost)
+        logger.info("Fetched costs for %d/%d KPIs", len(cost_map), len(kpi_ids))
+        return cost_map
+    except Exception as e:
+        logger.warning("Cost API failed: %s", e)
+        return {}
+
+
+def compute_row_cost(
+    items: list[dict],
+    kpi_cost_map: dict[str, float],
+) -> float | None:
+    """Compute total cost for a collection of action items.
+
+    Each item's cost equals its KPI's ``AverageCostInMin``.  Items whose
+    KPI is not in *kpi_cost_map* contribute 0. If **no** item has a
+    known cost the function returns ``None`` (meaning "no data").
+
+    Args:
+        items: Action-item dicts (must contain ``_kpi_id``).
+        kpi_cost_map: Mapping of KpiId → AverageCostInMin.
+
+    Returns:
+        Total cost in minutes, or ``None`` when no cost data exists.
+    """
+    if not kpi_cost_map:
+        return None
+    total = 0.0
+    any_found = False
+    for item in items:
+        kpi_id = item.get("_kpi_id")
+        cost = kpi_cost_map.get(kpi_id)
+        if cost is not None:
+            total += cost
+            any_found = True
+    return total if any_found else None
+
+
+def format_cost(value: float | None) -> str:
+    """Format a cost value for display in a Treeview cell.
+
+    Args:
+        value: Cost in minutes, or ``None`` for missing data.
+
+    Returns:
+        Formatted string (e.g. ``"1,054"``) or em-dash (``"—"``) when
+        *value* is ``None``.
+    """
+    if value is None:
+        return "\u2014"
+    return f"{round(value):,}"
+
+
 def fetch_full_data(user_alias: str) -> dict:
     """Fetch all data for a user and return with timestamp.
     

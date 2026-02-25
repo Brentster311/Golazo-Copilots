@@ -27,6 +27,7 @@ The app will open a browser window for Microsoft login if no `az login` session 
 - **View Details in Manual Review**: While stepping through items in Manual ETA review, click 🔍 View Details to see the full item detail modal.
 - **SLA Status & ETA Status columns**: Drill-down views show SLA Status (In SLA / Approaching / Out of SLA) and ETA Status columns.
 - **Diagnostic logging**: Rotating log file at `%TEMP%\sfireporter\sfi_reporter.log` (DEBUG+)
+- **Cost (min) column**: Each table view (Services, Programs, KPIs) shows the total estimated cost in minutes, sourced from the S360 KPI Costing API. Displays "—" when cost data is unavailable.
 - **🤖 Analyze with LLM**: Right-click any KPI row → "Analyze with LLM" sends action item data to Azure OpenAI for a structured analysis (Mission, Steps to Done, Resources Needing Repair, Risk of Delay). Results are saved to `%LOCALAPPDATA%\sfireporter\analyses\`.
 
 ## LLM Analysis Setup
