@@ -568,7 +568,7 @@ def fetch_kpi_costs(kpi_ids: list[str]) -> dict[str, float]:
         return {}
     try:
         client = get_client()
-        raw = client.query_kpi_costs(kpi_ids)
+        raw = client.get_kpi_costs(kpi_ids)
         cost_map: dict[str, float] = {}
         for entry in raw:
             kpi_id = entry.get("KpiId")

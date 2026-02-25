@@ -25,7 +25,7 @@ class TestFetchKpiCosts:
         """TC-037-01: Successful cost fetch returns correct map."""
         mock_client_class = mocker.patch('sfi_reporter.data.S360Client')
         mock_client = mock_client_class.return_value
-        mock_client.query_kpi_costs.return_value = [
+        mock_client.get_kpi_costs.return_value = [
             {"KpiId": "kpi-1", "AverageCostInMin": 180.0, "AverageCost": "HalfDay"},
             {"KpiId": "kpi-2", "AverageCostInMin": 1054.0, "AverageCost": "OneDay"},
             {"KpiId": "kpi-3", "AverageCostInMin": 1962.0, "AverageCost": "HalfWeek"},
@@ -41,7 +41,7 @@ class TestFetchKpiCosts:
         """TC-037-02: Cost API returns partial data — only found KPIs in map."""
         mock_client_class = mocker.patch('sfi_reporter.data.S360Client')
         mock_client = mock_client_class.return_value
-        mock_client.query_kpi_costs.return_value = [
+        mock_client.get_kpi_costs.return_value = [
             {"KpiId": "kpi-1", "AverageCostInMin": 180.0, "AverageCost": "HalfDay"},
         ]
         from sfi_reporter.data import fetch_kpi_costs
@@ -57,7 +57,7 @@ class TestFetchKpiCosts:
         """TC-037-03: Cost API fails entirely — returns empty dict, no exception."""
         mock_client_class = mocker.patch('sfi_reporter.data.S360Client')
         mock_client = mock_client_class.return_value
-        mock_client.query_kpi_costs.side_effect = Exception("API timeout")
+        mock_client.get_kpi_costs.side_effect = Exception("API timeout")
         from sfi_reporter.data import fetch_kpi_costs
 
         result = fetch_kpi_costs(["kpi-1", "kpi-2"])
@@ -75,7 +75,7 @@ class TestFetchKpiCosts:
 
         assert result == {}, \
             "Empty KPI list should short-circuit and return empty dict"
-        mock_client.query_kpi_costs.assert_not_called()
+        mock_client.get_kpi_costs.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
