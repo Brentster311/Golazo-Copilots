@@ -43,8 +43,13 @@
   - `WorkItems/SFI-040/RoleDecisionNotes/SFI-040-documenter.md`
   - `WorkItems/SFI-040/state.json`
   - `WorkItems/SFI-040/RoleDecisionNotes/SFI-040-builder.md`
-- Commit/push status:
-  - Not executed in this builder subagent run (orchestrator-owned final handoff sequence).
+- Commit/push commands executed:
+  - `git add .`
+  - `git commit -m "SFI-040: Reorder Score and Cost columns and add Score/Min ratio in SFIReporter grid"`
+  - `git push -u origin SFI-040`
+- Result:
+  - Commit: `d59c824`
+  - Push: success, branch `SFI-040` tracking `origin/SFI-040`
 
 ## Assumptions and Constraints
 - Assumption: Builder evidence can rely on targeted SFI-040 regression tests plus successful package build for this scoped UI change.
