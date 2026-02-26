@@ -1,0 +1,28 @@
+# Summary,R² = 0.0000  |  Method: NNLS  |  Feature: Total Count  |  5 services × 16 KPIs
+
+Per-KPI Coefficients
+KPI ID,KPI Name,Coefficient,Total Instances
+04988624-19fe-4a58-974a-aa47f6f6c1a4,04988624-19fe-4a58-974a-aa47f6f6c1a4,0.0000,2
+09c3aade-339c-403b-b1c1-33b4526768ee,09c3aade-339c-403b-b1c1-33b4526768ee,0.0000,2
+11df79b1-bc5d-4d9e-a984-d91c573c45c5,11df79b1-bc5d-4d9e-a984-d91c573c45c5,0.0000,1
+41b084c4-5e50-42d9-854f-086d670244b9,41b084c4-5e50-42d9-854f-086d670244b9,0.0000,1
+49a25abf-fe19-1f6c-20ed-5a0fcbdf6312,49a25abf-fe19-1f6c-20ed-5a0fcbdf6312,0.0000,1
+5261f8ca-71c6-41aa-81da-7cf25c6cccbb,5261f8ca-71c6-41aa-81da-7cf25c6cccbb,0.0000,1
+527fb616-07aa-8198-6419-50d04ef1c2f3,527fb616-07aa-8198-6419-50d04ef1c2f3,0.0000,16
+5c85fca2-d174-492c-80df-4cdaa5f74b4d,5c85fca2-d174-492c-80df-4cdaa5f74b4d,0.0000,10
+66408858-bc7a-e959-4abf-77c18136e66f,66408858-bc7a-e959-4abf-77c18136e66f,0.0000,1
+87fdda4b-d1ad-4b37-bfa2-4b4872c7e97b,87fdda4b-d1ad-4b37-bfa2-4b4872c7e97b,0.0000,1
+8c90c7b1-2148-452e-aa02-45bbd399455e,8c90c7b1-2148-452e-aa02-45bbd399455e,0.0000,1
+928b7015-db58-41a3-94ea-ab73c7bb9f4d,928b7015-db58-41a3-94ea-ab73c7bb9f4d,0.0000,7
+c6876c6f-2376-49a6-bcbd-f15af106d1af,c6876c6f-2376-49a6-bcbd-f15af106d1af,0.0000,1
+cb71c09d-0f7b-4056-8988-234502090876,cb71c09d-0f7b-4056-8988-234502090876,0.0000,12
+e3123e2a-615c-42ea-96a8-27e9732fdecd,e3123e2a-615c-42ea-96a8-27e9732fdecd,0.0000,33
+f05752b5-8212-459a-a0ed-41f52ee47664,f05752b5-8212-459a-a0ed-41f52ee47664,0.0000,1
+
+Per-Service Fit
+Service,Kusto UnWeighted,Model Prediction,Residual
+Azure Core Customer Insights and Analytics,0.00,0.00,+0.00
+Azure Core Platform and Decision Infrastructure,0.00,0.00,+0.00
+ACCIA Model Hosting Framework,0.00,0.00,+0.00
+EventHawk Detection,0.00,0.00,+0.00
+ACCIA Problem Modeling,0.00,0.00,+0.00
