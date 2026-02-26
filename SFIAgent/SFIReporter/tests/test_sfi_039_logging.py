@@ -2,11 +2,9 @@
 
 import logging
 import subprocess
-import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 
 
 # ---------------------------------------------------------------------------
@@ -132,7 +130,7 @@ class TestPatchSubprocessWindows:
 
     def test_noop_on_non_windows(self):
         """On non-win32, nothing happens."""
-        from sfi_reporter.logging_config import patch_subprocess_windows, _original_popen_init
+        from sfi_reporter.logging_config import patch_subprocess_windows
 
         with patch("sfi_reporter.logging_config.sys") as mock_sys:
             mock_sys.platform = "linux"
@@ -159,7 +157,7 @@ class TestPatchSubprocessWindows:
 
     def test_patched_popen_adds_create_no_window(self):
         """_patched_popen_init adds CREATE_NO_WINDOW flag on win32."""
-        from sfi_reporter.logging_config import _patched_popen_init, _original_popen_init
+        from sfi_reporter.logging_config import _patched_popen_init
 
         captured_kwargs = {}
         def fake_original(self, *args, **kwargs):

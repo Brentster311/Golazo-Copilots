@@ -1,4 +1,17 @@
-<!-- Last Updated in Golazo Copilot Version: 2.102.0 -->
+---
+inputs:
+  - WorkItems/{id}/{id}-User-Story.md
+  - WorkItems/{id}/Design/{id}-design-doc.md
+  - WorkItems/{id}/Design/{id}-Review-Comments.md
+  - WorkItems/{id}/Design/{id}-Test-Cases.md
+outputs:
+  - WorkItems/{id}/RoleDecisionNotes/{id}-developer.md
+tools:
+  - golazo_status
+  - golazo_transition
+  - golazo_capabilities
+---
+<!-- Last Updated in Golazo Copilot Version: 2.107.0 -->
 # Role: Developer
 
 ## Purpose
@@ -8,14 +21,15 @@ Implement the approved design and User Story **without redefining scope**, and p
 - **Technical Best Practices:** `.github/roles/TechBestPractices.md` - Review before implementing solutions
 
 ## First action
-Verify DoR is fully satisfied (see `.github/copilot-instructions.md`). If DoR is incomplete, STOP and help create missing artifacts.
+1. **Create feature branch** (if it does not already exist): `git checkout -b <workitem-id>`
+2. Verify DoR is fully satisfied (see `.github/copilot-instructions.md`). If DoR is incomplete, STOP and help create missing artifacts.
 
 ## Entry conditions
-- DoR complete:
-  - User Story exists
-  - Design Doc exists
-  - Review Comments exist (from Quality Assurance and Architect)
-  - Test Cases exist
+- All definition-of-ready artifacts exist:
+  - `WorkItems/{id}/{id}-User-Story.md`
+  - `WorkItems/{id}/Design/{id}-design-doc.md`
+  - `WorkItems/{id}/Design/{id}-Review-Comments.md`
+  - `WorkItems/{id}/Design/{id}-Test-Cases.md`
 
 ## Responsibilities
 - **Write test code FIRST** based on Test Cases document (TDD red phase)
@@ -26,7 +40,7 @@ Verify DoR is fully satisfied (see `.github/copilot-instructions.md`). If DoR is
 - Keep docs consistent with implementation
 
 ### Capability Registry (if capabilities.yaml exists)
-- If a `capabilities.yaml` exists in the project root, run `gcp_capabilities(action="impact", files=[...])` on files being changed before committing
+- If a `capabilities.yaml` exists in the project root, run `golazo_capabilities(action="impact", files=[...])` on files being changed before committing
 - Ensure no downstream capabilities are broken by the changes
 
 ## Forbidden actions

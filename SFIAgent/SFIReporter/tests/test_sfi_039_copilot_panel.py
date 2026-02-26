@@ -7,9 +7,7 @@ that touches the SDK.
 
 from __future__ import annotations
 
-import asyncio
 import sys
-import threading
 import time
 import tkinter as tk
 from unittest.mock import MagicMock, patch, AsyncMock
@@ -743,7 +741,7 @@ class TestOnSend:
         panel._is_sending = False
         panel._is_connecting = False
 
-        with patch.object(panel._bridge, "run_coroutine") as mock_rc:
+        with patch.object(panel._bridge, "run_coroutine"):
             panel._on_send()
 
         assert panel._is_sending is True
@@ -785,7 +783,7 @@ class TestSendPrompt:
         async def _run():
             with patch.object(
                 panel, "_ensure_connected", side_effect=RuntimeError("nope")
-            ), patch.object(panel, "after") as mock_after:
+            ), patch.object(panel, "after"):
                 await panel._send_prompt("fail")
 
         panel._bridge.run_coroutine(_run()).result(timeout=5)
@@ -851,7 +849,7 @@ class TestSendAnalysisPrompt:
              patch.object(panel, "_show_sources_card") as mock_card, \
              patch("sfi_reporter.copilot_panel.CopilotPanel._do_send_analysis.__module__", create=True):
             # We need to mock set_current_docs_dir import
-            with patch("sfi_reporter.copilot_tools.set_current_docs_dir") as mock_set:
+            with patch("sfi_reporter.copilot_tools.set_current_docs_dir"):
                 panel._do_send_analysis("prompt", "KPI", sources)
                 mock_card.assert_called_once_with(sources)
 

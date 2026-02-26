@@ -519,7 +519,6 @@ class TestItemDetailsModal:
 
     def test_on_columns_changed_refreshes(self, tk_root):
         dlg = ItemDetailsModal(tk_root, _make_item())
-        initial_counter = dlg._link_counter
         dlg._on_columns_changed()
         # link counter reset to 0 before rebuild
         dlg.destroy()

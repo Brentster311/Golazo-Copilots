@@ -8,8 +8,7 @@ from __future__ import annotations
 
 import sys
 import tkinter as tk
-from tkinter import ttk
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock
 from datetime import datetime
 
 import pytest
@@ -644,7 +643,7 @@ class TestOnServiceDoubleClick:
     def test_group_path_click(self, app, mocker):
         app._update_tables(SAMPLE_DATA_MANAGER)
         mock_modal = mocker.patch("sfi_reporter.app.DetailModal")
-        mock_collect = mocker.patch("sfi_reporter.app.collect_services_for_owner", return_value={"Service One"})
+        mocker.patch("sfi_reporter.app.collect_services_for_owner", return_value={"Service One"})
 
         # Find a group path iid
         group_iids = [iid for iid in app._group_path_map]
@@ -696,7 +695,7 @@ class TestOnProgramDoubleClick:
     def test_program_click(self, app, mocker):
         app._update_tables(SAMPLE_DATA_SIMPLE)
         mock_modal = mocker.patch("sfi_reporter.app.DetailModal")
-        mock_filter = mocker.patch("sfi_reporter.app.filter_items_by_program", return_value=[])
+        mocker.patch("sfi_reporter.app.filter_items_by_program", return_value=[])
 
         iids = app.program_tree.get_children()
         assert len(iids) > 0
@@ -829,7 +828,7 @@ class TestOnUpdateEtas:
 
     def test_opens_eta_mode_dialog(self, app, mocker):
         app.current_data = SAMPLE_DATA_SIMPLE
-        mock_get = mocker.patch(
+        mocker.patch(
             "sfi_reporter.app.get_items_needing_eta_update",
             create=True,
         )

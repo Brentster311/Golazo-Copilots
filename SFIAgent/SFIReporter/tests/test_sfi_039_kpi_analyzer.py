@@ -11,17 +11,14 @@ from __future__ import annotations
 import json
 import os
 import shutil
-import tempfile
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock, PropertyMock, call, patch
+from unittest.mock import MagicMock, patch
 
-import pytest
 
 from sfi_reporter.kpi_analyzer import (
     AnalysisResult,
     FetchResult,
-    _HTMLTextExtractor,
     _copy_edge_profile,
     _discover_relevant_urls,
     _fetch_via_cdp,
@@ -34,15 +31,11 @@ from sfi_reporter.kpi_analyzer import (
     _is_js_shell,
     _is_login_page,
     _safe_filename,
-    _sanitize_text,
     _save_fetched_docs,
     analyze_kpi,
     build_analysis_prompt,
-    collect_urls,
-    extract_text,
     fetch_url_content,
     format_sources_card,
-    truncate_content,
 )
 
 

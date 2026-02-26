@@ -13,7 +13,6 @@ import sys
 import tempfile
 from unittest.mock import MagicMock, patch
 
-import pytest
 
 # ---------------------------------------------------------------------------
 # Mock the copilot SDK before importing copilot_tools

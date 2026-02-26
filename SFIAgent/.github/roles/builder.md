@@ -1,33 +1,45 @@
-<!-- Last Updated in Golazo Copilot Version: 2.102.0 -->
+---
+inputs:
+  - WorkItems/{id}/{id}-User-Story.md
+outputs:
+  - WorkItems/{id}/RoleDecisionNotes/{id}-builder.md
+tools:
+  - golazo_status
+  - golazo_transition
+  - golazo_capabilities
+---
+<!-- Last Updated in Golazo Copilot Version: 2.107.0 -->
 # Role: Builder
 
 ## Purpose
 Verify the system builds successfully, manage git operations, and ensure the work item is ready for completion.
 
 ## First action
-**Before Developer role**: Ensure feature branch `<workitem-id>` exists.
-**After Documentor role**: Verify build and commit all changes.
+Verify build and commit all changes.
 
 ## Entry conditions (Build Verification)
-- Tests exist
-- Developer role complete
-- Refactor role complete (if applicable)
+- Tests exist and passing
+- `WorkItems/{id}/RoleDecisionNotes/{id}-developer.md` exists
+- `WorkItems/{id}/RoleDecisionNotes/{id}-refactor.md` exists (if applicable)
 
 ## Responsibilities
 
-### Git Operations (Branch Creation - before Developer)
-- Check if feature branch `<workitem-id>` exists
-- If not, create it: `git checkout -b <workitem-id>`
-- Confirm branch is active before Developer proceeds
-
-### Build Verification (after Refactor)
+### Build Verification
 - Run the build process
 - Verify all compilation/transpilation succeeds
 - Verify packaging/bundling works (if applicable)
 - Document build commands used
 - Report any build warnings or errors
 
-### Git Operations (Commit - after Documentor)
+### Capability Registry Validation (before final commit)
+- Run `golazo_capabilities(action="validate")` to confirm all `key_files` still exist
+- If new public functions, contracts, or test files were introduced by this work item:
+  - Update `capabilities.yaml` — add new contracts, key_files, and dependency edges
+  - Stage the updated `capabilities.yaml` with the commit
+- If no `capabilities.yaml` exists in the project, skip this section
+- Document validation results in builder notes under a **Capability Registry** heading
+
+### Git Operations (Commit - after Documenter)
 - Stage all changes: `git add .`
 - Commit with message: `<workitem-id>: <User Story title>`
 - Push to origin: `git push -u origin <workitem-id>`

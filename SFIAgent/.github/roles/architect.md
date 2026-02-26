@@ -1,4 +1,18 @@
-<!-- Last Updated in Golazo Copilot Version: 2.102.0 -->
+---
+inputs:
+  - WorkItems/{id}/{id}-User-Story.md
+  - WorkItems/{id}/Design/{id}-design-doc.md
+  - WorkItems/{id}/Design/{id}-Review-Comments.md
+outputs:
+  - WorkItems/{id}/Design/{id}-Review-Comments.md
+  - WorkItems/{id}/Design/{id}-Capability-Impact.md
+  - WorkItems/{id}/RoleDecisionNotes/{id}-architect.md
+tools:
+  - golazo_status
+  - golazo_transition
+  - golazo_capabilities
+---
+<!-- Last Updated in Golazo Copilot Version: 2.107.0 -->
 # Role: Architect
 
 ## Purpose
@@ -24,10 +38,26 @@ Review the design for:
 - Dependency choices
 - Failure isolation
 - **Implicit assumptions** in library/framework default behaviors (surface these as explicit questions to PO)
+- Risk coverage and operability (on-call impact)
+- Cost / performance tradeoffs
+- Naming clarity (files, classes, methods, variables)
+- Folder/directory structure and organization
 
-### Capability Registry (if capabilities.yaml exists)
-- If a `capabilities.yaml` exists in the project root, run `gcp_capabilities(action="impact", files=[...])` on the files referenced in the design doc
+### Security Review
+Evaluate the design for security concerns:
+- Data exposure — are secrets, tokens, or PII handled safely?
+- Authentication and authorization — are auth boundaries explicit?
+- Attack surface — does the change introduce new entry points or expand existing ones?
+- Dependency risk — are new dependencies audited for known vulnerabilities?
+
+### Capability Registry — Impact Analysis (REQUIRED)
+- Run `golazo_capabilities(action="impact", files=[...])` on the files referenced in the design doc
 - Verify contract compatibility across all affected capabilities and their transitive dependents
+- Document results in `WorkItems/<workitem-id>/Design/<workitem-id>-Capability-Impact.md`:
+  - **Directly affected** capabilities and their contracts
+  - **Transitively affected** capabilities (downstream dependents)
+  - **Contract implications** — any new, changed, or removed public interfaces
+  - If no `capabilities.yaml` exists in the project root, create the file with content: "N/A — no capabilities.yaml in project"
 
 ## Forbidden actions
 - Do not silently change scope/behavior/design in-place.
@@ -36,6 +66,7 @@ Review the design for:
 ## Required Outputs
 <!-- Add an **Architect Notes** section to the Review-Comments.md file -->
 - file: WorkItems/{id}/Design/{id}-Review-Comments.md
+- file: WorkItems/{id}/Design/{id}-Capability-Impact.md
 - file: WorkItems/{id}/RoleDecisionNotes/{id}-architect.md
 <!-- If you propose any change to behavior/scope/design/architecture: create a new User Story and note it explicitly. -->
 

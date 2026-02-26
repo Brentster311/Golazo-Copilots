@@ -8,12 +8,9 @@ Covers:
   • QueryBuilder Tk widget lifecycle (init, enrich, field metadata,
     add/remove clause rows, run query, clear all, apply filter, load cached)
 """
-import json
-import os
 import tkinter as tk
-from datetime import datetime, timedelta
-from pathlib import Path
-from unittest.mock import MagicMock, patch, PropertyMock
+from datetime import datetime
+from unittest.mock import MagicMock, patch
 
 import pytest
 
