@@ -19,7 +19,7 @@
 - Updated all row insertion paths (including manager/grouped branches) to populate:
   - `score`
   - `cost`
-  - `score_per_min` (`∞` when cost is zero)
+  - `score_per_min` (uses fallback cost `28,800` when incoming cost is zero)
 
 ## Validation
 - Focused tests: 3 passed.

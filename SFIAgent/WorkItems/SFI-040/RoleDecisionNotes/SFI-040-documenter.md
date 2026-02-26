@@ -5,7 +5,7 @@
 - User story request is reflected exactly in shipped behavior:
   - `Score` before `Cost`
   - New `Score/Min` column
-  - `∞` for zero cost
+  - `28,800` fallback when incoming cost is zero
 
 ## README / External Docs
 No README update required; this is a UI presentation enhancement without new setup or user workflow complexity.

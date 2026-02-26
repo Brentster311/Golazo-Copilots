@@ -3,7 +3,7 @@
 ## Delivered
 - Implemented table column reorder (`Score` before `Cost`) in Services, Program Summary, and Action Items.
 - Implemented new derived `Score/Min` column across those tables.
-- Added ratio formatting logic with zero-cost handling (`∞`).
+- Added ratio formatting logic with zero-cost fallback (`Cost` defaults to `28,800`).
 - Added/updated tests in `test_sfi_039_app.py` for column order and ratio behavior.
 
 ## Verification

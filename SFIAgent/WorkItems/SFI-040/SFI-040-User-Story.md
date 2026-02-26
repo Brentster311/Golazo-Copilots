@@ -11,13 +11,13 @@
   - Changes to non-SFIReporter applications or unrelated UI panels
 - Assumptions:
   - **Assumption (explicit):** `Score/Min` is computed from the same displayed Score and Cost values for each row at render time.
-  - **Assumption (explicit):** Division by zero is represented as `∞` exactly, not a numeric sentinel.
+  - **Assumption (explicit):** When incoming `Cost` is 0, displayed cost defaults to `28,800` and `Score/Min` uses that fallback cost.
   - **Assumption (explicit):** Existing cross-platform Python/Tkinter patterns remain unchanged while validated on Windows.
 - Acceptance Criteria (bulleted, testable):
   - In the SFIReporter table view, `Score` appears immediately before `Cost` in the visible column order.
   - A new column labeled `Score/Min` is present and populated for each displayed row.
   - For rows where `Cost > 0`, `Score/Min` equals `Score / Cost` using the row’s current values.
-  - For rows where `Cost == 0`, `Score/Min` displays `∞`.
+  - For rows where incoming `Cost == 0`, displayed `Cost` is `28,800` and `Score/Min` is computed using `28,800`.
   - Existing cache/data pipeline behavior is unchanged (no new persistence path, schema, or data source required).
 - Non-functional requirements:
   - Keep implementation minimal and localized to SFIReporter UI/table rendering logic.
@@ -35,13 +35,13 @@
 - Summary of what was delivered:
   - Reordered table columns so `Score` appears before `Cost` in Services, Program Summary, and Action Items.
   - Added `Score/Min` column in all three tables.
-  - Added ratio formatting logic with explicit `∞` rendering for zero-cost rows.
+  - Added zero-cost fallback logic (`Cost` defaults to `28,800`) and ratio formatting using the fallback.
   - Added and passed targeted tests validating column order and ratio behavior.
 - Acceptance criteria status:
   - `Score` before `Cost` in visible column order: **PASS**
   - `Score/Min` column exists and is populated: **PASS**
   - `Score/Min = Score / Cost` when `Cost > 0`: **PASS**
-  - `Score/Min = ∞` when `Cost == 0`: **PASS**
+  - Incoming `Cost == 0` defaults to `28,800` and `Score/Min` uses fallback: **PASS**
   - No cache/data pipeline changes: **PASS**
 - Future work items:
   - Improve capability registry mapping for UI table files so impact analysis includes this surface.

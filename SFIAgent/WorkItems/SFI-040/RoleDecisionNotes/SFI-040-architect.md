@@ -12,7 +12,7 @@
 
 ## Risk Mitigation
 - Add explicit tests for tuple ordering in each table branch.
-- Add explicit tests for zero-cost infinity rendering.
+- Add explicit tests for zero-cost fallback (`28,800`) rendering and ratio behavior.
 
 ## Decision
 Approved for Developer implementation.

@@ -10,4 +10,4 @@ No specialized domain expert consultation required.
 
 ## Guidance for downstream reviewers
 - Validate numeric formatting consistency for `Score/Min` across all table branches.
-- Ensure zero-cost behavior is explicitly rendered as `∞` as requested.
+- Ensure zero-cost fallback behavior is explicitly rendered as `28,800` and used in ratio calculation.

@@ -39,6 +39,8 @@ from sfi_reporter.dialogs import (
 
 logger = logging.getLogger(__name__)
 
+ZERO_COST_FALLBACK_MINUTES = 28800
+
 
 def _format_score_per_min(score, cost) -> str:
     try:
@@ -47,7 +49,7 @@ def _format_score_per_min(score, cost) -> str:
         return "∞"
 
     if cost_value == 0:
-        return "∞"
+        cost_value = ZERO_COST_FALLBACK_MINUTES
 
     try:
         score_value = float(score)
@@ -55,6 +57,17 @@ def _format_score_per_min(score, cost) -> str:
         score_value = 0.0
 
     return f"{(score_value / cost_value):.2f}"
+
+
+def _normalize_cost_for_display(cost):
+    try:
+        cost_value = float(cost)
+    except (TypeError, ValueError):
+        return cost
+
+    if cost_value == 0:
+        return ZERO_COST_FALLBACK_MINUTES
+    return cost_value
 
 
 class SFIReporterApp:
@@ -341,7 +354,7 @@ class SFIReporterApp:
         # Update program summary table
         for program_name, stats in sorted(program_stats.items(), key=lambda x: x[1].get('count', 0), reverse=True):
             program_score = stats.get('score', 0)
-            program_cost = stats.get('cost')
+            program_cost = _normalize_cost_for_display(stats.get('cost'))
             iid = self.program_tree.insert("", tk.END, values=(
                 program_name, stats.get('count', 0), stats.get('sla', 0), stats.get('invalid_eta', 0), format_score(program_score), format_cost(program_cost), _format_score_per_min(program_score, program_cost),
             ))
@@ -428,7 +441,7 @@ class SFIReporterApp:
             def _insert_group(parent_iid, name, group, depth, full_path):
                 grp_stats = group.get('_stats', {'count': 0, 'sla': 0, 'invalid_eta': 0, 'cost': 0.0, 'score': 0})
                 group_score = grp_stats.get('score', 0)
-                group_cost = grp_stats.get('cost')
+                group_cost = _normalize_cost_for_display(grp_stats.get('cost'))
                 iid = self.services_tree.insert(parent_iid, tk.END, values=(
                     f"\U0001f464 {name}", grp_stats['count'], grp_stats['sla'], grp_stats['invalid_eta'], format_score(group_score), format_cost(group_cost), _format_score_per_min(group_score, group_cost),
                 ), open=(depth == 0))
@@ -444,7 +457,7 @@ class SFIReporterApp:
 
                 for svc_id, svc_name, s in sorted(group['services'], key=lambda x: x[2].get('count', 0), reverse=True):
                     service_score = s.get('score', 0)
-                    service_cost = s.get('cost')
+                    service_cost = _normalize_cost_for_display(s.get('cost'))
                     child_iid = self.services_tree.insert(iid, tk.END, values=(
                         svc_name, s.get('count', 0), s.get('sla', 0), s.get('invalid_eta', 0), format_score(service_score), format_cost(service_cost), _format_score_per_min(service_score, service_cost),
                     ))
@@ -465,7 +478,7 @@ class SFIReporterApp:
                     root_stats['score'] += gs.get('score', 0)
 
                 root_score = root_stats.get('score', 0)
-                root_cost = root_stats.get('cost')
+                root_cost = _normalize_cost_for_display(root_stats.get('cost'))
                 root_iid = self.services_tree.insert("", tk.END, values=(
                     f"\U0001f464 {root_name}", root_stats['count'], root_stats['sla'], root_stats['invalid_eta'], format_score(root_score), format_cost(root_cost), _format_score_per_min(root_score, root_cost),
                 ), open=True)
@@ -487,7 +500,7 @@ class SFIReporterApp:
                         _insert_group(root_iid, child_name, group['children'][child_name], 0, child_full_path)
                     for svc_id, svc_name, s in sorted(group['services'], key=lambda x: x[2].get('count', 0), reverse=True):
                         service_score = s.get('score', 0)
-                        service_cost = s.get('cost')
+                        service_cost = _normalize_cost_for_display(s.get('cost'))
                         child_iid = self.services_tree.insert(root_iid, tk.END, values=(
                             svc_name, s.get('count', 0), s.get('sla', 0), s.get('invalid_eta', 0), format_score(service_score), format_cost(service_cost), _format_score_per_min(service_score, service_cost),
                         ))
@@ -504,7 +517,7 @@ class SFIReporterApp:
                 svc_id = s.get('Id', '')
                 stats = service_stats.get(svc_id, {})
                 service_score = stats.get('score', 0)
-                service_cost = stats.get('cost')
+                service_cost = _normalize_cost_for_display(stats.get('cost'))
                 iid = self.services_tree.insert("", tk.END, values=(
                     s.get('Name', 'Unknown'), stats.get('count', 0), stats.get('sla', 0), stats.get('invalid_eta', 0), format_score(service_score), format_cost(service_cost), _format_score_per_min(service_score, service_cost),
                 ))
@@ -513,7 +526,7 @@ class SFIReporterApp:
         elif service_stats:
             for svc_id, stats in sorted(service_stats.items(), key=lambda x: x[1].get('count', 0), reverse=True):
                 service_score = stats.get('score', 0)
-                service_cost = stats.get('cost')
+                service_cost = _normalize_cost_for_display(stats.get('cost'))
                 iid = self.services_tree.insert("", tk.END, values=(
                     stats.get('name', svc_id), stats.get('count', 0), stats.get('sla', 0), stats.get('invalid_eta', 0), format_score(service_score), format_cost(service_cost), _format_score_per_min(service_score, service_cost),
                 ))
@@ -524,7 +537,7 @@ class SFIReporterApp:
 
         for kpi_id, stats in sorted(kpi_stats.items(), key=lambda x: x[1].get('count', 0), reverse=True):
             kpi_score = stats.get('score', 0)
-            kpi_cost = stats.get('cost')
+            kpi_cost = _normalize_cost_for_display(stats.get('cost'))
             iid = self.action_tree.insert("", tk.END, values=(
                 stats.get('name', kpi_id), stats.get('count', 0), stats.get('sla', 0), stats.get('invalid_eta', 0), format_score(kpi_score), format_cost(kpi_cost), _format_score_per_min(kpi_score, kpi_cost),
             ))

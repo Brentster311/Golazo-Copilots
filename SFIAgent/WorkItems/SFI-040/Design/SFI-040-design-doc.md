@@ -19,7 +19,7 @@ Users can see score and cost but cannot quickly evaluate impact efficiency witho
 1. In Services, Program Summary, and Action Items tables, display `Score` before `Cost`.
 2. Add a new column `Score/Min` after `Cost`.
 3. For each row, compute `Score/Min = score / cost`.
-4. If `cost == 0`, display `∞`.
+4. If incoming `cost == 0`, display cost as `28,800` and compute ratio using `28,800`.
 
 ## Non-Functional Requirements
 - No changes to data fetching, cache schema, or persistence behavior.
@@ -29,7 +29,7 @@ Users can see score and cost but cannot quickly evaluate impact efficiency witho
 ## Proposed Approach (High Level)
 1. Update table column declarations in `_build_ui` for `services_tree`, `program_tree`, and `action_tree`.
 2. Add heading and width for `score_per_min` column.
-3. Add a local helper formatter in `app.py` to render score-per-minute safely (`∞` for zero-cost, otherwise fixed precision).
+3. Add local helper logic in `app.py` to normalize zero cost to `28,800` and render score-per-minute with fixed precision.
 4. Update each row insert tuple in `_update_tables` and related grouped-owner rendering to include reordered score/cost and new ratio.
 5. Add/adjust tests to assert column order and ratio rendering behavior.
 
@@ -39,7 +39,7 @@ Users can see score and cost but cannot quickly evaluate impact efficiency witho
 
 ## Risks / Mitigations / Open Questions
 - Risk: inconsistent formatting across table branches. Mitigation: centralize formatting helper and reuse everywhere.
-- Risk: division edge cases. Mitigation: explicit zero-cost handling with `∞`.
+- Risk: division edge cases. Mitigation: explicit zero-cost fallback to `28,800` before ratio computation.
 - Open question: preferred decimal precision; defaulting to two decimals for readability.
 
 ## Dependencies

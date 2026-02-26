@@ -12,7 +12,7 @@
 
 ## Assumptions (explicit)
 - `Score/Min` uses row-level displayed `Score` and `Cost` values.
-- `Cost == 0` displays `∞` in the new column.
+- Incoming `Cost == 0` defaults to `28,800` for display and ratio computation.
 - No additional settings/feature flags are required for rollout.
 
 ## Acceptance Criteria Rationale
@@ -20,7 +20,7 @@
   1) Column order,
   2) New column visibility,
   3) Formula behavior for non-zero cost,
-  4) Infinity behavior for zero cost,
+  4) Zero-cost fallback behavior (`28,800`),
   5) No persistence/data-pipeline changes.
 
 ## Risks / Dependencies

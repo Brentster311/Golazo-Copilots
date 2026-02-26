@@ -440,7 +440,7 @@ class TestUpdateTablesSimple:
         values = app.services_tree.item(first_service, "values")
         assert values[6] == "0.80"
 
-    def test_score_per_min_renders_infinity_for_zero_cost(self, app):
+    def test_score_per_min_uses_default_cost_for_zero_cost(self, app):
         data = {
             "services": [{"Id": "svc1", "Name": "Service One"}],
             "service_stats": {
@@ -458,7 +458,8 @@ class TestUpdateTablesSimple:
         app._update_tables(data)
         first_service = app.services_tree.get_children()[0]
         values = app.services_tree.item(first_service, "values")
-        assert values[6] == "∞"
+        assert values[5] == "28,800"
+        assert values[6] == "0.00"
 
 
 # ---------------------------------------------------------------------------

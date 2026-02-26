@@ -30,12 +30,14 @@
    - Assert displayed ratio is `1.25`.
 
 ### AC4: Cost == 0 shows infinity symbol
-9. **Zero-cost ratio rendering**
-   - Arrange any row with `cost=0` and `score>0`.
-   - Assert displayed value is `∞`.
-10. **Zero/zero ratio rendering**
-   - Arrange row with `cost=0`, `score=0`.
-   - Assert displayed value is `∞` (same rule).
+9. **Zero-cost fallback rendering**
+   - Arrange any row with incoming `cost=0` and `score>0`.
+   - Assert displayed `Cost` is `28,800`.
+   - Assert displayed `Score/Min` uses `score / 28800`.
+10. **Zero/zero fallback rendering**
+   - Arrange row with incoming `cost=0`, `score=0`.
+   - Assert displayed `Cost` is `28,800`.
+   - Assert displayed `Score/Min` is `0.00`.
 
 ### AC5: No persistence/data pipeline changes
 11. **No cache schema changes**
@@ -46,4 +48,4 @@
 ## Failure Messages (examples)
 - "Expected Score column before Cost in services table"
 - "Expected Score/Min column heading to be 'Score/Min'"
-- "Expected zero-cost Score/Min display to be ∞"
+- "Expected zero-cost fallback cost to be 28,800"
