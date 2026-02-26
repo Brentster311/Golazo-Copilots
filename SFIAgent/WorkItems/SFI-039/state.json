@@ -2,10 +2,10 @@
   "schema_version": "1.0",
   "work_item_id": "SFI-039",
   "profile": "complete",
-  "current_phase": "completion",
-  "current_role": "retrospective",
+  "current_phase": "closure",
+  "current_role": "project-owner-assistant",
   "created_at": "2026-02-26T03:15:39.319133Z",
-  "updated_at": "2026-02-26T04:08:23.843053Z",
+  "updated_at": "2026-02-26T04:51:07.847659Z",
   "role_history": [
     {
       "role": "project-owner-assistant",
@@ -55,9 +55,14 @@
     {
       "role": "retrospective",
       "entered_at": "2026-02-26T04:08:23.843053Z",
+      "exited_at": "2026-02-26T04:51:07.847659Z"
+    },
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-02-26T04:51:07.847659Z",
       "exited_at": null
     }
   ],
   "deviations": [],
-  "closure_pending": false
+  "closure_pending": true
 }

@@ -33,6 +33,30 @@ credential = ChainedTokenCredential(
 
 ---
 
+### Authentication - No Keys or Certificates
+**DO NOT** use API keys, shared keys, connection strings with keys, or certificate-based authentication.
+
+**Instead**, use managed identity or token-based credential flows (e.g., `ManagedIdentityCredential`, `AzureCliCredential`).
+
+```python
+# ❌ Wrong - Key-based or certificate-based authentication
+client = BlobServiceClient(account_url, credential=account_key)
+credential = CertificateCredential(tenant_id, client_id, certificate_path)
+
+# ✅ Correct - Token-based identity authentication
+from azure.identity import ChainedTokenCredential, AzureCliCredential, ManagedIdentityCredential
+
+credential = ChainedTokenCredential(
+    AzureCliCredential(),
+    ManagedIdentityCredential()
+)
+client = BlobServiceClient(account_url, credential=credential)
+```
+
+**Reason:** Keys and certificates are secrets that can leak, rotate poorly, and create security risks. Identity-based authentication is more secure and easier to manage. Keys or certificates may **only** be used when (1) there is no alternative and (2) the Project Owner has explicitly approved the exception.
+
+---
+
 ## Python
 
 ### Kusto / Azure Data Explorer Queries
@@ -71,6 +95,23 @@ df = handler.GetDataFrameFromKustoQuery(
 ```
 
 **Reason:** The `accia-datacollection` package handles caching, retries, and error handling consistently across all ACCIA projects. Using `AlternateAADCredentialsList` with explicit credentials avoids the unpredictable behavior of default credential chains.
+
+---
+
+### Code Coverage with pytest-cov
+**DO NOT** run tests without measuring code coverage when working in Python.
+
+**Instead**, run `pytest-cov` during the TDD Green phase and ensure each module exceeds 70% coverage:
+
+```bash
+# ❌ Wrong - Running tests without coverage measurement
+pytest tests/
+
+# ✅ Correct - Running tests with coverage per module
+pytest --cov=your_package --cov-report=term-missing tests/
+```
+
+**Reason:** TDD is the standard workflow. During the Green phase in Python projects, `pytest-cov` must be used to verify that code coverage exceeds **70% per module**. If a module cannot meet the 70% threshold by adding tests, a strong exception case must be made to and approved by the Project Owner before proceeding.
 
 ---
 

@@ -1,3 +1,16 @@
+---
+inputs:
+  - WorkItems/{id}/{id}-User-Story.md
+  - WorkItems/{id}/Design/{id}-design-doc.md
+  - WorkItems/{id}/Design/{id}-Review-Comments.md
+  - WorkItems/{id}/Design/{id}-Test-Cases.md
+outputs:
+  - WorkItems/{id}/RoleDecisionNotes/{id}-developer.md
+tools:
+  - golazo_status
+  - golazo_transition
+  - golazo_capabilities
+---
 <!-- Last Updated in Golazo Copilot Version: 2.107.0 -->
 # Role: Developer
 
@@ -12,11 +25,11 @@ Implement the approved design and User Story **without redefining scope**, and p
 2. Verify DoR is fully satisfied (see `.github/copilot-instructions.md`). If DoR is incomplete, STOP and help create missing artifacts.
 
 ## Entry conditions
-- DoR complete:
-  - User Story exists
-  - Design Doc exists
-  - Review Comments exist (from Quality Assurance and Architect)
-  - Test Cases exist
+- All definition-of-ready artifacts exist:
+  - `WorkItems/{id}/{id}-User-Story.md`
+  - `WorkItems/{id}/Design/{id}-design-doc.md`
+  - `WorkItems/{id}/Design/{id}-Review-Comments.md`
+  - `WorkItems/{id}/Design/{id}-Test-Cases.md`
 
 ## Responsibilities
 - **Write test code FIRST** based on Test Cases document (TDD red phase)

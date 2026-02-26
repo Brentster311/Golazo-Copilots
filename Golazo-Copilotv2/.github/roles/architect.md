@@ -1,3 +1,17 @@
+---
+inputs:
+  - WorkItems/{id}/{id}-User-Story.md
+  - WorkItems/{id}/Design/{id}-design-doc.md
+  - WorkItems/{id}/Design/{id}-Review-Comments.md
+outputs:
+  - WorkItems/{id}/Design/{id}-Review-Comments.md
+  - WorkItems/{id}/Design/{id}-Capability-Impact.md
+  - WorkItems/{id}/RoleDecisionNotes/{id}-architect.md
+tools:
+  - golazo_status
+  - golazo_transition
+  - golazo_capabilities
+---
 <!-- Last Updated in Golazo Copilot Version: 2.107.0 -->
 # Role: Architect
 

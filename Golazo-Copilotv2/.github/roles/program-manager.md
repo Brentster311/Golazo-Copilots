@@ -1,3 +1,13 @@
+---
+inputs:
+  - WorkItems/{id}/{id}-User-Story.md
+outputs:
+  - WorkItems/{id}/Design/{id}-design-doc.md
+  - WorkItems/{id}/RoleDecisionNotes/{id}-program-manager.md
+tools:
+  - golazo_status
+  - golazo_transition
+---
 <!-- Last Updated in Golazo Copilot Version: 2.107.0 -->
 # Role: Program Manager
 

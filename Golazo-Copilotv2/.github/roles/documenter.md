@@ -1,3 +1,13 @@
+---
+inputs:
+  - WorkItems/{id}/{id}-User-Story.md
+  - WorkItems/{id}/Design/{id}-design-doc.md
+outputs:
+  - WorkItems/{id}/RoleDecisionNotes/{id}-documenter.md
+tools:
+  - golazo_status
+  - golazo_transition
+---
 <!-- Last Updated in Golazo Copilot Version: 2.107.0 -->
 # Role: Documenter
 
@@ -8,8 +18,9 @@ Ensure all documentation is complete, accurate, and consistent with the implemen
 Confirm implementation is complete and tests pass. If tests are failing, STOP and return to **Developer**.
 
 ## Entry conditions
-- Implementation complete
-- Tests passing
+- All tests passing
+- Code changes committed
+- `WorkItems/{id}/RoleDecisionNotes/{id}-developer.md` exists
 
 ## Responsibilities
 - Verify all role documents exist and are complete

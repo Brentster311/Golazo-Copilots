@@ -1,3 +1,13 @@
+---
+inputs:
+  - WorkItems/{id}/RoleDecisionNotes/{id}-developer.md
+outputs:
+  - WorkItems/{id}/RoleDecisionNotes/{id}-refactor.md
+tools:
+  - golazo_status
+  - golazo_transition
+  - golazo_capabilities
+---
 <!-- Last Updated in Golazo Copilot Version: 2.107.0 -->
 # Role: Refactor Expert
 
@@ -33,6 +43,11 @@ Improve code quality, readability, and maintainability **without changing behavi
 - Prefer many small, focused modules over few large ones
 - When splitting a file, ensure imports and tests are updated accordingly
 - Common extraction patterns: separate data models from logic, extract formatting/display code, isolate I/O from pure computation
+
+### Linter Check
+- If the project has a linter configured (e.g., `ruff`, `flake8`, `pylint` in `pyproject.toml`; `.eslintrc` for JS/TS), run it on changed files
+- Fix any lint issues that don't change behavior (style, unused imports, naming conventions, complexity warnings)
+- Document linter results (tool used, issues found/fixed) in the refactor decision notes
 
 ### Capability Registry (if capabilities.yaml exists)
 - If a `capabilities.yaml` exists in the project root, run `golazo_capabilities(action="impact", files=[...])` on refactored files

@@ -1,6 +1,6 @@
 # SFI-037 — Add KPI Cost Column to SFI Reporter Table Views
 
-**Status**: IN PROGRESS
+**Status**: IMPLEMENTED
 
 ## User Story
 
@@ -41,3 +41,12 @@
 - **Rollout / rollback notes:**
   - Feature is additive — new column appears in all views
   - If cost API is unavailable, column shows "—" for all rows (graceful degradation)
+
+## Closure
+
+- Summary of delivery: Added KPI cost retrieval/aggregation and surfaced `Cost (min)` across Services, Programs, Action Items, and owner-grouped manager views with graceful fallback behavior.
+- Acceptance criteria validation: PASS (all functional and non-functional criteria met in implementation and tests).
+- Future work items:
+  - Consider extracting large `app.py` table-update logic into smaller methods.
+  - Consider marking live tests to allow faster default test runs.
+- Final status confirmation: **IMPLEMENTED**

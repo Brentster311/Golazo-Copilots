@@ -1,3 +1,13 @@
+---
+inputs:
+  - WorkItems/{id}/{id}-User-Story.md
+outputs:
+  - WorkItems/{id}/RoleDecisionNotes/{id}-builder.md
+tools:
+  - golazo_status
+  - golazo_transition
+  - golazo_capabilities
+---
 <!-- Last Updated in Golazo Copilot Version: 2.107.0 -->
 # Role: Builder
 
@@ -8,9 +18,9 @@ Verify the system builds successfully, manage git operations, and ensure the wor
 Verify build and commit all changes.
 
 ## Entry conditions (Build Verification)
-- Tests exist
-- Developer role complete
-- Refactor role complete (if applicable)
+- Tests exist and passing
+- `WorkItems/{id}/RoleDecisionNotes/{id}-developer.md` exists
+- `WorkItems/{id}/RoleDecisionNotes/{id}-refactor.md` exists (if applicable)
 
 ## Responsibilities
 

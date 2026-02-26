@@ -1,6 +1,6 @@
 # SFI-038: Add KPI Score Column to All Tables
 
-**Status**: IN PROGRESS
+**Status**: IMPLEMENTED
 
 **User Story**
 - **Title**: Add KPI Score column using kpi.csv lookup
@@ -22,3 +22,11 @@
 - **Non-functional requirements**: CSV load must be < 50ms; no new external dependencies (use stdlib `csv` module)
 - **Telemetry / metrics expected**: None
 - **Rollout / rollback notes**: Feature is additive — removing the Score column is a clean revert
+
+## Closure
+
+- Summary of delivery: Added KPI score lookup + aggregation and exposed `Score` column across Services, Program Summary, and Action Items with missing-score fallback to 0.
+- Acceptance criteria validation: PASS (all listed criteria satisfied via implementation and tests).
+- Future work items:
+  - Consider a small diagnostic view for missing KPI score mappings.
+- Final status confirmation: **IMPLEMENTED**
