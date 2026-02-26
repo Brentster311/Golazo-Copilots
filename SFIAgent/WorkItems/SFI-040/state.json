@@ -2,10 +2,10 @@
   "schema_version": "1.0",
   "work_item_id": "SFI-040",
   "profile": "express",
-  "current_phase": "completion",
-  "current_role": "builder",
+  "current_phase": "definition",
+  "current_role": "project-owner-assistant",
   "created_at": "2026-02-26T04:30:49.050944Z",
-  "updated_at": "2026-02-26T04:56:56.580098Z",
+  "updated_at": "2026-02-26T04:57:30.643784Z",
   "role_history": [
     {
       "role": "project-owner-assistant",
@@ -50,6 +50,16 @@
     {
       "role": "builder",
       "entered_at": "2026-02-26T04:56:56.580098Z",
+      "exited_at": "2026-02-26T04:57:21.781786Z"
+    },
+    {
+      "role": "retrospective",
+      "entered_at": "2026-02-26T04:57:21.781786Z",
+      "exited_at": "2026-02-26T04:57:30.643784Z"
+    },
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-02-26T04:57:30.643784Z",
       "exited_at": null
     }
   ],

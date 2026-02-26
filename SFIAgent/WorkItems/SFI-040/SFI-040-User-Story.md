@@ -1,4 +1,4 @@
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 **User Story**
 - Title: Reorder Score and Cost columns and add Score/Min ratio in SFIReporter grid
@@ -29,3 +29,20 @@
 - Rollout / rollback notes:
   - Rollout via normal SFIReporter release process.
   - Rollback by reverting table column order and removing `Score/Min` presentation logic.
+
+## Closure
+
+- Summary of what was delivered:
+  - Reordered table columns so `Score` appears before `Cost` in Services, Program Summary, and Action Items.
+  - Added `Score/Min` column in all three tables.
+  - Added ratio formatting logic with explicit `∞` rendering for zero-cost rows.
+  - Added and passed targeted tests validating column order and ratio behavior.
+- Acceptance criteria status:
+  - `Score` before `Cost` in visible column order: **PASS**
+  - `Score/Min` column exists and is populated: **PASS**
+  - `Score/Min = Score / Cost` when `Cost > 0`: **PASS**
+  - `Score/Min = ∞` when `Cost == 0`: **PASS**
+  - No cache/data pipeline changes: **PASS**
+- Future work items:
+  - Improve capability registry mapping for UI table files so impact analysis includes this surface.
+- Final status confirmation: **IMPLEMENTED**
