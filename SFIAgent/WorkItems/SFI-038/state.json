@@ -3,9 +3,9 @@
   "work_item_id": "SFI-038",
   "profile": "complete",
   "current_phase": "completion",
-  "current_role": "builder",
+  "current_role": "retrospective",
   "created_at": "2026-02-26T02:53:06.830542Z",
-  "updated_at": "2026-02-26T03:04:09.406982Z",
+  "updated_at": "2026-02-26T03:04:34.918610Z",
   "role_history": [
     {
       "role": "project-owner-assistant",
@@ -50,6 +50,11 @@
     {
       "role": "builder",
       "entered_at": "2026-02-26T03:04:09.406982Z",
+      "exited_at": "2026-02-26T03:04:34.918610Z"
+    },
+    {
+      "role": "retrospective",
+      "entered_at": "2026-02-26T03:04:34.918610Z",
       "exited_at": null
     }
   ],
