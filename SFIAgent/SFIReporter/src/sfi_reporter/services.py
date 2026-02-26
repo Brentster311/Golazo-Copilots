@@ -4,6 +4,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
+from sfi_reporter.kpi_lookup import load_kpi_scores
 from sfi_reporter.cache import (
     clear_cache,
     get_cache_age_minutes,
@@ -474,6 +475,9 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
             if kpi_id:
                 kpi_names[kpi_id] = kpi.get('KpiName', 'Unknown')
 
+        # Load KPI score lookup from bundled CSV
+        kpi_scores_lookup = load_kpi_scores()
+
         # Fetch KPI cost data (non-blocking — returns {} on failure)
         if on_status:
             on_status("Fetching KPI cost data...")
@@ -507,11 +511,19 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
 
             item_cost = kpi_cost_map.get(kpi_id, 0.0) if kpi_cost_map else 0.0
 
+            # Look up KPI score from CSV (by name first, then by ID)
+            kpi_name = kpi_names.get(kpi_id, kpi_id)
+            item_kpi_score = kpi_scores_lookup.get(kpi_name, 0)
+            if item_kpi_score == 0:
+                item_kpi_score = kpi_scores_lookup.get(kpi_id, 0)
+            row['_kpi_name'] = kpi_name
+
             # Update service stats
             if svc_id not in service_stats:
-                service_stats[svc_id] = {'name': svc_name, 'count': 0, 'sla': 0, 'invalid_eta': 0, 'cost': 0.0}
+                service_stats[svc_id] = {'name': svc_name, 'count': 0, 'sla': 0, 'invalid_eta': 0, 'cost': 0.0, 'score': 0}
             service_stats[svc_id]['count'] += 1
             service_stats[svc_id]['cost'] += item_cost
+            service_stats[svc_id]['score'] = service_stats[svc_id].get('score', 0) + item_kpi_score
             if is_out_of_sla:
                 service_stats[svc_id]['sla'] += 1
             if is_invalid:
@@ -519,9 +531,10 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
 
             # Update KPI stats
             if kpi_id not in kpi_stats:
-                kpi_stats[kpi_id] = {'name': kpi_names.get(kpi_id, kpi_id), 'count': 0, 'sla': 0, 'invalid_eta': 0, 'cost': 0.0}
+                kpi_stats[kpi_id] = {'name': kpi_names.get(kpi_id, kpi_id), 'count': 0, 'sla': 0, 'invalid_eta': 0, 'cost': 0.0, 'score': 0}
             kpi_stats[kpi_id]['count'] += 1
             kpi_stats[kpi_id]['cost'] += item_cost
+            kpi_stats[kpi_id]['score'] = kpi_stats[kpi_id].get('score', 0) + item_kpi_score
             if is_out_of_sla:
                 kpi_stats[kpi_id]['sla'] += 1
             if is_invalid:
@@ -534,18 +547,20 @@ def do_refresh(user_alias: str, on_status: Optional[callable] = None) -> Optiona
                 if not program_name:
                     program_name = 'Other Program'
                 if program_name not in program_stats:
-                    program_stats[program_name] = {'count': 0, 'sla': 0, 'invalid_eta': 0, 'cost': 0.0, 'id': pid}
+                    program_stats[program_name] = {'count': 0, 'sla': 0, 'invalid_eta': 0, 'cost': 0.0, 'id': pid, 'score': 0}
                 program_stats[program_name]['count'] += 1
                 program_stats[program_name]['cost'] += item_cost
+                program_stats[program_name]['score'] = program_stats[program_name].get('score', 0) + item_kpi_score
                 if is_out_of_sla:
                     program_stats[program_name]['sla'] += 1
                 if is_invalid:
                     program_stats[program_name]['invalid_eta'] += 1
             else:
                 if 'Unassigned' not in program_stats:
-                    program_stats['Unassigned'] = {'count': 0, 'sla': 0, 'invalid_eta': 0, 'cost': 0.0, 'id': 'unassigned'}
+                    program_stats['Unassigned'] = {'count': 0, 'sla': 0, 'invalid_eta': 0, 'cost': 0.0, 'id': 'unassigned', 'score': 0}
                 program_stats['Unassigned']['count'] += 1
                 program_stats['Unassigned']['cost'] += item_cost
+                program_stats['Unassigned']['score'] = program_stats['Unassigned'].get('score', 0) + item_kpi_score
                 if is_out_of_sla:
                     program_stats['Unassigned']['sla'] += 1
                 if is_invalid:

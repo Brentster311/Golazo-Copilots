@@ -1,0 +1,178 @@
+﻿KPI,KPIID,KPIScore
+[SFI-PS3.1] Security Code Bugs,a0f0ce42-3063-5d3b-3b47-1ff3143abdc9,93
+[SFI-ES5.2] 1ES Open Source Vulnerabilities (Operational),928b7015-db58-41a3-94ea-ab73c7bb9f4d,93
+[SFI-ES3.1.1] 1ES Live Secret Detection,f75ced92-856c-43c0-b56f-6fbdcfba2a02,93
+[SFI-AR1.2.7] Vulnerability Management,527fb616-07aa-8198-6419-50d04ef1c2f3,93
+[SFI-AR1.1] Accelerate Response and Remediation,1bfea7aa-d3b6-472f-9d8f-8fb1faf4fd32,90
+[SFI-TI2.3.2] Remove Plaintext Secrets from Production Azure Resources,9917f5dd-46a6-4e51-9d9a-b41361de8d4e,90
+[SFI-TI4.2.27.10] Protect APPKI identities of baremetal machines in KeyGuard,0efbe74a-9f9e-40fe-9214-feb03bd6eb32,90
+"[SFI-PS1.1] Security Repair Items, Feature Gaps & Asks - slr-pir - Critical",c55814ac-f52b-4259-9ea9-656bde21ac5b_slr-pir_Critical,83
+[SFI-SM2.3.1] Standard Service Layer Audit Logging,87fdda4b-d1ad-4b37-bfa2-4b4872c7e97b,83
+[SFI-AR1.2.2] Microsoft services migrate to 1P Image Gallery,f71ccfb4-c87b-404f-a067-4d3d5e21028c,83
+[Compl-CA2.3] Support TLS 1.3 [For Azure FedRAMP Certification],82988c80-31b5-4f7a-9e86-243032c6cb47,83
+[SFI-TI4.1.1] Identity Isolation,73996a69-a374-5f04-1b03-a4037b589e48,83
+[SFI-ID2.1.1][SFI-ID2.1.2] MISE Compliance,f05752b5-8212-459a-a0ed-41f52ee47664,83
+[SFI-PS2.1] Continuous SDL,2d6597da-8e08-4495-a4e1-954f7697a4a8,83
+[SFI-TI4.10] Code Integrity Metrics,14ca01a7-c74a-c6cb-e72d-45411e651526,83
+[SFI-SM2.1.1] Missing/Misconfigured Azure Security Pack,8d0a768d-a196-f8dd-6574-ee1707419ed8,83
+[SFI-TI5.1.1] Always JIT,66408858-bc7a-e959-4abf-77c18136e66f,83
+[Compl-CA2.4] OS Family - Get to Modern OS,3c8af5e7-13db-48ed-bd1f-0d5409788809,83
+Certificates not Auto-rotated,32217c89-204f-53dc-df3d-a5d5cae820e6,83
+[NS 2.5.4] Network DDoS Protection,a3357273-f260-407b-93a0-b5eed8666ff5,83
+"[SFI-PS1.1] Security Repair Items, Feature Gaps & Asks",c55814ac-f52b-4259-9ea9-656bde21ac5b,83
+Secrets Past SLA,e371414a-8773-526e-13a4-6141d3015b57,83
+Azure Watson Not Enabled,49a25abf-fe19-1f6c-20ed-5a0fcbdf6312,83
+User Access Review,0471bf82-93cc-b02b-1eb7-2ab5226a3929,83
+Network Isolation: Internet Exposed Endpoints,aa9a7750-1459-4f7d-827c-d4e82eab765e,83
+[SFI-NS2.4.1] Hosted On Behalf Of KPI,00f261ee-68b4-47f8-9f8b-c55d648ea8f0,83
+TLS SDL Policy Compliance,54dfb7d5-0aad-4d6e-814f-a33663c978f4,83
+[SFI-ID2.3.10] Remove SPLESS Auth,f923feb6-aa55-4c22-8e0b-21d8256342d8,80
+[SFI-ID1.6.1]Block Human Access to dSMS Secrets,b54f089e-af8a-457b-9cfb-1a44f03519b0,80
+[SFI-ES5.4.1] CRA Compliance: Binaries referenced in Software Bill of Materials (SBOM),8d4891da-3165-4da1-b872-4ba4011faf14,80
+[SFI-ID2.3.19] Eliminate MSAv1 auth flows and migrate to Entra V2,fb81834a-1b12-4feb-9fb6-0b11dcea2f95,80
+[SFI-TI4.2.15][TCB] Audit TCB teams to distrust remote storage platforms,04cc6054-30d7-4160-9b26-75518a210959,80
+[SFI-ID2.3.2] Services remove MS-Graph App Asserted user tokens,21b7e05f-88ac-403c-bb5b-ee1a86510a34,80
+[SFI-ES4.2.3] Network Isolation - TCB trusted endpoints,07f35bce-510f-4ff5-acba-3b1f91c733d9,80
+[SFI-ID2.3.20] Move directory data access to standard authentication protocols via Microsoft Graph,b9832d88-bd94-4b44-9df2-4beab849046e,80
+[SFI-TI3.2.1] Subject Name and Certificate must be isolated to a Cloud and a Tenant,ef37c8f7-9c3f-4a09-8112-4a1fd7698a6b,80
+[SFI-ID2.3.21] Secure S2S calls with CDT integration for accessing Entra ID APIs,39dd1915-7a10-4282-8282-69f9bb509a3f,80
+[SFI-TI4.1.9] Removal of High-Risk FIC Issuer Configurations on MSIs,4255ff41-5174-4e30-807d-ddbf77238de8,80
+[SFI-ID2.3.3] Eliminate cross tenant access risk by disallowing PASSTHROUGH AUTH of users without presence in the tenant,0cbc0014-97e9-4457-9ff2-c583ae2fc5d5,80
+[SFI-TI4.5.2] Move Geneva Actions operations to ASC,3b148129-06a0-4604-b9c9-562913a8fa53,80
+[SFI-ID2.3.4] Eliminate app-only access when user context is available,4a82bf91-c78c-4467-8463-2113dae0c191,80
+[SFI-ES3.9.1] Adopt Production Readiness Check,82de8789-f277-4eca-93ac-6aa6446080e9,80
+[SFI-ID2.3.8] Eliminate dependency on BEC WS APIs and migrate to MS Graph,4c3d85cd-279c-4d84-a3b2-42c506efd30c,80
+[SFI-ES1.6.3] Area Path Hygiene: Code owning area paths should be linked to Service,013c1540-844a-456d-baa7-b083d41d5f3e,80
+[SFI-ID4.1.1] Entra ID Apps - Safe Secrets Standard,4fcd9a91-1e64-41f9-b433-ef12bb4974c4,80
+[SFI-TI2.3.3] Disable Anonymous Access to Azure Blob Storage,45857a1f-8fb3-43d2-902f-c69dc25c3ac7,80
+[SFI-ID4.1.2] Service Principal - Safe Secrets Standard,fff8c506-e7d2-45db-b939-470d9006a66a,80
+[SFI-TI3.2.4] App and credential must be homed in the same clouds for dSTS issuance of tokens,08f4ee77-3173-4049-941f-052c7cc57e3b,80
+[SFI-ID4.1.3] MSA Apps - Safe Secrets Standard,4b0d288b-6ac8-4db2-9ad5-d3cbe263cd59,80
+[SFI-TI4.1.7] Revoke AME CA Issued Certificates for Prod Apps Found on Corp Machines,84bc23fc-87f2-4ae5-82ad-206241380cf8,80
+[SFI-ID4.1.4] dSTS Apps - Safe Secrets Standard,7905afa3-a527-467f-b4a7-b4115c5131b5,80
+[SFI-TI4.2.11] AADGraph and MSGraph Deprivileging,d81bc4ae-f532-4e44-9b26-99323aaec0e5,80
+[SFI-ID4.2.1] Storage Accounts - Safe Secrets Standard,c6876c6f-2376-49a6-bcbd-f15af106d1af,80
+[SFI-TI4.2.27.9] Protect APPKI identities of EAP VMs in KeyGuard,b020adc8-2d7f-48ba-aace-51238f59c068,80
+[SFI-ID4.2.2] SQL DB - Safe Secrets Standard,aec047c5-51e2-4e2a-92fd-b9926fa8593b,80
+[SFI-TI5.2.4] Geneva Actions Eliminate Unscoped PSV,1707fffe-dab9-4257-a318-030a4664d78d,80
+[SFI-ID4.2.3] Cosmos DB - Safe Secrets Standard,fef0b920-0076-43c9-a793-06a1187c0353,80
+[SFI-ID2.3.16] Block creation/update of apps vulnerable to WhiskeySour attack,65079fb0-6817-484c-adce-227431555243,80
+[SFI-ID4.2.4] SQL Managed Instance - Safe Secrets Standard,e72b264d-83d8-471d-8847-fe30e498a8e4,80
+[SFI-ES4.1.1] ES Standards: Pipeline Templates,41b084c4-5e50-42d9-854f-086d670244b9,80
+[SFI-ID4.2.5] Migrate to using Managed Identities to access Key Vaults during CloudTest execution (ONLY services that use CloudTest),73d8e586-3527-4a53-b9a0-a3a817e61650,80
+[SFI-ES4.2.4] Network Isolation for CFS endpoints,0f27291c-bc52-49fa-a978-7b4a9c362107,80
+[SFI-ID4.3.1] Cognitive Services - Safe Secrets Standard,cb71c09d-0f7b-4056-8988-234502090876,80
+[SFI-SM2.5.3] Adopt Credactor to Prevent Secret Leaks in Geneva Logs,57066be3-b43f-4e4c-bed4-aa5d968ab9c4,80
+[SFI-ID4.3.2] Event Hub - Safe Secrets Standard,494b97d8-69cc-479f-9763-a7a77fcdd19a,80
+[SFI-TI2.3.3.1] Opt-In Durability Enforcement for Anonymous Access to Azure Blob Storage,0dce4e10-23cb-4222-94e0-a488f592e5ba,80
+[SFI-ES2.8] Migrate all internal Azure DevOps OAuth apps to Entra OAuth,db48a5c3-c804-47f6-82b8-96cfb1dc9f5c,80
+[SFI-TI3.1.3] Block External Authentication Governance,da6b8186-567d-4c03-aeab-4d2d9d2d0d14,80
+[PILOT][SFI-vTI5.1.3] Remove standing human access to Key Vaults,d46c8070-a79d-4301-907b-ab3ba967b95c,80
+"[SFI-TI3.2.2] Entra ID App registrations, credentials and compute should be homed in the same",dc1c236d-e85a-413e-bdea-7fc89b096f9f,80
+"[SFI-NS1.13.1]	Migrate out of and decom shared EAP Vnets",a40f35fd-dea6-4815-bef4-37ce303e9001,80
+[SFI-TI3.3.9] Adopt Least Privileged Access for Foundational Applications,6ee31f39-b857-445a-a96e-e61853ff204f,80
+[SFI-NS1.13.3] Only Peered VNET for communication between 1P VNETs.,092725ba-68e5-451b-8aa3-7f3daa893968,80
+[SFI-TI4.1.5] Geneva Actions Operations have RBAC enforced,18fe67fb-ae76-472b-8156-eaf59d245fc5,80
+[SFI-NS1.7.1] Eliminate Internet/Corpnet access from AP/PF Environments,2ad26e83-dead-42d3-8c70-59d12b1348b4,80
+[SFI-TI4.1.8] ECS Datacenter Identity Compliance,12b14ef5-1e55-4195-88e3-7dd12990b57a,80
+[SFI-NS1.7.2] Tags only: Isolation syntax and Star Rules deprecation,9b904a23-5643-4a41-8e2e-d183e6b5e76a,80
+[SFI-ES2.4] Reduce unused and overly permissive access to Azure DevOps,b4aaf998-80a1-4bfe-86e4-6e767b434a91,80
+[SFI-NS2.1] IP allocations with Service Tags,04988624-19fe-4a58-974a-aa47f6f6c1a4,80
+[SFI-TI4.2.15.1][TCB] Fully Distrust Remote Storage Platforms.,213f526f-6a60-4bcb-84dd-2a9b4414365e,80
+[SFI-NS2.5.1] Overexposed Endpoints,627d394a-a7ce-4eb8-92e8-39edce55810f,80
+[SFI-ID2.1.9] AuthN Validation,40dc5095-2aea-40d0-8e0d-4676a140c1bb,80
+[SFI-NS2.3.1] Secure Entra 1p Apps,d9cf0bdd-527b-4267-bd42-198314779dba,80
+[SFI-TI4.4.2] Eliminate 100% of Productivity tenant-homed multitenant Entra Applications with Service Principals in 3rd party tenant(s),af48c9cb-2ab3-420d-9184-6dabf014745e,80
+[SFI-ES3.6.1] Eliminate access to ESRP Codesigning from Corp Tenant Identities,a3f38806-7bdb-425b-94db-9786b767f951,80
+[SFI-ID2.3.1] Services remove Trusted for Delegation (TFD) flow,9308040d-bafc-4c4d-9529-96b07f6f21b0,80
+[SFI-NS2.5.2] IaaS Network Isolation,1827c1aa-2f38-4122-873b-de9a4465999d,80
+[SFI-TI6.3.2] Endpoint Least Privilege Access for CORP contingent staff,465899cb-c712-4262-9c55-ad041555cd9f,80
+[SFI-NS2.6.1] Mark all subnets to disable default outbound connectivity,5c85fca2-d174-492c-80df-4cdaa5f74b4d,80
+[SFI-ID2.3.15] Enable S2S Authentication in ECS,f3ed69ec-a8f4-4311-936b-455e83a09229,80
+[SFI-NS2.6.3] Network Identifier,4263df32-8001-409b-9ba8-0a31cf405718,80
+[SFI-ID2.3.18] Access Bing API using EntraID,bb64415d-e404-42ab-a824-8b9f2e6ecc7a,80
+[SFI-ES3.8.1] Azure RP with HIS must onboard to Secrets Analytics,b50e302f-5de6-4dd8-b94c-d5b1a7ecf4a9,80
+[SFI-ID4.3.3] Service Bus - Safe Secrets Standard,7d5cfd70-9211-4d31-8c72-b5f4723eaa25,80
+[SFI-ID5.3.1] Implement CAE v2.0.0+ for S2S tokens,920cf6a0-25bc-4ea3-901f-42edeaad79e5,80
+[SFI-NS2.2.1] Secure PaaS Resources,e3123e2a-615c-42ea-96a8-27e9732fdecd,80
+[SFI-ID2.3.14] Encrypt Tokens with automatic key rotation,51423358-fbc6-4222-a36e-165f6273a769,60
+[SFI-ID4.5.1] Eliminate Certs from Unapproved Cert Authority,3d1ad633-bbb6-41ca-93a6-194233fe9f6d,60
+[SFI-ES3.3.1] Exposed Secrets,583d65f8-d054-4a08-936a-ef4ff8db470c,60
+"[SFI-PS1.1] Security Repair Items, Feature Gaps & Asks - slr-pir - Important",c55814ac-f52b-4259-9ea9-656bde21ac5b_slr-pir_Important,53
+[SFI-ES4.3.1] Adopt Governed Release Pipeline Templates,decc729f-382c-4c97-9f15-ef126a941830,50
+[SFI-TI3.8.1] Securing 1P app accessing Substrate Data,59125736-fe92-4c9e-8b19-434360343eef,50
+[SFI-TI3.3.2] Remove over-privileged assignments on critical roles (1.05),fd48236a-d8b1-477e-95d8-f102d370526d,50
+[SFI-SM2.1.2] Turn on Microsoft Defender for Server Plan (Defender for Cloud) (1.05),3a950594-c30b-4839-9dcc-a8bcb4165045,50
+[SFI-ES2.6] Secure Azure DevOps 1P organizations by enforcing safe configurations,d5315628-dfee-4184-8bf9-dbd074e17007,50
+[QEI-CM2.1] [SFI-ES4.3.2] Safe Deployment Practices,c43f87d9-2ee3-46a1-ac25-c910836d092f,50
+[SFI-SM2.1.5] AzSecPack Auto Config,56ba9f74-99c1-43bb-931c-cb8d78775e5a,50
+[SFI-NS2.5.3] Application DDOS Standard,bcd47415-439c-4532-b9ac-d98a6c98cb81,50
+[SFI-ID 6.1.1] USGov/Public Entra ID key separation Stage 1: prepare apps to remove explicit trust between USGov and Public EntraID keys,768b7257-3e3e-403a-8470-b61b13bc1fad,50
+[SFI-ID2.4.1] MSI Resource Provider Security Readiness,6937796a-ae08-49c6-a261-abea67780782,50
+[SFI-SM2.3.2] Security telemetry instrumentation R9,7bce143a-fedf-4058-8324-999da5b421e2,50
+[SFI-TI4.1.4] Package and Binary Signing for Geneva Actions Extensions,4c879810-d9a0-4d57-8d36-5484603864e2,50
+[SFI-AR1.2.5] Enable VMSS Auto Extension Upgrade,ed3bd145-a922-494e-8182-1ab95b44d889,50
+[SFI-ID6.2.1] dSTS Dialtone Key Split,71d9fe6d-2981-4341-9619-2bb49a20b576,50
+[SFI-TI1.3.1] Evacuating and Deprecating the Partners Extranet Environment,2fac29a0-9c10-4a7d-80b8-6d2adb3a4afe,50
+[SFI-TI5.2.2] Interactive Touch Reduction - Least Privileged Access,46f4b47d-a611-47e0-a6c7-cccff8027ae9,50
+[SFI-TI1.4.1] RDFE Compute Exposure,780e4fad-2e73-4fa7-93e5-69f1a70831e7,50
+[SFI-ES4.6.1] Ensure all build machines have clean state [CloudBuild],86609bfe-f249-4872-87a8-83e290636a7f,50
+[SFI-TI1.4.2] RDFE Classic Storage Account Migration,e47eb400-1225-4302-8cf6-025a464ecb7f,50
+[SFI-AR1.2.3] AKS Node Auto-Upgrade Compliance,76437c64-760a-40b5-ab21-0d862ffaa185,50
+[SFI-TI1.4.3] RDFE Classic Networking Retirement,b830a6a4-405d-4a32-a53d-ee82bcade95d,50
+[SFI-TI3.3.3] Unused Permissions in Service role,21bc28be-02b1-4e65-86b8-09b40b79ac2a,50
+[SFI-TI1.4.4] RDFE App Service Environment v1/v2 Retirement,2239a178-f6dd-494b-9445-2c3093d956a0,50
+[SFI-TI3.4] Entra ID App Registrations must map to a valid service within Service Tree,266046b8-5e35-41f1-92f4-35e34bbe0382,50
+[SFI-TI1.4.5] RDFE API Management stv1 Retirement,13923581-8727-4f93-b006-bd19853cf9f8,50
+[SFI-ES5.3.1]Migrate non-dialtone scenarios off reddog,d8dab3c3-7bd3-4ef1-bca9-471009bcb22a,50
+[SFI-AR1.2.6] Standardize Single VMs on VMSS Flex with Auto OS Upgrades enabled,1b069ce3-7225-4008-89fc-a717d4e3e828,50
+[SFI-ID4.7.1] Rotation of High Value Secrets,59d29b74-d117-4bfe-a9eb-2b37fbcf5654,50
+[SFI-ID2.1.7] Migrate to MISE/SNI,cdcfadfa-e467-48f0-bfbd-916c63b73e55,50
+[SFI-ID6.1.2] USGov/Public Entra ID key separation Stage 1: Remove implicit cross cloud authentication flow for clients unaware of USGov cloud presence.,f1f33184-5a4e-4564-8442-ffc6d45f14da,50
+[SFI-NS1.13.2] Express EAP backend connectivity requirements,26db6660-dc1b-46de-8323-d450a21aff11,50
+[SFI-TI4.2.13] Migrate CSES to VMSS or AKS or SFMC,e74a1251-7ccc-4832-aa11-8737eb8ef258,50
+[SFI-ID2.3.17] Remove risky “all-user” access lacking user context,1f80d1c4-6c13-4783-a619-bad5e105d334,50
+[SFI-NS2.1.1] E&D Network Service Tags,3dc54071-9121-45bf-b22a-034b368ad981,50
+[SFI-ES4.2.1] Build Network Isolation and Integrity,e561faed-4bcb-44a7-ad51-fe52ae4bacca,50
+[SFI-TI2.3.4] Fix/Update RP API Defaults,07de7c5a-ed3c-483c-be73-1de656971caf,50
+[SFI-NS2.1.1] E&D Tenant Policy,200940f0-ff84-46d2-b42d-2dcae71b643d,50
+[SFI-TI2.3] Universal Security Baseline (1.05),8e25add8-08be-448c-bc98-caeb3a4ba3e2,50
+[SFI-TI5.2.3] CIS Shared Secrets KPI,ac5333e7-4058-4b27-9404-9091ccaa0c5d,50
+[SFI-TI3.1.1] Soft Delete unused apps,1055ac30-4cbe-41a3-a3be-64309d395ac7,50
+[SFI-ES4.4.1] Deprecation of BuildTracker,f1c696e7-713b-486b-a58f-50b5e5e0294f,50
+[SFI-ID4.2.6] Adopt Safe Secrets Standard for Substrate (Virtual Accounts),5f9f77be-ea4d-4bdb-b38c-4fa1dc96ae82,50
+[SFI-ES5.1] Azure Artifacts - Central Feed Services (CFS),1a423da8-b18d-4fd5-b881-9d7a40860434,50
+[SFI-TI3.1.9] Enterprise App Governance Remediation,3456f1c0-d907-45c5-b063-5c00867fd697,50
+[SFI-ID2.3.5] Mitigate high privilege ARM S2S permissions,ab709185-312d-4661-82be-33ac06caf506,50
+[SFI-TI3.3.1] Remove unused high privilege MS Graph Directory permissions by 1P apps,4f83d571-7a78-44ea-8fcb-c928128e6f63,50
+[SFI-TI3.3.2] Address over privileged Azure RBAC role assignments to service principals,95e5a0ba-701a-4696-83bd-4c8bf85c1b22,50
+[SFI-AR1.2.1] Enable VMSS Auto Image Patching,e1642522-4275-4ed7-b196-ff28bee5d48a,50
+[SFI-TI5.1.2] Governance for App Registrations and SPNs for Corp (1.05),1790d828-2ead-490e-9aa5-d7b0520b3275,20
+"[SFI-NS3.2.1] NAT Gateway Requirement for Customers Using ACI Directly or Using ACI Indirectly via Ev2, Deployment Scripts, or Other Services with VNETs or AME Tenant Access",3766d6de-606c-4e50-8002-5b17f77983ef,20
+Service Tree Hygiene (DHE),8c90c7b1-2148-452e-aa02-45bbd399455e,20
+[SFI-ES5.3.2]Migrate dialtone build artifact scenarios off reddog,a7f0aa5c-d9aa-4798-9d5d-a1ef371df731,20
+[SFI-TI1.1.1] Satellite Tenant Governance,187b1964-cb84-4374-8e37-5dba845a4fb9,20
+[SFI-ES2.1.1] 1ES PAT Token Lifetime Reduction,18eb088b-e36d-47ab-94fb-125069347951,20
+[SFI-TI4.1.3] Service Tree Secure Edit Policy,4d83f7f1-4c23-44ae-9e0e-36dafabbd20c,20
+[SFI-NS3.2.4] Bring Your Own IP address for Container Apps outbound traffic,c2c4430d-7d8b-4e7b-af24-6ac8d4731b44,20
+[SFI-ES5.3.1]Migrate non-dialtone scenarios off reddog to CloudVault or Pipeline Artifacts,a0a14a74-162d-4609-95f3-154892221670,20
+[SFI-ES2.1.2] Remove permanently associated Managed Identities in Hosted Pools,59bafaba-b7d1-43ec-a48b-86c0a0785ea3,20
+[SFI-ES1.6.1] Onboarding multi-service repos to Inventory as Code,91505808-48af-423e-8fe3-66fb9fcf0c64,20
+[SFI-TI4.9.1] Trusted Launch for Elastic Autopilot,d7714262-7464-4eb4-ad4d-2136e6473fac,20
+[SFI-PS4.2.1] Enable WDAC (aka Code Integrity) across OPG Services,ed116e8d-2e99-476c-95d8-91690d2102b4,0
+M365 Repo Compliance,a0002483-089a-4e71-b935-bc769255d0fc,0
+[SFI-PS4.7] SG HPE Reduction,e00f7820-e289-444a-98d7-ed2022d4cb9a,0
+[SFI-PS4.2.2]  Encryption of Customer Content At Rest (OPG),8a1989d5-bc1d-4cbd-885f-98b15729bd27,0
+[SFI-ID4.2.7] Redis Cache - Safe Secrets Standard,858dc9be-7274-41df-a30a-c0ee8affcbf0,0
+[SFI-ID4.5.3] Eliminate Global Certificates Pilot,9e27454f-f3bf-449c-a357-dcb7ae95b3ad,0
+[SFI-PS3.2] CodeQL SDL-Required Findings [E+D],e44ba9c7-8eee-48e1-9555-ab0961316643,0
+[SFI-ES2.4.12] Removing Large Group Access from E+D ADO Repos,6038780b-5209-4943-84b6-16de051ff8d9,0
+[SFI-PS4.8] M365 CodeQL Adoption,8c14b98e-4c36-4809-9acd-556b6089a938,0
+[SFI-SM4.1.3] AzSecPack AntiMalware Enablement,6716fc9a-76a7-4fd2-a11f-27056dc0ea74,0
+[SFI-PS4.9] E+D Content Security Policy Violation,ecf3d9dc-f970-4c6d-8688-dd92c2339309,0
+[SFI-PS4.2.3] Strong CSP Adoption (OPG),bdcd5e7f-4c97-4689-ab43-5c6aeaa0c2b6,0
+[SFI-PS4.1] E+D Product Pillar Remediation,215f05f0-9ddd-45b9-aa2c-444a0bd58e14,0
+[SFI-PS4.3] Secure Default -  Restricted Mode,43a7a5f9-3cf8-4d70-af37-3a626d0151e7,0
+[SFI-TI4.3.3] MultiTenant Apps missing org restriction configuration,02b5c9d3-57d1-4735-96e7-fa92dd5e7edc,0
+[SFI-PS4.4] M365 Security Review,b1ad2227-887d-4f61-9409-3ba760c39005,0
+[SFI-PS4.6] IC3 MTLS,d7c1e44c-70de-4b66-aade-3d3c1f08c34f,0
