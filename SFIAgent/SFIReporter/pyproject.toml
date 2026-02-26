@@ -41,3 +41,6 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
+markers = [
+    "live: tests that call real APIs (may be slow or require auth)",
+]
