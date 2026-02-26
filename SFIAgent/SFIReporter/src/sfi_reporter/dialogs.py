@@ -57,13 +57,20 @@ class SortableTreeview(ttk.Treeview):
         if not all_items:
             return
 
+        def _parse_numeric(value):
+            text = (value or '').strip().replace(',', '')
+            if text == '':
+                return None
+            try:
+                return float(text)
+            except ValueError:
+                return None
+
         def get_sort_key(item, col):
             val = self.set(item, col) or ''
-            if val.replace(',', '').replace('.', '').replace('-', '').isdigit():
-                try:
-                    return (0, int(val.replace(',', '')))
-                except ValueError:
-                    return (1, val.lower())
+            numeric = _parse_numeric(val)
+            if numeric is not None:
+                return (0, numeric)
             return (1, val.lower())
 
         for col, descending in columns:
@@ -78,18 +85,25 @@ class SortableTreeview(ttk.Treeview):
 
         reverse = self._sort_reverse.get(col, False)
 
+        def _parse_numeric(value):
+            text = (value or '').strip().replace(',', '')
+            if text == '':
+                return None
+            try:
+                return float(text)
+            except ValueError:
+                return None
+
         is_numeric = False
         for val, _ in items:
             if val:
-                is_numeric = val.replace(',', '').replace('.', '').isdigit()
+                is_numeric = _parse_numeric(val) is not None
                 break
 
         if is_numeric:
             def sort_key(x):
-                try:
-                    return int(x[0].replace(',', '')) if x[0] else 0
-                except ValueError:
-                    return 0
+                numeric = _parse_numeric(x[0])
+                return numeric if numeric is not None else 0
             items.sort(key=sort_key, reverse=reverse)
         else:
             items.sort(key=lambda x: (x[0] or '').lower(), reverse=reverse)

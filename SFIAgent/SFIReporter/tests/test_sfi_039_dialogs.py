@@ -164,6 +164,18 @@ class TestSortableTreeview:
         assert vals == ["50", "200", "1,000"]
         tree.destroy()
 
+    def test_sort_decimal_numeric_column(self, tk_root):
+        tree = SortableTreeview(tk_root, columns=("ratio",), show="headings")
+        tree.heading("ratio", text="Score/Min")
+        tree.insert("", tk.END, values=("0.80",))
+        tree.insert("", tk.END, values=("0.02",))
+        tree.insert("", tk.END, values=("1.25",))
+
+        tree._sort_by_column("ratio")
+        vals = [tree.set(c, "ratio") for c in tree.get_children()]
+        assert vals == ["0.02", "0.80", "1.25"]
+        tree.destroy()
+
     def test_sort_empty_values(self, tk_root):
         tree = SortableTreeview(tk_root, columns=("name",), show="headings")
         tree.heading("name", text="Name")
@@ -188,6 +200,19 @@ class TestSortableTreeview:
         vals = [(tree.set(c, "a"), tree.set(c, "b")) for c in tree.get_children()]
         # Last column in list is primary sort
         assert vals[0][1] <= vals[1][1]
+        tree.destroy()
+
+    def test_sort_by_columns_decimal_primary(self, tk_root):
+        tree = SortableTreeview(tk_root, columns=("name", "ratio"), show="headings")
+        tree.heading("name", text="Name")
+        tree.heading("ratio", text="Score/Min")
+        tree.insert("", tk.END, values=("A", "0.80"))
+        tree.insert("", tk.END, values=("B", "0.02"))
+        tree.insert("", tk.END, values=("C", "1.25"))
+
+        tree.sort_by_columns([("name", False), ("ratio", False)])
+        vals = [tree.set(c, "ratio") for c in tree.get_children()]
+        assert vals == ["0.02", "0.80", "1.25"]
         tree.destroy()
 
     def test_sort_by_columns_empty_list(self, tk_root):
