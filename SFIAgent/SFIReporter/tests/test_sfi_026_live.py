@@ -37,11 +37,11 @@ def _get_data(alias: str) -> dict:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Scenario 1: brentj (IC / non-manager)
+# Scenario 1: brentj (manager)
 # ═══════════════════════════════════════════════════════════════════════════
 
 class TestBrentjIC:
-    """brentj is an individual contributor — no manager grouping expected."""
+    """brentj is a manager — expects manager grouping."""
 
     def test_refresh_succeeds(self):
         data = _get_data("brentj")
@@ -49,20 +49,20 @@ class TestBrentjIC:
         assert 'services' in data
         assert 'detailed_items' in data
 
-    def test_is_not_manager(self):
+    def test_is_manager(self):
         data = _get_data("brentj")
-        assert data['is_manager'] is False
+        assert data['is_manager'] is True
 
-    def test_no_owner_stats(self):
-        """IC view should have empty owner_stats."""
+    def test_has_owner_stats(self):
+        """Manager view should have owner_stats."""
         data = _get_data("brentj")
-        assert data.get('owner_stats') == {} or data.get('owner_stats') is None or len(data.get('owner_stats', {})) == 0
+        assert len(data.get('owner_stats', {})) > 0
 
-    def test_no_org_mapping(self):
-        """IC view should have no org_mapping."""
+    def test_has_org_mapping(self):
+        """Manager view should have org_mapping."""
         data = _get_data("brentj")
         om = data.get('org_mapping')
-        assert om is None or om == {} or len(om) == 0
+        assert om is not None and len(om) > 0
 
     def test_no_level2_stats(self):
         """IC view should have no level2_stats."""
