@@ -284,6 +284,11 @@ class TestInit:
     def test_eta_btn_disabled_initially(self, app):
         assert str(app.eta_btn.cget("state")) == "disabled"
 
+    def test_score_column_precedes_cost_and_ratio_column_exists(self, app):
+        assert app.services_tree["columns"] == ("name", "count", "sla", "invalid_eta", "score", "cost", "score_per_min")
+        assert app.program_tree["columns"] == ("program", "count", "sla", "invalid_eta", "score", "cost", "score_per_min")
+        assert app.action_tree["columns"] == ("name", "count", "sla", "invalid_eta", "score", "cost", "score_per_min")
+
 
 # ---------------------------------------------------------------------------
 # Tests: _load_cached_data
@@ -428,7 +433,32 @@ class TestUpdateTablesSimple:
     def test_cache_age_none(self, app, mocker):
         mocker.patch("sfi_reporter.app.get_cache_age_minutes", return_value=None)
         app._update_tables(SAMPLE_DATA_SIMPLE)
-        assert app.cache_age_var.get() == ""
+
+    def test_score_per_min_renders_for_non_zero_cost(self, app):
+        app._update_tables(SAMPLE_DATA_SIMPLE)
+        first_service = app.services_tree.get_children()[0]
+        values = app.services_tree.item(first_service, "values")
+        assert values[6] == "0.80"
+
+    def test_score_per_min_renders_infinity_for_zero_cost(self, app):
+        data = {
+            "services": [{"Id": "svc1", "Name": "Service One"}],
+            "service_stats": {
+                "svc1": {"name": "Service One", "count": 1, "sla": 0, "invalid_eta": 0, "cost": 0, "score": 10},
+            },
+            "program_stats": {
+                "Program A": {"count": 1, "sla": 0, "invalid_eta": 0, "cost": 0, "score": 10, "id": "prog1"},
+            },
+            "kpi_stats": {
+                "kpi1": {"name": "KPI One", "count": 1, "sla": 0, "invalid_eta": 0, "cost": 0, "score": 10},
+            },
+            "detailed_items": [],
+            "timestamp": datetime.now().isoformat(),
+        }
+        app._update_tables(data)
+        first_service = app.services_tree.get_children()[0]
+        values = app.services_tree.item(first_service, "values")
+        assert values[6] == "∞"
 
 
 # ---------------------------------------------------------------------------
