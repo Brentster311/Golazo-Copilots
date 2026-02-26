@@ -127,9 +127,9 @@ async def golazo_bootstrap(
         gitkeep_path.write_text("", encoding="utf-8")
         files_created.append("WorkItems/.gitkeep")
 
-    # Create capabilities.yaml from template
+    # Create capabilities.yaml from template (never overwrite — contains workspace-specific data)
     capabilities_path = workspace_path / "capabilities.yaml"
-    if capabilities_path.exists() and not force:
+    if capabilities_path.exists():
         files_skipped.append("capabilities.yaml")
     else:
         try:
