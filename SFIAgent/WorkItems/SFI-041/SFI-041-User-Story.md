@@ -1,0 +1,31 @@
+**Status**: BACKLOG
+
+**User Story**
+- Title: Persist Action Owner updates from SFIReporter details dialog
+- As a: non-technical SFIReporter user managing action items
+- I want: to set or update an Action Owner directly in the GUI details dialog and save it
+- So that: ownership changes are persisted through the s360 API without requiring scripts or manual backend actions
+- Out of scope:
+  - ETA editing or other field-editing enhancements outside Action Owner
+  - Cross-platform UI support (Mac/Linux)
+  - New authentication model or identity provider changes
+- Assumptions:
+  - **Assumption (explicit):** The existing s360 package exposes (or can expose) an API operation for persisting Action Owner changes using current auth flow.
+  - **Assumption (explicit):** The details dialog already has enough item context (e.g., action item identifier) to submit an Action Owner update payload.
+  - **Assumption (explicit):** The Action Owner selection UX can reuse existing GUI patterns in SFIReporter to remain approachable for non-technical users.
+- Acceptance Criteria (bulleted, testable):
+  - In Windows SFIReporter, the details dialog presents a clear Action Owner input/control for an action item.
+  - When a user saves a valid Action Owner change, SFIReporter calls the s360 API and receives a success response.
+  - After a successful save, reopening or refreshing the item shows the updated Action Owner value.
+  - On API failure, the dialog shows a user-friendly error message and does not falsely indicate success.
+  - The flow is operable by non-technical users using only GUI interactions (no CLI/script steps required).
+- Non-functional requirements:
+  - Windows-only support is required for this story; behavior on other platforms is out of scope.
+  - Keep UI and save workflow simple and consistent with current SFIReporter dialog patterns.
+  - Preserve existing authentication/security posture (token-based identity flow; no new secrets).
+- Telemetry / metrics expected:
+  - Log Action Owner save attempts with outcome (success/failure) and elapsed API call time.
+  - Track count of successful Action Owner updates per run/session for operational visibility.
+- Rollout / rollback notes:
+  - Roll out in standard SFIReporter Windows release.
+  - Roll back by disabling/removing the Action Owner save path in the details dialog and reverting API write usage.

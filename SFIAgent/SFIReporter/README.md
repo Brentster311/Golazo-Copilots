@@ -23,6 +23,7 @@ The app will open a browser window for Microsoft login if no `az login` session 
 - **Filter**: Curated filter builder (🔍 Filter button) — filter by Service Name, Assigned To, Program, Action Owner, Due Date, ETA Date (+ Service Owner for managers). Clauses persist across sessions.
 - **In-app Azure login**: Uses `az login` session if available; otherwise opens a browser window for Microsoft login
 - **Update ETAs**: Update ETAs and statuses for all items (Manual review) or auto-fix invalid ETAs (Bulk) from the home screen via 📋 Update ETAs button. Individual ETA editing available from the detail view (📅 Update ETA).
+- **Action Owner editing (details dialog)**: From an item’s details modal, click 👤 Set Action Owner, provide both alias and name, and click 💾 Save Action Owner. Saves use the existing `sfi_reporter.data.save_action_owner` path through `accia_s360.S360Client.save_action_owners(...)` (S360 endpoint `/ActionItems/SaveActionOwnersByIds`) with clear success/error feedback.
 - **Drill-down ETA editing**: Each drill-down view (service, KPI, program, owner) has its own 📋 Update ETAs button. Multi-select rows and click "📋 Update ETAs for N selected" to update just those items.
 - **View Details in Manual Review**: While stepping through items in Manual ETA review, click 🔍 View Details to see the full item detail modal.
 - **SLA Status & ETA Status columns**: Drill-down views show SLA Status (In SLA / Approaching / Out of SLA) and ETA Status columns.

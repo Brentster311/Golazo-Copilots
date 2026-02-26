@@ -424,7 +424,7 @@ class DetailModal(tk.Toplevel):
         item = self._item_map.get(iid)
         if not item:
             return
-        ItemDetailsModal(self, item)
+        ItemDetailsModal(self, item, on_owner_saved=lambda *_: self._refresh_items())
 
     def _on_item_right_click(self, event):
         iid = self.tree.identify_row(event.y)
@@ -450,7 +450,7 @@ class DetailModal(tk.Toplevel):
 class ItemDetailsModal(tk.Toplevel):
     """Modal dialog showing full details for a single action item."""
 
-    def __init__(self, parent, item: dict):
+    def __init__(self, parent, item: dict, on_owner_saved=None):
         super().__init__(parent)
 
         item_title = clean_html_from_title(item.get('title', 'Action Item Details'))
@@ -468,6 +468,7 @@ class ItemDetailsModal(tk.Toplevel):
 
         self._link_counter = 0
         self._item = item
+        self._on_owner_saved = on_owner_saved
         self._create_widgets(item)
 
         self.bind('<Escape>', lambda e: self.destroy())
@@ -482,11 +483,21 @@ class ItemDetailsModal(tk.Toplevel):
     def _open_eta_editor(self):
         SingleEtaEditDialog(self, self._item, on_saved=self._on_eta_saved)
 
+    def _open_action_owner_editor(self):
+        ActionOwnerEditDialog(self, self._item, on_saved=self._on_action_owner_saved)
+
     def _on_eta_saved(self, item: dict, eta_date: str, notes: str):
         item['EtaDate'] = eta_date
         if notes:
             item['EtaStatus'] = notes
         self._on_columns_changed()
+
+    def _on_action_owner_saved(self, item: dict, alias: str, name: str):
+        item['ActionOwnerAlias'] = alias
+        item['ActionOwnerName'] = name
+        self._on_columns_changed()
+        if self._on_owner_saved:
+            self._on_owner_saved(item, alias, name)
 
     def _on_columns_changed(self):
         for widget in self._main_frame.winfo_children():
@@ -639,7 +650,120 @@ class ItemDetailsModal(tk.Toplevel):
         ttk.Button(btn_frame, text="Columns", command=self._open_column_selector).pack(side=tk.LEFT)
         ttk.Button(btn_frame, text="\U0001f4c5 Update ETA",
                    command=self._open_eta_editor).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="\U0001f464 Set Action Owner",
+                   command=self._open_action_owner_editor).pack(side=tk.LEFT, padx=5)
         ttk.Button(btn_frame, text="Close", command=self.destroy).pack(side=tk.RIGHT)
+
+
+class ActionOwnerEditDialog(tk.Toplevel):
+    """Dialog for updating Action Owner for a single action item."""
+
+    def __init__(self, parent, item: dict, on_saved=None):
+        super().__init__(parent)
+        self.title("Set Action Owner")
+        self.geometry("500x270")
+        self.transient(parent)
+        self.grab_set()
+
+        self.update_idletasks()
+        x = parent.winfo_x() + (parent.winfo_width() - 500) // 2
+        y = parent.winfo_y() + (parent.winfo_height() - 270) // 2
+        self.geometry(f"+{x}+{y}")
+
+        self._item = item
+        self._on_saved = on_saved
+        self._saving = False
+        self._create_widgets()
+
+        self.bind('<Escape>', lambda e: self.destroy())
+        self.bind('<Return>', lambda e: self._on_save())
+        self.focus_set()
+
+    def _create_widgets(self):
+        frame = ttk.Frame(self, padding=15)
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        title = clean_html_from_title(self._item.get('title', ''))[:70]
+        ttk.Label(frame, text=title, font=("Segoe UI", 10, "bold"), wraplength=460).pack(anchor=tk.W)
+
+        current_owner = self._item.get('ActionOwnerName') or self._item.get('ActionOwnerAlias') or 'None'
+        ttk.Label(frame, text=f"Current Action Owner: {current_owner}", foreground="gray").pack(anchor=tk.W, pady=(6, 10))
+
+        alias_frame = ttk.Frame(frame)
+        alias_frame.pack(fill=tk.X, pady=(0, 6))
+        ttk.Label(alias_frame, text="Owner Alias:", width=14).pack(side=tk.LEFT)
+        self._alias_var = tk.StringVar(value=(self._item.get('ActionOwnerAlias') or '').strip())
+        self._alias_entry = ttk.Entry(alias_frame, textvariable=self._alias_var, width=40)
+        self._alias_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        name_frame = ttk.Frame(frame)
+        name_frame.pack(fill=tk.X)
+        ttk.Label(name_frame, text="Owner Name:", width=14).pack(side=tk.LEFT)
+        self._name_var = tk.StringVar(value=(self._item.get('ActionOwnerName') or '').strip())
+        self._name_entry = ttk.Entry(name_frame, textvariable=self._name_var, width=40)
+        self._name_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        self._error_var = tk.StringVar()
+        ttk.Label(frame, textvariable=self._error_var, foreground="red").pack(anchor=tk.W, pady=(8, 0))
+
+        btn_frame = ttk.Frame(frame)
+        btn_frame.pack(fill=tk.X, pady=(16, 0))
+        self._save_btn = ttk.Button(btn_frame, text="\U0001f4be Save Action Owner", command=self._on_save)
+        self._save_btn.pack(side=tk.RIGHT, padx=(5, 0))
+        ttk.Button(btn_frame, text="Cancel", command=self.destroy).pack(side=tk.RIGHT)
+
+        self._alias_var.trace_add('write', self._on_input_changed)
+        self._name_var.trace_add('write', self._on_input_changed)
+        self._update_save_state()
+        self._alias_entry.focus_set()
+
+    def _on_input_changed(self, *_args):
+        self._update_save_state()
+
+    def _update_save_state(self):
+        alias = self._alias_var.get().strip()
+        name = self._name_var.get().strip()
+        has_required = bool(alias and name)
+        self._save_btn.configure(state=tk.NORMAL if (has_required and not self._saving) else tk.DISABLED)
+
+    def _on_save(self):
+        if self._saving:
+            return
+
+        alias = self._alias_var.get().strip()
+        name = self._name_var.get().strip()
+        if not alias or not name:
+            self._error_var.set("Please provide both Action Owner alias and name.")
+            self._update_save_state()
+            return
+
+        self._error_var.set("")
+        self._saving = True
+        self._update_save_state()
+
+        def _save_bg():
+            from sfi_reporter.data import save_action_owner
+
+            success, message, _category = save_action_owner(self._item, alias, name)
+            self.after(0, lambda: self._on_save_complete(success, message, alias, name))
+
+        threading.Thread(target=_save_bg, daemon=True).start()
+
+    def _on_save_complete(self, success: bool, message: str, alias: str, name: str):
+        self._saving = False
+        self._update_save_state()
+
+        if success:
+            normalized_alias = alias.strip().lower()
+            normalized_name = name.strip()
+            if self._on_saved:
+                self._on_saved(self._item, normalized_alias, normalized_name)
+            messagebox.showinfo("Action Owner Saved", message, parent=self)
+            self.destroy()
+            return
+
+        self._error_var.set(message)
+        messagebox.showerror("Could not Save Action Owner", message, parent=self)
 
 
 # ---------------------------------------------------------------------------

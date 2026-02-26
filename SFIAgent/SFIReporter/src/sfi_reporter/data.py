@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 import json
 import os
+import time
 from threading import Lock
 from typing import Any, Optional
 
@@ -129,6 +130,184 @@ def merge_columns_with_essentials(columns: list[str]) -> list[str]:
 
 
 _client_instance: Any = None
+_action_owner_counter_lock = Lock()
+_action_owner_save_success_count = 0
+
+
+def get_action_owner_save_success_count() -> int:
+    """Return the number of successful Action Owner saves in this session."""
+    with _action_owner_counter_lock:
+        return _action_owner_save_success_count
+
+
+def reset_action_owner_save_success_count() -> None:
+    """Reset session-level Action Owner save success counter (primarily for tests)."""
+    global _action_owner_save_success_count
+    with _action_owner_counter_lock:
+        _action_owner_save_success_count = 0
+
+
+def _increment_action_owner_save_success_count() -> int:
+    global _action_owner_save_success_count
+    with _action_owner_counter_lock:
+        _action_owner_save_success_count += 1
+        return _action_owner_save_success_count
+
+
+def build_action_owner_save_request(
+    item: dict,
+    action_owner_alias: str,
+    action_owner_name: str,
+) -> tuple[bool, str, Optional[dict]]:
+    """Validate and build the Action Owner save request payload.
+
+    Returns:
+        Tuple of (is_valid, message, request_dict).
+        request_dict contains: kpi_id, action_owner_alias, action_owner_name, action_items.
+    """
+    owner_alias = (action_owner_alias or "").strip().lower()
+    owner_name = (action_owner_name or "").strip()
+
+    if not owner_alias or not owner_name:
+        return False, "Please provide both Action Owner alias and name.", None
+
+    if any(ch in owner_alias for ch in (" ", ",", ";", "|")):
+        return False, "Action Owner alias contains unsupported characters.", None
+
+    kpi_id = str(item.get('_kpi_id') or item.get('KpiId') or '').strip()
+    service_id = str(item.get('S360_ServiceId') or item.get('serviceTreeId') or item.get('ServiceId') or '').strip()
+    action_item_id = str(item.get('S360_ActionItemId') or item.get('ActionItemId') or item.get('id') or '').strip()
+    sla_type = str(item.get('SlaType') or item.get('SLAType') or '').strip()
+
+    missing = []
+    if not kpi_id:
+        missing.append("KpiId")
+    if not service_id:
+        missing.append("ServiceId")
+    if not action_item_id:
+        missing.append("ActionItemId")
+    if not sla_type:
+        missing.append("SLAType")
+    if missing:
+        return False, f"Cannot save Action Owner because required fields are missing: {', '.join(missing)}.", None
+
+    return True, "", {
+        "kpi_id": kpi_id,
+        "action_owner_alias": owner_alias,
+        "action_owner_name": owner_name,
+        "action_items": [
+            {
+                "ServiceId": service_id,
+                "ActionItemId": action_item_id,
+                "SLAType": sla_type,
+            }
+        ],
+        "service_id": service_id,
+        "action_item_id": action_item_id,
+    }
+
+
+def _classify_action_owner_save_exception(exc: Exception) -> tuple[str, str]:
+    auth_error_type = None
+    api_error_type = None
+    try:
+        from accia_s360.exceptions import S360AuthError, S360ApiError
+
+        auth_error_type = S360AuthError
+        api_error_type = S360ApiError
+    except Exception:
+        pass
+
+    if auth_error_type and isinstance(exc, auth_error_type):
+        return "auth_failure", "Your session appears to have expired. Please sign in again and retry."
+
+    if api_error_type and isinstance(exc, api_error_type):
+        return "api_failure", "Action Owner could not be saved right now. Please try again in a moment."
+
+    lowered = str(exc).lower()
+    if any(token in lowered for token in ("auth", "unauthorized", "forbidden", "token", "expired")):
+        return "auth_failure", "Your session appears to have expired. Please sign in again and retry."
+    if any(token in lowered for token in ("timeout", "connection", "network", "dns")):
+        return "network_failure", "Could not reach the service to save Action Owner. Please check your connection and try again."
+    if "http" in lowered or "api" in lowered:
+        return "api_failure", "Action Owner could not be saved right now. Please try again in a moment."
+    return "unknown_failure", "We could not save the Action Owner due to an unexpected issue. Please try again."
+
+
+def save_action_owner(item: dict, action_owner_alias: str, action_owner_name: str) -> tuple[bool, str, str]:
+    """Persist Action Owner for a single action item via S360 client API.
+
+    Returns:
+        Tuple of (success, user_message, category)
+    """
+    start = time.perf_counter()
+    ok, message, request = build_action_owner_save_request(item, action_owner_alias, action_owner_name)
+
+    kpi_id = str(item.get('_kpi_id') or item.get('KpiId') or '').strip()
+    service_id = str(item.get('S360_ServiceId') or item.get('serviceTreeId') or item.get('ServiceId') or '').strip()
+    action_item_id = str(item.get('S360_ActionItemId') or item.get('ActionItemId') or item.get('id') or '').strip()
+
+    logger.info(
+        "action_owner_save_attempt kpi_id=%s service_id=%s action_item_id=%s",
+        kpi_id,
+        service_id,
+        action_item_id,
+    )
+
+    if not ok or request is None:
+        duration_ms = int((time.perf_counter() - start) * 1000)
+        logger.warning(
+            "action_owner_save_failure category=validation_failure kpi_id=%s service_id=%s action_item_id=%s duration_ms=%d",
+            kpi_id,
+            service_id,
+            action_item_id,
+            duration_ms,
+        )
+        return False, message, "validation_failure"
+
+    try:
+        client = get_client()
+        result = client.save_action_owners(
+            request["kpi_id"],
+            request["action_owner_alias"],
+            request["action_owner_name"],
+            request["action_items"],
+        )
+
+        duration_ms = int((time.perf_counter() - start) * 1000)
+        if result:
+            count = _increment_action_owner_save_success_count()
+            logger.info(
+                "action_owner_save_success kpi_id=%s service_id=%s action_item_id=%s duration_ms=%d session_success_count=%d",
+                request["kpi_id"],
+                request["service_id"],
+                request["action_item_id"],
+                duration_ms,
+                count,
+            )
+            return True, "Action Owner updated successfully.", "success"
+
+        logger.warning(
+            "action_owner_save_failure category=api_failure kpi_id=%s service_id=%s action_item_id=%s duration_ms=%d",
+            request["kpi_id"],
+            request["service_id"],
+            request["action_item_id"],
+            duration_ms,
+        )
+        return False, "Action Owner could not be saved right now. Please try again in a moment.", "api_failure"
+    except Exception as exc:
+        category, user_message = _classify_action_owner_save_exception(exc)
+        duration_ms = int((time.perf_counter() - start) * 1000)
+        logger.warning(
+            "action_owner_save_failure category=%s kpi_id=%s service_id=%s action_item_id=%s duration_ms=%d exception_type=%s",
+            category,
+            kpi_id,
+            service_id,
+            action_item_id,
+            duration_ms,
+            exc.__class__.__name__,
+        )
+        return False, user_message, category
 
 
 def get_client() -> Any:
