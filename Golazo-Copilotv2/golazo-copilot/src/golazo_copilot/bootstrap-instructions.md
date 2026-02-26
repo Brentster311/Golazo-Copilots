@@ -1,4 +1,4 @@
-<!-- Last Updated in Golazo Copilot Version: 2.107.0 -->
+<!-- Last Updated in Golazo Copilot Version: 2.109.0 -->
 # Golazo Copilot v2
 
 This workspace uses Golazo Copilot MCP server for workflow management.
@@ -106,7 +106,9 @@ golazo_transition(work_item_id="<id>", role="<next-role>")
 
 **How it works**: Each role file defines `## Required Outputs` that must exist before you can transition away from that role. The system automatically validates these outputs.
 
-**Valid roles in order:** project-owner-assistant → program-manager → domain-expert → quality-assurance → architect → developer → refactor-expert → documenter → builder → retrospective
+**Valid roles in order:** project-owner-assistant → program-manager → domain-expert → quality-assurance → architect → developer → refactor-expert → documenter → builder → retrospective → project-owner-assistant (closure)
+
+> **Closure re-entry (complete profile only):** After retrospective, the workflow transitions back to `project-owner-assistant` for formal closure (acceptance validation, final commit, closure.md). In `express` and `spike` profiles the workflow ends at retrospective.
 
 ---
 
