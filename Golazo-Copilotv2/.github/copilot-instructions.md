@@ -35,6 +35,10 @@ For each role in the workflow, follow this sequence:
 **Orchestrator (you):** Sequence roles, enforce gates, communicate progress, handle errors. NEVER write design docs, code, tests, or role notes yourself.
 **Subagent (them):** Read bundle, create required outputs, make decisions per role guidance, return summary.
 
+### Inline Exception: Retrospective
+
+**Always run the retrospective role inline** (never delegate to a subagent). The retrospective evaluates workflow friction, debugging struggles, and iteration pain — context that only exists in the orchestrator's conversation memory. Subagents receive only curated role decision notes and cannot assess what actually went wrong during execution. The orchestrator should write the retrospective directly using its full session context.
+
 ---
 
 ## Subagent Prompt Template
