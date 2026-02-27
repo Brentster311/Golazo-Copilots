@@ -16,7 +16,6 @@ from .tools.golazo_bootstrap import golazo_bootstrap
 from .tools.golazo_consent import golazo_consent
 from .tools.golazo_capabilities import golazo_capabilities
 from .tools.golazo_role_context import golazo_role_context
-from .tools.golazo_update import golazo_update
 
 # Create server instance with version in name
 server = Server(f"golazo-copilot v{__version__}")
@@ -29,7 +28,7 @@ ICON_PENDING = "[...]"
 ICON_CHECK = "[x]"
 ICON_EMPTY = "[ ]"
 
-_REQUIRED_TOOL_NAMES = {"golazo_update"}
+_REQUIRED_TOOL_NAMES: set[str] = set()
 _STARTUP_TOOL_WARNINGS: list[str] = []
 
 
@@ -492,29 +491,6 @@ def _get_tool_definitions() -> list[Tool]:
                 "required": ["work_item_id", "workspace_path"]
             }
         ),
-        Tool(
-            name="golazo_update",
-            description="Check for and install updates to Golazo Copilot from Azure Artifacts. Triggered by user requests like 'update golazo' or 'check for golazo update'.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "action": {
-                        "type": "string",
-                        "enum": ["check", "install"],
-                        "description": "check = report versions; install = install a specific version"
-                    },
-                    "version": {
-                        "type": "string",
-                        "description": "Target version to install (required when action=install)"
-                    },
-                    "workspace_path": {
-                        "type": "string",
-                        "description": "Workspace root path (required)"
-                    }
-                },
-                "required": ["action", "workspace_path"]
-            }
-        ),
     ]
 
 
@@ -649,17 +625,6 @@ async def _dispatch_tool(name: str, arguments: dict) -> list[TextContent]:
             project_root=project_root,
         )
         return [TextContent(type="text", text=format_role_context_result(result))]
-
-    elif name == "golazo_update":
-        ws = arguments.get("workspace_path")
-        if not ws:
-            return [TextContent(type="text", text=f"{ICON_FAIL} workspace_path is required")]
-        result = await golazo_update(
-            action=arguments["action"],
-            version=arguments.get("version"),
-            workspace_path=ws,
-        )
-        return [TextContent(type="text", text=format_update_result(result))]
 
     return [TextContent(type="text", text=f"Unknown tool: {name}")]
 

@@ -7,6 +7,5 @@ from .golazo_bootstrap import golazo_bootstrap
 from .golazo_consent import golazo_consent
 from .golazo_capabilities import golazo_capabilities
 from .golazo_role_context import golazo_role_context
-from .golazo_update import golazo_update
 
-__all__ = ["golazo_create_workitem", "golazo_transition", "golazo_status", "golazo_bootstrap", "golazo_consent", "golazo_capabilities", "golazo_role_context", "golazo_update"]
+__all__ = ["golazo_create_workitem", "golazo_transition", "golazo_status", "golazo_bootstrap", "golazo_consent", "golazo_capabilities", "golazo_role_context"]
