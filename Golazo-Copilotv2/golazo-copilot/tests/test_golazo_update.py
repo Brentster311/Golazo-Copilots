@@ -265,6 +265,25 @@ class TestCheckAction:
         assert result["update_available"] is True
 
     @pytest.mark.asyncio
+    async def test_tc06c_check_http_401_fallback_second_launcher_success(self):
+        """TC-06c: First pip launcher fails; second launcher succeeds."""
+        from urllib.error import HTTPError
+        err = HTTPError(FEED_URL, 401, "Unauthorized", {}, None)
+        pip_stdout = b"Available versions: 2.111.3, 2.111.2\n"
+        run_side_effect = [
+            subprocess.CompletedProcess(args=["pip"], returncode=1, stdout=b"", stderr=b""),
+            subprocess.CompletedProcess(args=["py", "-3.14"], returncode=0, stdout=pip_stdout, stderr=b""),
+        ]
+        with patch("golazo_update_mod.importlib.metadata.version", return_value="2.111.2"), \
+             patch("golazo_update_mod.urllib.request.urlopen", side_effect=err), \
+             patch("golazo_update_mod.subprocess.run", side_effect=run_side_effect):
+            result = await golazo_update(action="check", workspace_path="/workspace")
+
+        assert result["status"] == "ok"
+        assert result["latest_stable"] == "2.111.3"
+        assert result["update_available"] is True
+
+    @pytest.mark.asyncio
     async def test_tc07_check_malformed_html(self):
         """TC-07: Malformed HTML with no version links."""
         html = "<html><body>unexpected content</body></html>"

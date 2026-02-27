@@ -117,8 +117,7 @@ def _get_versions_from_pip_index() -> list[Version] | None:
 
     Returns a list of parsed versions, or None if the query fails.
     """
-    cmd = [
-        sys.executable,
+    base_args = [
         "-m",
         "pip",
         "index",
@@ -126,27 +125,38 @@ def _get_versions_from_pip_index() -> list[Version] | None:
         "golazo-copilot",
         f"--index-url={FEED_INDEX_URL}",
     ]
-    try:
-        result = subprocess.run(cmd, capture_output=True, timeout=30)
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
-        return None
 
-    if result.returncode != 0:
-        return None
+    commands = [
+        [sys.executable, *base_args],
+        ["py", "-3.14", *base_args],
+        ["python", *base_args],
+    ]
 
-    stdout = result.stdout.decode("utf-8", errors="replace") if result.stdout else ""
-    match = _PIP_VERSIONS_RE.search(stdout)
-    if not match:
-        return None
-
-    versions: list[Version] = []
-    for raw in [v.strip() for v in match.group(1).split(",") if v.strip()]:
+    for cmd in commands:
         try:
-            versions.append(Version(raw))
-        except InvalidVersion:
+            result = subprocess.run(cmd, capture_output=True, timeout=30)
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             continue
 
-    return versions or None
+        if result.returncode != 0:
+            continue
+
+        stdout = result.stdout.decode("utf-8", errors="replace") if result.stdout else ""
+        match = _PIP_VERSIONS_RE.search(stdout)
+        if not match:
+            continue
+
+        versions: list[Version] = []
+        for raw in [v.strip() for v in match.group(1).split(",") if v.strip()]:
+            try:
+                versions.append(Version(raw))
+            except InvalidVersion:
+                continue
+
+        if versions:
+            return versions
+
+    return None
 
 
 # ---------------------------------------------------------------------------
