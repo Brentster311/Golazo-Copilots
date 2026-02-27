@@ -26,6 +26,10 @@ FEED_URL = (
     "https://msazure.pkgs.visualstudio.com/One/_packaging/"
     "azinsights_accia_pkgs/pypi/simple/golazo-copilot/"
 )
+FEED_INDEX_URL = (
+    "https://msazure.pkgs.visualstudio.com/One/_packaging/"
+    "azinsights_accia_pkgs/pypi/simple/"
+)
 
 # Regex to pull a version string from a PEP 503 filename anchor.
 # Matches both dash-separated (sdist) and underscore-separated (wheel) names.
@@ -34,6 +38,7 @@ VERSION_RE = re.compile(r"golazo[_-]copilot-(\d+\.\d+\.\d+(?:[a-zA-Z0-9.]*[a-zA-
 
 # Only allow safe characters in the user-provided version string.
 _SAFE_VERSION_RE = re.compile(r"^[a-zA-Z0-9.\-]+$")
+_PIP_VERSIONS_RE = re.compile(r"Available versions:\s*(.+)", re.IGNORECASE)
 
 
 # ---------------------------------------------------------------------------
@@ -80,6 +85,68 @@ def _classify(versions: list[Version]) -> tuple[Version | None, Version | None]:
     stable = sorted([v for v in versions if not v.is_prerelease], reverse=True)
     pre = sorted([v for v in versions if v.is_prerelease], reverse=True)
     return (stable[0] if stable else None), (pre[0] if pre else None)
+
+
+def _build_check_result(current: str, versions: list[Version]) -> dict[str, Any]:
+    """Build a standardized check result from parsed version objects."""
+    latest_stable, latest_pre = _classify(versions)
+    latest_stable_str = str(latest_stable) if latest_stable else None
+    latest_pre_str = str(latest_pre) if latest_pre else None
+
+    try:
+        current_v = Version(current)
+    except InvalidVersion:
+        current_v = None
+
+    update_available = False
+    if current_v and latest_stable:
+        update_available = latest_stable > current_v
+
+    return {
+        "status": "ok",
+        "action": "check",
+        "current_version": current,
+        "latest_stable": latest_stable_str,
+        "latest_prerelease": latest_pre_str,
+        "update_available": update_available,
+    }
+
+
+def _get_versions_from_pip_index() -> list[Version] | None:
+    """Get package versions via pip index (authenticated via keyring/plugins).
+
+    Returns a list of parsed versions, or None if the query fails.
+    """
+    cmd = [
+        sys.executable,
+        "-m",
+        "pip",
+        "index",
+        "versions",
+        "golazo-copilot",
+        f"--index-url={FEED_INDEX_URL}",
+    ]
+    try:
+        result = subprocess.run(cmd, capture_output=True, timeout=30)
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return None
+
+    if result.returncode != 0:
+        return None
+
+    stdout = result.stdout.decode("utf-8", errors="replace") if result.stdout else ""
+    match = _PIP_VERSIONS_RE.search(stdout)
+    if not match:
+        return None
+
+    versions: list[Version] = []
+    for raw in [v.strip() for v in match.group(1).split(",") if v.strip()]:
+        try:
+            versions.append(Version(raw))
+        except InvalidVersion:
+            continue
+
+    return versions or None
 
 
 # ---------------------------------------------------------------------------
@@ -142,6 +209,10 @@ async def _action_check() -> dict[str, Any]:
             html = resp.read().decode("utf-8")
     except urllib.error.HTTPError as exc:
         code = exc.code
+        if code in (401, 403):
+            fallback_versions = _get_versions_from_pip_index()
+            if fallback_versions:
+                return _build_check_result(current, fallback_versions)
         hint = ""
         if code in (401, 403):
             hint = " Ensure you are authenticated — try running `az login`."
@@ -166,28 +237,7 @@ async def _action_check() -> dict[str, Any]:
             "error": "No versions found on the Azure Artifacts feed. The HTML may be malformed.",
         }
 
-    latest_stable, latest_pre = _classify(versions)
-    latest_stable_str = str(latest_stable) if latest_stable else None
-    latest_pre_str = str(latest_pre) if latest_pre else None
-
-    # Determine update availability: newer stable exists?
-    try:
-        current_v = Version(current)
-    except InvalidVersion:
-        current_v = None
-
-    update_available = False
-    if current_v and latest_stable:
-        update_available = latest_stable > current_v
-
-    return {
-        "status": "ok",
-        "action": "check",
-        "current_version": current,
-        "latest_stable": latest_stable_str,
-        "latest_prerelease": latest_pre_str,
-        "update_available": update_available,
-    }
+    return _build_check_result(current, versions)
 
 
 # ---------------------------------------------------------------------------

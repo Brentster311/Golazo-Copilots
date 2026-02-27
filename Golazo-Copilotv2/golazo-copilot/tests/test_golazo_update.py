@@ -240,11 +240,29 @@ class TestCheckAction:
         from urllib.error import HTTPError
         err = HTTPError(FEED_URL, 403, "Forbidden", {}, None)
         with patch("golazo_update_mod.importlib.metadata.version", return_value="2.109.0"), \
-             patch("golazo_update_mod.urllib.request.urlopen", side_effect=err):
+             patch("golazo_update_mod.urllib.request.urlopen", side_effect=err), \
+             patch("golazo_update_mod.subprocess.run", return_value=subprocess.CompletedProcess(args=["pip"], returncode=1, stdout=b"", stderr=b"auth failed")):
             result = await golazo_update(action="check", workspace_path="/workspace")
 
         assert result["status"] == "error"
         assert "403" in result["error"] or "auth" in result["error"].lower() or "forbidden" in result["error"].lower()
+
+    @pytest.mark.asyncio
+    async def test_tc06b_check_http_401_fallback_pip_index_success(self):
+        """TC-06b: 401/403 from raw URL falls back to authenticated pip index."""
+        from urllib.error import HTTPError
+        err = HTTPError(FEED_URL, 401, "Unauthorized", {}, None)
+        pip_stdout = b"golazo-copilot (2.111.2)\nAvailable versions: 2.111.2, 2.111.1, 2.110.0\n"
+        with patch("golazo_update_mod.importlib.metadata.version", return_value="2.110.0"), \
+             patch("golazo_update_mod.urllib.request.urlopen", side_effect=err), \
+             patch("golazo_update_mod.subprocess.run", return_value=subprocess.CompletedProcess(args=["pip"], returncode=0, stdout=pip_stdout, stderr=b"")):
+            result = await golazo_update(action="check", workspace_path="/workspace")
+
+        assert result["status"] == "ok"
+        assert result["action"] == "check"
+        assert result["current_version"] == "2.110.0"
+        assert result["latest_stable"] == "2.111.2"
+        assert result["update_available"] is True
 
     @pytest.mark.asyncio
     async def test_tc07_check_malformed_html(self):
