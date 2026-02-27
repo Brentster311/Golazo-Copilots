@@ -19,7 +19,20 @@ class TestSchemaRequiresWorkspacePath:
     async def test_all_tools_require_workspace_path(self):
         """Every tool schema must list workspace_path as required."""
         tools = await list_tools()
-        assert len(tools) == 7, f"Expected 7 tools, got {len(tools)}"
+        expected_tool_names = {
+            "golazo_create_workitem",
+            "golazo_transition",
+            "golazo_status",
+            "golazo_bootstrap",
+            "golazo_consent",
+            "golazo_capabilities",
+            "golazo_role_context",
+            "golazo_update",
+        }
+        actual_tool_names = {tool.name for tool in tools}
+        assert actual_tool_names == expected_tool_names, (
+            f"Tool registry mismatch. Expected {sorted(expected_tool_names)}, got {sorted(actual_tool_names)}"
+        )
         for tool in tools:
             required = tool.inputSchema.get("required", [])
             assert "workspace_path" in required, (

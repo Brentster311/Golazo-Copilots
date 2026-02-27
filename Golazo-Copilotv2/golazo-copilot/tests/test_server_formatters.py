@@ -4,6 +4,7 @@ These test the abstraction boundary between tool results (dicts) and
 the Markdown text returned to the MCP client.  No MCP infrastructure needed.
 """
 
+import asyncio
 import sys
 from pathlib import Path
 
@@ -25,6 +26,7 @@ from golazo_copilot.server import (
     format_status_result,
     format_transition_result,
     resolve_work_items_dir,
+    _runtime_tool_self_check,
 )
 
 
@@ -43,6 +45,14 @@ class TestResolveWorkItemsDir:
     def test_empty_string_raises(self):
         with pytest.raises(ValueError, match="workspace_path is required"):
             resolve_work_items_dir("")
+
+
+class TestToolSelfCheck:
+
+    def test_runtime_self_check_has_no_missing_required_or_dispatch(self):
+        warnings = asyncio.run(_runtime_tool_self_check())
+        assert all("Missing required tool registration" not in w for w in warnings)
+        assert all("missing dispatch branch" not in w for w in warnings)
 
 
 # ── format_create_workitem_result ───────────────────────────────────────
@@ -178,6 +188,17 @@ class TestFormatStatusResult:
         result = {**self._ACTIVE_BASE, "registry_hint": "12 capabilities registered"}
         text = format_status_result(result)
         assert "12 capabilities registered" in text
+
+    def test_tooling_warnings(self):
+        result = {
+            **self._ACTIVE_BASE,
+            "tooling_warnings": [
+                "Missing required tool registration: golazo_update",
+            ],
+        }
+        text = format_status_result(result)
+        assert "Tooling self-check warnings" in text
+        assert "golazo_update" in text
 
     def test_deviations(self):
         result = {

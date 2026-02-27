@@ -2,6 +2,7 @@
 """Golazo Copilot MCP Server - Entry point for GitHub Copilot integration."""
 
 import asyncio
+import sys
 from pathlib import Path
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
@@ -27,6 +28,9 @@ ICON_WARN = "[WARN]"
 ICON_PENDING = "[...]"
 ICON_CHECK = "[x]"
 ICON_EMPTY = "[ ]"
+
+_REQUIRED_TOOL_NAMES = {"golazo_update"}
+_STARTUP_TOOL_WARNINGS: list[str] = []
 
 
 def resolve_work_items_dir(workspace_path: str | None) -> Path:
@@ -115,6 +119,11 @@ def format_status_result(result: dict) -> str:
         if result.get("registry_hint"):
             registry_section = f"\n- {result['registry_hint']}"
 
+        tooling_warning_section = ""
+        tooling_warnings = result.get("tooling_warnings", [])
+        if tooling_warnings:
+            tooling_warning_section = "\n- Tooling self-check warnings: " + " | ".join(tooling_warnings)
+
         next_steps = "\n".join(f"- {step}" for step in result["next_steps"])
 
         # GCP-0053: Closure mode indicator
@@ -134,7 +143,7 @@ def format_status_result(result: dict) -> str:
         return f"""**Golazo Status** (v{result['version']}){version_warning}
 - Work Item: {result['work_item_id']}
 - Current Role: **{result['current_role']}**{closure_label}
-- Phase: {result['current_phase']}{progress_section}{outputs_section}{registry_section}{deviations_section}
+    - Phase: {result['current_phase']}{progress_section}{outputs_section}{registry_section}{tooling_warning_section}{deviations_section}
 
 **Next Steps:**
 {next_steps}
@@ -143,7 +152,11 @@ def format_status_result(result: dict) -> str:
 {result['role_instructions']}
 """
     version_info = f" (v{result.get('version', 'unknown')})" if 'version' in result else ""
-    return f"{ICON_WARN}{version_info} {result.get('message', 'No active work item')}"
+    tooling_warnings = result.get("tooling_warnings", [])
+    tooling_suffix = ""
+    if tooling_warnings:
+        tooling_suffix = "\n" + "\n".join(f"{ICON_WARN} Tooling self-check: {w}" for w in tooling_warnings)
+    return f"{ICON_WARN}{version_info} {result.get('message', 'No active work item')}{tooling_suffix}"
 
 
 def format_bootstrap_result(result: dict) -> str:
@@ -301,6 +314,11 @@ def format_update_result(result: dict) -> str:
 @server.list_tools()
 async def list_tools() -> list[Tool]:
     """List available tools."""
+    return _get_tool_definitions()
+
+
+def _get_tool_definitions() -> list[Tool]:
+    """Build tool definitions advertised by this MCP server."""
     return [
         Tool(
             name="golazo_create_workitem",
@@ -500,6 +518,43 @@ async def list_tools() -> list[Tool]:
     ]
 
 
+async def _runtime_tool_self_check() -> list[str]:
+    """Validate tool registration consistency at startup.
+
+    Checks:
+    - Required tools are advertised in list_tools.
+    - Every advertised tool has a dispatcher branch (not Unknown tool).
+    """
+    warnings: list[str] = []
+    tool_names = {tool.name for tool in _get_tool_definitions()}
+
+    missing_required = sorted(_REQUIRED_TOOL_NAMES - tool_names)
+    if missing_required:
+        warnings.append(
+            "Missing required tool registration: " + ", ".join(missing_required)
+        )
+
+    missing_dispatch: list[str] = []
+    for tool_name in sorted(tool_names):
+        try:
+            result = await _dispatch_tool(tool_name, {})
+        except Exception:
+            # Expected for many tools due to required params; this still proves
+            # a dispatcher branch exists for the tool.
+            continue
+
+        first_text = result[0].text if result and hasattr(result[0], "text") else ""
+        if isinstance(first_text, str) and first_text.startswith("Unknown tool:"):
+            missing_dispatch.append(tool_name)
+
+    if missing_dispatch:
+        warnings.append(
+            "Advertised tool(s) missing dispatch branch: " + ", ".join(missing_dispatch)
+        )
+
+    return warnings
+
+
 @server.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     """Handle tool calls."""
@@ -534,12 +589,17 @@ async def _dispatch_tool(name: str, arguments: dict) -> list[TextContent]:
         work_item_id = arguments.get("work_item_id", "").strip()
         if not work_item_id:
             from golazo_copilot import __version__ as ver
-            return [TextContent(type="text", text=f"**Golazo Copilot** (v{ver})")]
+            warning_lines = ""
+            if _STARTUP_TOOL_WARNINGS:
+                warning_lines = "\n" + "\n".join(f"{ICON_WARN} Tooling self-check: {w}" for w in _STARTUP_TOOL_WARNINGS)
+            return [TextContent(type="text", text=f"**Golazo Copilot** (v{ver}){warning_lines}")]
         work_items_dir = resolve_work_items_dir(arguments.get("workspace_path"))
         result = await golazo_status(
             work_item_id=work_item_id,
             work_items_dir=work_items_dir
         )
+        if _STARTUP_TOOL_WARNINGS:
+            result["tooling_warnings"] = list(_STARTUP_TOOL_WARNINGS)
         return [TextContent(type="text", text=format_status_result(result))]
 
     elif name == "golazo_bootstrap":
@@ -606,6 +666,12 @@ async def _dispatch_tool(name: str, arguments: dict) -> list[TextContent]:
 
 async def main():
     """Run the MCP server."""
+    global _STARTUP_TOOL_WARNINGS
+    startup_warnings = await _runtime_tool_self_check()
+    _STARTUP_TOOL_WARNINGS = list(startup_warnings)
+    for warning in startup_warnings:
+        print(f"{ICON_WARN} Startup self-check: {warning}", file=sys.stderr)
+
     async with stdio_server() as (read_stream, write_stream):
         await server.run(read_stream, write_stream, server.create_initialization_options())
 
