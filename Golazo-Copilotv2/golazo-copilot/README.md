@@ -178,6 +178,7 @@ You should see the Golazo Copilot tools listed:
 - `golazo_transition` – Move between roles
 - `golazo_consent` – Record consent for bypassing workflow gates
 - `golazo_bootstrap` – Bootstrap Golazo instructions in a workspace
+- `golazo_update` – Check for and install Golazo Copilot updates
 
 ### Step 5: Bootstrap Your Workspace
 
@@ -280,6 +281,15 @@ Query the project capability registry for impact analysis. Reads `capabilities.y
 | `files` | array of strings | No | File paths to check impact for (required for `action="impact"`) |
 | `workspace_path` | string | **Yes** | Workspace root path containing `capabilities.yaml` |
 
+#### `golazo_update`
+Check for and install updates to Golazo Copilot from Azure Artifacts.
+
+| Input | Type | Required | Description |
+|-------|------|----------|-------------|
+| `action` | string | **Yes** | `check` to report installed vs. latest versions, or `install` to install a specific version |
+| `version` | string | No | Target version to install (required when `action="install"`) |
+| `workspace_path` | string | **Yes** | Workspace root path |
+
 ### Workflow Profiles
 
 | Profile | Description | Use Case |
@@ -310,7 +320,17 @@ Query the project capability registry for impact analysis. Reads `capabilities.y
 
 ## Updating
 
-To update to the latest version:
+The easiest way to update is via the built-in MCP tool. In GitHub Copilot Chat:
+
+1. **Check for updates:**
+   > "Check for golazo updates"
+
+2. **Install a specific version:**
+   > "Update golazo to version 2.110.0"
+
+The tool validates authentication prerequisites (keyring, artifacts-keyring, `az login`) before installing, and will prompt you to restart the MCP server afterward.
+
+Alternatively, update manually via pip:
 
 ```powershell
 pip install --upgrade golazo-copilot --index-url https://msazure.pkgs.visualstudio.com/One/_packaging/azinsights_accia_pkgs/pypi/simple/

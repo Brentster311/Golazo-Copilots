@@ -164,6 +164,17 @@ capabilities:
       - "action='validate' -> {results: [{name, valid, missing_files}]}"
     depends_on: []
 
+  - name: tool-golazo-update
+    description: "Check for and install Golazo Copilot updates from Azure DevOps Artifacts feed"
+    key_files:
+      - golazo-copilot/src/golazo_copilot/tools/golazo_update.py
+    contracts:
+      - "golazo_update(action, version?, include_prerelease?) -> dict"
+      - "action='check' -> {current_version, latest_stable, latest_prerelease?, available_versions}"
+      - "action='install' -> {success, version_installed, pip_output, restart_required}"
+    depends_on:
+      - mcp-server
+
   # ── Server (MCP entry point) ────────────────────────────────────────
   - name: mcp-server
     description: "MCP server entry point — registers all tools, routes calls, formats responses"
@@ -171,7 +182,7 @@ capabilities:
       - golazo-copilot/src/golazo_copilot/server.py
       - golazo-copilot/src/golazo_copilot/__init__.py
     contracts:
-      - "list_tools() -> list[Tool]  # 7 tools registered"
+      - "list_tools() -> list[Tool]  # 8 tools registered"
       - "call_tool(name, arguments) -> list[TextContent]"
     depends_on:
       - tool-create-workitem
@@ -181,6 +192,7 @@ capabilities:
       - tool-consent
       - tool-capabilities
       - tool-role-context
+      - tool-golazo-update
 
   - name: tool-role-context
     description: "Assemble a self-contained context bundle for a role — instructions, state, input artifacts, previous notes"
