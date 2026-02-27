@@ -14,7 +14,7 @@ import yaml
 from .. import __version__
 from ..core.persistence import load_state, work_item_exists, DEFAULT_WORKITEMS_DIR
 from ..core.output_validator import parse_required_outputs, validate_all_outputs
-from ..core.transitions import ROLE_ORDER
+from ..core.transitions import ROLE_ORDER, get_role_order_for_profile
 from ..roles.loader import load_role_instructions, get_role_content
 from .golazo_transition import get_role_notes_path
 
@@ -112,11 +112,19 @@ def _get_registry_hint(workspace_root: Path) -> str | None:
 def _compute_role_progress(state) -> dict:
     """Compute role progress from state's role_history.
     
+    Uses the profile's role sequence to determine which roles are
+    relevant and their order.
+    
     Returns dict with:
         roles: list of {"role": str, "status": "completed"|"in-progress"|"pending"}
         roles_completed: int
         roles_total: int
+        profile: str
     """
+    # Use profile-specific role order
+    profile = getattr(state, 'profile', 'complete')
+    profile_roles = get_role_order_for_profile(profile)
+    
     # Build latest entry per role from history
     latest: dict[str, object] = {}
     for entry in state.role_history:
@@ -124,7 +132,7 @@ def _compute_role_progress(state) -> dict:
     
     roles = []
     completed = 0
-    for role in ROLE_ORDER:
+    for role in profile_roles:
         entry = latest.get(role)
         if entry and entry.exited_at is not None:
             status = "completed"
@@ -138,7 +146,8 @@ def _compute_role_progress(state) -> dict:
     return {
         "roles": roles,
         "roles_completed": completed,
-        "roles_total": len(ROLE_ORDER),
+        "roles_total": len(profile_roles),
+        "profile": profile,
     }
 
 
@@ -267,7 +276,7 @@ async def golazo_status(
     )
 
     role_progress = (
-        {"roles": [], "roles_completed": 0, "roles_total": len(ROLE_ORDER)}
+        {"roles": [], "roles_completed": 0, "roles_total": len(get_role_order_for_profile(state.profile))}
         if isinstance(progress_result, BaseException)
         else progress_result
     )

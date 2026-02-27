@@ -10,6 +10,7 @@ from ..core.transitions import (
     validate_transition,
     is_backward_transition,
     get_phase_for_role,
+    get_role_order_for_profile,
 )
 from ..core.output_validator import parse_required_outputs, validate_all_outputs
 from ..roles.loader import load_role_instructions, get_role_content
@@ -91,13 +92,13 @@ async def golazo_transition(
             "role_instructions": role_instructions,
         }
     
-    # Validate transition is allowed
-    valid, error = validate_transition(current_role, role)
+    # Validate transition is allowed (profile-aware)
+    valid, error = validate_transition(current_role, role, profile=state.profile)
     if not valid:
         return {"success": False, "error": error}
     
     # Check if backward transition
-    backward = is_backward_transition(current_role, role)
+    backward = is_backward_transition(current_role, role, profile=state.profile)
     warning = None
     if backward:
         warning = "Moving backward to rework. Previous progress preserved."
