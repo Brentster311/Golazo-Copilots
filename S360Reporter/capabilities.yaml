@@ -1,0 +1,215 @@
+# Golazo Copilot — Capability Registry
+#
+# Maps project capabilities to their key files, contracts, and dependencies.
+# The Golazo workflow uses it for impact analysis.
+#
+# Usage:
+#   gcp_capabilities(action="list")       — summary of all capabilities
+#   gcp_capabilities(action="show", capability="<name>")  — full card
+#   gcp_capabilities(action="impact", files=["path/to/file.py"])
+#   gcp_capabilities(action="validate")   — check key_files exist
+
+capabilities:
+
+  # ══════════════════════════════════════════════════════════════════════
+  # accia-s360 — redistributable S360 client package (browser auth chain)
+  # ══════════════════════════════════════════════════════════════════════
+
+  - name: accia-s360-auth
+    description: "Two-step auth chain: AzureCliCredential → InteractiveBrowserCredential"
+    key_files:
+      - accia-s360/src/accia_s360/auth.py
+      - accia-s360/src/accia_s360/config.py
+    contracts:
+      - "AuthManager.get_s360_token() -> str"
+      - "AuthManager.get_graph_token() -> str"
+      - "S360Auth.get_token() -> str"
+      - "S360Auth.get_current_user() -> UserInfo"
+    depends_on: []
+
+  - name: accia-s360-client
+    description: "Redistributable S360Client with browser-fallback auth (published to Azure Artifacts)"
+    key_files:
+      - accia-s360/src/accia_s360/client.py
+      - accia-s360/src/accia_s360/__init__.py
+      - accia-s360/pyproject.toml
+    contracts:
+      - "S360Client(config?) -> client"
+      - "S360Client.get_current_user() -> UserInfo"
+      - "S360Client.get_action_items(params) -> list[dict]"
+      - "S360Client.get_action_items_grid(kpi_id, audience) -> dict"
+      - "S360Client.get_kpi(kpi_id) -> dict"
+      - "S360Client.get_all_action_item_metadata() -> dict"
+    depends_on:
+      - accia-s360-auth
+
+  - name: accia-s360-endpoints
+    description: "Action items, discovery, and extended endpoints for accia-s360"
+    key_files:
+      - accia-s360/src/accia_s360/endpoints/action_items.py
+      - accia-s360/src/accia_s360/endpoints/discovery.py
+      - accia-s360/src/accia_s360/endpoints/extended.py
+    contracts: []
+    depends_on:
+      - accia-s360-auth
+
+  - name: accia-s360-tests
+    description: "Pytest suite for accia-s360 (auth chain, ETA payload, build, package)"
+    key_files:
+      - accia-s360/tests/test_auth_chain.py
+      - accia-s360/tests/test_build.py
+      - accia-s360/tests/test_eta_payload.py
+      - accia-s360/tests/test_package.py
+    contracts: []
+    depends_on:
+      - accia-s360-client
+
+  # ══════════════════════════════════════════════════════════════════════
+  # S360Reporter — desktop + web app for SFI/QEI action item management
+  # ══════════════════════════════════════════════════════════════════════
+
+  - name: reporter-tk-app
+    description: "Tkinter desktop UI — service drill-down, column toggle, filter, ETA editing, detail modals, multi-level owner grouping"
+    key_files:
+      - GUI/src/s360_reporter/tk_app.py
+    contracts:
+      - "main() — Tkinter entry point (s360-reporter CLI)"
+      - "OrgAncestry(level1: str, level2: Optional[str]) — NamedTuple for multi-level org mapping"
+      - "get_org_mapping(owner_names, manager_alias) -> dict[str, OrgAncestry]"
+      - "aggregate_by_owner(items, service_owners, org_mapping?, allowed_owners?) -> dict"
+      - "aggregate_by_level2(items, service_owners, org_mapping) -> dict[(level1, level2), stats]"
+      - "collect_services_for_owner(owner_name, level, service_owners, org_mapping) -> set[str]"
+      - "get_service_owners(service_names, on_status?) -> dict[str, list[str]]"
+    depends_on:
+      - reporter-data
+      - reporter-cache
+      - reporter-eta-logic
+      - reporter-llm
+      - reporter-query-builder
+      - reporter-logging
+
+  - name: reporter-data
+    description: "Data layer — fetches action items from S360 via accia-s360, parallel KPI grid loading"
+    key_files:
+      - GUI/src/s360_reporter/data.py
+    contracts:
+      - "get_current_user_alias() -> str | None"
+      - "fetch_full_data(user_alias) -> dict"
+      - "is_invalid_eta(eta_str) -> bool"
+      - "get_cached_columns(kpi_id) -> list[str] | None"
+    depends_on:
+      - accia-s360-client
+
+  - name: reporter-cache
+    description: "JSON file-based caching with 1-hour TTL for S360Reporter"
+    key_files:
+      - GUI/src/s360_reporter/cache.py
+    contracts:
+      - "write_cache(user_alias, data) -> None"
+      - "read_cache(user_alias) -> dict | None"
+      - "is_cache_valid(data) -> bool"
+      - "get_cache_age_minutes(data) -> int | None"
+      - "clear_cache(user_alias) -> None"
+      - "get_cache_dir() -> Path"
+    depends_on: []
+
+  - name: reporter-eta-logic
+    description: "Pure ETA logic — propose dates, validate user input, filter items needing updates"
+    key_files:
+      - GUI/src/s360_reporter/eta_logic.py
+    contracts:
+      - "propose_eta(due_date_str?) -> str"
+      - "get_items_needing_eta_update(items) -> list[dict]"
+      - "validate_eta_date(date_str) -> tuple[bool, str]"
+    depends_on:
+      - reporter-data
+
+  - name: reporter-llm
+    description: "Azure OpenAI integration — SFI item analysis (Mission, Steps, Resources, Risk)"
+    key_files:
+      - GUI/src/s360_reporter/llm_client.py
+      - GUI/src/s360_reporter/llm_storage.py
+    contracts:
+      - "LLMConfig.from_env() -> LLMConfig"
+      - "analyze_item(config, item_data) -> AnalysisResult"
+      - "fetch_action_item_urls(item_data) -> list[str]"
+      - "save_analysis(result) -> Path"
+      - "load_analysis(action_item_id) -> AnalysisResult | None"
+      - "analysis_exists(action_item_id) -> bool"
+    depends_on:
+      - accia-s360-client
+
+  - name: reporter-query-builder
+    description: "Clause-based filter builder UI — field/operator/value clauses that persist across sessions"
+    key_files:
+      - GUI/src/s360_reporter/query_builder.py
+    contracts:
+      - "QueryBuilderDialog — Tkinter dialog for building filter clauses"
+      - "apply_clauses(items, clauses) -> list[dict]"
+    depends_on:
+      - reporter-cache
+      - reporter-data
+
+  - name: reporter-logging
+    description: "Rotating file + console logging, subprocess window suppression for PyInstaller"
+    key_files:
+      - GUI/src/s360_reporter/logging_config.py
+    contracts:
+      - "setup_logging(level?) -> None"
+      - "get_log_path() -> Path"
+      - "patch_subprocess_windows() -> None"
+    depends_on: []
+
+  - name: reporter-build
+    description: "PyInstaller packaging for S360Reporter.exe standalone distribution"
+    key_files:
+      - S360Reporter.spec
+      - BUILD_MANIFEST.md
+      - pyproject.toml
+    contracts:
+      - "pyinstaller S360Reporter.spec -> dist/GUI/"
+    depends_on:
+      - reporter-tk-app
+
+  - name: reporter-tests
+    description: "Pytest suite for S360Reporter (cache, data, ETA, LLM, query builder, UI)"
+    key_files:
+      - GUI/tests/test_cache.py
+      - GUI/tests/test_data.py
+      - GUI/tests/test_eta_logic.py
+      - GUI/tests/test_eta_ui.py
+      - GUI/tests/test_llm_client.py
+      - GUI/tests/test_llm_storage.py
+      - GUI/tests/test_query_builder.py
+      - GUI/tests/test_tk_app.py
+      - GUI/tests/test_sfi_026.py
+      - GUI/tests/test_detail_modal_colors.py
+    contracts: []
+    depends_on:
+      - reporter-tk-app
+
+  # ══════════════════════════════════════════════════════════════════════
+  # Standalone scripts & docs
+  # ══════════════════════════════════════════════════════════════════════
+
+  - name: standalone-scripts
+    description: "Ad-hoc CLI scripts for SFI analysis, Watson/ATS doc fetching, HAR parsing"
+    key_files:
+      - analyze_sfi_risk.py
+      - fetch_watson_docs.py
+      - search_ats_docs.py
+      - get_kpi_details.py
+      - parse_har3.py
+      - examples/find_my_sfi_items.py
+      - examples/get_sfi_details.py
+    contracts: []
+    depends_on:
+      - accia-s360-client
+
+  - name: remediation-docs
+    description: "Azure remediation guides (tenant security, Watson AKS)"
+    key_files:
+      - docs/azure-tenant-security-remediation.md
+      - docs/azure-watson-aks-remediation.md
+    contracts: []
+    depends_on: []

@@ -1,0 +1,116 @@
+{
+  "schema_version": "1.0",
+  "work_item_id": "LLM-0004",
+  "profile": "express",
+  "current_phase": "completion",
+  "current_role": "retrospective",
+  "created_at": "2026-02-08T04:24:58.373445Z",
+  "updated_at": "2026-02-08T04:30:31.787139Z",
+  "dor": {
+    "userStory": {
+      "complete": true,
+      "evidence": "WorkItems/LLM-0004/LLM-0004-User-Story.md",
+      "validated_at": "2026-02-08T04:25:00Z"
+    },
+    "designDoc": {
+      "complete": true,
+      "evidence": "WorkItems/LLM-0004/Design/LLM-0004-design-doc.md",
+      "validated_at": "2026-02-08T04:25:20Z"
+    },
+    "reviewComments": {
+      "complete": true,
+      "evidence": "WorkItems/LLM-0004/Design/LLM-0004-Review-Comments.md",
+      "validated_at": "2026-02-08T04:25:40Z"
+    },
+    "testCases": {
+      "complete": true,
+      "evidence": "WorkItems/LLM-0004/Design/LLM-0004-Test-Cases.md",
+      "validated_at": "2026-02-08T04:25:40Z"
+    }
+  },
+  "dod": {
+    "branchCreated": {
+      "complete": true,
+      "evidence": "Working on main branch",
+      "validated_at": "2026-02-08T04:29:00Z"
+    },
+    "testsWrittenFirst": {
+      "complete": true,
+      "evidence": "tests/test_azure_openai_provider.py - 21 tests",
+      "validated_at": "2026-02-08T04:29:00Z"
+    },
+    "testsPass": {
+      "complete": true,
+      "evidence": "74 passed in 7.99s",
+      "validated_at": "2026-02-08T04:29:00Z"
+    },
+    "buildPasses": {
+      "complete": true,
+      "evidence": "pytest 74/74 pass, no build errors",
+      "validated_at": "2026-02-08T04:29:00Z"
+    },
+    "docsUpdated": {
+      "complete": true,
+      "evidence": "README.md updated with Azure provider docs, Architecture-Overview.md updated",
+      "validated_at": "2026-02-08T04:29:00Z"
+    },
+    "refactorComplete": {
+      "complete": true,
+      "evidence": "WorkItems/LLM-0004/RoleDecisionNotes/LLM-0004-refactor-expert.md",
+      "validated_at": "2026-02-08T04:29:00Z"
+    },
+    "committed": {
+      "complete": true,
+      "evidence": "git commit on main",
+      "validated_at": "2026-02-08T04:29:00Z"
+    }
+  },
+  "role_history": [
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-02-08T04:24:58.373445Z",
+      "exited_at": "2026-02-08T04:25:37.886700Z"
+    },
+    {
+      "role": "program-manager",
+      "entered_at": "2026-02-08T04:25:37.886700Z",
+      "exited_at": "2026-02-08T04:25:41.175018Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-02-08T04:25:41.175018Z",
+      "exited_at": "2026-02-08T04:25:44.911474Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-02-08T04:25:44.911474Z",
+      "exited_at": "2026-02-08T04:26:00.849204Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-02-08T04:26:00.849204Z",
+      "exited_at": "2026-02-08T04:28:36.307026Z"
+    },
+    {
+      "role": "refactor-expert",
+      "entered_at": "2026-02-08T04:28:36.307026Z",
+      "exited_at": "2026-02-08T04:28:39.530883Z"
+    },
+    {
+      "role": "documentor",
+      "entered_at": "2026-02-08T04:28:39.530883Z",
+      "exited_at": "2026-02-08T04:28:42.807092Z"
+    },
+    {
+      "role": "builder",
+      "entered_at": "2026-02-08T04:28:42.807092Z",
+      "exited_at": "2026-02-08T04:30:31.787139Z"
+    },
+    {
+      "role": "retrospective",
+      "entered_at": "2026-02-08T04:30:31.787139Z",
+      "exited_at": null
+    }
+  ],
+  "deviations": []
+}
