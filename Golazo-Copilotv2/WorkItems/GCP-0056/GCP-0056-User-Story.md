@@ -1,6 +1,6 @@
 # GCP-0056 User Story
 
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 ## User Story
 
@@ -24,12 +24,12 @@
 - **Assumption (explicit):** The user can choose between installing the latest released version or the latest pre-release version.
 
 ## Acceptance Criteria (bulleted, testable)
-- [ ] When the user says "update golazo", "check for golazo update", or similar, the tool queries the Azure Artifacts feed and reports the current installed version, the latest released version, and the latest pre-release version (if different).
-- [ ] The user is presented with a choice: install latest released version, install latest pre-release version, or cancel.
-- [ ] If the user chooses to install, the tool runs the correct `pip install` command with `--index-url=https://msazure.pkgs.visualstudio.com/One/_packaging/azinsights_accia_pkgs/pypi/simple/`, ensures `keyring` and `artifacts-keyring` are installed, and verifies `az login` is active (prompting if not).
-- [ ] If the installed version is already the latest, the tool informs the user and does not reinstall.
-- [ ] After a successful install, the tool informs the user that the MCP server must be refreshed/restarted before the new version takes effect, and that bootstrap will not work until this refresh occurs.
-- [ ] After the user confirms the refresh has been done, the tool asks the user to choose one of: (1) Do not bootstrap, (2) Bootstrap, or (3) Full clean bootstrap. If the user selects option 2 or 3, the tool invokes `golazo_bootstrap` with the appropriate parameters.
+- [x] When the user says "update golazo", "check for golazo update", or similar, the tool queries the Azure Artifacts feed and reports the current installed version, the latest released version, and the latest pre-release version (if different).
+- [x] The user is presented with a choice: install latest released version, install latest pre-release version, or cancel.
+- [x] If the user chooses to install, the tool runs the correct `pip install` command with `--index-url=https://msazure.pkgs.visualstudio.com/One/_packaging/azinsights_accia_pkgs/pypi/simple/`, ensures `keyring` and `artifacts-keyring` are installed, and verifies `az login` is active (prompting if not).
+- [x] If the installed version is already the latest, the tool informs the user and does not reinstall.
+- [x] After a successful install, the tool informs the user that the MCP server must be refreshed/restarted before the new version takes effect, and that bootstrap will not work until this refresh occurs.
+- [x] After the user confirms the refresh has been done, the tool asks the user to choose one of: (1) Do not bootstrap, (2) Bootstrap, or (3) Full clean bootstrap. If the user selects option 2 or 3, the tool invokes `golazo_bootstrap` with the appropriate parameters.
 
 ## Non-functional Requirements
 - The tool must not store or expose credentials; authentication is handled entirely through `az login` + `keyring`/`artifacts-keyring`.
@@ -40,3 +40,40 @@
 
 ## Rollout / Rollback Notes
 - The tool is additive — it does not change existing Golazo behavior. Rollback is simply removing the tool registration.
+
+## Closure
+
+**Date:** 2026-02-27
+**Final Status:** IMPLEMENTED — all 6 acceptance criteria validated and passing.
+
+### Implementation Summary
+
+The `golazo_update` MCP tool was implemented with two actions:
+- **check**: Queries the Azure Artifacts PEP 503 API, parses HTML to extract versions, classifies into stable/pre-release, and returns a structured dict with `current_version`, `latest_stable`, `latest_prerelease`, and `update_available`.
+- **install**: Validates the version string, runs preflight checks (keyring, artifacts-keyring, `az login`), shells out to pip with the correct `--index-url`, and returns success with `restart_required` and `bootstrap_options` (3 options: no bootstrap, standard, full clean).
+
+### Artifacts Delivered
+| Artifact | Path |
+|----------|------|
+| Tool implementation | `golazo-copilot/src/golazo_copilot/tools/golazo_update.py` (~312 lines) |
+| Test suite | `golazo-copilot/tests/test_golazo_update.py` (30 tests, all passing) |
+| Server integration | `golazo-copilot/src/golazo_copilot/server.py` (handler + formatter) |
+| Package export | `golazo-copilot/src/golazo_copilot/tools/__init__.py` |
+| Documentation | `golazo-copilot/README.md` (updated) |
+| Capability registration | `capabilities.yaml` (updated) |
+
+### Acceptance Criteria Results
+| # | Criterion | Result |
+|---|-----------|--------|
+| 1 | Check action reports current, latest stable, and latest pre-release versions | PASS |
+| 2 | User presented with install choices (stable, pre-release, cancel) | PASS |
+| 3 | Install runs pip with correct `--index-url`, validates auth prerequisites | PASS |
+| 4 | Already-latest detection via `update_available` flag | PASS |
+| 5 | Post-install restart/refresh messaging | PASS |
+| 6 | Bootstrap options (none, standard, full clean) provided after install | PASS |
+
+### Pending Work Items (from Retrospective)
+1. **Fix broken import chain** — `get_role_order_for_profile` in `core/transitions.py` causes 15+ test collection failures (pre-existing, not introduced by GCP-0056)
+2. **Add linter configuration** — ruff config in `pyproject.toml`
+3. **Add CI import smoke test** — catch import-chain breaks early
+4. **Add `golazo_role_context` documentation to README** — noted by documenter as out-of-scope for this work item
