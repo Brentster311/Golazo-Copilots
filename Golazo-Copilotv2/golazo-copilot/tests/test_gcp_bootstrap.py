@@ -1,6 +1,7 @@
 """Tests for golazo_bootstrap tool."""
 
 import shutil
+import time
 from pathlib import Path
 
 import pytest
@@ -14,17 +15,33 @@ from golazo_copilot.tools.golazo_bootstrap import golazo_bootstrap
 TEST_WORKSPACE_DIR = Path(__file__).parent / "test-workspace"
 
 
+def _safe_rmtree(path: Path, retries: int = 5, delay: float = 0.1) -> None:
+    """Remove a directory with small retries for transient Windows file locks."""
+    if not path.exists():
+        return
+    last_error: Exception | None = None
+    for _ in range(retries):
+        try:
+            shutil.rmtree(path)
+            return
+        except PermissionError as exc:
+            last_error = exc
+            time.sleep(delay)
+    if last_error is not None:
+        raise last_error
+
+
 @pytest.fixture(autouse=True)
 def cleanup():
     """Clean up test directory before and after each test."""
     if TEST_WORKSPACE_DIR.exists():
-        shutil.rmtree(TEST_WORKSPACE_DIR)
+        _safe_rmtree(TEST_WORKSPACE_DIR)
     TEST_WORKSPACE_DIR.mkdir(parents=True)
     # Create a WorkItems folder to simulate a valid workspace
     (TEST_WORKSPACE_DIR / "WorkItems").mkdir()
     yield
     if TEST_WORKSPACE_DIR.exists():
-        shutil.rmtree(TEST_WORKSPACE_DIR)
+        _safe_rmtree(TEST_WORKSPACE_DIR)
 
 
 class TestBootstrapCreatesInstructions:
