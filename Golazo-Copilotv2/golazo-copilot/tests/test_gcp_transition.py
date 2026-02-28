@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from golazo_copilot.tools.golazo_create_workitem import golazo_create_workitem
 from golazo_copilot.tools.golazo_transition import golazo_transition, ROLE_SUFFIX_MAP
+from golazo_copilot.tools.golazo_consent import golazo_consent
 from golazo_copilot.core.persistence import load_state, save_state
 
 
@@ -583,3 +584,69 @@ class TestBlockingRoleNotes:
         # Should fail because developer notes don't exist
         assert result["success"] is False
         assert "developer" in result["error"].lower()
+
+
+class TestForcedProfileMismatchRecovery:
+    """Force-recovery tests when work item state drifts outside profile role set."""
+
+    @pytest.mark.asyncio
+    async def test_force_recovery_requires_consent(self):
+        """Force transition from profile mismatch fails without revert/custom consent."""
+        await golazo_create_workitem(
+            work_item_id="FRC-001", profile="express", work_items_dir=TEST_WORKITEMS_DIR
+        )
+
+        state = load_state("FRC-001", TEST_WORKITEMS_DIR)
+        state.current_role = "architect"
+        state.current_phase = "definition"
+        state.role_history[-1].role = "architect"
+        save_state("FRC-001", state, TEST_WORKITEMS_DIR)
+
+        create_role_notes("FRC-001", "architect", TEST_WORKITEMS_DIR)
+
+        result = await golazo_transition(
+            work_item_id="FRC-001",
+            role="retrospective",
+            work_items_dir=TEST_WORKITEMS_DIR,
+            force=True,
+        )
+
+        assert result["success"] is False
+        assert "revert_progress" in result["error"] or "custom" in result["error"]
+
+    @pytest.mark.asyncio
+    async def test_force_recovery_succeeds_with_custom_consent(self):
+        """Force transition from profile mismatch succeeds with recorded custom consent."""
+        await golazo_create_workitem(
+            work_item_id="FRC-002", profile="express", work_items_dir=TEST_WORKITEMS_DIR
+        )
+
+        state = load_state("FRC-002", TEST_WORKITEMS_DIR)
+        state.current_role = "architect"
+        state.current_phase = "definition"
+        state.role_history[-1].role = "architect"
+        save_state("FRC-002", state, TEST_WORKITEMS_DIR)
+
+        create_role_notes("FRC-002", "architect", TEST_WORKITEMS_DIR)
+
+        await golazo_consent(
+            work_item_id="FRC-002",
+            action="custom",
+            reason="PO approves force recovery from profile-role mismatch",
+            work_items_dir=TEST_WORKITEMS_DIR,
+        )
+
+        result = await golazo_transition(
+            work_item_id="FRC-002",
+            role="retrospective",
+            work_items_dir=TEST_WORKITEMS_DIR,
+            force=True,
+        )
+
+        assert result["success"] is True
+        assert result["current_role"] == "retrospective"
+        assert "warning" in result
+        assert "profile-role mismatch" in result["warning"]
+
+        state_after = load_state("FRC-002", TEST_WORKITEMS_DIR)
+        assert state_after.current_role == "retrospective"

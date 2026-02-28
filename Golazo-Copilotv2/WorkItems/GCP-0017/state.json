@@ -2,25 +2,10 @@
   "schema_version": "1.0",
   "work_item_id": "GCP-0017",
   "profile": "complete",
-  "current_phase": "development",
-  "current_role": "developer",
+  "current_phase": "closure",
+  "current_role": "project-owner-assistant",
   "created_at": "2026-02-06T22:54:52.081149Z",
-  "updated_at": "2026-02-06T23:06:52.518512Z",
-  "dor": {
-    "userStory": true,
-    "designDoc": false,
-    "reviewComments": false,
-    "testCases": false
-  },
-  "dod": {
-    "branchCreated": true,
-    "testsWrittenFirst": true,
-    "testsPass": true,
-    "buildPasses": true,
-    "docsUpdated": true,
-    "refactorComplete": true,
-    "committed": true
-  },
+  "updated_at": "2026-02-28T18:20:42.549132Z",
   "role_history": [
     {
       "role": "project-owner-assistant",
@@ -45,6 +30,31 @@
     {
       "role": "developer",
       "entered_at": "2026-02-06T23:04:28.687552Z",
+      "exited_at": "2026-02-28T18:20:29.624471Z"
+    },
+    {
+      "role": "refactor-expert",
+      "entered_at": "2026-02-28T18:20:29.624471Z",
+      "exited_at": "2026-02-28T18:20:34.834628Z"
+    },
+    {
+      "role": "documenter",
+      "entered_at": "2026-02-28T18:20:34.834628Z",
+      "exited_at": "2026-02-28T18:20:39.314137Z"
+    },
+    {
+      "role": "builder",
+      "entered_at": "2026-02-28T18:20:39.314137Z",
+      "exited_at": "2026-02-28T18:20:40.941173Z"
+    },
+    {
+      "role": "retrospective",
+      "entered_at": "2026-02-28T18:20:40.941173Z",
+      "exited_at": "2026-02-28T18:20:42.549132Z"
+    },
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-02-28T18:20:42.549132Z",
       "exited_at": null
     }
   ],
@@ -67,5 +77,6 @@
       "consumed": false,
       "consumed_at": null
     }
-  ]
+  ],
+  "closure_pending": true
 }

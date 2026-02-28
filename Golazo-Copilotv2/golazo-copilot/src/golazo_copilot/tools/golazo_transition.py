@@ -80,6 +80,7 @@ async def golazo_transition(
     # Load current state
     state = load_state(work_item_id, work_items_dir)
     current_role = state.current_role
+    profile_roles = get_role_order_for_profile(state.profile)
     
     # Same role - no-op success
     if current_role == role:
@@ -92,16 +93,47 @@ async def golazo_transition(
             "role_instructions": role_instructions,
         }
     
-    # Validate transition is allowed (profile-aware)
-    valid, error = validate_transition(current_role, role, profile=state.profile)
-    if not valid:
-        return {"success": False, "error": error}
-    
-    # Check if backward transition
-    backward = is_backward_transition(current_role, role, profile=state.profile)
     warning = None
-    if backward:
-        warning = "Moving backward to rework. Previous progress preserved."
+    profile_mismatch = current_role not in profile_roles or role not in profile_roles
+
+    # Validate transition is allowed (profile-aware)
+    if profile_mismatch:
+        if not force:
+            valid, error = validate_transition(current_role, role, profile=state.profile)
+            return {"success": False, "error": error}
+
+        # Force-recovery path for invalid profile/role state requires explicit consent
+        consent_action = None
+        if has_valid_consent(state, "revert_progress"):
+            consent_action = "revert_progress"
+        elif has_valid_consent(state, "custom"):
+            consent_action = "custom"
+
+        if consent_action is None:
+            return {
+                "success": False,
+                "error": (
+                    "Cannot force transition from profile-role mismatch without recorded consent. "
+                    "Call golazo_consent(action='revert_progress' or action='custom') first."
+                ),
+            }
+
+        consume_consent(state, consent_action)
+        save_state(work_item_id, state, work_items_dir)
+        backward = False
+        warning = (
+            f"Forced transition using consent ({consent_action}) to recover from "
+            f"profile-role mismatch: profile='{state.profile}', current_role='{current_role}'."
+        )
+    else:
+        valid, error = validate_transition(current_role, role, profile=state.profile)
+        if not valid:
+            return {"success": False, "error": error}
+
+        # Check if backward transition
+        backward = is_backward_transition(current_role, role, profile=state.profile)
+        if backward:
+            warning = "Moving backward to rework. Previous progress preserved."
     
     # Check if outgoing role has decision notes (BLOCK if missing - GCP-0020)
     if not check_role_notes_exist(work_item_id, current_role, work_items_dir):

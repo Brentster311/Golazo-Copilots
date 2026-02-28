@@ -282,6 +282,23 @@ async def golazo_status(
         else progress_result
     )
 
+    if (
+        closure_mode
+        and state.current_role == "project-owner-assistant"
+        and outputs_complete
+    ):
+        role_progress = dict(role_progress)
+        role_progress["roles_completed"] = role_progress.get(
+            "roles_total", role_progress.get("roles_completed", 0)
+        )
+        role_progress_roles = []
+        for role in role_progress.get("roles", []):
+            if role.get("role") == "project-owner-assistant":
+                role_progress_roles.append({"role": role["role"], "status": "completed"})
+            else:
+                role_progress_roles.append(role)
+        role_progress["roles"] = role_progress_roles
+
     # ── Assemble result (unchanged structure) ─────────────────────────
 
     # Generate next steps (with output remediation — GCP-0027)

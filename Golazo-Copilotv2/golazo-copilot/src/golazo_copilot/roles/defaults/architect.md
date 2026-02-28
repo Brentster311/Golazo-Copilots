@@ -12,7 +12,7 @@ tools:
   - golazo_transition
   - golazo_capabilities
 ---
-<!-- Last Updated in Golazo Copilot Version: 3.0.1 -->
+<!-- Last Updated in Golazo Copilot Version: 3.0.2 -->
 # Role: Architect
 
 ## Purpose

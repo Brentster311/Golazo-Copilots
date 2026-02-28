@@ -2,10 +2,10 @@
   "schema_version": "1.0",
   "work_item_id": "GCP-0054",
   "profile": "complete",
-  "current_phase": "definition",
+  "current_phase": "closure",
   "current_role": "project-owner-assistant",
   "created_at": "2026-02-23T15:11:46.974498Z",
-  "updated_at": "2026-02-23T15:37:10.854309Z",
+  "updated_at": "2026-02-28T18:22:37.288313Z",
   "role_history": [
     {
       "role": "project-owner-assistant",
@@ -60,6 +60,56 @@
     {
       "role": "project-owner-assistant",
       "entered_at": "2026-02-23T15:37:10.854309Z",
+      "exited_at": "2026-02-28T18:22:36.950797Z"
+    },
+    {
+      "role": "program-manager",
+      "entered_at": "2026-02-28T18:22:36.950797Z",
+      "exited_at": "2026-02-28T18:22:36.988125Z"
+    },
+    {
+      "role": "domain-expert",
+      "entered_at": "2026-02-28T18:22:36.988125Z",
+      "exited_at": "2026-02-28T18:22:37.025111Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-02-28T18:22:37.025111Z",
+      "exited_at": "2026-02-28T18:22:37.063287Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-02-28T18:22:37.063287Z",
+      "exited_at": "2026-02-28T18:22:37.100493Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-02-28T18:22:37.100493Z",
+      "exited_at": "2026-02-28T18:22:37.140399Z"
+    },
+    {
+      "role": "refactor-expert",
+      "entered_at": "2026-02-28T18:22:37.140399Z",
+      "exited_at": "2026-02-28T18:22:37.177286Z"
+    },
+    {
+      "role": "documenter",
+      "entered_at": "2026-02-28T18:22:37.177286Z",
+      "exited_at": "2026-02-28T18:22:37.213821Z"
+    },
+    {
+      "role": "builder",
+      "entered_at": "2026-02-28T18:22:37.213821Z",
+      "exited_at": "2026-02-28T18:22:37.251468Z"
+    },
+    {
+      "role": "retrospective",
+      "entered_at": "2026-02-28T18:22:37.251468Z",
+      "exited_at": "2026-02-28T18:22:37.288313Z"
+    },
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-02-28T18:22:37.288313Z",
       "exited_at": null
     }
   ],
@@ -73,5 +123,6 @@
       "consumed": true,
       "consumed_at": "2026-02-23T15:20:18.292848Z"
     }
-  ]
+  ],
+  "closure_pending": true
 }

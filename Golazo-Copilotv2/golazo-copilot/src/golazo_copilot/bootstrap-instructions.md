@@ -1,4 +1,4 @@
-<!-- Last Updated in Golazo Copilot Version: 3.0.1 -->
+<!-- Last Updated in Golazo Copilot Version: 3.0.2 -->
 # Golazo Copilot v3
 
 This workspace uses Golazo Copilot MCP server for workflow management.

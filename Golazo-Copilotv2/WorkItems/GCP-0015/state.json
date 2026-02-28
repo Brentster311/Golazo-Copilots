@@ -2,31 +2,77 @@
   "schema_version": "1.0",
   "work_item_id": "GCP-0015",
   "profile": "complete",
-  "current_phase": "definition",
+  "current_phase": "closure",
   "current_role": "project-owner-assistant",
   "created_at": "2026-02-06T18:25:22.982648Z",
-  "updated_at": "2026-02-06T18:25:22.982648Z",
-  "dor": {
-    "userStory": false,
-    "designDoc": false,
-    "reviewComments": false,
-    "testCases": false
-  },
-  "dod": {
-    "branchCreated": false,
-    "testsWrittenFirst": false,
-    "testsPass": false,
-    "buildPasses": false,
-    "docsUpdated": false,
-    "refactorComplete": false,
-    "committed": false
-  },
+  "updated_at": "2026-02-28T18:49:08.976805Z",
   "role_history": [
     {
       "role": "project-owner-assistant",
       "entered_at": "2026-02-06T18:25:22.982648Z",
+      "exited_at": "2026-02-28T18:48:32.022273Z"
+    },
+    {
+      "role": "program-manager",
+      "entered_at": "2026-02-28T18:48:32.022273Z",
+      "exited_at": "2026-02-28T18:48:35.257513Z"
+    },
+    {
+      "role": "domain-expert",
+      "entered_at": "2026-02-28T18:48:35.257513Z",
+      "exited_at": "2026-02-28T18:48:38.974916Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-02-28T18:48:38.974916Z",
+      "exited_at": "2026-02-28T18:48:42.884092Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-02-28T18:48:42.884092Z",
+      "exited_at": "2026-02-28T18:48:47.148802Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-02-28T18:48:47.148802Z",
+      "exited_at": "2026-02-28T18:48:50.920525Z"
+    },
+    {
+      "role": "refactor-expert",
+      "entered_at": "2026-02-28T18:48:50.920525Z",
+      "exited_at": "2026-02-28T18:48:57.504805Z"
+    },
+    {
+      "role": "documenter",
+      "entered_at": "2026-02-28T18:48:57.504805Z",
+      "exited_at": "2026-02-28T18:49:02.262882Z"
+    },
+    {
+      "role": "builder",
+      "entered_at": "2026-02-28T18:49:02.262882Z",
+      "exited_at": "2026-02-28T18:49:05.964932Z"
+    },
+    {
+      "role": "retrospective",
+      "entered_at": "2026-02-28T18:49:05.964932Z",
+      "exited_at": "2026-02-28T18:49:08.976805Z"
+    },
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-02-28T18:49:08.976805Z",
       "exited_at": null
     }
   ],
-  "deviations": []
+  "deviations": [
+    {
+      "id": "dev-001",
+      "action": "custom",
+      "reason": "Project Owner consent: mark GCP-0015 as completed in workflow as CUT/deferred and transition to closure terminal state.",
+      "role": "project-owner-assistant",
+      "timestamp": "2026-02-28T18:47:27.206315Z",
+      "consumed": false,
+      "consumed_at": null
+    }
+  ],
+  "closure_pending": true
 }

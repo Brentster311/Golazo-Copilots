@@ -129,7 +129,7 @@ pip install golazo-copilot --index-url https://msazure.pkgs.visualstudio.com/One
 
 In GitHub Copilot Chat, ask: **"GCP version?"**
 
-It will run `golazo_status` and display the running version (e.g., `v3.0.1`).
+It will run `golazo_status` and display the running version (e.g., `v3.0.2`).
 
 ## VS Code Configuration
 
@@ -335,7 +335,7 @@ The easiest way to update is via the built-in MCP tool. In GitHub Copilot Chat:
    > "Check for golazo updates"
 
 2. **Install a specific version:**
-   > "Update golazo to version 3.0.1"
+   > "Update golazo to version 3.0.2"
 
 The tool validates authentication prerequisites (keyring, artifacts-keyring, `az login`) before installing, and will prompt you to restart the MCP server afterward.
 

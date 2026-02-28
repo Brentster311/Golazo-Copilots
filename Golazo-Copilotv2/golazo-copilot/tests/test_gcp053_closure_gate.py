@@ -371,6 +371,103 @@ class TestClosureStatus:
         assert result["active"]
         assert result["closure_pending"] is False
 
+    @pytest.mark.asyncio
+    async def test_status_closure_complete_reports_full_progress(self, tmp_path):
+        """Closure mode with complete outputs reports 10/10 progress."""
+        from golazo_copilot.tools.golazo_status import golazo_status
+
+        now = datetime.now(timezone.utc)
+        role_history = [
+            RoleHistoryEntry(role=role, entered_at=now, exited_at=now)
+            for role in [
+                "project-owner-assistant",
+                "program-manager",
+                "domain-expert",
+                "quality-assurance",
+                "architect",
+                "developer",
+                "refactor-expert",
+                "builder",
+                "documenter",
+                "retrospective",
+            ]
+        ]
+        role_history.append(
+            RoleHistoryEntry(role="project-owner-assistant", entered_at=now, exited_at=None)
+        )
+        state = WorkItemState(
+            work_item_id="TST-001",
+            profile="complete",
+            current_role="project-owner-assistant",
+            current_phase="closure",
+            closure_pending=True,
+            created_at=now,
+            updated_at=now,
+            role_history=role_history,
+        )
+
+        wi_dir = _setup_work_item(tmp_path, state)
+        item_dir = wi_dir / "TST-001"
+        (item_dir / "TST-001-User-Story.md").write_text("# User Story")
+        (item_dir / "TST-001-closure.md").write_text("# Closure")
+
+        result = await golazo_status(
+            work_item_id="TST-001",
+            work_items_dir=wi_dir,
+            project_root=tmp_path,
+        )
+
+        assert result["required_outputs"]["complete"] is True
+        assert result["role_progress"]["roles_completed"] == result["role_progress"]["roles_total"]
+
+    @pytest.mark.asyncio
+    async def test_status_closure_incomplete_keeps_current_progress(self, tmp_path):
+        """Closure mode without complete outputs should not force full progress."""
+        from golazo_copilot.tools.golazo_status import golazo_status
+
+        now = datetime.now(timezone.utc)
+        role_history = [
+            RoleHistoryEntry(role=role, entered_at=now, exited_at=now)
+            for role in [
+                "project-owner-assistant",
+                "program-manager",
+                "domain-expert",
+                "quality-assurance",
+                "architect",
+                "developer",
+                "refactor-expert",
+                "builder",
+                "documenter",
+                "retrospective",
+            ]
+        ]
+        role_history.append(
+            RoleHistoryEntry(role="project-owner-assistant", entered_at=now, exited_at=None)
+        )
+        state = WorkItemState(
+            work_item_id="TST-001",
+            profile="complete",
+            current_role="project-owner-assistant",
+            current_phase="closure",
+            closure_pending=True,
+            created_at=now,
+            updated_at=now,
+            role_history=role_history,
+        )
+
+        wi_dir = _setup_work_item(tmp_path, state)
+        item_dir = wi_dir / "TST-001"
+        (item_dir / "TST-001-User-Story.md").write_text("# User Story")
+
+        result = await golazo_status(
+            work_item_id="TST-001",
+            work_items_dir=wi_dir,
+            project_root=tmp_path,
+        )
+
+        assert result["required_outputs"]["complete"] is False
+        assert result["role_progress"]["roles_completed"] < result["role_progress"]["roles_total"]
+
 
 # ── TC-14: Retrospective role content ────────────────────────────────
 

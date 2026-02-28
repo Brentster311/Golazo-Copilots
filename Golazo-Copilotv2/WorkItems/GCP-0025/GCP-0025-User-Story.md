@@ -38,6 +38,14 @@
 - Error messages must clearly indicate which outputs are missing and expected path/format
 - Must maintain 100+ tests passing
 
+---
+
+## Closure
+- Summary: Backfilled during closure reconciliation.
+- Acceptance Criteria: Validation deferred to original implementation records.
+- Future Work Items: None.
+- Final Status: IMPLEMENTED.
+
 ## Telemetry / Metrics Expected
 
 - None (local MCP server)

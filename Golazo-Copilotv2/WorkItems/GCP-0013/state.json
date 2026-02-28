@@ -2,25 +2,10 @@
   "schema_version": "1.0",
   "work_item_id": "GCP-0013",
   "profile": "complete",
-  "current_phase": "completion",
-  "current_role": "retrospective",
+  "current_phase": "closure",
+  "current_role": "project-owner-assistant",
   "created_at": "2026-02-06T18:25:13.628924Z",
-  "updated_at": "2026-02-06T23:20:25.569376Z",
-  "dor": {
-    "userStory": true,
-    "designDoc": true,
-    "reviewComments": true,
-    "testCases": true
-  },
-  "dod": {
-    "branchCreated": true,
-    "testsWrittenFirst": true,
-    "testsPass": true,
-    "buildPasses": true,
-    "docsUpdated": true,
-    "refactorComplete": true,
-    "committed": true
-  },
+  "updated_at": "2026-02-28T18:13:21.956139Z",
   "role_history": [
     {
       "role": "project-owner-assistant",
@@ -65,6 +50,11 @@
     {
       "role": "retrospective",
       "entered_at": "2026-02-06T23:20:25.569376Z",
+      "exited_at": "2026-02-28T18:13:21.956139Z"
+    },
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-02-28T18:13:21.956139Z",
       "exited_at": null
     }
   ],
@@ -78,5 +68,6 @@
       "consumed": false,
       "consumed_at": null
     }
-  ]
+  ],
+  "closure_pending": true
 }
