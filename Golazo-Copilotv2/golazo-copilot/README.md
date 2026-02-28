@@ -9,14 +9,14 @@ Golazo is a structured development methodology that ensures high-quality softwar
 ## Features
 
 - **Persistent state tracking** – Workflow progress is saved to `state.json` files, surviving session restarts
-- **Automated role transitions** – Enforce the correct sequence: Project Owner → Program Manager → QA → Architect → Developer → Refactor Expert → Documenter → Builder → Retrospective
+- **Automated role transitions** – Enforce the correct sequence by profile (complete includes Domain Expert and closure re-entry)
 - **Role-based output validation** – Each role defines required outputs (files, directories) that are automatically validated on transition
 - **Multi-session support** – Switch between work items while preserving context
 - **Workflow profiles** – Choose `complete`, `express`, or `spike` modes based on task complexity
 - **Deviation recording** – Audit trail when gates are bypassed with justification
 - **Role notes enforcement** – Blocks transitions when role decision notes are missing (bypass with consent)
 - **Version sync warning** – Alerts when the deployed workspace instructions don't match the running MCP server version
-- **Role progress display** – Shows completion progress (X/9 roles) for each work item
+- **Role progress display** – Shows completion progress (X/N roles) for each work item profile
 
 ### Feature Details
 
@@ -27,13 +27,16 @@ Each work item maintains its own `state.json` file in the `WorkItems/<id>/` dire
 The Golazo workflow enforces a structured progression through roles:
 1. **Project Owner** – Define the user story and acceptance criteria
 2. **Program Manager** – Break down work, create design document
-3. **Quality Assurance** – Review design, define test cases
-4. **Architect** – Validate architectural alignment, review contracts
-5. **Developer** – Implement the solution with TDD
-6. **Refactor Expert** – Improve code quality without changing behavior
-7. **Documenter** – Update documentation to reflect changes
-8. **Builder** – Verify builds pass, handle CI/CD concerns
-9. **Retrospective** – Review what worked and what didn't
+3. **Domain Expert** – Provide domain-specific guidance when needed
+4. **Quality Assurance** – Review design, define test cases
+5. **Architect** – Validate architectural alignment, review contracts
+6. **Developer** – Implement the solution with TDD
+7. **Refactor Expert** – Improve code quality without changing behavior
+8. **Documenter** – Update documentation to reflect changes
+9. **Builder** – Verify builds pass, handle CI/CD concerns
+10. **Retrospective** – Review what worked and what didn't
+
+For the `complete` profile, retrospective transitions to Project Owner Assistant again for formal closure.
 
 Transitions are validated—you cannot skip roles or jump directly to Developer without completing earlier phases. Backward transitions to any prior role are always allowed.
 
@@ -66,7 +69,7 @@ Choose the right level of process for the task:
 
 | Profile | Roles | Use Case |
 |---------|-------|----------|
-| **Complete** | All 9 roles in sequence | Production features, complex changes |
+| **Complete** | Full 10-role workflow + closure re-entry | Production features, complex changes |
 | **Express** | Streamlined subset of roles | Small bug fixes, minor enhancements |
 | **Spike** | Minimal roles | Prototypes, research, proof-of-concept |
 
@@ -92,7 +95,7 @@ This ensures an audit trail of decisions made at each workflow stage.
 When you call `golazo_status`, the system compares the running MCP server version against the version comment in your workspace's `.github/copilot-instructions.md`. If they differ, a warning is displayed so you know to re-bootstrap or update the package.
 
 #### Role Progress Display
-`golazo_status` shows how many of the 9 workflow roles have been completed for a work item (e.g., "Role Progress: 4/9 complete"), giving visibility into overall progress.
+`golazo_status` shows profile-aware progress (e.g., `4/10` in complete profile, `3/5` in express/spike), giving visibility into overall workflow progress.
 
 #### TechBestPractices Reference
 When bootstrapping a workspace, a `.github/roles/TechBestPractices.md` file is deployed alongside the role files. This shared reference document is referenced by the Architect, Developer, and Refactor Expert roles to ensure consistent technical standards.
