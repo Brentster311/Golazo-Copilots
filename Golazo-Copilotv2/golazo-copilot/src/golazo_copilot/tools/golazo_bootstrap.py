@@ -10,6 +10,8 @@ from golazo_copilot import __version__
 # Workspace markers - at least one must exist
 WORKSPACE_MARKERS = ["pyproject.toml", "package.json", "Cargo.toml", ".hg", "WorkItems"]
 
+BOOTSTRAP_MODES = {"full", "orchestrator-only"}
+
 # Default role files to copy
 DEFAULT_ROLES = [
     "project-owner-assistant.md",
@@ -70,6 +72,7 @@ async def golazo_bootstrap(
     workspace_path: Path | str | None = None,
     force: bool = False,
     include_roles: bool = True,
+    mode: str = "full",
 ) -> dict:
     """
     Bootstrap Golazo Copilot in a workspace.
@@ -83,6 +86,8 @@ async def golazo_bootstrap(
         workspace_path: Workspace root path (auto-detected if not provided)
         force: Overwrite existing files if they exist
         include_roles: Also copy default role files to .github/roles/
+        mode: Bootstrap mode. "full" scaffolds all files; "orchestrator-only"
+            only creates/updates .github/copilot-instructions.md
     
     Returns:
         Dict with success status and list of created/skipped files.
@@ -92,6 +97,14 @@ async def golazo_bootstrap(
         workspace_path = Path.cwd()
     else:
         workspace_path = Path(workspace_path)
+
+    if mode not in BOOTSTRAP_MODES:
+        return {
+            "success": False,
+            "error": f"Invalid mode '{mode}'. Expected one of: full, orchestrator-only",
+            "files_created": [],
+            "files_skipped": [],
+        }
     
     # Validate workspace
     if not _is_workspace(workspace_path):
@@ -116,6 +129,14 @@ async def golazo_bootstrap(
     else:
         instructions_path.write_text(_get_default_instructions(), encoding="utf-8")
         files_created.append(".github/copilot-instructions.md")
+
+    if mode == "orchestrator-only":
+        return {
+            "success": True,
+            "files_created": files_created,
+            "files_skipped": files_skipped,
+            "message": f"Bootstrapped Golazo Copilot in {workspace_path} (mode: orchestrator-only)",
+        }
     
     # Create WorkItems directory
     workitems_dir = workspace_path / "WorkItems"
@@ -168,5 +189,5 @@ async def golazo_bootstrap(
         "success": True,
         "files_created": files_created,
         "files_skipped": files_skipped,
-        "message": f"Bootstrapped Golazo Copilot in {workspace_path}",
+        "message": f"Bootstrapped Golazo Copilot in {workspace_path} (mode: full)",
     }

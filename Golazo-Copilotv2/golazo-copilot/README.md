@@ -129,7 +129,7 @@ pip install golazo-copilot --index-url https://msazure.pkgs.visualstudio.com/One
 
 In GitHub Copilot Chat, ask: **"GCP version?"**
 
-It will run `golazo_status` and display the running version (e.g., `v2.103.6`).
+It will run `golazo_status` and display the running version (e.g., `v3.0.1`).
 
 ## VS Code Configuration
 
@@ -182,9 +182,17 @@ You should see the Golazo Copilot tools listed:
 
 ### Step 5: Bootstrap Your Workspace
 
-In GitHub Copilot Chat, say: *"Please bootstrap GCP"*
+Bootstrap is required before workflow tool operations (`golazo_create_workitem`, `golazo_transition`, `golazo_status` with a work item, `golazo_consent`, and `golazo_role_context`).
 
-This will create the Golazo Copilot directory structure and instruction files in your workspace:
+In GitHub Copilot Chat, say one of:
+
+- *"Run golazo bootstrap in orchestrator-only mode"* (minimal setup)
+- *"Please bootstrap GCP"* (full setup)
+
+`orchestrator-only` creates only:
+- `.github/copilot-instructions.md` – Orchestrator instructions required for workflow execution
+
+Full bootstrap creates the Golazo Copilot directory structure and instruction files in your workspace:
 - `WorkItems/` – Directory for work item artifacts
 - `.github/copilot-instructions.md` – Workflow enforcement rules for Copilot
 - `.github/roles/` – Role-specific instruction files (including `TechBestPractices.md`)
@@ -267,6 +275,7 @@ Bootstrap Golazo Copilot in a workspace — creates copilot instructions and dir
 
 | Input | Type | Required | Description |
 |-------|------|----------|-------------|
+| `mode` | string | No | Bootstrap mode: `full` (default) or `orchestrator-only` |
 | `force` | boolean | No | Overwrite existing files if they exist (default: `false`) |
 | `include_roles` | boolean | No | Also copy default role files to `.github/roles/` (default: `true`) |
 | `workspace_path` | string | **Yes** | Workspace root path |
@@ -326,7 +335,7 @@ The easiest way to update is via the built-in MCP tool. In GitHub Copilot Chat:
    > "Check for golazo updates"
 
 2. **Install a specific version:**
-   > "Update golazo to version 2.110.0"
+   > "Update golazo to version 3.0.1"
 
 The tool validates authentication prerequisites (keyring, artifacts-keyring, `az login`) before installing, and will prompt you to restart the MCP server afterward.
 
@@ -337,7 +346,7 @@ pip install --upgrade golazo-copilot --index-url https://msazure.pkgs.visualstud
 ```
 
 Then reload VS Code and re-bootstrap your workspace to pick up the new version:
-> "Please bootstrap GCP with force"
+> "Run golazo bootstrap in orchestrator-only mode with force"
 
 ## License
 

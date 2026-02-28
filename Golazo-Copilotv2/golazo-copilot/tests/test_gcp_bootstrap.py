@@ -330,3 +330,46 @@ class TestBootstrapCapabilitiesTemplate:
         assert result["success"] is True
         assert "capabilities.yaml" in result["files_created"]
         assert (TEST_WORKSPACE_DIR / "capabilities.yaml").exists()
+
+
+class TestBootstrapModes:
+    """Tests for bootstrap mode selection behavior."""
+
+    @pytest.mark.asyncio
+    async def test_orchestrator_only_creates_only_instructions(self):
+        """orchestrator-only should avoid full scaffolding side-effects."""
+        result = await golazo_bootstrap(
+            workspace_path=TEST_WORKSPACE_DIR,
+            mode="orchestrator-only",
+        )
+
+        assert result["success"] is True
+        assert ".github/copilot-instructions.md" in result["files_created"]
+        assert not (TEST_WORKSPACE_DIR / "capabilities.yaml").exists()
+        assert not (TEST_WORKSPACE_DIR / ".github" / "roles").exists()
+        assert not (TEST_WORKSPACE_DIR / "WorkItems" / ".gitkeep").exists()
+
+    @pytest.mark.asyncio
+    async def test_invalid_mode_fails(self):
+        """Unknown mode should return a validation error."""
+        result = await golazo_bootstrap(
+            workspace_path=TEST_WORKSPACE_DIR,
+            mode="unknown",
+        )
+
+        assert result["success"] is False
+        assert "Invalid mode" in result["error"]
+        assert "orchestrator-only" in result["error"]
+
+    @pytest.mark.asyncio
+    async def test_explicit_full_mode_matches_default(self):
+        """Explicit full mode should preserve legacy behavior."""
+        result = await golazo_bootstrap(
+            workspace_path=TEST_WORKSPACE_DIR,
+            mode="full",
+        )
+
+        assert result["success"] is True
+        assert ".github/copilot-instructions.md" in result["files_created"]
+        assert (TEST_WORKSPACE_DIR / "capabilities.yaml").exists()
+        assert (TEST_WORKSPACE_DIR / ".github" / "roles").exists()

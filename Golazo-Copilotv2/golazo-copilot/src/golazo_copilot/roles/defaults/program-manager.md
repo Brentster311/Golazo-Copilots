@@ -8,7 +8,7 @@ tools:
   - golazo_status
   - golazo_transition
 ---
-<!-- Last Updated in Golazo Copilot Version: 2.107.0 -->
+<!-- Last Updated in Golazo Copilot Version: 3.0.1 -->
 # Role: Program Manager
 
 ## Purpose

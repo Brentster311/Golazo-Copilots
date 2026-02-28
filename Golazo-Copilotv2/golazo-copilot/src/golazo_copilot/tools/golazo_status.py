@@ -167,6 +167,8 @@ async def golazo_status(
     Returns:
         Dict with full workflow status
     """
+    workspace_root = project_root if project_root else work_items_dir.parent
+
     # Check work item exists
     if not work_item_exists(work_item_id, work_items_dir):
         return {
@@ -183,7 +185,6 @@ async def golazo_status(
     
     # GCP-0025: Validate required outputs for current role
     # (Moved before _generate_next_steps so remediation can be included — AR-1)
-    workspace_root = work_items_dir.parent
     role_content = get_role_content(state.current_role, workspace_root)
     output_specs = parse_required_outputs(role_content, work_item_id)
     

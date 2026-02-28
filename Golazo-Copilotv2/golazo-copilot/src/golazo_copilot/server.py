@@ -30,6 +30,13 @@ ICON_EMPTY = "[ ]"
 
 _REQUIRED_TOOL_NAMES: set[str] = set()
 _STARTUP_TOOL_WARNINGS: list[str] = []
+_WORKFLOW_TOOLS_REQUIRING_INSTRUCTIONS: set[str] = {
+    "golazo_create_workitem",
+    "golazo_transition",
+    "golazo_status",
+    "golazo_consent",
+    "golazo_role_context",
+}
 
 
 def resolve_work_items_dir(workspace_path: str | None) -> Path:
@@ -48,6 +55,13 @@ def resolve_work_items_dir(workspace_path: str | None) -> Path:
     if not workspace_path:
         raise ValueError("workspace_path is required — MCP servers cannot rely on cwd")
     return (Path(workspace_path) / "WorkItems").resolve()
+
+
+def has_orchestrator_instructions(workspace_path: str | None) -> bool:
+    """Return True when .github/copilot-instructions.md exists for workspace."""
+    if not workspace_path:
+        return False
+    return (Path(workspace_path) / ".github" / "copilot-instructions.md").exists()
 
 
 # ---------------------------------------------------------------------------
@@ -396,6 +410,12 @@ def _get_tool_definitions() -> list[Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
+                    "mode": {
+                        "type": "string",
+                        "enum": ["full", "orchestrator-only"],
+                        "default": "full",
+                        "description": "Bootstrap mode: full scaffolding or orchestrator-instructions only"
+                    },
                     "force": {
                         "type": "boolean",
                         "default": False,
@@ -542,6 +562,25 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 
 async def _dispatch_tool(name: str, arguments: dict) -> list[TextContent]:
     """Internal dispatcher — separated so ValueError bubbles to call_tool."""
+    if name in _WORKFLOW_TOOLS_REQUIRING_INSTRUCTIONS:
+        ws = arguments.get("workspace_path")
+        # Version-only status query is always allowed.
+        if not (name == "golazo_status" and not arguments.get("work_item_id", "").strip()):
+            if not ws:
+                return [TextContent(type="text", text=f"{ICON_FAIL} workspace_path is required")]
+            if not has_orchestrator_instructions(ws):
+                return [
+                    TextContent(
+                        type="text",
+                        text=(
+                            f"{ICON_FAIL} Orchestrator instructions are required before workflow operations. "
+                            f"Missing: .github/copilot-instructions.md\n\n"
+                            f"Run: golazo_bootstrap(workspace_path=\"{ws}\", mode=\"orchestrator-only\")\n"
+                            f"Use force=True to overwrite an existing instructions file."
+                        ),
+                    )
+                ]
+
     if name == "golazo_create_workitem":
         work_items_dir = resolve_work_items_dir(arguments.get("workspace_path"))
         result = await golazo_create_workitem(
@@ -584,6 +623,7 @@ async def _dispatch_tool(name: str, arguments: dict) -> list[TextContent]:
             return [TextContent(type="text", text=f"{ICON_FAIL} workspace_path is required")]
         result = await golazo_bootstrap(
             workspace_path=ws,
+            mode=arguments.get("mode", "full"),
             force=arguments.get("force", False),
             include_roles=arguments.get("include_roles", True)
         )
