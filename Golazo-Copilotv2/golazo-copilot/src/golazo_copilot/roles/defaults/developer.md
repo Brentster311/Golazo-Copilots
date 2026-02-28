@@ -11,7 +11,7 @@ tools:
   - golazo_transition
   - golazo_capabilities
 ---
-<!-- Last Updated in Golazo Copilot Version: 3.0.2 -->
+<!-- Last Updated in Golazo Copilot Version: 3.0.3 -->
 # Role: Developer
 
 ## Purpose

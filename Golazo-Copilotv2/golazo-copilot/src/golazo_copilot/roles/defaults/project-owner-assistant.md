@@ -10,7 +10,7 @@ tools:
   - golazo_capabilities
   - golazo_create_workitem
 ---
-<!-- Last Updated in Golazo Copilot Version: 3.0.2 -->
+<!-- Last Updated in Golazo Copilot Version: 3.0.3 -->
 # Role: Project Owner Assistant
 
 ## Purpose

@@ -1,4 +1,4 @@
-<!-- Last Updated in Golazo Copilot Version: 3.0.2 -->
+<!-- Last Updated in Golazo Copilot Version: 3.0.3 -->
 # Technical Best Practices
 
 This file contains accumulated technical knowledge to prevent redesigns and common pitfalls.
