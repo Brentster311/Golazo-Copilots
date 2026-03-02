@@ -154,6 +154,43 @@ class TestGcpCreateWorkitemRoleInstructions:
         assert len(result["role_instructions"]) > 50
 
 
+class TestGcpCreateWorkitemCapabilitiesRegistry:
+    """Ensure capability registry is initialized on first work item creation."""
+
+    @pytest.mark.asyncio
+    async def test_creates_capabilities_yaml_on_first_create(self, tmp_path):
+        """Should create capabilities.yaml in workspace root when missing."""
+        work_items_dir = tmp_path / "WorkItems"
+        capabilities_path = tmp_path / "capabilities.yaml"
+
+        assert not capabilities_path.exists()
+
+        result = await golazo_create_workitem(
+            work_item_id="CPY-001",
+            work_items_dir=work_items_dir,
+        )
+
+        assert result["success"] is True
+        assert capabilities_path.exists()
+        assert "capabilities:" in capabilities_path.read_text(encoding="utf-8")
+
+    @pytest.mark.asyncio
+    async def test_does_not_overwrite_existing_capabilities_yaml(self, tmp_path):
+        """Should preserve existing capabilities.yaml content."""
+        work_items_dir = tmp_path / "WorkItems"
+        capabilities_path = tmp_path / "capabilities.yaml"
+        original_content = "capabilities:\n  - name: existing\n"
+        capabilities_path.write_text(original_content, encoding="utf-8")
+
+        result = await golazo_create_workitem(
+            work_item_id="CPY-002",
+            work_items_dir=work_items_dir,
+        )
+
+        assert result["success"] is True
+        assert capabilities_path.read_text(encoding="utf-8") == original_content
+
+
 class TestGcpCreateWorkitemErrorHandling:
     """AC5: Error handling."""
 

@@ -1,5 +1,6 @@
 """golazo_create_workitem tool - Create a new work item."""
 
+from importlib import resources
 from pathlib import Path
 from typing import Literal
 
@@ -11,6 +12,22 @@ from ..roles.loader import load_role_instructions
 
 Profile = Literal["complete", "express", "spike"]
 DEFAULT_PROFILE: Profile = "complete"
+
+
+def _ensure_capabilities_registry(workspace_root: Path) -> None:
+    """Create capabilities.yaml in workspace root if it does not exist."""
+    capabilities_path = workspace_root / "capabilities.yaml"
+    if capabilities_path.exists():
+        return
+
+    try:
+        files_pkg = resources.files("golazo_copilot")
+        template = files_pkg.joinpath("capabilities-template.yaml")
+        content = template.read_text(encoding="utf-8")
+    except (FileNotFoundError, TypeError):
+        content = "capabilities: []\n"
+
+    capabilities_path.write_text(content, encoding="utf-8")
 
 
 async def golazo_create_workitem(
@@ -46,6 +63,15 @@ async def golazo_create_workitem(
         return {
             "success": False,
             "error": f"Work item '{work_item_id}' already exists. Use golazo_switch to resume.",
+        }
+
+    workspace_root = Path(project_root) if project_root is not None else Path(work_items_dir).parent
+    try:
+        _ensure_capabilities_registry(workspace_root)
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Failed to create capabilities.yaml: {e}",
         }
     
     # Create initial state

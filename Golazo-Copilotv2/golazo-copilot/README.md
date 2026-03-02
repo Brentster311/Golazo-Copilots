@@ -259,7 +259,7 @@ Transition to a new role in the Golazo Copilot workflow.
 | Input | Type | Required | Description |
 |-------|------|----------|-------------|
 | `work_item_id` | string | **Yes** | Work item identifier |
-| `role` | string | **Yes** | Target role: `project-owner-assistant`, `program-manager`, `quality-assurance`, `architect`, `developer`, `refactor-expert`, `builder`, `documenter`, `retrospective` |
+| `role` | string | **Yes** | Target role: `project-owner-assistant`, `program-manager`, `domain-expert`, `quality-assurance`, `architect`, `developer`, `refactor-expert`, `builder`, `documenter`, `retrospective` |
 | `force` | boolean | No | Force transition even if gates not met (default: `false`, requires prior consent) |
 | `workspace_path` | string | **Yes** | Workspace root path containing the WorkItems folder |
 
