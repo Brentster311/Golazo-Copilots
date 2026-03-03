@@ -15,15 +15,10 @@ Tests cover:
 
 import re
 from importlib import resources
-from pathlib import Path
 
 import pytest
 
 from golazo_copilot.core.transitions import TRANSITIONS, ROLE_ORDER
-
-
-PACKAGE_ROOT = Path(__file__).resolve().parent.parent
-WORKSPACE_ROOT = PACKAGE_ROOT.parent
 
 
 def _read_role(role_name: str) -> str:
@@ -75,6 +70,28 @@ class TestDeveloperBranchCreation:
         text = first_action.group(1).lower()
         assert "branch" in text or "git checkout" in text, \
             "Developer First Action should include branch creation"
+
+    def test_developer_branch_creation_uses_alias_and_workitem(self):
+        """TC-2b: Developer branch command uses <useralias>/<workitem-id> format."""
+        content = _read_role("developer")
+        first_action = re.search(r"## First action\n(.*?)(?=\n## )", content, re.DOTALL)
+        assert first_action, "Developer missing First Action section"
+
+        text = first_action.group(1)
+        assert "git checkout -b <useralias>/<workitem-id>" in text, (
+            "Developer First Action must require branch format <useralias>/<workitem-id>"
+        )
+
+    def test_developer_branch_creation_rejects_legacy_workitem_only_pattern(self):
+        """TC-2c: Developer branch command must not use legacy <workitem-id>-only format."""
+        content = _read_role("developer")
+        first_action = re.search(r"## First action\n(.*?)(?=\n## )", content, re.DOTALL)
+        assert first_action, "Developer missing First Action section"
+
+        text = first_action.group(1)
+        assert "git checkout -b <workitem-id>" not in text, (
+            "Developer First Action must not allow legacy <workitem-id>-only branch format"
+        )
 
 
 class TestBuilderNoBranchCreation:

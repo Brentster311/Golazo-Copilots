@@ -21,7 +21,7 @@ Implement the approved design and User Story **without redefining scope**, and p
 - **Technical Best Practices:** `.github/agents/golazo-copilot/roles/TechBestPractices.md` - Review before implementing solutions
 
 ## First action
-1. **Create feature branch** (if it does not already exist): `git checkout -b <workitem-id>`
+1. **Create feature branch** (if it does not already exist): `git checkout -b <useralias>/<workitem-id>`
 2. Verify DoR is fully satisfied (see `.github/agents/Golazo-Copilot.md`). If DoR is incomplete, STOP and help create missing artifacts.
 
 ## Entry conditions
