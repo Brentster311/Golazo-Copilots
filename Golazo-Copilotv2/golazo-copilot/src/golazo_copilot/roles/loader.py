@@ -4,13 +4,22 @@ from pathlib import Path
 from importlib import resources
 
 
+def _candidate_local_paths(project_root: Path, role: str) -> list[Path]:
+    """Return local role override search paths in priority order."""
+    return [
+        project_root / ".github" / "agents" / "golazo-copilot" / "roles" / f"{role}.md",
+        project_root / ".github" / "roles" / f"{role}.md",  # legacy fallback
+    ]
+
+
 def load_role_instructions(role: str, project_root: Path | None = None) -> str:
     """
     Load role instructions for a given role.
     
     Priority:
-    1. Local .github/roles/{role}.md if exists
-    2. Package defaults
+    1. Local .github/agents/golazo-copilot/roles/{role}.md if exists
+    2. Local .github/roles/{role}.md (legacy fallback)
+    3. Package defaults
     
     Args:
         role: Role name (e.g., "project-owner")
@@ -23,9 +32,9 @@ def load_role_instructions(role: str, project_root: Path | None = None) -> str:
         project_root = Path.cwd()
     
     # Try local first
-    local_path = project_root / ".github" / "roles" / f"{role}.md"
-    if local_path.exists():
-        return local_path.read_text(encoding='utf-8')
+    for local_path in _candidate_local_paths(project_root, role):
+        if local_path.exists():
+            return local_path.read_text(encoding='utf-8')
     
     # Fall back to package defaults
     return load_default_role(role)
@@ -40,15 +49,17 @@ def load_default_role(role: str) -> str:
         return role_file.read_text(encoding='utf-8')
     except (FileNotFoundError, TypeError):
         # Return placeholder if not found
-        return f"# {role}\n\nRole instructions not found. Please create .github/roles/{role}.md"
+        return (
+            f"# {role}\n\nRole instructions not found. "
+            f"Please create .github/agents/golazo-copilot/roles/{role}.md"
+        )
 
 
 def has_local_role_override(role: str, project_root: Path | None = None) -> bool:
     """Check if a local role override exists."""
     if project_root is None:
         project_root = Path.cwd()
-    local_path = project_root / ".github" / "roles" / f"{role}.md"
-    return local_path.exists()
+    return any(path.exists() for path in _candidate_local_paths(project_root, role))
 
 
 def get_role_content(role: str, project_root: Path | None = None) -> str:
@@ -66,9 +77,9 @@ def get_role_content(role: str, project_root: Path | None = None) -> str:
         project_root = Path.cwd()
     
     # Try local first
-    local_path = project_root / ".github" / "roles" / f"{role}.md"
-    if local_path.exists():
-        return local_path.read_text(encoding='utf-8')
+    for local_path in _candidate_local_paths(project_root, role):
+        if local_path.exists():
+            return local_path.read_text(encoding='utf-8')
     
     # Fall back to package defaults
     try:

@@ -235,13 +235,16 @@ class TestFormatBootstrapResult:
     def test_success_with_files(self):
         result = {
             "success": True,
-            "files_created": [".github/copilot-instructions.md", ".github/roles/developer.md"],
-            "files_skipped": [".github/roles/architect.md"],
+            "files_created": [
+                ".github/agents/Golazo-Copilot.md",
+                ".github/agents/golazo-copilot/roles/developer.md",
+            ],
+            "files_skipped": [".github/agents/golazo-copilot/roles/architect.md"],
             "message": "Bootstrap complete.",
         }
         text = format_bootstrap_result(result)
         assert ICON_OK in text
-        assert "copilot-instructions.md" in text
+        assert "Golazo-Copilot.md" in text
         assert ICON_CHECK in text
         assert "architect.md" in text
         assert ICON_EMPTY in text

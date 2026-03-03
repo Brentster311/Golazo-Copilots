@@ -259,22 +259,23 @@ class TestPerFileStaleReporting:
         """TC1: All deployed files match source → empty stale list."""
         github_dir = tmp_path / ".github"
         github_dir.mkdir()
-        roles_dir = github_dir / "roles"
-        roles_dir.mkdir()
+        agents_dir = github_dir / "agents" / "golazo-copilot"
+        roles_dir = agents_dir / "roles"
+        roles_dir.mkdir(parents=True)
         # Write spine with current source version
         from golazo_copilot.tools.golazo_status import _extract_version
         from importlib import resources
         source_files = resources.files("golazo_copilot")
         source_spine = source_files.joinpath("bootstrap-instructions.md").read_text(encoding="utf-8")
         spine_ver = _extract_version(source_spine)
-        (github_dir / "copilot-instructions.md").write_text(
+        (agents_dir / "Golazo-Copilot.md").write_text(
             f"<!-- Last Updated in Golazo Copilot Version: {spine_ver} -->\n# Instructions"
         )
         # Write each role with matching source version
         source_roles = resources.files("golazo_copilot.roles.defaults")
         from golazo_copilot.tools.golazo_status import _DEPLOYED_TO_SOURCE
         for deployed_rel, _, _ in _DEPLOYED_TO_SOURCE:
-            if deployed_rel == ".github/copilot-instructions.md":
+            if deployed_rel == ".github/agents/Golazo-Copilot.md":
                 continue
             role_name = deployed_rel.split("/")[-1]
             try:
@@ -292,19 +293,19 @@ class TestPerFileStaleReporting:
     def test_spine_stale_only(self, tmp_path):
         """TC2: Spine stale, roles match → only spine listed."""
         github_dir = tmp_path / ".github"
-        github_dir.mkdir()
-        (github_dir / "copilot-instructions.md").write_text(
+        agents_dir = github_dir / "agents" / "golazo-copilot"
+        agents_dir.mkdir(parents=True)
+        (github_dir / "agents" / "Golazo-Copilot.md").write_text(
             "<!-- Last Updated in Golazo Copilot Version: 0.0.1 -->\n# Old spine"
         )
         result = _get_stale_files(tmp_path)
         stale_names = [s["file"] for s in result]
-        assert "copilot-instructions.md" in stale_names
+        assert "Golazo-Copilot.md" in stale_names
         assert result[0]["deployed"] == "0.0.1"
 
     def test_one_role_stale(self, tmp_path):
         """TC3: One role file stale → that role listed."""
-        github_dir = tmp_path / ".github"
-        roles_dir = github_dir / "roles"
+        roles_dir = tmp_path / ".github" / "agents" / "golazo-copilot" / "roles"
         roles_dir.mkdir(parents=True)
         (roles_dir / "developer.md").write_text(
             "<!-- Last Updated in Golazo Copilot Version: 0.0.1 -->\n# Dev"
@@ -315,10 +316,9 @@ class TestPerFileStaleReporting:
 
     def test_multiple_files_stale(self, tmp_path):
         """TC4: Multiple stale files → all listed."""
-        github_dir = tmp_path / ".github"
-        roles_dir = github_dir / "roles"
+        roles_dir = tmp_path / ".github" / "agents" / "golazo-copilot" / "roles"
         roles_dir.mkdir(parents=True)
-        (github_dir / "copilot-instructions.md").write_text(
+        (tmp_path / ".github" / "agents" / "Golazo-Copilot.md").write_text(
             "<!-- Last Updated in Golazo Copilot Version: 0.0.1 -->\n# Old"
         )
         (roles_dir / "developer.md").write_text(
@@ -332,7 +332,7 @@ class TestPerFileStaleReporting:
 
     def test_missing_deployed_file_not_listed(self, tmp_path):
         """TC5: Missing deployed file → not listed as stale."""
-        # No .github/roles/architect.md at all
+        # No .github/agents/golazo-copilot/roles/architect.md at all
         github_dir = tmp_path / ".github"
         github_dir.mkdir()
         result = _get_stale_files(tmp_path)
@@ -341,12 +341,12 @@ class TestPerFileStaleReporting:
 
     def test_deployed_no_version_comment_skipped(self, tmp_path):
         """TC6: Deployed file has no version comment → skipped."""
-        github_dir = tmp_path / ".github"
-        github_dir.mkdir()
-        (github_dir / "copilot-instructions.md").write_text("# No version here")
+        agents_dir = tmp_path / ".github" / "agents"
+        agents_dir.mkdir(parents=True)
+        (agents_dir / "Golazo-Copilot.md").write_text("# No version here")
         result = _get_stale_files(tmp_path)
         stale_names = [s["file"] for s in result]
-        assert "copilot-instructions.md" not in stale_names
+        assert "Golazo-Copilot.md" not in stale_names
 
     def test_no_github_directory_no_stale(self, tmp_path):
         """TC8: No .github directory → empty stale list."""
@@ -355,13 +355,13 @@ class TestPerFileStaleReporting:
 
     def test_stale_file_structure(self, tmp_path):
         """TC9: Stale file entry has correct keys."""
-        github_dir = tmp_path / ".github"
-        github_dir.mkdir()
-        (github_dir / "copilot-instructions.md").write_text(
+        agents_dir = tmp_path / ".github" / "agents"
+        agents_dir.mkdir(parents=True)
+        (agents_dir / "Golazo-Copilot.md").write_text(
             "<!-- Last Updated in Golazo Copilot Version: 0.0.1 -->\n# Old"
         )
         result = _get_stale_files(tmp_path)
-        stale = [s for s in result if s["file"] == "copilot-instructions.md"]
+        stale = [s for s in result if s["file"] == "Golazo-Copilot.md"]
         assert len(stale) == 1
         assert "deployed" in stale[0]
         assert "source" in stale[0]
@@ -374,9 +374,9 @@ class TestPerFileStaleReporting:
         await golazo_create_workitem(work_item_id="SP-001", work_items_dir=TEST_WORKITEMS_DIR)
 
         workspace_root = TEST_WORKITEMS_DIR.parent
-        instructions_dir = workspace_root / ".github"
+        instructions_dir = workspace_root / ".github" / "agents" / "golazo-copilot"
         instructions_dir.mkdir(parents=True, exist_ok=True)
-        instructions_file = instructions_dir / "copilot-instructions.md"
+        instructions_file = workspace_root / ".github" / "agents" / "Golazo-Copilot.md"
         original = instructions_file.read_text(encoding="utf-8") if instructions_file.exists() else None
 
         instructions_file.write_text("<!-- Last Updated in Golazo Copilot Version: 0.0.1 -->\n# Old")
@@ -387,7 +387,7 @@ class TestPerFileStaleReporting:
                 work_items_dir=TEST_WORKITEMS_DIR
             )
             assert result.get("version_warning") is not None
-            assert "copilot-instructions.md" in result["version_warning"]
+            assert "Golazo-Copilot.md" in result["version_warning"]
             assert "golazo_bootstrap" in result["version_warning"]
         finally:
             if original:
@@ -560,5 +560,15 @@ class TestRegistryHint:
         """TC7: golazo_status registry_hint is None when no capabilities.yaml."""
         wi_id = "RH-002"
         await golazo_create_workitem(work_item_id=wi_id, work_items_dir=TEST_WORKITEMS_DIR)
-        result = await golazo_status(work_item_id=wi_id, work_items_dir=TEST_WORKITEMS_DIR)
-        assert result.get("registry_hint") is None
+        workspace_root = TEST_WORKITEMS_DIR.parent
+        cap_path = workspace_root / "capabilities.yaml"
+        original_content = None
+        if cap_path.exists():
+            original_content = cap_path.read_text(encoding="utf-8")
+            cap_path.unlink(missing_ok=True)
+        try:
+            result = await golazo_status(work_item_id=wi_id, work_items_dir=TEST_WORKITEMS_DIR)
+            assert result.get("registry_hint") is None
+        finally:
+            if original_content is not None:
+                cap_path.write_text(original_content, encoding="utf-8")

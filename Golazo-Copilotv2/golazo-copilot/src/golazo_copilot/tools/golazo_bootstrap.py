@@ -12,6 +12,10 @@ WORKSPACE_MARKERS = ["pyproject.toml", "package.json", "Cargo.toml", ".hg", "Wor
 
 BOOTSTRAP_MODES = {"full", "orchestrator-only"}
 
+AGENTS_ROOT = Path(".github") / "agents"
+ORCHESTRATOR_REL_PATH = AGENTS_ROOT / "Golazo-Copilot.md"
+ROLES_REL_DIR = AGENTS_ROOT / "golazo-copilot" / "roles"
+
 # Default role files to copy
 DEFAULT_ROLES = [
     "project-owner-assistant.md",
@@ -78,16 +82,17 @@ async def golazo_bootstrap(
     Bootstrap Golazo Copilot in a workspace.
     
     Creates:
-    - .github/copilot-instructions.md
+    - .github/agents/Golazo-Copilot.md
     - WorkItems/.gitkeep
-    - .github/roles/*.md (default role files)
+    - .github/agents/golazo-copilot/roles/*.md (default role files)
     
     Args:
         workspace_path: Workspace root path (auto-detected if not provided)
         force: Overwrite existing files if they exist
-        include_roles: Also copy default role files to .github/roles/
+        include_roles: Also copy default role files to
+            .github/agents/golazo-copilot/roles/
         mode: Bootstrap mode. "full" scaffolds all files; "orchestrator-only"
-            only creates/updates .github/copilot-instructions.md
+            only creates/updates .github/agents/Golazo-Copilot.md
     
     Returns:
         Dict with success status and list of created/skipped files.
@@ -118,17 +123,17 @@ async def golazo_bootstrap(
     files_created = []
     files_skipped = []
     
-    # Create .github directory
-    github_dir = workspace_path / ".github"
-    github_dir.mkdir(parents=True, exist_ok=True)
+    # Create .github/agents directory
+    agents_dir = workspace_path / AGENTS_ROOT
+    agents_dir.mkdir(parents=True, exist_ok=True)
     
-    # Create copilot-instructions.md
-    instructions_path = github_dir / "copilot-instructions.md"
+    # Create Golazo-Copilot.md spine file
+    instructions_path = workspace_path / ORCHESTRATOR_REL_PATH
     if instructions_path.exists() and not force:
-        files_skipped.append(".github/copilot-instructions.md")
+        files_skipped.append(ORCHESTRATOR_REL_PATH.as_posix())
     else:
         instructions_path.write_text(_get_default_instructions(), encoding="utf-8")
-        files_created.append(".github/copilot-instructions.md")
+        files_created.append(ORCHESTRATOR_REL_PATH.as_posix())
 
     if mode == "orchestrator-only":
         return {
@@ -165,7 +170,7 @@ async def golazo_bootstrap(
     
     # Optionally copy role files
     if include_roles:
-        roles_dir = github_dir / "roles"
+        roles_dir = workspace_path / ROLES_REL_DIR
         roles_dir.mkdir(parents=True, exist_ok=True)
         
         try:
@@ -176,11 +181,11 @@ async def golazo_bootstrap(
                 dest_path = roles_dir / role_name
                 
                 if dest_path.exists() and not force:
-                    files_skipped.append(f".github/roles/{role_name}")
+                    files_skipped.append(f"{ROLES_REL_DIR.as_posix()}/{role_name}")
                 else:
                     content = role_file.read_text(encoding="utf-8")
                     dest_path.write_text(content, encoding="utf-8")
-                    files_created.append(f".github/roles/{role_name}")
+                    files_created.append(f"{ROLES_REL_DIR.as_posix()}/{role_name}")
         except Exception as e:
             # If package resources fail, still succeed but note it
             pass

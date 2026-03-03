@@ -49,11 +49,16 @@ class TestBootstrapCreatesInstructions:
 
     @pytest.mark.asyncio
     async def test_creates_copilot_instructions(self):
-        """Should create .github/copilot-instructions.md."""
+        """Should create .github/agents/Golazo-Copilot.md."""
         result = await golazo_bootstrap(workspace_path=TEST_WORKSPACE_DIR)
         
         assert result["success"] is True
-        instructions_path = TEST_WORKSPACE_DIR / ".github" / "copilot-instructions.md"
+        instructions_path = (
+            TEST_WORKSPACE_DIR
+            / ".github"
+            / "agents"
+            / "Golazo-Copilot.md"
+        )
         assert instructions_path.exists()
 
     @pytest.mark.asyncio
@@ -70,7 +75,7 @@ class TestBootstrapCreatesInstructions:
         """Should return list of created files."""
         result = await golazo_bootstrap(workspace_path=TEST_WORKSPACE_DIR)
         
-        assert ".github/copilot-instructions.md" in result["files_created"]
+        assert ".github/agents/Golazo-Copilot.md" in result["files_created"]
 
 
 class TestBootstrapInstructionsContent:
@@ -81,7 +86,12 @@ class TestBootstrapInstructionsContent:
         """Should include golazo_status tool call instruction."""
         await golazo_bootstrap(workspace_path=TEST_WORKSPACE_DIR)
         
-        content = (TEST_WORKSPACE_DIR / ".github" / "copilot-instructions.md").read_text()
+        content = (
+            TEST_WORKSPACE_DIR
+            / ".github"
+            / "agents"
+            / "Golazo-Copilot.md"
+        ).read_text()
         assert "golazo_status" in content
 
     @pytest.mark.asyncio
@@ -89,7 +99,12 @@ class TestBootstrapInstructionsContent:
         """Should include output validation instructions (replaced evidence-based marking)."""
         await golazo_bootstrap(workspace_path=TEST_WORKSPACE_DIR)
         
-        content = (TEST_WORKSPACE_DIR / ".github" / "copilot-instructions.md").read_text()
+        content = (
+            TEST_WORKSPACE_DIR
+            / ".github"
+            / "agents"
+            / "Golazo-Copilot.md"
+        ).read_text()
         assert "required outputs" in content.lower()
 
     @pytest.mark.asyncio
@@ -97,7 +112,12 @@ class TestBootstrapInstructionsContent:
         """Should include role transition instructions."""
         await golazo_bootstrap(workspace_path=TEST_WORKSPACE_DIR)
         
-        content = (TEST_WORKSPACE_DIR / ".github" / "copilot-instructions.md").read_text()
+        content = (
+            TEST_WORKSPACE_DIR
+            / ".github"
+            / "agents"
+            / "Golazo-Copilot.md"
+        ).read_text()
         assert "golazo_transition" in content
 
 
@@ -108,35 +128,35 @@ class TestBootstrapNoOverwrite:
     async def test_does_not_overwrite_existing(self):
         """Should not overwrite existing instructions file."""
         # Create existing file
-        github_dir = TEST_WORKSPACE_DIR / ".github"
+        github_dir = TEST_WORKSPACE_DIR / ".github" / "agents"
         github_dir.mkdir(parents=True)
         existing_content = "# Existing Instructions\nDo not overwrite me!"
-        (github_dir / "copilot-instructions.md").write_text(existing_content)
+        (github_dir / "Golazo-Copilot.md").write_text(existing_content)
         
         result = await golazo_bootstrap(workspace_path=TEST_WORKSPACE_DIR)
         
         assert result["success"] is True
-        assert ".github/copilot-instructions.md" in result["files_skipped"]
+        assert ".github/agents/Golazo-Copilot.md" in result["files_skipped"]
         
         # Verify content unchanged
-        content = (github_dir / "copilot-instructions.md").read_text()
+        content = (github_dir / "Golazo-Copilot.md").read_text()
         assert content == existing_content
 
     @pytest.mark.asyncio
     async def test_force_overwrites_existing(self):
         """Should overwrite existing file when force=True."""
         # Create existing file
-        github_dir = TEST_WORKSPACE_DIR / ".github"
+        github_dir = TEST_WORKSPACE_DIR / ".github" / "agents"
         github_dir.mkdir(parents=True)
-        (github_dir / "copilot-instructions.md").write_text("Old content")
+        (github_dir / "Golazo-Copilot.md").write_text("Old content")
         
         result = await golazo_bootstrap(workspace_path=TEST_WORKSPACE_DIR, force=True)
         
         assert result["success"] is True
-        assert ".github/copilot-instructions.md" in result["files_created"]
+        assert ".github/agents/Golazo-Copilot.md" in result["files_created"]
         
         # Verify content changed
-        content = (github_dir / "copilot-instructions.md").read_text()
+        content = (github_dir / "Golazo-Copilot.md").read_text()
         assert "golazo_status" in content
 
 
@@ -170,7 +190,7 @@ class TestBootstrapRoleFiles:
         result = await golazo_bootstrap(workspace_path=TEST_WORKSPACE_DIR)
         
         assert result["success"] is True
-        roles_dir = TEST_WORKSPACE_DIR / ".github" / "roles"
+        roles_dir = TEST_WORKSPACE_DIR / ".github" / "agents" / "golazo-copilot" / "roles"
         assert roles_dir.is_dir()
         assert (roles_dir / "project-owner-assistant.md").exists()
 
@@ -179,7 +199,7 @@ class TestBootstrapRoleFiles:
         """Should not copy role files when include_roles=False."""
         await golazo_bootstrap(workspace_path=TEST_WORKSPACE_DIR, include_roles=False)
         
-        roles_dir = TEST_WORKSPACE_DIR / ".github" / "roles"
+        roles_dir = TEST_WORKSPACE_DIR / ".github" / "agents" / "golazo-copilot" / "roles"
         assert not roles_dir.exists()
 
     @pytest.mark.asyncio
@@ -188,7 +208,7 @@ class TestBootstrapRoleFiles:
         result = await golazo_bootstrap(workspace_path=TEST_WORKSPACE_DIR, include_roles=True)
         
         assert result["success"] is True
-        roles_dir = TEST_WORKSPACE_DIR / ".github" / "roles"
+        roles_dir = TEST_WORKSPACE_DIR / ".github" / "agents" / "golazo-copilot" / "roles"
         assert roles_dir.is_dir()
         assert (roles_dir / "project-owner-assistant.md").exists()
         assert (roles_dir / "program-manager.md").exists()
@@ -235,7 +255,12 @@ class TestBootstrapVersionConsistency:
         """Bootstrap should embed a version comment in instructions."""
         await golazo_bootstrap(workspace_path=TEST_WORKSPACE_DIR)
         
-        content = (TEST_WORKSPACE_DIR / ".github" / "copilot-instructions.md").read_text()
+        content = (
+            TEST_WORKSPACE_DIR
+            / ".github"
+            / "agents"
+            / "Golazo-Copilot.md"
+        ).read_text()
         assert "Last Updated in Golazo Copilot Version:" in content
 
     def test_role_loader_updates_version(self):
@@ -344,9 +369,9 @@ class TestBootstrapModes:
         )
 
         assert result["success"] is True
-        assert ".github/copilot-instructions.md" in result["files_created"]
+        assert ".github/agents/Golazo-Copilot.md" in result["files_created"]
         assert not (TEST_WORKSPACE_DIR / "capabilities.yaml").exists()
-        assert not (TEST_WORKSPACE_DIR / ".github" / "roles").exists()
+        assert not (TEST_WORKSPACE_DIR / ".github" / "agents" / "golazo-copilot" / "roles").exists()
         assert not (TEST_WORKSPACE_DIR / "WorkItems" / ".gitkeep").exists()
 
     @pytest.mark.asyncio
@@ -370,6 +395,6 @@ class TestBootstrapModes:
         )
 
         assert result["success"] is True
-        assert ".github/copilot-instructions.md" in result["files_created"]
+        assert ".github/agents/Golazo-Copilot.md" in result["files_created"]
         assert (TEST_WORKSPACE_DIR / "capabilities.yaml").exists()
-        assert (TEST_WORKSPACE_DIR / ".github" / "roles").exists()
+        assert (TEST_WORKSPACE_DIR / ".github" / "agents" / "golazo-copilot" / "roles").exists()

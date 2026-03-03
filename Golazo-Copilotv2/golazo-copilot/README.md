@@ -41,7 +41,7 @@ For the `complete` profile, retrospective transitions to Project Owner Assistant
 Transitions are validated—you cannot skip roles or jump directly to Developer without completing earlier phases. Backward transitions to any prior role are always allowed.
 
 #### Role-Based Output Validation
-Each role file (in `.github/roles/`) defines a `## Required Outputs` section listing the files or directories that must exist before you can transition away from that role. The system automatically validates these on transition.
+Each role file (in `.github/agents/golazo-copilot/roles/`) defines a `## Required Outputs` section listing the files or directories that must exist before you can transition away from that role. The system automatically validates these on transition.
 
 For example, the `project-owner-assistant` role requires:
 ```
@@ -92,13 +92,13 @@ The Golazo workflow requires every role to produce a decision notes document. Th
 This ensures an audit trail of decisions made at each workflow stage.
 
 #### Version Sync Warning
-When you call `golazo_status`, the system compares the running MCP server version against the version comment in your workspace's `.github/copilot-instructions.md`. If they differ, a warning is displayed so you know to re-bootstrap or update the package.
+When you call `golazo_status`, the system compares the running MCP server version against the version comment in your workspace's `.github/agents/Golazo-Copilot.md`. If they differ, a warning is displayed so you know to re-bootstrap or update the package.
 
 #### Role Progress Display
 `golazo_status` shows profile-aware progress (e.g., `4/10` in complete profile, `3/5` in express/spike), giving visibility into overall workflow progress.
 
 #### TechBestPractices Reference
-When bootstrapping a workspace, a `.github/roles/TechBestPractices.md` file is deployed alongside the role files. This shared reference document is referenced by the Architect, Developer, and Refactor Expert roles to ensure consistent technical standards.
+When bootstrapping a workspace, a `.github/agents/golazo-copilot/roles/TechBestPractices.md` file is deployed alongside the role files. This shared reference document is referenced by the Architect, Developer, and Refactor Expert roles to ensure consistent technical standards.
 
 ## Prerequisites
 
@@ -193,12 +193,21 @@ In GitHub Copilot Chat, say one of:
 - *"Please bootstrap GCP"* (full setup)
 
 `orchestrator-only` creates only:
-- `.github/copilot-instructions.md` – Orchestrator instructions required for workflow execution
+- `.github/agents/Golazo-Copilot.md` – Orchestrator instructions required for workflow execution
 
 Full bootstrap creates the Golazo Copilot directory structure and instruction files in your workspace:
 - `WorkItems/` – Directory for work item artifacts
-- `.github/copilot-instructions.md` – Workflow enforcement rules for Copilot
-- `.github/roles/` – Role-specific instruction files (including `TechBestPractices.md`)
+- `.github/agents/Golazo-Copilot.md` – Workflow enforcement rules for Copilot
+- `.github/agents/golazo-copilot/roles/` – Role-specific instruction files (including `TechBestPractices.md`)
+
+### Step 6: Select the Golazo-Copilot Agent in Chat
+
+After bootstrap, switch Copilot Chat to the Golazo custom agent:
+
+1. Open the Agent picker in Copilot Chat (e.g., `Ctrl+Shift+I`)
+2. Select **Agent** mode
+3. Choose **Golazo-Copilot** from the dropdown
+4. If it is not listed, use **Configure Custom Agents...** and ensure `.github/agents/Golazo-Copilot.md` is enabled
 
 ## Troubleshooting
 
@@ -280,7 +289,7 @@ Bootstrap Golazo Copilot in a workspace — creates copilot instructions and dir
 |-------|------|----------|-------------|
 | `mode` | string | No | Bootstrap mode: `full` (default) or `orchestrator-only` |
 | `force` | boolean | No | Overwrite existing files if they exist (default: `false`) |
-| `include_roles` | boolean | No | Also copy default role files to `.github/roles/` (default: `true`) |
+| `include_roles` | boolean | No | Also copy default role files to `.github/agents/golazo-copilot/roles/` (default: `true`) |
 | `workspace_path` | string | **Yes** | Workspace root path |
 
 #### `golazo_capabilities`

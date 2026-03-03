@@ -81,6 +81,14 @@ The override applies for the current session only. Default is subagent mode.
 
 ---
 
+## Role-Specific Execution Rule
+
+- **Retrospective is always inline.**
+- When current role is `retrospective`, do NOT call `runSubagent`.
+- This rule overrides default subagent mode and any session-level `use subagents` preference for that role.
+
+---
+
 ## REQUIRED: Before EVERY Response
 1. Call `golazo_status(work_item_id="<current-id>")` to get current state
 2. Display the Golazo Status header

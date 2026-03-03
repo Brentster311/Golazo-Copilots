@@ -104,7 +104,8 @@ async def golazo_role_context(
     work_items_dir:
         Absolute path to the ``WorkItems/`` directory.
     project_root:
-        Workspace root (used to locate ``.github/roles/`` overrides).
+        Workspace root (used to locate
+        ``.github/agents/golazo-copilot/roles/`` overrides).
     max_bundle_size:
         Maximum bundle size in bytes.  Artifacts are truncated when exceeded.
 

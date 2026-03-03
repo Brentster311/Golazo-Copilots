@@ -23,17 +23,17 @@ _VERSION_PATTERN = re.compile(r'<!-- Last Updated in Golazo Copilot Version: ([\
 # Mapping: (deployed relative path, source package resource info)
 # Each entry: (deployed_rel_path, package_name, resource_filename)
 _DEPLOYED_TO_SOURCE: list[tuple[str, str, str]] = [
-    (".github/copilot-instructions.md", "golazo_copilot", "bootstrap-instructions.md"),
-    (".github/roles/project-owner-assistant.md", "golazo_copilot.roles.defaults", "project-owner-assistant.md"),
-    (".github/roles/program-manager.md", "golazo_copilot.roles.defaults", "program-manager.md"),
-    (".github/roles/quality-assurance.md", "golazo_copilot.roles.defaults", "quality-assurance.md"),
-    (".github/roles/architect.md", "golazo_copilot.roles.defaults", "architect.md"),
-    (".github/roles/developer.md", "golazo_copilot.roles.defaults", "developer.md"),
-    (".github/roles/refactor-expert.md", "golazo_copilot.roles.defaults", "refactor-expert.md"),
-    (".github/roles/builder.md", "golazo_copilot.roles.defaults", "builder.md"),
-    (".github/roles/documenter.md", "golazo_copilot.roles.defaults", "documenter.md"),
-    (".github/roles/retrospective.md", "golazo_copilot.roles.defaults", "retrospective.md"),
-    (".github/roles/TechBestPractices.md", "golazo_copilot.roles.defaults", "TechBestPractices.md"),
+    (".github/agents/Golazo-Copilot.md", "golazo_copilot", "bootstrap-instructions.md"),
+    (".github/agents/golazo-copilot/roles/project-owner-assistant.md", "golazo_copilot.roles.defaults", "project-owner-assistant.md"),
+    (".github/agents/golazo-copilot/roles/program-manager.md", "golazo_copilot.roles.defaults", "program-manager.md"),
+    (".github/agents/golazo-copilot/roles/quality-assurance.md", "golazo_copilot.roles.defaults", "quality-assurance.md"),
+    (".github/agents/golazo-copilot/roles/architect.md", "golazo_copilot.roles.defaults", "architect.md"),
+    (".github/agents/golazo-copilot/roles/developer.md", "golazo_copilot.roles.defaults", "developer.md"),
+    (".github/agents/golazo-copilot/roles/refactor-expert.md", "golazo_copilot.roles.defaults", "refactor-expert.md"),
+    (".github/agents/golazo-copilot/roles/builder.md", "golazo_copilot.roles.defaults", "builder.md"),
+    (".github/agents/golazo-copilot/roles/documenter.md", "golazo_copilot.roles.defaults", "documenter.md"),
+    (".github/agents/golazo-copilot/roles/retrospective.md", "golazo_copilot.roles.defaults", "retrospective.md"),
+    (".github/agents/golazo-copilot/roles/TechBestPractices.md", "golazo_copilot.roles.defaults", "TechBestPractices.md"),
 ]
 
 

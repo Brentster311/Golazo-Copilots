@@ -259,6 +259,6 @@ def test_tech_best_practices_path(role: str):
     # Find TechBestPractices references
     refs = re.findall(r'[`\s/]([^\s`]*TechBestPractices[^\s`]*)', body)
     for ref in refs:
-        assert ".github/roles/TechBestPractices.md" in ref or "TechBestPractices.md" == ref, (
+        assert ".github/agents/golazo-copilot/roles/TechBestPractices.md" in ref or "TechBestPractices.md" == ref, (
             f"{role}.md references TechBestPractices with unexpected path: '{ref}'"
         )

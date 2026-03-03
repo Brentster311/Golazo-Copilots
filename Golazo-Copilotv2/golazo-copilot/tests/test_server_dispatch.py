@@ -34,9 +34,9 @@ class TestWorkflowPreflight:
     async def test_allows_workflow_tool_when_instructions_present(self, tmp_path):
         workspace = tmp_path
         (workspace / "WorkItems").mkdir()
-        github = workspace / ".github"
-        github.mkdir()
-        (github / "copilot-instructions.md").write_text("# Instructions", encoding="utf-8")
+        agents = workspace / ".github" / "agents"
+        agents.mkdir(parents=True)
+        (agents / "Golazo-Copilot.md").write_text("# Instructions", encoding="utf-8")
 
         result = await _dispatch_tool(
             "golazo_create_workitem",
