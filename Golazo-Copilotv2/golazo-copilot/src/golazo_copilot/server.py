@@ -17,6 +17,28 @@ from .tools.golazo_consent import golazo_consent
 from .tools.golazo_capabilities import golazo_capabilities
 from .tools.golazo_role_context import golazo_role_context
 from .tools.golazo_git_propose import golazo_git_propose
+from .dispatch.paths import has_orchestrator_instructions as _mod_has_orchestrator_instructions
+from .dispatch.paths import resolve_work_items_dir as _mod_resolve_work_items_dir
+from .dispatch.registry import REQUIRED_TOOL_NAMES as _mod_required_tool_names
+from .dispatch.registry import WORKFLOW_TOOLS_REQUIRING_INSTRUCTIONS as _mod_workflow_tools_requiring_instructions
+from .dispatch.registry import get_tool_definitions as _mod_get_tool_definitions
+from .dispatch.router import dispatch_tool as _mod_dispatch_tool
+from .dispatch.router import runtime_tool_self_check as _mod_runtime_tool_self_check
+from .formatters.results import ICON_CHECK as _mod_icon_check
+from .formatters.results import ICON_EMPTY as _mod_icon_empty
+from .formatters.results import ICON_FAIL as _mod_icon_fail
+from .formatters.results import ICON_OK as _mod_icon_ok
+from .formatters.results import ICON_PENDING as _mod_icon_pending
+from .formatters.results import ICON_WARN as _mod_icon_warn
+from .formatters.results import format_bootstrap_result as _mod_format_bootstrap_result
+from .formatters.results import format_capabilities_result as _mod_format_capabilities_result
+from .formatters.results import format_consent_result as _mod_format_consent_result
+from .formatters.results import format_create_workitem_result as _mod_format_create_workitem_result
+from .formatters.results import format_git_propose_result as _mod_format_git_propose_result
+from .formatters.results import format_role_context_result as _mod_format_role_context_result
+from .formatters.results import format_status_result as _mod_format_status_result
+from .formatters.results import format_transition_result as _mod_format_transition_result
+from .formatters.results import format_update_result as _mod_format_update_result
 
 # Create server instance with version in name
 server = Server(f"golazo-copilot v{__version__}")
@@ -625,7 +647,7 @@ async def _runtime_tool_self_check() -> list[str]:
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     """Handle tool calls."""
     try:
-        return await _dispatch_tool(name, arguments)
+        return await _dispatch_tool(name, arguments, _STARTUP_TOOL_WARNINGS)
     except ValueError as exc:
         return [TextContent(type="text", text=f"{ICON_FAIL} {exc}")]
 
@@ -749,6 +771,38 @@ async def _dispatch_tool(name: str, arguments: dict) -> list[TextContent]:
         return [TextContent(type="text", text=format_git_propose_result(result))]
 
     return [TextContent(type="text", text=f"Unknown tool: {name}")]
+
+
+# ---------------------------------------------------------------------------
+# Modular override bindings (GCP-0061)
+# ---------------------------------------------------------------------------
+
+ICON_OK = _mod_icon_ok
+ICON_FAIL = _mod_icon_fail
+ICON_WARN = _mod_icon_warn
+ICON_PENDING = _mod_icon_pending
+ICON_CHECK = _mod_icon_check
+ICON_EMPTY = _mod_icon_empty
+
+_REQUIRED_TOOL_NAMES = _mod_required_tool_names
+_WORKFLOW_TOOLS_REQUIRING_INSTRUCTIONS = _mod_workflow_tools_requiring_instructions
+
+resolve_work_items_dir = _mod_resolve_work_items_dir
+has_orchestrator_instructions = _mod_has_orchestrator_instructions
+
+format_create_workitem_result = _mod_format_create_workitem_result
+format_transition_result = _mod_format_transition_result
+format_status_result = _mod_format_status_result
+format_bootstrap_result = _mod_format_bootstrap_result
+format_consent_result = _mod_format_consent_result
+format_capabilities_result = _mod_format_capabilities_result
+format_role_context_result = _mod_format_role_context_result
+format_git_propose_result = _mod_format_git_propose_result
+format_update_result = _mod_format_update_result
+
+_get_tool_definitions = _mod_get_tool_definitions
+_dispatch_tool = _mod_dispatch_tool
+_runtime_tool_self_check = _mod_runtime_tool_self_check
 
 
 async def main():

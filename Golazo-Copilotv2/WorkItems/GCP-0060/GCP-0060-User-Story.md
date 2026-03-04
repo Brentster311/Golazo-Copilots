@@ -1,4 +1,4 @@
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 **User Story**
 - Title: Proposal-gated git intent capture for workflow auditability
@@ -32,3 +32,24 @@
 - Rollout / rollback notes:
   - Rollout behind normal package release; no migration blocker if `git_actions` defaults to empty list.
   - Rollback by disabling/removing tool registration while preserving existing state fields for backward compatibility.
+
+## Closure
+
+### Delivery summary
+- Implemented `golazo_git_propose` MCP tool with deterministic validation and append-only proposal persistence.
+- Added `git_actions` typed state field for schema-safe round-trips and backward compatibility.
+- Added/updated tests for tool behavior and server dispatch coverage.
+- Updated documentation to reflect supported tool contract.
+
+### Acceptance criteria validation
+- AC1 (initialize missing `git_actions` safely): **PASS**
+- AC2 (`add` persists proposal record): **PASS**
+- AC3 (`commit` without `message` fails deterministically): **PASS**
+- AC4 (`push`/`branch` without `branch` fail deterministically): **PASS**
+- AC5 (not-found guidance + persistence across round-trips): **PASS**
+
+### Future work items
+- Extract and modularize `golazo-copilot/src/golazo_copilot/server.py` to reduce coupling and improve maintainability (no behavior change).
+
+### Final status
+- Work item implemented and validated in complete profile closure flow.
