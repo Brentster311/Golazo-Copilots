@@ -16,6 +16,7 @@ from .tools.golazo_bootstrap import golazo_bootstrap
 from .tools.golazo_consent import golazo_consent
 from .tools.golazo_capabilities import golazo_capabilities
 from .tools.golazo_role_context import golazo_role_context
+from .tools.golazo_git_propose import golazo_git_propose
 
 # Create server instance with version in name
 server = Server(f"golazo-copilot v{__version__}")
@@ -36,6 +37,7 @@ _WORKFLOW_TOOLS_REQUIRING_INSTRUCTIONS: set[str] = {
     "golazo_status",
     "golazo_consent",
     "golazo_role_context",
+    "golazo_git_propose",
 }
 
 
@@ -286,6 +288,33 @@ def format_role_context_result(result: dict) -> str:
 {result['bundle']}"""
 
 
+def format_git_propose_result(result: dict) -> str:
+    """Format golazo_git_propose result dict into display text."""
+    if not result.get("success"):
+        code = result.get("error_code")
+        suffix = f" ({code})" if code else ""
+        return f"{ICON_FAIL} Git proposal failed{suffix}: {result['error']}"
+
+    proposal = result["proposal"]
+    payload = []
+    if "files" in proposal:
+        payload.append(f"files={proposal['files']}")
+    if "message" in proposal:
+        payload.append("message=<provided>")
+    if "branch" in proposal:
+        payload.append(f"branch={proposal['branch']}")
+    payload_text = f"\nPayload: {', '.join(payload)}" if payload else ""
+
+    return (
+        f"{ICON_OK} Git proposal recorded for '{result['work_item_id']}'.\n\n"
+        f"Action: {proposal['action']}\n"
+        f"Status: {proposal['status']}\n"
+        f"Timestamp: {proposal['timestamp']}\n"
+        f"Proposal count: {result['proposal_count']}"
+        f"{payload_text}"
+    )
+
+
 def format_update_result(result: dict) -> str:
     """Format golazo_update result dict into display text."""
     if result.get("status") == "error":
@@ -516,6 +545,42 @@ def _get_tool_definitions() -> list[Tool]:
                 "required": ["work_item_id", "workspace_path"]
             }
         ),
+        Tool(
+            name="golazo_git_propose",
+            description="Record proposal-only git action intent in a work item's append-only audit history.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "work_item_id": {
+                        "type": "string",
+                        "description": "Work item identifier"
+                    },
+                    "action": {
+                        "type": "string",
+                        "enum": ["add", "commit", "push", "branch"],
+                        "description": "Git intent action to propose"
+                    },
+                    "files": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "File paths for action='add'"
+                    },
+                    "message": {
+                        "type": "string",
+                        "description": "Commit message for action='commit'"
+                    },
+                    "branch": {
+                        "type": "string",
+                        "description": "Branch name for action='push' or action='branch'"
+                    },
+                    "workspace_path": {
+                        "type": "string",
+                        "description": "Workspace root path containing the WorkItems folder (required)"
+                    }
+                },
+                "required": ["work_item_id", "action", "workspace_path"]
+            }
+        ),
     ]
 
 
@@ -670,6 +735,18 @@ async def _dispatch_tool(name: str, arguments: dict) -> list[TextContent]:
             project_root=project_root,
         )
         return [TextContent(type="text", text=format_role_context_result(result))]
+
+    elif name == "golazo_git_propose":
+        work_items_dir = resolve_work_items_dir(arguments.get("workspace_path"))
+        result = await golazo_git_propose(
+            work_item_id=arguments["work_item_id"],
+            action=arguments["action"],
+            files=arguments.get("files"),
+            message=arguments.get("message"),
+            branch=arguments.get("branch"),
+            work_items_dir=work_items_dir,
+        )
+        return [TextContent(type="text", text=format_git_propose_result(result))]
 
     return [TextContent(type="text", text=f"Unknown tool: {name}")]
 

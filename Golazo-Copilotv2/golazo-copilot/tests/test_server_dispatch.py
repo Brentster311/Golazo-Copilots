@@ -65,3 +65,22 @@ class TestWorkflowPreflight:
         text = result[0].text
         assert "Golazo Copilot" in text
         assert "Orchestrator instructions are required" not in text
+
+    @pytest.mark.asyncio
+    async def test_git_propose_blocks_when_instructions_missing(self, tmp_path):
+        workspace = tmp_path
+        (workspace / "WorkItems").mkdir()
+
+        result = await _dispatch_tool(
+            "golazo_git_propose",
+            {
+                "work_item_id": "GCP-9003",
+                "action": "add",
+                "files": ["a.txt"],
+                "workspace_path": str(workspace),
+            },
+        )
+
+        text = result[0].text
+        assert ICON_FAIL in text
+        assert "Orchestrator instructions are required" in text

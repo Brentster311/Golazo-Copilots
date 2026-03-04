@@ -36,6 +36,7 @@ class WorkItemState(BaseModel):
     updated_at: datetime
     role_history: list[RoleHistoryEntry] = Field(default_factory=list)
     deviations: list[Deviation] = Field(default_factory=list)
+    git_actions: list[dict[str, Any]] = Field(default_factory=list)
     closure_pending: bool = False
 
 

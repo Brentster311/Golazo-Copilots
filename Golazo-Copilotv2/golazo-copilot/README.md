@@ -180,12 +180,13 @@ You should see the Golazo Copilot tools listed:
 - `golazo_status` – Check workflow status
 - `golazo_transition` – Move between roles
 - `golazo_consent` – Record consent for bypassing workflow gates
+- `golazo_git_propose` – Record proposal-only git action intent for auditability
 - `golazo_bootstrap` – Bootstrap Golazo instructions in a workspace
 - `golazo_update` – Check for and install Golazo Copilot updates
 
 ### Step 5: Bootstrap Your Workspace
 
-Bootstrap is required before workflow tool operations (`golazo_create_workitem`, `golazo_transition`, `golazo_status` with a work item, `golazo_consent`, and `golazo_role_context`).
+Bootstrap is required before workflow tool operations (`golazo_create_workitem`, `golazo_transition`, `golazo_status` with a work item, `golazo_consent`, `golazo_role_context`, and `golazo_git_propose`).
 
 In GitHub Copilot Chat, say one of:
 
@@ -301,6 +302,18 @@ Query the project capability registry for impact analysis. Reads `capabilities.y
 | `capability` | string | No | Capability name (required for `action="show"`) |
 | `files` | array of strings | No | File paths to check impact for (required for `action="impact"`) |
 | `workspace_path` | string | **Yes** | Workspace root path containing `capabilities.yaml` |
+
+#### `golazo_git_propose`
+Record proposal-only git action intent in work-item state as append-only `git_actions` history.
+
+| Input | Type | Required | Description |
+|-------|------|----------|-------------|
+| `work_item_id` | string | **Yes** | Work item identifier |
+| `action` | string | **Yes** | Proposed git action: `add`, `commit`, `push`, or `branch` |
+| `files` | array of strings | No | Required for `action="add"` |
+| `message` | string | No | Required for `action="commit"` |
+| `branch` | string | No | Required for `action="push"` and `action="branch"` |
+| `workspace_path` | string | **Yes** | Workspace root path containing the WorkItems folder |
 
 #### `golazo_update`
 Check for and install updates to Golazo Copilot from Azure Artifacts.
