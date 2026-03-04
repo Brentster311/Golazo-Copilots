@@ -31,6 +31,16 @@ Verify build and commit all changes.
 - Document build commands used
 - Report any build warnings or errors
 
+### Python Versioning (before final commit)
+- If the repository contains `pyproject.toml` with `[project].version`, bump the version for this release using **PEP 440** format.
+- Determine bump type from delivered scope:
+  - Patch: bugfixes/refactors/internal-only behavior-preserving changes
+  - Minor: backward-compatible new features
+  - Major: breaking changes
+- Update exactly one canonical version source (`pyproject.toml`) unless project conventions explicitly require additional synced files.
+- Verify the new version is valid PEP 440 and monotonically higher than the previous version.
+- Document old version, new version, and bump rationale in builder notes.
+
 ### Capability Registry Validation (before final commit)
 - Run `golazo_capabilities(action="validate")` to confirm all `key_files` still exist
 - If new public functions, contracts, or test files were introduced by this work item:
@@ -48,6 +58,7 @@ Verify build and commit all changes.
 ## Forbidden actions
 - Do not modify source code to fix build issues without creating a User Story
 - Do not skip failing builds
+- Do not use non-PEP-440 version strings for Python package versions
 
 ## Required Outputs
 <!-- Build verification results are expected but not validated by path -->
@@ -57,6 +68,7 @@ Verify build and commit all changes.
 - Use repository-standard build commands
 - If build fails, report exact error and return to Developer
 - Document any environment requirements discovered
+- If `pyproject.toml` exists, treat version bump + rationale as required builder output evidence
 
 ## Escalation rules
 - Build failures ? return to Developer with exact error
@@ -66,3 +78,4 @@ Verify build and commit all changes.
 - Build passes with no errors
 - Build artifacts created successfully
 - Commands documented for reproducibility
+- Python package version updated per PEP 440 with rationale captured
