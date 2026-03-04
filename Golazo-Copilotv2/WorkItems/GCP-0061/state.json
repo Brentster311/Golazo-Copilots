@@ -2,67 +2,17 @@
   "schema_version": "1.0",
   "work_item_id": "GCP-0061",
   "profile": "complete",
-  "current_phase": "closure",
+  "current_phase": "definition",
   "current_role": "project-owner-assistant",
-  "created_at": "2026-03-04T03:12:45.830921Z",
-  "updated_at": "2026-03-04T15:40:06.083890Z",
+  "created_at": "2026-03-03T19:44:10.943512Z",
+  "updated_at": "2026-03-03T19:44:10.943512Z",
   "role_history": [
     {
       "role": "project-owner-assistant",
-      "entered_at": "2026-03-04T03:12:45.830921Z",
-      "exited_at": "2026-03-04T03:41:24.190320Z"
-    },
-    {
-      "role": "program-manager",
-      "entered_at": "2026-03-04T03:41:24.190320Z",
-      "exited_at": "2026-03-04T03:42:37.024443Z"
-    },
-    {
-      "role": "domain-expert",
-      "entered_at": "2026-03-04T03:42:37.024443Z",
-      "exited_at": "2026-03-04T03:43:49.618697Z"
-    },
-    {
-      "role": "quality-assurance",
-      "entered_at": "2026-03-04T03:43:49.618697Z",
-      "exited_at": "2026-03-04T15:21:44.237890Z"
-    },
-    {
-      "role": "architect",
-      "entered_at": "2026-03-04T15:21:44.237890Z",
-      "exited_at": "2026-03-04T15:25:59.593475Z"
-    },
-    {
-      "role": "developer",
-      "entered_at": "2026-03-04T15:25:59.593475Z",
-      "exited_at": "2026-03-04T15:33:55.364162Z"
-    },
-    {
-      "role": "refactor-expert",
-      "entered_at": "2026-03-04T15:33:55.364162Z",
-      "exited_at": "2026-03-04T15:35:40.132595Z"
-    },
-    {
-      "role": "documenter",
-      "entered_at": "2026-03-04T15:35:40.132595Z",
-      "exited_at": "2026-03-04T15:37:29.815785Z"
-    },
-    {
-      "role": "builder",
-      "entered_at": "2026-03-04T15:37:29.815785Z",
-      "exited_at": "2026-03-04T15:39:40.646722Z"
-    },
-    {
-      "role": "retrospective",
-      "entered_at": "2026-03-04T15:39:40.646722Z",
-      "exited_at": "2026-03-04T15:40:06.083890Z"
-    },
-    {
-      "role": "project-owner-assistant",
-      "entered_at": "2026-03-04T15:40:06.083890Z",
+      "entered_at": "2026-03-03T19:44:10.943512Z",
       "exited_at": null
     }
   ],
   "deviations": [],
-  "closure_pending": true
+  "closure_pending": false
 }

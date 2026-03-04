@@ -36,6 +36,10 @@ The Golazo workflow enforces a structured progression through roles:
 9. **Builder** – Verify builds pass, handle CI/CD concerns
 10. **Retrospective** – Review what worked and what didn't
 
+When work reaches the **Developer** role, the role instructions require creating a feature branch using:
+`git checkout -b <useralias>/<workitem-id>`
+This branch format requirement is documented in the default Developer role file and validated by repository tests.
+
 For the `complete` profile, retrospective transitions to Project Owner Assistant again for formal closure.
 
 Transitions are validated—you cannot skip roles or jump directly to Developer without completing earlier phases. Backward transitions to any prior role are always allowed.
