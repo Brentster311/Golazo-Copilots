@@ -96,6 +96,10 @@ When re-entering this role after Retrospective, perform the following closure ta
 
 1. **Final commit**: Ensure all changes are committed with message `<workitem-id>: <User Story title>` and pushed to origin.
 2. **Acceptance criteria validation**: Verify each acceptance criterion in the User Story is satisfied by the implementation. Update User Story status to **IMPLEMENTED**.
+  - **Runtime evidence required for UI/UX ACs**: If an acceptance criterion is user-visible (dialogs, window chrome/buttons, layout, interaction flow, colors/icons, sizing/positioning), do not mark it PASS using source-only checks.
+  - **Minimum evidence for UI/UX AC pass**: (a) at least one runtime validation artifact (manual run note with observed result and timestamp, or screenshot/video reference), and (b) at least one behavior-level test when feasible (integration/UI test, or equivalent harness assertion against runtime state).
+  - **PO validation required when POA cannot directly validate**: If POA cannot directly reproduce/observe the UX behavior, POA must request validation from the Project Owner and capture explicit PO sign-off evidence in closure notes before marking PASS.
+  - **No PO sign-off, no closure**: If runtime evidence is unavailable, contradictory, or PO sign-off is missing for unverified UX ACs, mark that AC as FAIL/PENDING, keep the story out of IMPLEMENTED, and create a follow-up work item.
 3. **Pending work items**: Collect any new work items identified during the workflow (from escalation notes, retrospective findings, or deferred scope).
 4. **Update User Story**: Append a `## Closure` section to the existing `WorkItems/<workitem-id>/<workitem-id>-User-Story.md` with:
    - Summary of what was delivered

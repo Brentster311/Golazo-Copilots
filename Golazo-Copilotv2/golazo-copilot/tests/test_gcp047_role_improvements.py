@@ -172,6 +172,24 @@ class TestPOAClosureSection:
         assert "update user story" in text or "user-story" in text, \
             "POA Closure must instruct to update the User Story with closure info"
 
+    def test_closure_requires_runtime_ui_evidence(self):
+        """TC-7b: POA Closure must require runtime evidence for user-visible UI/UX ACs."""
+        content = _read_role("project-owner-assistant")
+        closure = re.search(r"## Closure\n(.*)", content, re.DOTALL)
+        assert closure, "POA missing Closure section"
+        text = closure.group(1).lower()
+        assert "runtime evidence required" in text or "runtime validation artifact" in text, \
+            "POA Closure must require runtime evidence for UI/UX acceptance criteria"
+
+    def test_closure_requires_po_signoff_for_unverified_ux(self):
+        """TC-7c: POA Closure must require PO sign-off when UX cannot be directly validated."""
+        content = _read_role("project-owner-assistant")
+        closure = re.search(r"## Closure\n(.*)", content, re.DOTALL)
+        assert closure, "POA missing Closure section"
+        text = closure.group(1).lower()
+        assert "po sign-off" in text or "project owner" in text, \
+            "POA Closure must require Project Owner sign-off for unverified UX ACs"
+
 
 # ---------------------------------------------------------------------------
 # AC4: QA — testability focus, no design-quality overlap
