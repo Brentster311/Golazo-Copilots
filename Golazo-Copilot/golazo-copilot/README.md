@@ -389,3 +389,38 @@ Then reload VS Code and re-bootstrap your workspace to pick up the new version:
 ## License
 
 MIT
+
+## Changelog (By Version)
+
+### v4.3.1
+
+- Modularized `golazo_status` internals for maintainability while preserving output contract and behavior (`GCP-0064`)
+- Consolidated role execution-mode policy guidance (inline design roles, subagent default for non-design roles) and aligned docs/mappings (`GCP-0063`)
+
+### v4.2.3
+
+- Added project-level completion handoff via `golazo_transition_workitem` with next-item sequencing and `global_state.json` persistence (`GCP-0061`)
+
+### v4.2.2
+
+- Hardened closure guidance to require runtime UX validation evidence and explicit PO sign-off for unverifiable UX acceptance criteria
+
+### v4.2.1
+
+- Refactored MCP server dispatch into modular handlers without changing tool behavior
+- Refreshed bootstrap capabilities template behavior
+- Added/enforced builder PEP 440 versioning guidance
+
+### v4.0.0
+
+- Enforced workflow-managed branch naming format `<useralias>/<workitem-id>` (`GCP-0062`)
+- Aligned Golazo agent bootstrap and documentation behavior
+
+### v3.0.4
+
+- Auto-create root `capabilities.yaml` on first successful `golazo_create_workitem` call when missing
+- Preserve existing `capabilities.yaml` content when already present (`GCP-0058`)
+
+### v3.0.3
+
+- Introduced required bootstrap preflight with `orchestrator-only` mode and explicit remediation path (`GCP-0057`)
