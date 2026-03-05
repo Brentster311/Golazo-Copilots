@@ -1,4 +1,4 @@
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 **User Story**
 - Title: Resolve `capabilities.yaml` from `WorkItems/` root location
@@ -24,3 +24,24 @@
 - Rollout / rollback notes:
   - Rollout: merge with tests validating `WorkItems/capabilities.yaml` handling.
   - Rollback: revert path-resolution changes and tests if regressions are discovered.
+
+## Closure
+
+### Summary of what was delivered
+- Capability registry canonical path handling now uses `WorkItems/capabilities.yaml`.
+- Legacy root `capabilities.yaml` is automatically moved to `WorkItems/capabilities.yaml` when canonical is absent.
+- Dual-file scenario is deterministic: canonical file is used and legacy remains untouched.
+- Error messaging for missing registry clearly points to `WorkItems/capabilities.yaml`.
+- Documentation text was updated to reflect canonical-path and migration behavior.
+
+### Acceptance criteria pass/fail status
+- AC1 PASS: `golazo_capabilities(action="list")` resolves and operates with `WorkItems/capabilities.yaml` (covered by updated tests in `golazo-copilot/tests/test_gcp_capabilities.py`).
+- AC2 PASS: `golazo_capabilities(action="impact", files=[...])` resolves from canonical registry path (covered by updated tests and impact-analysis checks).
+- AC3 PASS: workspace-root workflows remain functional through legacy-to-canonical migration behavior (covered by migration test scenario).
+- AC4 PASS: missing-file errors now reference canonical expected path `WorkItems/capabilities.yaml` (covered by missing-file test scenario).
+
+### Future work items
+- Candidate follow-up: address unrelated baseline test failure in `golazo-copilot/tests/test_golazo_update.py::TestCheckAction::test_tc06b_check_http_401_fallback_pip_index_success`.
+
+### Final status confirmation
+- Work item implementation scope completed and verified against acceptance criteria.
