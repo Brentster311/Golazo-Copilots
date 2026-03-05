@@ -1,9 +1,0 @@
-"""Golazo Copilot - MCP server for workflow management."""
-
-from importlib.metadata import version as _pkg_version
-from importlib.metadata import PackageNotFoundError
-
-try:
-	__version__ = _pkg_version("golazo-copilot")
-except PackageNotFoundError:
-	__version__ = "0.0.0+local"

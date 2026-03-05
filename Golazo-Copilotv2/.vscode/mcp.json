@@ -1,8 +1,0 @@
-{
-  "servers": {
-    "golazo-copilot": {
-      "command": "py",
-      "args": ["-3.14", "-m", "golazo_copilot.server"]
-    }
-  }
-}

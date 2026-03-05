@@ -1,0 +1,58 @@
+{
+  "schema_version": "1.0",
+  "work_item_id": "BOB-001",
+  "profile": "spike",
+  "current_phase": "development",
+  "current_role": "developer",
+  "created_at": "2026-02-27T05:05:42.841774Z",
+  "updated_at": "2026-02-27T05:12:41.184550Z",
+  "role_history": [
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-02-27T05:05:42.841774Z",
+      "exited_at": "2026-02-27T05:06:54.428284Z"
+    },
+    {
+      "role": "program-manager",
+      "entered_at": "2026-02-27T05:06:54.428284Z",
+      "exited_at": "2026-02-27T05:07:24.019964Z"
+    },
+    {
+      "role": "domain-expert",
+      "entered_at": "2026-02-27T05:07:24.019964Z",
+      "exited_at": "2026-02-27T05:07:33.461661Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-02-27T05:07:33.461661Z",
+      "exited_at": "2026-02-27T05:08:00.682947Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-02-27T05:08:00.682947Z",
+      "exited_at": "2026-02-27T05:08:21.279297Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-02-27T05:08:21.279297Z",
+      "exited_at": "2026-02-27T05:12:35.525617Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-02-27T05:12:35.525617Z",
+      "exited_at": "2026-02-27T05:12:38.651081Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-02-27T05:12:38.651081Z",
+      "exited_at": "2026-02-27T05:12:41.184550Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-02-27T05:12:41.184550Z",
+      "exited_at": null
+    }
+  ],
+  "deviations": [],
+  "closure_pending": false
+}
