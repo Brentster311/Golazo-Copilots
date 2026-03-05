@@ -1,0 +1,169 @@
+capabilities:
+  - name: state-model
+    description: "Typed workflow state contracts for work items"
+    key_files:
+      - golazo-copilot/src/golazo_copilot/core/types.py
+      - golazo-copilot/src/golazo_copilot/core/state.py
+    contracts:
+      - "WorkItemState schema and default initialization"
+      - "RoleHistoryEntry/Deviation contracts"
+    depends_on: []
+
+  - name: persistence
+    description: "Atomic read/write of work item state files"
+    key_files:
+      - golazo-copilot/src/golazo_copilot/core/persistence.py
+    contracts:
+      - "load_state(work_item_id, workspace_path) -> WorkItemState"
+      - "save_state(work_item_id, state, workspace_path) -> None"
+    depends_on:
+      - state-model
+
+  - name: transitions
+    description: "Role ordering, profile role sets, and transition validation"
+    key_files:
+      - golazo-copilot/src/golazo_copilot/core/transitions.py
+    contracts:
+      - "validate_transition(profile, current_role, target_role) -> (allowed, warning?)"
+      - "profile role definitions and next/previous role helpers"
+    depends_on:
+      - state-model
+
+  - name: output-validation
+    description: "Parse and validate role Required Outputs declarations"
+    key_files:
+      - golazo-copilot/src/golazo_copilot/core/output_validator.py
+    contracts:
+      - "parse_required_outputs(role_file_content) -> list[OutputSpec]"
+      - "validate_outputs(outputs, workspace_path, work_item_id) -> ValidationResult"
+    depends_on:
+      - state-model
+
+  - name: role-loader
+    description: "Load role instruction files from workspace overrides or package defaults"
+    key_files:
+      - golazo-copilot/src/golazo_copilot/roles/loader.py
+    contracts:
+      - "load_role_file(role, workspace_path) -> str"
+      - "load_default_role(role) -> str"
+    depends_on: []
+
+  - name: tool-create-workitem
+    description: "Create new tracked work item and initialize workflow state"
+    key_files:
+      - golazo-copilot/src/golazo_copilot/tools/golazo_create_workitem.py
+    contracts:
+      - "golazo_create_workitem(work_item_id, profile, workspace_path) -> dict"
+    depends_on:
+      - state-model
+      - persistence
+      - role-loader
+
+  - name: tool-transition
+    description: "Transition work items between roles with gate checks"
+    key_files:
+      - golazo-copilot/src/golazo_copilot/tools/golazo_transition.py
+    contracts:
+      - "golazo_transition(work_item_id, role, force, workspace_path) -> dict"
+    depends_on:
+      - state-model
+      - persistence
+      - transitions
+      - output-validation
+      - role-loader
+
+  - name: tool-status
+    description: "Return comprehensive workflow status and guidance"
+    key_files:
+      - golazo-copilot/src/golazo_copilot/tools/golazo_status.py
+      - golazo-copilot/src/golazo_copilot/tools/status_helpers.py
+    contracts:
+      - "golazo_status(work_item_id?, workspace_path) -> dict"
+    depends_on:
+      - state-model
+      - persistence
+      - output-validation
+      - role-loader
+
+  - name: tool-bootstrap
+    description: "Bootstrap workspace instruction spine and default role files"
+    key_files:
+      - golazo-copilot/src/golazo_copilot/tools/golazo_bootstrap.py
+    contracts:
+      - "golazo_bootstrap(workspace_path, mode, force, include_roles) -> dict"
+    depends_on:
+      - role-loader
+
+  - name: tool-consent
+    description: "Record Project Owner consent for bypassing workflow gates"
+    key_files:
+      - golazo-copilot/src/golazo_copilot/tools/golazo_consent.py
+    contracts:
+      - "golazo_consent(work_item_id, action, reason, workspace_path) -> dict"
+    depends_on:
+      - persistence
+
+  - name: tool-capabilities
+    description: "Capability registry listing, lookup, impact, and validation"
+    key_files:
+      - golazo-copilot/src/golazo_copilot/tools/golazo_capabilities.py
+    contracts:
+      - "golazo_capabilities(action, capability?, files?, workspace_path) -> dict"
+    depends_on: []
+
+  - name: tool-role-context
+    description: "Assemble self-contained role bundle for subagent execution"
+    key_files:
+      - golazo-copilot/src/golazo_copilot/tools/golazo_role_context.py
+    contracts:
+      - "golazo_role_context(work_item_id, role?, workspace_path) -> dict"
+    depends_on:
+      - persistence
+      - role-loader
+
+  - name: tool-git-propose
+    description: "Record proposal-only git intent events in work item audit history"
+    key_files:
+      - golazo-copilot/src/golazo_copilot/tools/golazo_git_propose.py
+    contracts:
+      - "golazo_git_propose(work_item_id, action, files?, message?, branch?, workspace_path) -> dict"
+    depends_on:
+      - persistence
+
+  - name: tool-transition-workitem
+    description: "Mark retrospective-complete work item as completed and advance global pointer"
+    key_files:
+      - golazo-copilot/src/golazo_copilot/tools/golazo_transition_workitem.py
+    contracts:
+      - "golazo_transition_workitem(work_item_id, workspace_path) -> dict"
+    depends_on:
+      - persistence
+      - transitions
+
+  - name: tool-update
+    description: "Check and install golazo-copilot updates from package feeds"
+    key_files:
+      - golazo-copilot/src/golazo_copilot/tools/golazo_update.py
+    contracts:
+      - "golazo_update(action, version?, workspace_path, bootstrap_mode?) -> dict"
+    depends_on: []
+
+  - name: mcp-server
+    description: "MCP server registration, dispatch, and formatter surface"
+    key_files:
+      - golazo-copilot/src/golazo_copilot/server.py
+      - golazo-copilot/src/golazo_copilot/tools/__init__.py
+    contracts:
+      - "list_tools() -> list[Tool]"
+      - "dispatch(name, arguments) -> tool result"
+    depends_on:
+      - tool-create-workitem
+      - tool-transition
+      - tool-status
+      - tool-bootstrap
+      - tool-consent
+      - tool-capabilities
+      - tool-role-context
+      - tool-git-propose
+      - tool-transition-workitem
+      - tool-update
