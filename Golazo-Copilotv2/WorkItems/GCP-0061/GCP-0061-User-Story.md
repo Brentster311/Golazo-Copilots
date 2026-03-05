@@ -1,4 +1,4 @@
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 **User Story**
 - Title: Project-level work-item completion handoff with next-item sequencing
@@ -29,3 +29,20 @@
 - Rollout / rollback notes:
   - Rollout as additive tool; no breaking change to existing per-work-item flow.
   - Rollback by removing tool exposure while keeping `global_state.json` ignored by existing workflows.
+
+## Closure
+- Summary of what was delivered:
+  - Implemented MCP tool `golazo_transition_workitem` for project-level completion handoff and next-item sequencing.
+  - Added workspace-level persistence in `global_state.json` with atomic writes and schema-safe initialization.
+  - Wired tool registration, dispatch, and output formatting; updated README and contract-parity tests.
+- Acceptance criteria pass/fail status:
+  - AC1 (retrospective success + computed next ID): PASS
+  - AC2 (non-retrospective role precondition failure): PASS
+  - AC3 (create missing `global_state.json` with metadata + next item): PASS
+  - AC4 (update existing `global_state.json` with completion + next item): PASS
+  - AC5 (guide create-work-item when next does not exist): PASS
+- List of future work items (if any):
+  - Optional: add explicit telemetry emission for transition success/failure categories.
+  - Optional: add branch-level integration test coverage for global-state lifecycle under merged-history scenarios.
+- Final status confirmation:
+  - This user story is implemented and validated by focused regression tests.

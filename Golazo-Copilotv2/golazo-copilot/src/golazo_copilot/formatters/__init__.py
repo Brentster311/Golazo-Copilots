@@ -15,6 +15,7 @@ from .results import (
     format_role_context_result,
     format_status_result,
     format_transition_result,
+    format_transition_workitem_result,
     format_update_result,
 )
 
@@ -33,5 +34,6 @@ __all__ = [
     "format_role_context_result",
     "format_status_result",
     "format_transition_result",
+    "format_transition_workitem_result",
     "format_update_result",
 ]

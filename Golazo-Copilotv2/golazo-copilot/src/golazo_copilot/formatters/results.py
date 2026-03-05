@@ -242,6 +242,32 @@ def format_git_propose_result(result: dict) -> str:
     )
 
 
+def format_transition_workitem_result(result: dict) -> str:
+    """Format golazo_transition_workitem result dict into display text."""
+    if not result.get("success"):
+        code = result.get("error_code")
+        suffix = f" ({code})" if code else ""
+        return f"{ICON_FAIL} Work-item transition failed{suffix}: {result['error']}"
+
+    guidance = ""
+    if not result.get("next_work_item_exists", False):
+        guidance = (
+            f"\n{ICON_WARN} Next work item does not exist yet. "
+            f"Create '{result['next_work_item']}' with golazo_create_workitem."
+        )
+
+    created = "yes" if result.get("global_state_created") else "no"
+    return (
+        f"{ICON_OK} Project-level transition recorded for '{result['work_item_id']}'.\n\n"
+        f"Completed work item: {result['completed_work_item']}\n"
+        f"Next work item: {result['next_work_item']}\n"
+        f"Next work item exists: {'yes' if result.get('next_work_item_exists') else 'no'}\n"
+        f"global_state.json created: {created}\n"
+        f"global_state.json path: {result['global_state_path']}"
+        f"{guidance}"
+    )
+
+
 def format_update_result(result: dict) -> str:
     """Format golazo_update result dict into display text."""
     if result.get("status") == "error":

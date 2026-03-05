@@ -25,3 +25,17 @@
 ## Final closure confirmation
 - Closure complete for GCP-0061 in complete profile.
 
+## Reconciliation addendum (2026-03-04)
+- Context:
+	- The original closure text above captured a modular-dispatch refactor scope, while the user story for GCP-0061 explicitly targets `golazo_transition_workitem`.
+	- This created a documentation mismatch between user-story intent and closure narrative.
+- Corrective action taken:
+	- Implemented `golazo_transition_workitem` in the MCP server and wired registration/dispatch/formatting.
+	- Added focused tests for acceptance criteria coverage (`golazo_transition_workitem` success, precondition failure, global-state create/update, and next-item guidance).
+	- Updated tool contract parity and workspace-path schema tests, plus README tool documentation.
+- Validation evidence:
+	- Focused regression run after implementation: `34 passed` (includes 0060/0061 related suites and new transition-workitem coverage).
+- Note on workflow state artifact:
+	- `WorkItems/GCP-0061/state.json` remains an independent workflow-state snapshot and may not reflect historical branch-level closure progression.
+	- This addendum reconciles functional implementation and documentation for the user-story scope without rewriting historical commit metadata.
+

@@ -27,6 +27,7 @@ class TestSchemaRequiresWorkspacePath:
             "golazo_consent",
             "golazo_capabilities",
             "golazo_role_context",
+            "golazo_transition_workitem",
         }
         actual_tool_names = {tool.name for tool in tools}
         assert expected_tool_names.issubset(actual_tool_names), (

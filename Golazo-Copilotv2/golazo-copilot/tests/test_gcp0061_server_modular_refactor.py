@@ -33,6 +33,7 @@ class TestGCP0061ContractParity:
             "golazo_capabilities",
             "golazo_role_context",
             "golazo_git_propose",
+            "golazo_transition_workitem",
         }
         actual = {tool.name for tool in tools}
         assert actual == expected
@@ -50,6 +51,7 @@ class TestGCP0061ContractParity:
             "golazo_capabilities": ["action", "workspace_path"],
             "golazo_role_context": ["work_item_id", "workspace_path"],
             "golazo_git_propose": ["work_item_id", "action", "workspace_path"],
+            "golazo_transition_workitem": ["work_item_id", "workspace_path"],
         }
         for tool_name, required in expected_required.items():
             assert tool_map[tool_name].inputSchema.get("required") == required

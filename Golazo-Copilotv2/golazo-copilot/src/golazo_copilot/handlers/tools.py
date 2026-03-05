@@ -13,6 +13,7 @@ from ..formatters import (
     format_role_context_result,
     format_status_result,
     format_transition_result,
+    format_transition_workitem_result,
 )
 from ..formatters.results import ICON_FAIL, ICON_WARN
 from ..tools.golazo_bootstrap import golazo_bootstrap
@@ -23,6 +24,7 @@ from ..tools.golazo_git_propose import golazo_git_propose
 from ..tools.golazo_role_context import golazo_role_context
 from ..tools.golazo_status import golazo_status
 from ..tools.golazo_transition import golazo_transition
+from ..tools.golazo_transition_workitem import golazo_transition_workitem
 from ..dispatch.paths import resolve_work_items_dir
 
 
@@ -135,5 +137,13 @@ async def handle_registered_tool(name: str, arguments: dict, startup_tool_warnin
             work_items_dir=work_items_dir,
         )
         return [TextContent(type="text", text=format_git_propose_result(result))]
+
+    if name == "golazo_transition_workitem":
+        work_items_dir = resolve_work_items_dir(arguments.get("workspace_path"))
+        result = await golazo_transition_workitem(
+            work_item_id=arguments["work_item_id"],
+            work_items_dir=work_items_dir,
+        )
+        return [TextContent(type="text", text=format_transition_workitem_result(result))]
 
     return None

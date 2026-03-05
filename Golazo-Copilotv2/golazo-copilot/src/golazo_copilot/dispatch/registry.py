@@ -10,6 +10,7 @@ WORKFLOW_TOOLS_REQUIRING_INSTRUCTIONS: set[str] = {
     "golazo_consent",
     "golazo_role_context",
     "golazo_git_propose",
+    "golazo_transition_workitem",
 }
 
 
@@ -228,6 +229,24 @@ def get_tool_definitions() -> list[Tool]:
                     }
                 },
                 "required": ["work_item_id", "action", "workspace_path"]
+            }
+        ),
+        Tool(
+            name="golazo_transition_workitem",
+            description="Mark a retrospective-complete work item as completed and set the next sequential work item in global project state.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "work_item_id": {
+                        "type": "string",
+                        "description": "Completed work item identifier (must currently be at role 'retrospective')"
+                    },
+                    "workspace_path": {
+                        "type": "string",
+                        "description": "Workspace root path containing the WorkItems folder (required)"
+                    }
+                },
+                "required": ["work_item_id", "workspace_path"]
             }
         ),
     ]

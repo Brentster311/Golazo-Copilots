@@ -183,6 +183,7 @@ You should see the Golazo Copilot tools listed:
 - `golazo_create_workitem` – Initialize a new work item
 - `golazo_status` – Check workflow status
 - `golazo_transition` – Move between roles
+- `golazo_transition_workitem` – Mark retrospective-complete work item and set next work item
 - `golazo_consent` – Record consent for bypassing workflow gates
 - `golazo_git_propose` – Record proposal-only git action intent for auditability
 - `golazo_bootstrap` – Bootstrap Golazo instructions in a workspace
@@ -190,7 +191,7 @@ You should see the Golazo Copilot tools listed:
 
 ### Step 5: Bootstrap Your Workspace
 
-Bootstrap is required before workflow tool operations (`golazo_create_workitem`, `golazo_transition`, `golazo_status` with a work item, `golazo_consent`, `golazo_role_context`, and `golazo_git_propose`).
+Bootstrap is required before workflow tool operations (`golazo_create_workitem`, `golazo_transition`, `golazo_transition_workitem`, `golazo_status` with a work item, `golazo_consent`, `golazo_role_context`, and `golazo_git_propose`).
 
 In GitHub Copilot Chat, say one of:
 
@@ -275,6 +276,14 @@ Transition to a new role in the Golazo Copilot workflow.
 | `work_item_id` | string | **Yes** | Work item identifier |
 | `role` | string | **Yes** | Target role: `project-owner-assistant`, `program-manager`, `domain-expert`, `quality-assurance`, `architect`, `developer`, `refactor-expert`, `builder`, `documenter`, `retrospective` |
 | `force` | boolean | No | Force transition even if gates not met (default: `false`, requires prior consent) |
+| `workspace_path` | string | **Yes** | Workspace root path containing the WorkItems folder |
+
+#### `golazo_transition_workitem`
+Mark a retrospective-complete work item as completed and set the next sequential work item in workspace-level `global_state.json`.
+
+| Input | Type | Required | Description |
+|-------|------|----------|-------------|
+| `work_item_id` | string | **Yes** | Completed work item identifier (must currently be at role `retrospective`) |
 | `workspace_path` | string | **Yes** | Workspace root path containing the WorkItems folder |
 
 #### `golazo_consent`
