@@ -110,10 +110,22 @@ capabilities:
 """
 
 
+def _canonical_registry_path(workspace_root):
+    """Return canonical capabilities registry path."""
+    return workspace_root / "WorkItems" / "capabilities.yaml"
+
+
+def _write_canonical_registry(workspace_root, content):
+    """Write capabilities registry to canonical path under WorkItems/."""
+    registry_path = _canonical_registry_path(workspace_root)
+    registry_path.parent.mkdir(parents=True, exist_ok=True)
+    registry_path.write_text(content, encoding="utf-8")
+
+
 @pytest.fixture
 def workspace(tmp_path):
-    """Create a workspace with sample capabilities.yaml."""
-    (tmp_path / "capabilities.yaml").write_text(SAMPLE_YAML, encoding="utf-8")
+    """Create a workspace with sample capabilities.yaml in canonical location."""
+    _write_canonical_registry(tmp_path, SAMPLE_YAML)
     # Create key_files so validate passes
     for f in [
         "src/tools/golazo_bootstrap.py",
@@ -129,7 +141,7 @@ def workspace(tmp_path):
 @pytest.fixture
 def diamond_workspace(tmp_path):
     """Create a workspace with diamond dependency pattern."""
-    (tmp_path / "capabilities.yaml").write_text(DIAMOND_YAML, encoding="utf-8")
+    _write_canonical_registry(tmp_path, DIAMOND_YAML)
     for f in ["src/base.py", "src/left.py", "src/right.py", "src/top.py"]:
         (tmp_path / f).parent.mkdir(parents=True, exist_ok=True)
         (tmp_path / f).write_text("# placeholder", encoding="utf-8")
@@ -139,7 +151,7 @@ def diamond_workspace(tmp_path):
 @pytest.fixture
 def circular_workspace(tmp_path):
     """Create a workspace with circular dependencies."""
-    (tmp_path / "capabilities.yaml").write_text(CIRCULAR_YAML, encoding="utf-8")
+    _write_canonical_registry(tmp_path, CIRCULAR_YAML)
     for f in ["src/alpha.py", "src/beta.py"]:
         (tmp_path / f).parent.mkdir(parents=True, exist_ok=True)
         (tmp_path / f).write_text("# placeholder", encoding="utf-8")
@@ -169,12 +181,39 @@ class TestListAction:
     @pytest.mark.asyncio
     async def test_list_empty_capabilities(self, tmp_path):
         """TC-1.2: Empty capabilities list returns empty, no error."""
-        (tmp_path / "capabilities.yaml").write_text(
-            "capabilities: []\n", encoding="utf-8"
-        )
+        _write_canonical_registry(tmp_path, "capabilities: []\n")
         result = await golazo_capabilities(action="list", workspace_path=tmp_path)
         assert result["success"] is True
         assert result["capabilities"] == []
+
+    @pytest.mark.asyncio
+    async def test_list_migrates_legacy_when_canonical_missing(self, tmp_path):
+        """TC-1.3: Legacy root file is moved to canonical path when canonical is missing."""
+        legacy_path = tmp_path / "capabilities.yaml"
+        canonical_path = _canonical_registry_path(tmp_path)
+        legacy_path.write_text(SAMPLE_YAML, encoding="utf-8")
+
+        result = await golazo_capabilities(action="list", workspace_path=tmp_path)
+
+        assert result["success"] is True
+        assert canonical_path.exists()
+        assert not legacy_path.exists()
+
+    @pytest.mark.asyncio
+    async def test_list_prefers_canonical_when_legacy_also_exists(self, tmp_path):
+        """TC-1.4: Canonical wins and legacy remains untouched when both files exist."""
+        canonical_path = _canonical_registry_path(tmp_path)
+        legacy_path = tmp_path / "capabilities.yaml"
+
+        _write_canonical_registry(tmp_path, "capabilities:\n  - name: canonical\n")
+        legacy_path.write_text("capabilities:\n  - name: legacy\n", encoding="utf-8")
+
+        result = await golazo_capabilities(action="list", workspace_path=tmp_path)
+
+        assert result["success"] is True
+        assert [cap["name"] for cap in result["capabilities"]] == ["canonical"]
+        assert legacy_path.read_text(encoding="utf-8") == "capabilities:\n  - name: legacy\n"
+        assert canonical_path.exists()
 
 
 class TestShowAction:
@@ -336,19 +375,17 @@ class TestMissingRegistry:
 
     @pytest.mark.asyncio
     async def test_no_registry(self, empty_workspace):
-        """TC-5.1: No capabilities.yaml → clear message, success=true."""
+        """TC-5.1: Missing registry returns canonical-path error."""
         result = await golazo_capabilities(
             action="list", workspace_path=empty_workspace
         )
-        assert result["success"] is True
-        assert "no registry" in result.get("message", "").lower()
+        assert result["success"] is False
+        assert "WorkItems/capabilities.yaml" in result["error"]
 
     @pytest.mark.asyncio
     async def test_malformed_yaml(self, tmp_path):
         """TC-5.2: Malformed YAML → clear error message."""
-        (tmp_path / "capabilities.yaml").write_text(
-            "capabilities: [invalid: yaml: here", encoding="utf-8"
-        )
+        _write_canonical_registry(tmp_path, "capabilities: [invalid: yaml: here")
         result = await golazo_capabilities(
             action="list", workspace_path=tmp_path
         )

@@ -522,7 +522,7 @@ def _get_tool_definitions() -> list[Tool]:
         ),
         Tool(
             name="golazo_capabilities",
-            description="Query the project capability registry for impact analysis. Reads capabilities.yaml to show features, dependencies, and which capabilities are affected by file changes.",
+            description="Query the project capability registry for impact analysis. Reads canonical WorkItems/capabilities.yaml, migrating legacy root capabilities.yaml when needed, to show features, dependencies, and affected capabilities.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -542,7 +542,7 @@ def _get_tool_definitions() -> list[Tool]:
                     },
                     "workspace_path": {
                         "type": "string",
-                        "description": "Workspace root path containing capabilities.yaml (required)"
+                        "description": "Workspace root path containing WorkItems/capabilities.yaml (required; legacy root capabilities.yaml is migration input)"
                     }
                 },
                 "required": ["action", "workspace_path"]

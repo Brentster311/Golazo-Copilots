@@ -2,29 +2,60 @@
 
 from collections import defaultdict, deque
 from pathlib import Path
+import shutil
 
 import yaml
 
 
-def _load_registry(workspace_path: Path) -> dict | None:
-    """Load capabilities.yaml from workspace root.
-    
-    Returns parsed dict or None if file doesn't exist.
-    Raises ValueError on malformed YAML.
+CANONICAL_REGISTRY_REL_PATH = Path("WorkItems") / "capabilities.yaml"
+LEGACY_REGISTRY_REL_PATH = Path("capabilities.yaml")
+
+
+def _resolve_registry_path(workspace_path: Path) -> Path:
+    """Resolve canonical registry location, migrating legacy file when needed."""
+    canonical_path = workspace_path / CANONICAL_REGISTRY_REL_PATH
+    legacy_path = workspace_path / LEGACY_REGISTRY_REL_PATH
+
+    if canonical_path.exists():
+        return canonical_path
+
+    if legacy_path.exists():
+        canonical_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            shutil.move(str(legacy_path), str(canonical_path))
+        except OSError as e:
+            raise ValueError(
+                f"Failed to move legacy capabilities registry from {legacy_path} "
+                f"to {canonical_path}: {e}"
+            ) from e
+        return canonical_path
+
+    raise ValueError(
+        "Capability registry not found. Expected canonical path: "
+        f"{CANONICAL_REGISTRY_REL_PATH.as_posix()}"
+    )
+
+
+def _load_registry(workspace_path: Path) -> dict:
+    """Load capabilities registry from canonical path.
+
+    Raises ValueError when the file is missing or malformed.
     """
-    yaml_path = workspace_path / "capabilities.yaml"
-    if not yaml_path.exists():
-        return None
-    
+    yaml_path = _resolve_registry_path(workspace_path)
+
     content = yaml_path.read_text(encoding="utf-8")
     try:
         data = yaml.safe_load(content)
     except yaml.YAMLError as e:
-        raise ValueError(f"Failed to parse capabilities.yaml: {e}") from e
-    
+        raise ValueError(
+            f"Failed to parse {CANONICAL_REGISTRY_REL_PATH.as_posix()}: {e}"
+        ) from e
+
     if not isinstance(data, dict) or "capabilities" not in data:
-        raise ValueError("capabilities.yaml must contain a 'capabilities' key")
-    
+        raise ValueError(
+            f"{CANONICAL_REGISTRY_REL_PATH.as_posix()} must contain a 'capabilities' key"
+        )
+
     return data
 
 
@@ -95,7 +126,7 @@ async def golazo_capabilities(
         action: "list" | "show" | "impact" | "validate"
         capability: Capability name (required for "show")
         files: List of file paths (required for "impact")
-        workspace_path: Workspace root containing capabilities.yaml
+        workspace_path: Workspace root containing WorkItems/capabilities.yaml
     
     Returns:
         dict with results varying by action
@@ -110,16 +141,6 @@ async def golazo_capabilities(
         data = _load_registry(workspace_path)
     except ValueError as e:
         return {"success": False, "error": str(e)}
-    
-    if data is None:
-        return {
-            "success": True,
-            "message": "No registry found. Create a capabilities.yaml in your project root to enable capability tracking.",
-            "capabilities": [],
-            "results": [],
-            "directly_affected": [],
-            "transitively_affected": [],
-        }
     
     capabilities = data.get("capabilities") or []
     cap_by_name = {c["name"]: c for c in capabilities}

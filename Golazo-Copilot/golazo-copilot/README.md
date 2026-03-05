@@ -307,14 +307,14 @@ Bootstrap Golazo Copilot in a workspace — creates copilot instructions and dir
 | `workspace_path` | string | **Yes** | Workspace root path |
 
 #### `golazo_capabilities`
-Query the project capability registry for impact analysis. Reads `capabilities.yaml` to show features, dependencies, and which capabilities are affected by file changes.
+Query the project capability registry for impact analysis. Reads canonical `WorkItems/capabilities.yaml` to show features, dependencies, and which capabilities are affected by file changes. If only a legacy root `capabilities.yaml` exists, it is moved to the canonical path.
 
 | Input | Type | Required | Description |
 |-------|------|----------|-------------|
 | `action` | string | **Yes** | Action to perform: `list` (summary), `show` (full card), `impact` (affected by files), `validate` (check key_files exist) |
 | `capability` | string | No | Capability name (required for `action="show"`) |
 | `files` | array of strings | No | File paths to check impact for (required for `action="impact"`) |
-| `workspace_path` | string | **Yes** | Workspace root path containing `capabilities.yaml` |
+| `workspace_path` | string | **Yes** | Workspace root path containing `WorkItems/capabilities.yaml` (legacy root `capabilities.yaml` is migration input) |
 
 #### `golazo_git_propose`
 Record proposal-only git action intent in work-item state as append-only `git_actions` history.
