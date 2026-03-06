@@ -452,57 +452,27 @@ MIT
 - Updated `golazo_bootstrap` behavior, server dispatch wiring, and associated bootstrap/server tests
 - Added complete `GCP-0059` workflow artifacts to document and validate the rollout
 
-### Historical Version Notes (Backfilled)
+### Historical Major/Minor Summary (Backfilled)
 
-Backfilled from `golazo-copilot/pyproject.toml` version-bump commit subjects:
+Backfilled from `golazo-copilot/pyproject.toml` and grouped by `major.minor` stream (not patch-by-patch):
 
-- v2.111.5: GCP-0058 drop golazo_update MCP tool, use terminal strategy
-- v2.111.4: GCP-0057 harden update-check fallback launchers
-- v2.111.3: GCP-0057 authenticated fallback for golazo_update check
-- v2.111.2: GCP-0056 bump version to 2.111.2
-- v2.111.1: Retro inline exception and version bump
-- v2.111.0: version bump
-- v2.110.0: GCP-0055 artifacts and profile role support updates
-- v2.109.1: GCP-0053 never overwrite capabilities.yaml on force bootstrap
-- v2.109.0: GCP-0053 document closure re-entry in bootstrap instructions
-- v2.107.0: GCP-0054 version bump and builder notes
-- v2.106.0: architecture overview rewrite and legacy VS project cleanup
-- v2.105.2: fixed `__version__` package metadata source
-- v2.105.1: version bump
-- v2.105.0: version bump
-- v2.104.5: GCP-0046 add Domain Expert role to definition phase
-- v2.104.3: refactor role linter check requirement
-- v2.104.2: POA pre-scope review requirements for capabilities and best practices
-- v2.104.1: GCP-0044 make `workspace_path` required on MCP tools
-- v2.103.6: V2 rule grammar updates and EES work item creation
-- v2.103.5: EES-00007 fix run_in_worker call signature
-- v2.103.4: EES-00007 retrospective notes
-- v2.103.1: rollback of SFI-026 manager_alias fix
-- v2.100.11: GCP-0038 capability registry tool implementation
-- v2.100.10: version bump
-- v2.100.9: GCP-0031 remove DoR/DoD checklist system
-- v2.100.8: update commit (limited metadata retained)
-- v2.100.7: LLM-0007 client-side JS rendering via Playwright
-- v2.30.0: version bump
-- v2.17.0: bootstrap instructions update and version bump
-- v2.16.7: GCP-0025 output validation for role transitions
-- v2.16.5: checklist item type and evidence validation fix
-- v2.16.3: expose evidence parameter in MCP tool schemas
-- v2.16.2: dynamic version injection in bootstrap and role loader
-- v2.16.1: version bump
-- v2.16.0: GCP-0024 evidence-based validation and role order update
-- v2.15.0: GCP-0023 evidence-based validation for DoR/DoD items
-- v2.12.1: maintenance release (`foo` commit message)
-- v2.10.0: GCP-0019 enforce role decision notes on transition
-- v2.9.0: GCP-0014 require PO consent for gate bypass and status deviations
-- v2.8.0: GCP-0011 align version comments across package/bootstrap/roles
-- v0.3.2: fixed server.py syntax error
-- v0.3.1: replaced emojis with ASCII icons to avoid encoding issues
-- v0.3.0: GCP-0005 add consent tool for deviation tracking
-- v0.2.2: repaired server.py indentation errors
-- v0.2.1: renamed `gcp_init` to `gcp_create_workitem`
-- v0.2.0: minor release for GCP-0010 completion
-- v0.1.4: GCP-0010 add bootstrap tool
-- v0.1.3: updated roles to match Golazo v1 source of truth
-- v0.1.2: synchronized `pyproject.toml` version
-- v0.1.0: initial Python MCP implementation (`GCP-0001`)
+- v2.111: update-tooling hardening and fallback/authentication improvements; eventual shift away from `golazo_update` MCP path.
+- v2.110: profile-role support and associated GCP-0055 workflow artifacts.
+- v2.109: bootstrap safety improvements, including protection against overwriting `capabilities.yaml` and closure guidance updates.
+- v2.107: builder/versioning process updates and release hygiene notes.
+- v2.106: architecture/documentation refresh and cleanup of legacy project artifacts.
+- v2.105: versioning reliability fixes, including metadata-based `__version__` sourcing.
+- v2.104: role/process hardening (Domain Expert addition, linter expectations, POA pre-scope checks, required `workspace_path`).
+- v2.103: rule grammar/decision updates and EES-series fixes/rollbacks.
+- v2.100: capability-registry introduction, checklist-system removal, and related workflow evolution.
+- v2.30: baseline release bump in early pre-GCP history.
+- v2.17: bootstrap-instructions refresh and version alignment.
+- v2.16: evidence-driven workflow enforcement maturation (DoR/DoD evidence, role-order and validation updates).
+- v2.15: initial evidence-based validation capability rollout.
+- v2.12: maintenance-only minor stream (limited metadata retained).
+- v2.10: enforced role decision notes on transitions.
+- v2.9: Project Owner consent/deviation tracking visibility improvements.
+- v2.8: version-comment alignment across package/bootstrap/role files.
+- v0.3: stabilization fixes plus consent tool introduction.
+- v0.2: early workflow/tooling renames and bootstrap-related maturation.
+- v0.1: initial Golazo MCP foundation and first bootstrap/tooling rollout.
