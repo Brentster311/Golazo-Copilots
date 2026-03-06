@@ -438,12 +438,24 @@ MIT
 
 - Introduced required bootstrap preflight with `orchestrator-only` mode and explicit remediation path (`GCP-0057`)
 
+### v3.0.2
+
+- Reconciled workflow state drift and retargeted execution path from `GCP-0059` to `GCP-0057` where needed
+- Updated role/default guidance and bootstrap instructions to align closure and transition behavior
+- Refreshed affected work-item artifacts and state files to restore consistent role progression
+- Updated transition/status test coverage related to closure gate and role transitions
+
+### v3.0.1
+
+- Introduced the orchestrator-instructions bootstrap requirement (`GCP-0059`)
+- Added `orchestrator-only` bootstrap mode support in tooling and dispatch paths
+- Updated `golazo_bootstrap` behavior, server dispatch wiring, and associated bootstrap/server tests
+- Added complete `GCP-0059` workflow artifacts to document and validate the rollout
+
 ### Historical Version Notes (Backfilled)
 
 Backfilled from `golazo-copilot/pyproject.toml` version-bump commit subjects:
 
-- v3.0.2: reconcile GCP workflow states and retarget 0059 to 0057
-- v3.0.1: GCP-0059 Require orchestrator-instructions bootstrap with an orchestrator-only option
 - v2.111.5: GCP-0058 drop golazo_update MCP tool, use terminal strategy
 - v2.111.4: GCP-0057 harden update-check fallback launchers
 - v2.111.3: GCP-0057 authenticated fallback for golazo_update check
