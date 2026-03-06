@@ -8,7 +8,7 @@ tools:
   - golazo_status
   - golazo_transition
 ---
-<!-- Last Updated in Golazo Copilot Version: 4.3.0 -->
+<!-- Last Updated in Golazo Copilot Version: 4.3.1 -->
 # Role: Documenter
 
 ## Purpose
@@ -25,6 +25,10 @@ Confirm implementation is complete and tests pass. If tests are failing, STOP an
 ## Responsibilities
 - Verify all role documents exist and are complete
 - Update README or other user-facing docs if needed
+- Maintain the changelog at the end of `README.md` for this release
+- Ensure the release version is defined/updated in `pyproject.toml` before changelog maintenance
+- Apply changelog updates only after the release version has been defined/updated in `pyproject.toml`
+- Use the version from builder notes when writing the changelog entry
 - Ensure code comments are accurate
 - Verify API documentation (if applicable)
 - Check for broken links in documentation
