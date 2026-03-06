@@ -438,20 +438,59 @@ MIT
 
 - Introduced required bootstrap preflight with `orchestrator-only` mode and explicit remediation path (`GCP-0057`)
 
-### Historical Version Index (Backfilled)
+### Historical Version Notes (Backfilled)
 
-The following versions are confirmed from `golazo-copilot/pyproject.toml` history and were published before full per-version changelog discipline was applied in this README.
+Backfilled from `golazo-copilot/pyproject.toml` version-bump commit subjects:
 
-- 3.0.2, 3.0.1
-- 2.111.5, 2.111.4, 2.111.3, 2.111.2, 2.111.1, 2.111.0
-- 2.110.0, 2.109.1, 2.109.0, 2.107.0, 2.106.0
-- 2.105.2, 2.105.1, 2.105.0
-- 2.104.5, 2.104.3, 2.104.2, 2.104.1
-- 2.103.6, 2.103.5, 2.103.4, 2.103.1
-- 2.100.11, 2.100.10, 2.100.9, 2.100.8, 2.100.7
-- 2.30.0, 2.17.0
-- 2.16.7, 2.16.5, 2.16.3, 2.16.2, 2.16.1, 2.16.0
-- 2.15.0, 2.12.1, 2.10.0, 2.9.0, 2.8.0
-- 0.3.2, 0.3.1, 0.3.0, 0.2.2, 0.2.1, 0.2.0, 0.1.4, 0.1.3, 0.1.2, 0.1.0
-
-If you want, we can iteratively expand these into fully detailed per-version notes from commit history.
+- v3.0.2: reconcile GCP workflow states and retarget 0059 to 0057
+- v3.0.1: GCP-0059 Require orchestrator-instructions bootstrap with an orchestrator-only option
+- v2.111.5: GCP-0058 drop golazo_update MCP tool, use terminal strategy
+- v2.111.4: GCP-0057 harden update-check fallback launchers
+- v2.111.3: GCP-0057 authenticated fallback for golazo_update check
+- v2.111.2: GCP-0056 bump version to 2.111.2
+- v2.111.1: Retro inline exception and version bump
+- v2.111.0: version bump
+- v2.110.0: GCP-0055 artifacts and profile role support updates
+- v2.109.1: GCP-0053 never overwrite capabilities.yaml on force bootstrap
+- v2.109.0: GCP-0053 document closure re-entry in bootstrap instructions
+- v2.107.0: GCP-0054 version bump and builder notes
+- v2.106.0: architecture overview rewrite and legacy VS project cleanup
+- v2.105.2: fixed `__version__` package metadata source
+- v2.105.1: version bump
+- v2.105.0: version bump
+- v2.104.5: GCP-0046 add Domain Expert role to definition phase
+- v2.104.3: refactor role linter check requirement
+- v2.104.2: POA pre-scope review requirements for capabilities and best practices
+- v2.104.1: GCP-0044 make `workspace_path` required on MCP tools
+- v2.103.6: V2 rule grammar updates and EES work item creation
+- v2.103.5: EES-00007 fix run_in_worker call signature
+- v2.103.4: EES-00007 retrospective notes
+- v2.103.1: rollback of SFI-026 manager_alias fix
+- v2.100.11: GCP-0038 capability registry tool implementation
+- v2.100.10: version bump
+- v2.100.9: GCP-0031 remove DoR/DoD checklist system
+- v2.100.8: update commit (limited metadata retained)
+- v2.100.7: LLM-0007 client-side JS rendering via Playwright
+- v2.30.0: version bump
+- v2.17.0: bootstrap instructions update and version bump
+- v2.16.7: GCP-0025 output validation for role transitions
+- v2.16.5: checklist item type and evidence validation fix
+- v2.16.3: expose evidence parameter in MCP tool schemas
+- v2.16.2: dynamic version injection in bootstrap and role loader
+- v2.16.1: version bump
+- v2.16.0: GCP-0024 evidence-based validation and role order update
+- v2.15.0: GCP-0023 evidence-based validation for DoR/DoD items
+- v2.12.1: maintenance release (`foo` commit message)
+- v2.10.0: GCP-0019 enforce role decision notes on transition
+- v2.9.0: GCP-0014 require PO consent for gate bypass and status deviations
+- v2.8.0: GCP-0011 align version comments across package/bootstrap/roles
+- v0.3.2: fixed server.py syntax error
+- v0.3.1: replaced emojis with ASCII icons to avoid encoding issues
+- v0.3.0: GCP-0005 add consent tool for deviation tracking
+- v0.2.2: repaired server.py indentation errors
+- v0.2.1: renamed `gcp_init` to `gcp_create_workitem`
+- v0.2.0: minor release for GCP-0010 completion
+- v0.1.4: GCP-0010 add bootstrap tool
+- v0.1.3: updated roles to match Golazo v1 source of truth
+- v0.1.2: synchronized `pyproject.toml` version
+- v0.1.0: initial Python MCP implementation (`GCP-0001`)
