@@ -1,4 +1,4 @@
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 **User Story**
 - Title: Clarify and enforce `golazo_status` vs `golazo_update` behavior and install target selection
@@ -25,3 +25,26 @@
 - Rollout / rollback notes:
   - Rollout: ship code, tests, and docs together in one release.
   - Rollback: revert update-target additions and message/doc changes if regressions occur in update flow.
+
+## Closure
+
+### Summary of what was delivered
+- Clarified `golazo_status` as read-only/reporting in tool descriptions and formatter output.
+- Clarified `golazo_update` as state-changing install action and added explicit install target support: `active` (default) and `global`.
+- Added deterministic target validation and invalid-target error handling before install attempts.
+- Added/updated tests covering semantics clarity, target selection behavior, invalid target handling, and contract parity.
+- Updated README documentation and changelog; aligned package version to `4.3.4`.
+
+### Acceptance criteria pass/fail status
+- AC1 PASS: `golazo_status` output/docs now explicitly state read-only, non-mutating behavior.
+- AC2 PASS: `golazo_update` output/docs now explicitly state install behavior and target modes.
+- AC3 PASS: install target behavior is deterministic with explicit confirmation in output (`target`, install command context).
+- AC4 PASS: automated tests validate new behavior, including negative/error path for invalid target.
+- AC5 PASS: omitted `target` remains backward-compatible with active interpreter install path.
+
+### Future work items
+- Candidate follow-up: workflow pre-check for registry parity tests before builder to reduce late-stage rework.
+- Candidate follow-up: make stale role-version warning actionable via optional bootstrap reminder gate.
+
+### Final status confirmation
+- Scope implemented and validated. Full suite passed in closure validation (`530 passed`).
