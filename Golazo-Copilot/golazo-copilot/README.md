@@ -454,8 +454,6 @@ MIT
 
 ### Historical Major/Minor Summary (Backfilled)
 
-Backfilled from `golazo-copilot/pyproject.toml` and grouped by `major.minor` stream (not patch-by-patch):
-
 - v2.111: update-tooling hardening and fallback/authentication improvements; eventual shift away from `golazo_update` MCP path.
 - v2.110: profile-role support and associated GCP-0055 workflow artifacts.
 - v2.109: bootstrap safety improvements, including protection against overwriting `capabilities.yaml` and closure guidance updates.
