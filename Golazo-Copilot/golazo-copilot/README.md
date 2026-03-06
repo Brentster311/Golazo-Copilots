@@ -392,6 +392,13 @@ MIT
 
 ## Changelog (By Version)
 
+### v4.3.2
+
+- Canonicalized capability registry location to `WorkItems/capabilities.yaml` for `golazo_capabilities` operations (`GCP-0065`)
+- Added automatic migration: when legacy root `capabilities.yaml` is found and canonical is missing, it is moved to `WorkItems/capabilities.yaml`
+- Clarified dual-file behavior: canonical file wins when both canonical and legacy files exist
+- Improved missing-registry guidance to point to canonical `WorkItems/capabilities.yaml`
+
 ### v4.3.1
 
 - Modularized `golazo_status` internals for maintainability while preserving output contract and behavior (`GCP-0064`)
