@@ -31,7 +31,6 @@ VERSION_RE = _mod.VERSION_RE
 sys.modules["golazo_update_mod"] = _mod
 _PATCH_PREFIX = "golazo_update_mod"
 
-
 def _get_format_update_result():
     """Lazily import format_update_result, handling broken transitive imports."""
     try:
@@ -260,7 +259,7 @@ class TestCheckAction:
         assert result["status"] == "ok"
         assert result["action"] == "check"
         assert result["current_version"] == "2.110.0"
-        assert result["latest_stable"] == "2.111.2"
+        assert result["latest_stable"] == "4.3.1"
         assert result["update_available"] is True
 
     @pytest.mark.asyncio
@@ -645,3 +644,112 @@ class TestVersionStringSecurity:
         result = await golazo_update(action="install", version="2.0; rm -rf /", workspace_path="/workspace")
         assert result["status"] == "error"
         assert "version" in result["error"].lower() or "invalid" in result["error"].lower()
+
+
+# ---------------------------------------------------------------------------
+# GCP-0067: status/update clarity and deterministic update target behavior
+# ---------------------------------------------------------------------------
+
+class TestGcp0067StatusUpdateClarity:
+    """Contract tests for clear status/update semantics and target schema."""
+
+    def test_status_and_update_tool_descriptions_are_explicit(self):
+        from golazo_copilot.dispatch.registry import get_tool_definitions
+
+        tool_defs = {tool.name: tool for tool in get_tool_definitions()}
+
+        status_tool = tool_defs["golazo_status"]
+        status_desc = status_tool.description.lower()
+        assert "read-only" in status_desc or "reporting" in status_desc
+        assert "does not" in status_desc and ("modify" in status_desc or "install" in status_desc)
+
+        update_tool = tool_defs["golazo_update"]
+        update_desc = update_tool.description.lower()
+        assert "install" in update_desc or "update" in update_desc
+        assert "target" in update_desc
+
+        target_schema = update_tool.inputSchema["properties"]["target"]
+        assert target_schema["enum"] == ["active", "global"]
+        assert target_schema["default"] == "active"
+
+
+class TestGcp0067InstallTargetSelection:
+    """Deterministic target-selection behavior for golazo_update install."""
+
+    @pytest.mark.asyncio
+    async def test_default_target_uses_active_environment(self):
+        with patch("golazo_update_mod.importlib.util.find_spec", side_effect=_mock_find_spec({"keyring": True, "artifacts_keyring": True})), \
+             patch("golazo_update_mod.subprocess.run") as mock_run:
+            mock_run.side_effect = [_az_ok(), _pip_ok()]
+            result = await golazo_update(action="install", version="2.110.0", workspace_path="/workspace")
+
+        assert result["status"] == "ok"
+        assert result["target"] == "active"
+        assert result["install_command"][0] == sys.executable
+
+    @pytest.mark.asyncio
+    async def test_explicit_global_target_uses_global_launcher(self):
+        with patch("golazo_update_mod.importlib.util.find_spec", side_effect=_mock_find_spec({"keyring": True, "artifacts_keyring": True})), \
+             patch("golazo_update_mod.subprocess.run") as mock_run:
+            mock_run.side_effect = [_az_ok(), _pip_ok()]
+            result = await golazo_update(
+                action="install",
+                version="2.110.0",
+                target="global",
+                workspace_path="/workspace",
+            )
+
+        assert result["status"] == "ok"
+        assert result["target"] == "global"
+        assert result["install_command"][0] == "python"
+
+    @pytest.mark.asyncio
+    async def test_invalid_target_fails_before_install_attempt(self):
+        with patch("golazo_update_mod.subprocess.run") as mock_run:
+            result = await golazo_update(
+                action="install",
+                version="2.110.0",
+                target="workspace",
+                workspace_path="/workspace",
+            )
+
+        assert result["status"] == "error"
+        assert "target" in result["error"].lower()
+        assert "active" in result["error"].lower()
+        assert "global" in result["error"].lower()
+        mock_run.assert_not_called()
+
+
+class TestGcp0067FormatterMessages:
+    """Result text must make check/install semantics unambiguous."""
+
+    def setup_method(self):
+        self.format_update_result = _get_format_update_result()
+
+    def test_check_output_declares_read_only_behavior(self):
+        result = {
+            "status": "ok",
+            "action": "check",
+            "current_version": "2.109.0",
+            "latest_stable": "2.110.0",
+            "latest_prerelease": None,
+            "update_available": True,
+        }
+        text = self.format_update_result(result).lower()
+        assert "read-only" in text
+        assert "does not install" in text or "does not modify" in text
+
+    def test_install_output_includes_selected_target(self):
+        result = {
+            "status": "ok",
+            "action": "install",
+            "installed_version": "2.110.0",
+            "target": "global",
+            "install_command": ["python", "-m", "pip", "install", "golazo-copilot==2.110.0"],
+            "restart_required": True,
+            "restart_message": "Restart required.",
+            "bootstrap_options": ["Do not bootstrap"],
+        }
+        text = self.format_update_result(result).lower()
+        assert "target" in text
+        assert "global" in text

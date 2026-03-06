@@ -39,6 +39,7 @@ VERSION_RE = re.compile(r"golazo[_-]copilot-(\d+\.\d+\.\d+(?:[a-zA-Z0-9.]*[a-zA-
 # Only allow safe characters in the user-provided version string.
 _SAFE_VERSION_RE = re.compile(r"^[a-zA-Z0-9.\-]+$")
 _PIP_VERSIONS_RE = re.compile(r"Available versions:\s*(.+)", re.IGNORECASE)
+_VALID_INSTALL_TARGETS = {"active", "global"}
 
 
 # ---------------------------------------------------------------------------
@@ -166,6 +167,7 @@ def _get_versions_from_pip_index() -> list[Version] | None:
 async def golazo_update(
     action: str,
     version: str | None = None,
+    target: str | None = None,
     workspace_path: str | None = None,
 ) -> dict[str, Any]:
     """Check for or install updates to golazo-copilot.
@@ -177,6 +179,10 @@ async def golazo_update(
         specific version.
     version : str | None
         Target version (required when *action* is ``"install"``).
+    target : str | None
+        Install target for *action* ``"install"``. ``"active"`` (default)
+        installs in the active interpreter environment. ``"global"`` uses the
+        system ``python`` launcher for an explicit global/system install path.
     workspace_path : str | None
         Workspace root path (required).
 
@@ -189,7 +195,7 @@ async def golazo_update(
     if action == "check":
         return await _action_check()
     elif action == "install":
-        return await _action_install(version, workspace_path)
+        return await _action_install(version, workspace_path, target)
     else:
         return {"status": "error", "action": action, "error": f"Unknown action: {action}"}
 
@@ -315,18 +321,50 @@ def _check_auth_prerequisites() -> dict[str, Any] | None:
     return None
 
 
-def _run_pip_install(version: str) -> dict[str, Any]:
-    """Execute ``pip install golazo-copilot==<version>`` and return a result dict."""
-    pip_cmd = [
-        sys.executable, "-m", "pip", "install",
+def _normalize_install_target(target: str | None) -> tuple[str | None, dict[str, Any] | None]:
+    """Return (normalized_target, error_dict) for install target selection."""
+    normalized = (target or "active").strip().lower()
+    if normalized not in _VALID_INSTALL_TARGETS:
+        return None, _install_error(
+            f"Invalid target '{target}'. Supported values are: active, global."
+        )
+    return normalized, None
+
+
+def _build_pip_install_command(version: str, target: str) -> list[str]:
+    """Build deterministic pip install command for the selected target."""
+    pip_entry = sys.executable if target == "active" else "python"
+    return [
+        pip_entry,
+        "-m",
+        "pip",
+        "install",
         f"golazo-copilot=={version}",
         f"--index-url={FEED_URL}",
     ]
 
+
+def _run_pip_install(version: str, target: str) -> dict[str, Any]:
+    """Execute ``pip install golazo-copilot==<version>`` and return a result dict."""
+    pip_cmd = _build_pip_install_command(version, target)
+
     try:
         pip_result = subprocess.run(pip_cmd, capture_output=True, timeout=300)
     except subprocess.TimeoutExpired:
-        return _install_error("pip install timed out after 300 seconds.")
+        return _install_error(
+            "pip install timed out after 300 seconds.",
+            target=target,
+            install_command=pip_cmd,
+        )
+    except FileNotFoundError:
+        return _install_error(
+            (
+                "Unable to run Python launcher for target 'global'. Ensure 'python' is on PATH, "
+                "or use target='active' to install into the active interpreter."
+            ) if target == "global" else "Unable to execute pip for the active interpreter.",
+            target=target,
+            install_command=pip_cmd,
+        )
 
     if pip_result.returncode != 0:
         stderr_text = (
@@ -336,12 +374,16 @@ def _run_pip_install(version: str) -> dict[str, Any]:
         return _install_error(
             f"pip install failed (exit code {pip_result.returncode})",
             stderr=stderr_text,
+            target=target,
+            install_command=pip_cmd,
         )
 
     return {
         "status": "ok",
         "action": "install",
         "installed_version": version,
+        "target": target,
+        "install_command": pip_cmd,
         "restart_required": True,
         "restart_message": (
             "The MCP server must be refreshed/restarted before the new version "
@@ -359,9 +401,17 @@ def _run_pip_install(version: str) -> dict[str, Any]:
 # install
 # ---------------------------------------------------------------------------
 
-async def _action_install(version: str | None, workspace_path: str | None) -> dict[str, Any]:
+async def _action_install(
+    version: str | None,
+    workspace_path: str | None,
+    target: str | None,
+) -> dict[str, Any]:
     """Validate pre-requisites and install the requested version."""
     err = _validate_install_version(version)
+    if err:
+        return err
+
+    resolved_target, err = _normalize_install_target(target)
     if err:
         return err
 
@@ -369,4 +419,4 @@ async def _action_install(version: str | None, workspace_path: str | None) -> di
     if err:
         return err
 
-    return _run_pip_install(version)  # type: ignore[arg-type]
+    return _run_pip_install(version, resolved_target)  # type: ignore[arg-type]

@@ -261,7 +261,7 @@ Create a new Golazo Copilot work item with persistent state tracking.
 | `workspace_path` | string | **Yes** | Workspace root path containing the WorkItems folder |
 
 #### `golazo_status`
-Get comprehensive workflow status for a work item. Returns current role, phase, required outputs, next steps, deviations, and the Golazo Copilot version number.
+Read-only workflow status reporting for a work item. Returns current role, phase, required outputs, next steps, deviations, and the Golazo Copilot version number. This tool does not modify workflow state or install software.
 
 | Input | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -329,12 +329,13 @@ Record proposal-only git action intent in work-item state as append-only `git_ac
 | `workspace_path` | string | **Yes** | Workspace root path containing the WorkItems folder |
 
 #### `golazo_update`
-Check for and install updates to Golazo Copilot from Azure Artifacts.
+State-changing update/install tool for Golazo Copilot from Azure Artifacts. Use `action="check"` for read-only version reporting, or `action="install"` to install a specific version.
 
 | Input | Type | Required | Description |
 |-------|------|----------|-------------|
-| `action` | string | **Yes** | `check` to report installed vs. latest versions, or `install` to install a specific version |
+| `action` | string | **Yes** | `check` reports installed vs. latest versions only; `install` performs package installation |
 | `version` | string | No | Target version to install (required when `action="install"`) |
+| `target` | string | No | Install target: `active` (default, current interpreter environment) or `global` (system/global Python launcher) |
 | `workspace_path` | string | **Yes** | Workspace root path |
 
 ### Workflow Profiles
@@ -372,8 +373,14 @@ The easiest way to update is via the built-in MCP tool. In GitHub Copilot Chat:
 1. **Check for updates:**
    > "Check for golazo updates"
 
+   `check` is read-only and does not install or modify your environment.
+
 2. **Install a specific version:**
    > "Update golazo to version 4.3.1"
+
+   Optional target control examples:
+   - Active environment (default): `golazo_update(action="install", version="4.3.1", target="active")`
+   - Global/system target: `golazo_update(action="install", version="4.3.1", target="global")`
 
 The tool validates authentication prerequisites (keyring, artifacts-keyring, `az login`) before installing, and will prompt you to restart the MCP server afterward.
 
@@ -391,6 +398,12 @@ Then reload VS Code and re-bootstrap your workspace to pick up the new version:
 MIT
 
 ## Changelog (By Version)
+
+### v4.3.4
+
+- Clarified `golazo_status` semantics as read-only reporting that does not modify workflow state or install software (`GCP-0067`)
+- Clarified `golazo_update` semantics as state-changing install behavior, including explicit `target` selection (`active` default, `global` explicit) (`GCP-0067`)
+- Added deterministic install-target resolution and invalid-target error handling with explicit confirmation output (`GCP-0067`)
 
 ### v4.3.3
 

@@ -15,6 +15,7 @@ from ..formatters import (
     format_status_result,
     format_transition_result,
     format_transition_workitem_result,
+    format_update_result,
 )
 from ..formatters.results import ICON_FAIL, ICON_WARN
 from ..tools.golazo_bootstrap import golazo_bootstrap
@@ -26,6 +27,7 @@ from ..tools.golazo_role_context import golazo_role_context
 from ..tools.golazo_status import golazo_status
 from ..tools.golazo_transition import golazo_transition
 from ..tools.golazo_transition_workitem import golazo_transition_workitem
+from ..tools.golazo_update import golazo_update
 
 
 async def handle_registered_tool(name: str, arguments: dict, startup_tool_warnings: list[str]) -> list[TextContent] | None:
@@ -145,5 +147,14 @@ async def handle_registered_tool(name: str, arguments: dict, startup_tool_warnin
             work_items_dir=work_items_dir,
         )
         return [TextContent(type="text", text=format_transition_workitem_result(result))]
+
+    if name == "golazo_update":
+        result = await golazo_update(
+            action=arguments["action"],
+            version=arguments.get("version"),
+            target=arguments.get("target"),
+            workspace_path=arguments.get("workspace_path"),
+        )
+        return [TextContent(type="text", text=format_update_result(result))]
 
     return None

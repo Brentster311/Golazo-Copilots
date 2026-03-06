@@ -145,7 +145,7 @@ capabilities:
     key_files:
       - golazo-copilot/src/golazo_copilot/tools/golazo_update.py
     contracts:
-      - "golazo_update(action, version?, workspace_path, bootstrap_mode?) -> dict"
+      - "golazo_update(action, version?, target?, workspace_path) -> dict"
     depends_on: []
 
   - name: mcp-server

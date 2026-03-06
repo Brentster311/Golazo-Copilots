@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.0",
+  "work_item_id": "GCP-0067",
+  "profile": "complete",
+  "current_phase": "completion",
+  "current_role": "builder",
+  "created_at": "2026-03-06T02:03:06.490804Z",
+  "updated_at": "2026-03-06T02:26:51.065384Z",
+  "role_history": [
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-03-06T02:03:06.490804Z",
+      "exited_at": "2026-03-06T02:04:46.283207Z"
+    },
+    {
+      "role": "program-manager",
+      "entered_at": "2026-03-06T02:04:46.283207Z",
+      "exited_at": "2026-03-06T02:05:14.884483Z"
+    },
+    {
+      "role": "domain-expert",
+      "entered_at": "2026-03-06T02:05:14.884483Z",
+      "exited_at": "2026-03-06T02:05:31.248641Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-03-06T02:05:31.248641Z",
+      "exited_at": "2026-03-06T02:06:00.041165Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-03-06T02:06:00.041165Z",
+      "exited_at": "2026-03-06T02:06:35.488781Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-03-06T02:06:35.488781Z",
+      "exited_at": "2026-03-06T02:12:19.447911Z"
+    },
+    {
+      "role": "refactor-expert",
+      "entered_at": "2026-03-06T02:12:19.447911Z",
+      "exited_at": "2026-03-06T02:15:22.310670Z"
+    },
+    {
+      "role": "documenter",
+      "entered_at": "2026-03-06T02:15:22.310670Z",
+      "exited_at": "2026-03-06T02:17:26.393879Z"
+    },
+    {
+      "role": "builder",
+      "entered_at": "2026-03-06T02:17:26.393879Z",
+      "exited_at": "2026-03-06T02:25:40.638159Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-03-06T02:25:40.638159Z",
+      "exited_at": "2026-03-06T02:26:36.845925Z"
+    },
+    {
+      "role": "refactor-expert",
+      "entered_at": "2026-03-06T02:26:36.845925Z",
+      "exited_at": "2026-03-06T02:26:43.517568Z"
+    },
+    {
+      "role": "documenter",
+      "entered_at": "2026-03-06T02:26:43.517568Z",
+      "exited_at": "2026-03-06T02:26:51.065384Z"
+    },
+    {
+      "role": "builder",
+      "entered_at": "2026-03-06T02:26:51.065384Z",
+      "exited_at": null
+    }
+  ],
+  "deviations": [],
+  "git_actions": [],
+  "closure_pending": false
+}

@@ -282,6 +282,8 @@ def format_update_result(result: dict) -> str:
         lines = [
             f"{ICON_OK} **Golazo Copilot Version Check**",
             "",
+            "Read-only report: this action does not install or modify your environment.",
+            "",
             "| Field | Value |",
             "|-------|-------|",
             f"| Current version | {result['current_version']} |",
@@ -290,19 +292,29 @@ def format_update_result(result: dict) -> str:
         if result.get("latest_prerelease"):
             lines.append(f"| Latest pre-release | {result['latest_prerelease']} |")
         if result["update_available"]:
-            lines.append(f"\n{ICON_WARN} **Update available!** Use `golazo_update(action=\"install\", version=\"<version>\")` to install.")
+            lines.append(f"\n{ICON_WARN} **Update available!** Use `golazo_update(action=\"install\", version=\"<version>\", target=\"active\")` to install.")
         else:
             lines.append(f"\n{ICON_OK} Already up to date.")
         return "\n".join(lines)
 
     if action == "install":
+        target = result.get("target", "active")
+        install_cmd = result.get("install_command")
         lines = [
             f"{ICON_OK} **Installed golazo-copilot {result['installed_version']}**",
             "",
+            f"Target: `{target}`",
+        ]
+        if install_cmd:
+            lines.extend([
+                f"Install command: `{ ' '.join(str(p) for p in install_cmd) }`",
+                "",
+            ])
+        lines.extend([
             f"{ICON_WARN} {result['restart_message']}",
             "",
             "**Post-restart bootstrap options:**",
-        ]
+        ])
         for option in result.get("bootstrap_options", []):
             lines.append(f"- {option}")
         return "\n".join(lines)
