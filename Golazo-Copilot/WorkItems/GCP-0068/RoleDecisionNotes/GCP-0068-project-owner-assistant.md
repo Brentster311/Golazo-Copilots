@@ -15,3 +15,9 @@
 ## Acceptance strategy
 - Validate resolution logic and messaging paths via focused unit tests.
 - Preserve existing install/update behavior for already-working scenarios.
+
+## Closure validation
+- Verified final implementation commit exists on `brent/GCP-0068` and `origin/brent/GCP-0068`.
+- Verified acceptance criteria against implementation and test evidence recorded in developer/builder notes.
+- Updated `GCP-0068-User-Story.md` to status `IMPLEMENTED` and appended closure summary.
+- Created `GCP-0068-closure.md` with final AC pass/fail record and follow-up items.

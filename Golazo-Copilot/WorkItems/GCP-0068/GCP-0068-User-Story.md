@@ -1,4 +1,4 @@
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 **User Story**
 - Title: Fix Windows Azure CLI preflight detection in `golazo_update`
@@ -25,3 +25,26 @@
 - Rollout / rollback notes:
   - Rollout: ship code, tests, and docs together.
   - Rollback: revert preflight resolution changes if cross-platform regressions appear.
+
+## Closure
+
+### Summary of Delivery
+- Implemented Windows-aware Azure CLI resolution in `golazo_update` preflight (`az` with `az.cmd` fallback).
+- Preserved non-Windows executable resolution behavior.
+- Added focused tests for Windows fallback and missing-CLI fail-fast behavior.
+- Updated README update-tool prerequisite behavior notes and included release-note entry.
+
+### Acceptance Criteria Validation
+- AC1 PASS: Windows preflight resolver behavior validated by `TestGcp0068WindowsAzPreflight::test_windows_uses_az_cmd_fallback_when_az_missing`.
+- AC2 PASS: Missing CLI, not logged in, timeout, and execution-failure branches validated by update-tool tests and preflight branch assertions.
+- AC3 PASS: Regression suites passed without non-Windows behavioral regressions (`test_server_formatters.py`, `test_server_dispatch.py`, and broader `test_golazo_update.py`).
+- AC4 PASS: Automated tests added and executed for Windows resolution and failure-mode messaging.
+- AC5 PASS: Documentation updated in `golazo-copilot/README.md` with Windows preflight details.
+
+### Future Work Items
+- Capture workflow-role asset version drift handling as a new process-improvement item.
+- Add a version-handshake checkpoint between documenter and builder roles.
+- Improve coverage instrumentation reliability for `test_golazo_update.py` import style.
+
+### Final Status Confirmation
+- User Story status is set to **IMPLEMENTED**.
