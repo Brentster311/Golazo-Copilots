@@ -452,7 +452,7 @@ MIT
 - Updated `golazo_bootstrap` behavior, server dispatch wiring, and associated bootstrap/server tests
 - Added complete `GCP-0059` workflow artifacts to document and validate the rollout
 
-### Historical Major/Minor Summary (Backfilled)
+### Historical Version Summary
 
 - v2.111: update-tooling hardening and fallback/authentication improvements; eventual shift away from `golazo_update` MCP path.
 - v2.110: profile-role support and associated GCP-0055 workflow artifacts.
