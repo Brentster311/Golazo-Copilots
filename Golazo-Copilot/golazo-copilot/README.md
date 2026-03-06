@@ -437,3 +437,21 @@ MIT
 ### v3.0.3
 
 - Introduced required bootstrap preflight with `orchestrator-only` mode and explicit remediation path (`GCP-0057`)
+
+### Historical Version Index (Backfilled)
+
+The following versions are confirmed from `golazo-copilot/pyproject.toml` history and were published before full per-version changelog discipline was applied in this README.
+
+- 3.0.2, 3.0.1
+- 2.111.5, 2.111.4, 2.111.3, 2.111.2, 2.111.1, 2.111.0
+- 2.110.0, 2.109.1, 2.109.0, 2.107.0, 2.106.0
+- 2.105.2, 2.105.1, 2.105.0
+- 2.104.5, 2.104.3, 2.104.2, 2.104.1
+- 2.103.6, 2.103.5, 2.103.4, 2.103.1
+- 2.100.11, 2.100.10, 2.100.9, 2.100.8, 2.100.7
+- 2.30.0, 2.17.0
+- 2.16.7, 2.16.5, 2.16.3, 2.16.2, 2.16.1, 2.16.0
+- 2.15.0, 2.12.1, 2.10.0, 2.9.0, 2.8.0
+- 0.3.2, 0.3.1, 0.3.0, 0.2.2, 0.2.1, 0.2.0, 0.1.4, 0.1.3, 0.1.2, 0.1.0
+
+If you want, we can iteratively expand these into fully detailed per-version notes from commit history.
