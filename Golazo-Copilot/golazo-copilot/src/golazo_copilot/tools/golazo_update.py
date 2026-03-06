@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import importlib.metadata
 import importlib.util
+import platform
 import re
+import shutil
 import subprocess
 import sys
 import urllib.request
@@ -295,9 +297,17 @@ def _check_auth_prerequisites() -> dict[str, Any] | None:
             "Install it with: pip install artifacts-keyring"
         )
 
+    az_executable = _resolve_az_executable()
+    if not az_executable:
+        return _install_error(
+            "Azure CLI (az) is not installed or not on PATH. "
+            "Install it from https://aka.ms/installazurecliwindows "
+            "or ensure it is on your PATH."
+        )
+
     try:
         az_result = subprocess.run(
-            ["az", "account", "show"],
+            [az_executable, "account", "show"],
             capture_output=True,
             timeout=10,
         )
@@ -306,19 +316,26 @@ def _check_auth_prerequisites() -> dict[str, Any] | None:
                 "Azure CLI is not logged in. Run `az login` before installing "
                 "from Azure Artifacts."
             )
-    except FileNotFoundError:
-        return _install_error(
-            "Azure CLI (az) is not installed or not on PATH. "
-            "Install it from https://aka.ms/installazurecliwindows "
-            "or ensure it is on your PATH."
-        )
     except subprocess.TimeoutExpired:
         return _install_error(
             "Azure CLI timed out checking login status. "
             "Try running `az account show` manually."
         )
+    except OSError as exc:
+        return _install_error(
+            "Azure CLI execution failed while checking login status. "
+            "Try running `az account show` manually. "
+            f"Details: {exc}"
+        )
 
     return None
+
+
+def _resolve_az_executable() -> str | None:
+    """Resolve a runnable Azure CLI executable path for the current platform."""
+    if platform.system().lower().startswith("win"):
+        return shutil.which("az") or shutil.which("az.cmd")
+    return shutil.which("az")
 
 
 def _normalize_install_target(target: str | None) -> tuple[str | None, dict[str, Any] | None]:

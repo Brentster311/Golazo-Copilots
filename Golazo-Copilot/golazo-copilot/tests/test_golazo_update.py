@@ -31,6 +31,14 @@ VERSION_RE = _mod.VERSION_RE
 sys.modules["golazo_update_mod"] = _mod
 _PATCH_PREFIX = "golazo_update_mod"
 
+
+@pytest.fixture(autouse=True)
+def _default_az_resolution():
+    """Avoid host-dependent PATH lookups in tests unless a test overrides it."""
+    with patch("golazo_update_mod.shutil.which", return_value="az"):
+        yield
+
+
 def _get_format_update_result():
     """Lazily import format_update_result, handling broken transitive imports."""
     try:
@@ -428,6 +436,44 @@ class TestPreflightChecks:
         assert cmd[1:4] == ["-m", "pip", "install"]
         assert "golazo-copilot==2.110.0" in cmd
         assert any(FEED_URL in arg for arg in cmd)
+
+
+class TestGcp0068WindowsAzPreflight:
+    """Windows-specific resolver behavior for Azure CLI preflight."""
+
+    @pytest.mark.asyncio
+    async def test_windows_uses_az_cmd_fallback_when_az_missing(self):
+        """If only az.cmd is available on Windows, preflight must execute it."""
+        az_cmd_path = r"C:\\Program Files\\AzureCLI\\wbin\\az.cmd"
+        with patch("golazo_update_mod.importlib.util.find_spec",
+                    side_effect=_mock_find_spec({"keyring": True, "artifacts_keyring": True})), \
+             patch("golazo_update_mod.platform.system", return_value="Windows"), \
+             patch("golazo_update_mod.shutil.which", side_effect=[None, az_cmd_path]), \
+             patch("golazo_update_mod.subprocess.run") as mock_run:
+            mock_run.side_effect = [
+                subprocess.CompletedProcess([az_cmd_path, "account", "show"], 0, b"", b""),
+                _pip_ok(),
+            ]
+            result = await golazo_update(action="install", version="2.110.0", workspace_path="/workspace")
+
+        assert result["status"] == "ok"
+        az_call = mock_run.call_args_list[0]
+        assert az_call[0][0][0] == az_cmd_path
+
+    @pytest.mark.asyncio
+    async def test_windows_missing_cli_fails_before_subprocess_execution(self):
+        """When no az executable is resolved on Windows, fail with missing-CLI error."""
+        with patch("golazo_update_mod.importlib.util.find_spec",
+                    side_effect=_mock_find_spec({"keyring": True, "artifacts_keyring": True})), \
+             patch("golazo_update_mod.platform.system", return_value="Windows"), \
+             patch("golazo_update_mod.shutil.which", side_effect=[None, None]), \
+             patch("golazo_update_mod.subprocess.run") as mock_run:
+            result = await golazo_update(action="install", version="2.110.0", workspace_path="/workspace")
+
+        assert result["status"] == "error"
+        assert "azure cli" in result["error"].lower() or "az" in result["error"].lower()
+        assert "path" in result["error"].lower()
+        mock_run.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

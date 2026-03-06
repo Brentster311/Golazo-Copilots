@@ -382,7 +382,7 @@ The easiest way to update is via the built-in MCP tool. In GitHub Copilot Chat:
    - Active environment (default): `golazo_update(action="install", version="4.3.1", target="active")`
    - Global/system target: `golazo_update(action="install", version="4.3.1", target="global")`
 
-The tool validates authentication prerequisites (keyring, artifacts-keyring, `az login`) before installing, and will prompt you to restart the MCP server afterward.
+The tool validates authentication prerequisites (keyring, artifacts-keyring, `az login`) before installing, and will prompt you to restart the MCP server afterward. On Windows, preflight resolves Azure CLI using `az` with an `az.cmd` fallback so standard CLI installs are detected reliably.
 
 Alternatively, update manually via pip:
 
@@ -399,11 +399,16 @@ MIT
 
 ## Changelog (By Version)
 
+### v4.3.5
+
+- Finalized GCP-0068 release packaging for Windows Azure CLI preflight hardening in `golazo_update`, including builder verification and capability registry validation (`GCP-0068`)
+
 ### v4.3.4
 
 - Clarified `golazo_status` semantics as read-only reporting that does not modify workflow state or install software (`GCP-0067`)
 - Clarified `golazo_update` semantics as state-changing install behavior, including explicit `target` selection (`active` default, `global` explicit) (`GCP-0067`)
 - Added deterministic install-target resolution and invalid-target error handling with explicit confirmation output (`GCP-0067`)
+- Hardened Windows `golazo_update` preflight to resolve Azure CLI via `az`/`az.cmd` and improved missing/login/timeout/execution diagnostics (`GCP-0068`)
 
 ### v4.3.3
 
