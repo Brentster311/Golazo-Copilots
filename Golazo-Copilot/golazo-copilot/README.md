@@ -392,6 +392,12 @@ MIT
 
 ## Changelog (By Version)
 
+### v4.3.3
+
+- Documenter role now explicitly requires maintaining the changelog at the end of `README.md` (`GCP-0066`)
+- Added explicit sequencing policy: version must be defined/updated before changelog maintenance (`GCP-0066`)
+- Added policy test coverage for changelog requirement and version-before-changelog semantics (`GCP-0066`)
+
 ### v4.3.2
 
 - Canonicalized capability registry location to `WorkItems/capabilities.yaml` for `golazo_capabilities` operations (`GCP-0065`)
