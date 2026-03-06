@@ -39,9 +39,9 @@ For each role in the workflow, follow this sequence:
 
 ## Role Execution Matrix
 
-- Design roles (project-owner-assistant, program-manager, domain-expert, quality-assurance, architect) run inline and may ask user questions.
-- Non-design roles (developer, refactor-expert, documenter, builder, retrospective) run as subagents by default.
-- Question policy: subagents do not ask user questions; inline design roles may ask clarifying questions.
+- Inline-required roles (project-owner-assistant, program-manager, domain-expert, quality-assurance, architect, retrospective) run inline and may ask user questions.
+- Subagent-default roles (developer, refactor-expert, documenter, builder) run as subagents by default.
+- Question policy: subagents do not ask user questions; inline-required roles may ask clarifying questions.
 
 ---
 

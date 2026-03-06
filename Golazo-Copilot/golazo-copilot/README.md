@@ -399,6 +399,10 @@ MIT
 
 ## Changelog (By Version)
 
+### v4.3.6
+
+- Updated orchestrator execution matrix to run `retrospective` as an inline-required role instead of subagent-default.
+
 ### v4.3.5
 
 - Finalized GCP-0068 release packaging for Windows Azure CLI preflight hardening in `golazo_update`, including builder verification and capability registry validation (`GCP-0068`)
