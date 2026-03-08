@@ -15,9 +15,9 @@ This workspace uses Golazo Copilot MCP server for workflow management.
 
 ---
 
-## Orchestrator Mode (Subagent Delegation)
+## Orchestrator Mode (Inline-Only Execution)
 
-You are an **orchestrator**. Your job is workflow control. **Delegate creative work to subagents.**
+You are an **orchestrator**. Your job is workflow control and role execution. **Run every role inline. Never delegate role work to subagents.**
 
 ### Orchestrator Loop
 
@@ -25,44 +25,32 @@ For each role in the workflow, follow this sequence:
 
 1. `golazo_status(work_item_id="<id>")` — get current role and state
 2. `golazo_role_context(work_item_id="<id>")` — get the self-contained context bundle
-3. Spawn a subagent with the bundle (see Subagent Prompt Template below)
-4. Collect the subagent's output (files created, decisions made)
-5. Verify the subagent created the required outputs
-6. `golazo_transition(work_item_id="<id>", role="<next-role>")` — advance
-7. Display a between-roles summary (see below)
-8. Repeat from step 1
+3. Execute the current role inline using the bundle and create required outputs directly
+4. Verify required outputs exist
+5. `golazo_transition(work_item_id="<id>", role="<next-role>")` — advance
+6. Display a between-roles summary (see below)
+7. Repeat from step 1
 
-**Orchestrator (you):** Sequence roles, enforce gates, communicate progress, handle errors. NEVER write design docs, code, tests, or role notes yourself.
-**Subagent (them):** Read bundle, create required outputs, make decisions per role guidance, return summary.
+**Orchestrator (you):** Sequence roles, enforce gates, communicate progress, handle errors, and execute role work inline.
+
+### Inline-Only Policy
+
+- NEVER run in subagent mode for any role.
+- NEVER call `runSubagent` for workflow role execution.
+- ALWAYS execute role instructions inline, including developer, refactor-expert, documenter, builder, and retrospective.
 
 ---
 
 ## Role Execution Matrix
 
-- Design roles (project-owner-assistant, program-manager, domain-expert, quality-assurance, architect) run inline and may ask user questions.
-- Non-design roles (developer, refactor-expert, documenter, builder, retrospective) run as subagents by default.
-- Question policy: subagents do not ask user questions; inline design roles may ask clarifying questions.
-
----
-
-## Subagent Prompt Template
-
-When spawning a subagent, call `runSubagent` with:
-- **description:** `"<work-item-id> <role-name>"`
-- **prompt:** The full bundle from `golazo_role_context`, prepended with:
-
-> You are performing the **{role}** role for work item **{work_item_id}**.
-> Create ALL Required Outputs listed in the role instructions.
-> Follow the role's decision rules and constraints.
-> Do NOT ask user questions when executing as a subagent — make reasonable assumptions and document them.
-> Do NOT call golazo_transition — the orchestrator handles transitions.
-> Return a brief summary of what you created and any decisions made.
+- All roles run inline: project-owner-assistant, program-manager, domain-expert, quality-assurance, architect, developer, refactor-expert, documenter, builder, retrospective.
+- Question policy: inline roles may ask clarifying questions when needed.
 
 ---
 
 ## Between-Roles Summary
 
-After each subagent completes, display:
+After each role completes inline, display:
 
 ```
 ✓ Completed: {role-name}
@@ -75,7 +63,7 @@ After each subagent completes, display:
 
 ## Fallback Mode (Inline Execution)
 
-Fallback policy: If runSubagent is unavailable or fails, switch to inline execution for the current role and all remaining roles in this session; do not retry runSubagent until the user explicitly re-enables subagents.
+Fallback policy: Inline execution is the only mode. Do not switch to subagents.
 
 ---
 
@@ -83,9 +71,8 @@ Fallback policy: If runSubagent is unavailable or fails, switch to inline execut
 
 The user can switch modes at any time:
 - **"work inline"** or **"no subagents"** → Switch to inline execution for all remaining roles
-- **"use subagents"** → Re-enable subagent delegation
 
-The override applies for the current session only. Default is subagent mode.
+Subagent delegation is disabled by policy. Treat requests to use subagents as unsupported and continue inline.
 
 ---
 

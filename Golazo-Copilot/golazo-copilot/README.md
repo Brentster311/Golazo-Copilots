@@ -136,7 +136,7 @@ pip install golazo-copilot --index-url https://msazure.pkgs.visualstudio.com/One
 
 In GitHub Copilot Chat, ask: **"GCP version?"**
 
-It will run `golazo_status` and display the running version (e.g., `v4.3.1`).
+It will run `golazo_status` and display the running version (e.g., `v4.3.7`).
 
 ## VS Code Configuration
 
@@ -376,11 +376,11 @@ The easiest way to update is via the built-in MCP tool. In GitHub Copilot Chat:
    `check` is read-only and does not install or modify your environment.
 
 2. **Install a specific version:**
-   > "Update golazo to version 4.3.1"
+   > "Update golazo to version 4.3.7"
 
    Optional target control examples:
-   - Active environment (default): `golazo_update(action="install", version="4.3.1", target="active")`
-   - Global/system target: `golazo_update(action="install", version="4.3.1", target="global")`
+   - Active environment (default): `golazo_update(action="install", version="4.3.7", target="active")`
+   - Global/system target: `golazo_update(action="install", version="4.3.7", target="global")`
 
 The tool validates authentication prerequisites (keyring, artifacts-keyring, `az login`) before installing, and will prompt you to restart the MCP server afterward. On Windows, preflight resolves Azure CLI using `az` with an `az.cmd` fallback so standard CLI installs are detected reliably.
 
@@ -398,6 +398,11 @@ Then reload VS Code and re-bootstrap your workspace to pick up the new version:
 MIT
 
 ## Changelog (By Version)
+
+### v4.3.7
+
+- Enforced inline-only orchestration in spine instructions: never use subagent mode for any workflow role.
+- Updated orchestration loop guidance to execute all roles inline and removed subagent delegation instructions from the spine template.
 
 ### v4.3.6
 
