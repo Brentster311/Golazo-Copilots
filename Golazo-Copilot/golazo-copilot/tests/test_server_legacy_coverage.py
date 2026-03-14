@@ -190,6 +190,19 @@ def test_legacy_format_update_result_branches():
     assert "value" in fallback_text
 
 
+def test_legacy_has_orchestrator_instructions_accepts_user_scope(tmp_path, monkeypatch):
+    ns = _load_legacy_server_namespace()
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    user_home = tmp_path / "user-home"
+    monkeypatch.setattr("pathlib.Path.home", lambda: user_home)
+    agents = user_home / ".copilot" / ".github" / "agents"
+    agents.mkdir(parents=True)
+    (agents / "Golazo-Copilot.md").write_text("# Instructions", encoding="utf-8")
+
+    assert ns["has_orchestrator_instructions"](str(workspace)) is True
+
+
 @pytest.mark.asyncio
 async def test_legacy_dispatch_tool_branches(monkeypatch, tmp_path):
     ns = _load_legacy_server_namespace()

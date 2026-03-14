@@ -123,6 +123,12 @@ def get_tool_definitions() -> list[Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
+                    "scope": {
+                        "type": "string",
+                        "enum": ["Workspace", "User"],
+                        "default": "Workspace",
+                        "description": "Install scope for orchestrator instructions"
+                    },
                     "mode": {
                         "type": "string",
                         "enum": ["full", "orchestrator-only"],

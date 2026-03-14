@@ -111,7 +111,11 @@ def format_bootstrap_result(result: dict) -> str:
     if result["success"]:
         created = "\n".join(f"  {ICON_CHECK} {item}" for item in result["files_created"]) or "  (none)"
         skipped = "\n".join(f"  {ICON_EMPTY} {item}" for item in result["files_skipped"]) or "  (none)"
+        scope_line = f"\n**Scope:** {result['scope']}" if result.get("scope") else ""
+        target_line = f"\n**Target Path:** {result['target_path']}" if result.get("target_path") else ""
         return f"""{ICON_OK} Golazo Copilot bootstrapped!
+
+{scope_line}{target_line}
 
 **Files Created:**
 {created}

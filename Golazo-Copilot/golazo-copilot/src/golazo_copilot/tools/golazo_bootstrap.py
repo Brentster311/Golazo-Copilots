@@ -76,6 +76,7 @@ async def golazo_bootstrap(
     force: bool = False,
     include_roles: bool = True,
     mode: str = "full",
+    scope: str | None = "Workspace",
 ) -> dict:
     """
     Bootstrap Golazo Copilot in a workspace.
@@ -92,6 +93,8 @@ async def golazo_bootstrap(
             .github/agents/golazo-copilot/roles/
         mode: Bootstrap mode. "full" scaffolds all files; "orchestrator-only"
             only creates/updates .github/agents/Golazo-Copilot.md
+        scope: Install scope for orchestrator instructions. Supported values:
+            Workspace and User. Omitted or empty behaves as Workspace.
     
     Returns:
         Dict with success status and list of created/skipped files.
@@ -109,6 +112,21 @@ async def golazo_bootstrap(
             "files_created": [],
             "files_skipped": [],
         }
+
+    from golazo_copilot.dispatch.paths import (
+        normalize_bootstrap_scope,
+        resolve_orchestrator_bootstrap_path,
+    )
+
+    try:
+        normalized_scope = normalize_bootstrap_scope(scope)
+    except ValueError as exc:
+        return {
+            "success": False,
+            "error": str(exc),
+            "files_created": [],
+            "files_skipped": [],
+        }
     
     # Validate workspace
     if not _is_workspace(workspace_path):
@@ -121,13 +139,10 @@ async def golazo_bootstrap(
     
     files_created = []
     files_skipped = []
-    
-    # Create .github/agents directory
-    agents_dir = workspace_path / AGENTS_ROOT
-    agents_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Create Golazo-Copilot.md spine file
-    instructions_path = workspace_path / ORCHESTRATOR_REL_PATH
+    instructions_path = resolve_orchestrator_bootstrap_path(workspace_path, normalized_scope)
+    instructions_path.parent.mkdir(parents=True, exist_ok=True)
     if instructions_path.exists() and not force:
         files_skipped.append(ORCHESTRATOR_REL_PATH.as_posix())
     else:
@@ -137,9 +152,14 @@ async def golazo_bootstrap(
     if mode == "orchestrator-only":
         return {
             "success": True,
+            "scope": normalized_scope,
+            "target_path": str(instructions_path),
             "files_created": files_created,
             "files_skipped": files_skipped,
-            "message": f"Bootstrapped Golazo Copilot in {workspace_path} (mode: orchestrator-only)",
+            "message": (
+                f"Bootstrapped Golazo Copilot in {workspace_path} "
+                f"(mode: orchestrator-only, scope: {normalized_scope})"
+            ),
         }
     
     # Create WorkItems directory
@@ -192,7 +212,12 @@ async def golazo_bootstrap(
     
     return {
         "success": True,
+        "scope": normalized_scope,
+        "target_path": str(instructions_path),
         "files_created": files_created,
         "files_skipped": files_skipped,
-        "message": f"Bootstrapped Golazo Copilot in {workspace_path} (mode: full)",
+        "message": (
+            f"Bootstrapped Golazo Copilot in {workspace_path} "
+            f"(mode: full, scope: {normalized_scope})"
+        ),
     }
