@@ -85,15 +85,8 @@ def resolve_work_items_dir(workspace_path: str | None) -> Path:
 
 
 def has_orchestrator_instructions(workspace_path: str | None) -> bool:
-    """Return True when .github/agents/Golazo-Copilot.md exists for workspace."""
-    if not workspace_path:
-        return False
-    return (
-        Path(workspace_path)
-        / ".github"
-        / "agents"
-        / "Golazo-Copilot.md"
-    ).exists()
+    """Return True when orchestrator instructions exist in workspace or user scope."""
+    return _mod_has_orchestrator_instructions(workspace_path)
 
 
 # ---------------------------------------------------------------------------
@@ -469,6 +462,12 @@ def _get_tool_definitions() -> list[Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
+                    "scope": {
+                        "type": "string",
+                        "enum": ["Workspace", "User"],
+                        "default": "Workspace",
+                        "description": "Install scope for orchestrator instructions"
+                    },
                     "mode": {
                         "type": "string",
                         "enum": ["full", "orchestrator-only"],
@@ -669,8 +668,9 @@ async def _dispatch_tool(name: str, arguments: dict) -> list[TextContent]:
                         type="text",
                         text=(
                             f"{ICON_FAIL} Orchestrator instructions are required before workflow operations. "
-                            f"Missing: .github/agents/Golazo-Copilot.md\n\n"
+                            f"Missing: .github/agents/Golazo-Copilot.md in workspace or user Copilot scope\n\n"
                             f"Run: golazo_bootstrap(workspace_path=\"{ws}\", mode=\"orchestrator-only\")\n"
+                            f"Or:  golazo_bootstrap(workspace_path=\"{ws}\", mode=\"orchestrator-only\", scope=\"User\")\n"
                             f"Use force=True to overwrite an existing instructions file."
                         ),
                     )
@@ -718,6 +718,7 @@ async def _dispatch_tool(name: str, arguments: dict) -> list[TextContent]:
             return [TextContent(type="text", text=f"{ICON_FAIL} workspace_path is required")]
         result = await golazo_bootstrap(
             workspace_path=ws,
+            scope=arguments.get("scope"),
             mode=arguments.get("mode", "full"),
             force=arguments.get("force", False),
             include_roles=arguments.get("include_roles", True)

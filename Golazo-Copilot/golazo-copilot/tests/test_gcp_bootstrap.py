@@ -10,6 +10,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from golazo_copilot.tools.golazo_bootstrap import golazo_bootstrap
+from golazo_copilot.dispatch.registry import get_tool_definitions
 
 TEST_WORKSPACE_DIR = Path(__file__).parent / "test-workspace"
 
@@ -75,6 +76,69 @@ class TestBootstrapCreatesInstructions:
         result = await golazo_bootstrap(workspace_path=TEST_WORKSPACE_DIR)
         
         assert ".github/agents/Golazo-Copilot.md" in result["files_created"]
+
+
+class TestBootstrapScopeSupport:
+    """GCP-0069: scope-aware bootstrap behavior."""
+
+    @pytest.mark.asyncio
+    async def test_omitted_scope_defaults_to_workspace_target(self):
+        result = await golazo_bootstrap(workspace_path=TEST_WORKSPACE_DIR)
+
+        instructions_path = TEST_WORKSPACE_DIR / ".github" / "agents" / "Golazo-Copilot.md"
+        assert result["success"] is True
+        assert result["scope"] == "Workspace"
+        assert result["target_path"] == str(instructions_path)
+        assert instructions_path.exists()
+
+    @pytest.mark.asyncio
+    async def test_empty_scope_matches_workspace_behavior(self):
+        result = await golazo_bootstrap(workspace_path=TEST_WORKSPACE_DIR, scope="")
+
+        instructions_path = TEST_WORKSPACE_DIR / ".github" / "agents" / "Golazo-Copilot.md"
+        assert result["success"] is True
+        assert result["scope"] == "Workspace"
+        assert result["target_path"] == str(instructions_path)
+        assert instructions_path.exists()
+
+    @pytest.mark.asyncio
+    async def test_user_scope_writes_to_user_copilot_root(self, monkeypatch, tmp_path):
+        user_home = tmp_path / "user-home"
+        monkeypatch.setattr("golazo_copilot.dispatch.paths.Path.home", lambda: user_home)
+
+        result = await golazo_bootstrap(workspace_path=TEST_WORKSPACE_DIR, scope="User")
+
+        workspace_instructions = TEST_WORKSPACE_DIR / ".github" / "agents" / "Golazo-Copilot.md"
+        user_instructions = (
+            user_home
+            / ".copilot"
+            / ".github"
+            / "agents"
+            / "Golazo-Copilot.md"
+        )
+        assert result["success"] is True
+        assert result["scope"] == "User"
+        assert result["target_path"] == str(user_instructions)
+        assert user_instructions.exists()
+        assert not workspace_instructions.exists()
+
+    @pytest.mark.asyncio
+    async def test_invalid_scope_is_rejected_with_supported_values(self):
+        result = await golazo_bootstrap(workspace_path=TEST_WORKSPACE_DIR, scope="Team")
+
+        assert result["success"] is False
+        assert "Team" in result["error"]
+        assert "Workspace" in result["error"]
+        assert "User" in result["error"]
+
+    def test_tool_schema_exposes_scope_parameter(self):
+        bootstrap_tool = next(
+            tool for tool in get_tool_definitions() if tool.name == "golazo_bootstrap"
+        )
+
+        scope_schema = bootstrap_tool.inputSchema["properties"]["scope"]
+        assert scope_schema["enum"] == ["Workspace", "User"]
+        assert scope_schema["default"] == "Workspace"
 
 
 class TestBootstrapInstructionsContent:

@@ -82,6 +82,7 @@ async def handle_registered_tool(name: str, arguments: dict, startup_tool_warnin
             return [TextContent(type="text", text=f"{ICON_FAIL} workspace_path is required")]
         result = await golazo_bootstrap(
             workspace_path=ws,
+            scope=arguments.get("scope"),
             mode=arguments.get("mode", "full"),
             force=arguments.get("force", False),
             include_roles=arguments.get("include_roles", True),

@@ -195,15 +195,18 @@ Bootstrap is required before workflow tool operations (`golazo_create_workitem`,
 
 In GitHub Copilot Chat, say one of:
 
-- *"Run golazo bootstrap in orchestrator-only mode"* (minimal setup)
+- *"Run golazo bootstrap in orchestrator-only mode"* (minimal workspace-scoped setup)
+- *"Run golazo bootstrap in orchestrator-only mode with user scope"* (install orchestrator instructions into the active user Copilot directory)
 - *"Please bootstrap GCP"* (full setup)
 
-`orchestrator-only` creates only:
+`orchestrator-only` creates only the orchestrator instructions file. By default this is written to workspace scope:
 - `.github/agents/Golazo-Copilot.md` – Orchestrator instructions required for workflow execution
+
+If you run bootstrap with `scope="User"`, the same orchestrator instructions file is written under the active user Copilot directory instead of the target workspace, using the same relative path beneath the user Copilot root.
 
 Full bootstrap creates the Golazo Copilot directory structure and instruction files in your workspace:
 - `WorkItems/` – Directory for work item artifacts
-- `.github/agents/Golazo-Copilot.md` – Workflow enforcement rules for Copilot
+- `.github/agents/Golazo-Copilot.md` – Workflow enforcement rules for Copilot when bootstrap uses the default workspace scope
 - `.github/agents/golazo-copilot/roles/` – Role-specific instruction files (including `TechBestPractices.md`)
 
 ### Step 6: Select the Golazo-Copilot Agent in Chat
@@ -301,10 +304,16 @@ Bootstrap Golazo Copilot in a workspace — creates copilot instructions and dir
 
 | Input | Type | Required | Description |
 |-------|------|----------|-------------|
+| `scope` | string | No | Install scope for orchestrator instructions: `Workspace` (default) or `User` |
 | `mode` | string | No | Bootstrap mode: `full` (default) or `orchestrator-only` |
 | `force` | boolean | No | Overwrite existing files if they exist (default: `false`) |
 | `include_roles` | boolean | No | Also copy default role files to `.github/agents/golazo-copilot/roles/` (default: `true`) |
 | `workspace_path` | string | **Yes** | Workspace root path |
+
+Notes:
+- Omitted or empty `scope` behaves the same as `Workspace`.
+- `scope="User"` redirects only the orchestrator instructions file to the active user Copilot directory; other full-bootstrap artifacts remain workspace-scoped.
+- Workflow preflight accepts orchestrator instructions from either workspace scope or active user scope.
 
 #### `golazo_capabilities`
 Query the project capability registry for impact analysis. Reads canonical `WorkItems/capabilities.yaml` to show features, dependencies, and which capabilities are affected by file changes. If only a legacy root `capabilities.yaml` exists, it is moved to the canonical path.

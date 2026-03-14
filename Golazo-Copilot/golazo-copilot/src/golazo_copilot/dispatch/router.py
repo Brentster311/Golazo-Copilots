@@ -37,8 +37,9 @@ def _workflow_preflight_failure(name: str, arguments: dict) -> str | None:
 
     return (
         f"{ICON_FAIL} Orchestrator instructions are required before workflow operations. "
-        f"Missing: .github/agents/Golazo-Copilot.md\n\n"
+        f"Missing: .github/agents/Golazo-Copilot.md in workspace or user Copilot scope\n\n"
         f"Run: golazo_bootstrap(workspace_path=\"{ws}\", mode=\"orchestrator-only\")\n"
+        f"Or:  golazo_bootstrap(workspace_path=\"{ws}\", mode=\"orchestrator-only\", scope=\"User\")\n"
         f"Use force=True to overwrite an existing instructions file."
     )
 

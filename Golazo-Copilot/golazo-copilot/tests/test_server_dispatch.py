@@ -51,6 +51,28 @@ class TestWorkflowPreflight:
         assert "created" in text.lower()
 
     @pytest.mark.asyncio
+    async def test_allows_workflow_tool_when_only_user_scope_instructions_present(self, tmp_path, monkeypatch):
+        workspace = tmp_path
+        (workspace / "WorkItems").mkdir()
+        user_home = tmp_path / "user-home"
+        monkeypatch.setattr("golazo_copilot.dispatch.paths.Path.home", lambda: user_home)
+        agents = user_home / ".copilot" / ".github" / "agents"
+        agents.mkdir(parents=True)
+        (agents / "Golazo-Copilot.md").write_text("# Instructions", encoding="utf-8")
+
+        result = await _dispatch_tool(
+            "golazo_create_workitem",
+            {
+                "work_item_id": "GCP-9002",
+                "workspace_path": str(workspace),
+            },
+        )
+
+        text = result[0].text
+        assert ICON_OK in text
+        assert "created" in text.lower()
+
+    @pytest.mark.asyncio
     async def test_version_only_status_bypasses_preflight(self, tmp_path):
         workspace = tmp_path
         (workspace / "WorkItems").mkdir()
