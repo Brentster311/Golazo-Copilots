@@ -28,7 +28,6 @@ class TestGCP0061ContractParity:
             "golazo_create_workitem",
             "golazo_transition",
             "golazo_status",
-            "golazo_update",
             "golazo_bootstrap",
             "golazo_consent",
             "golazo_capabilities",

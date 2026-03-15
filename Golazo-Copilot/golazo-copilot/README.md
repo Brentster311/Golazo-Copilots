@@ -187,7 +187,6 @@ You should see the Golazo Copilot tools listed:
 - `golazo_consent` – Record consent for bypassing workflow gates
 - `golazo_git_propose` – Record proposal-only git action intent for auditability
 - `golazo_bootstrap` – Bootstrap Golazo instructions in a workspace
-- `golazo_update` – Check for and install Golazo Copilot updates
 
 ### Step 5: Bootstrap Your Workspace
 
@@ -337,16 +336,6 @@ Record proposal-only git action intent in work-item state as append-only `git_ac
 | `branch` | string | No | Required for `action="push"` and `action="branch"` |
 | `workspace_path` | string | **Yes** | Workspace root path containing the WorkItems folder |
 
-#### `golazo_update`
-State-changing update/install tool for Golazo Copilot from Azure Artifacts. Use `action="check"` for read-only version reporting, or `action="install"` to install a specific version.
-
-| Input | Type | Required | Description |
-|-------|------|----------|-------------|
-| `action` | string | **Yes** | `check` reports installed vs. latest versions only; `install` performs package installation |
-| `version` | string | No | Target version to install (required when `action="install"`) |
-| `target` | string | No | Install target: `active` (default, current interpreter environment) or `global` (system/global Python launcher) |
-| `workspace_path` | string | **Yes** | Workspace root path |
-
 ### Workflow Profiles
 
 | Profile | Description | Use Case |
@@ -377,27 +366,21 @@ State-changing update/install tool for Golazo Copilot from Azure Artifacts. Use 
 
 ## Updating
 
-The easiest way to update is via the built-in MCP tool. In GitHub Copilot Chat:
+Update the package in the same Python environment referenced by your VS Code MCP configuration.
 
-1. **Check for updates:**
-   > "Check for golazo updates"
+Install the Azure Artifacts credential helpers first if needed:
 
-   `check` is read-only and does not install or modify your environment.
+```powershell
+pip install keyring artifacts-keyring
+```
 
-2. **Install a specific version:**
-   > "Update golazo to version 4.3.7"
-
-   Optional target control examples:
-   - Active environment (default): `golazo_update(action="install", version="4.3.7", target="active")`
-   - Global/system target: `golazo_update(action="install", version="4.3.7", target="global")`
-
-The tool validates authentication prerequisites (keyring, artifacts-keyring, `az login`) before installing, and will prompt you to restart the MCP server afterward. On Windows, preflight resolves Azure CLI using `az` with an `az.cmd` fallback so standard CLI installs are detected reliably.
-
-Alternatively, update manually via pip:
+Then upgrade Golazo Copilot from the Azure Artifacts feed:
 
 ```powershell
 pip install --upgrade golazo-copilot --index-url https://msazure.pkgs.visualstudio.com/One/_packaging/azinsights_accia_pkgs/pypi/simple/
 ```
+
+If your MCP server uses a specific interpreter path in `mcp.json`, run the install command with that interpreter so the package lands in the environment VS Code actually launches.
 
 Then reload VS Code and re-bootstrap your workspace to pick up the new version:
 > "Run golazo bootstrap in orchestrator-only mode with force"
@@ -407,6 +390,12 @@ Then reload VS Code and re-bootstrap your workspace to pick up the new version:
 MIT
 
 ## Changelog (By Version)
+
+### v5.0.0
+
+- Removed the `golazo_update` MCP tool from the supported tool surface.
+- Added explicit manual package install and upgrade guidance in the bootstrap spine and README, tied to the Python environment configured for the MCP server.
+- Simplified the server/formatter/test surface by deleting the obsolete update handler and its dedicated test suite.
 
 ### v4.3.7
 

@@ -3,6 +3,16 @@
 
 This workspace uses Golazo Copilot MCP server for workflow management.
 
+## Package Installation
+
+Install or upgrade `golazo-copilot` in the same Python environment referenced by your MCP server configuration. Do not install it into an unrelated repo-local environment unless your `mcp.json` command points there.
+
+```powershell
+pip install --upgrade golazo-copilot --index-url https://msazure.pkgs.visualstudio.com/One/_packaging/azinsights_accia_pkgs/pypi/simple/
+```
+
+After installation, reload VS Code and rerun `golazo_bootstrap` if you need refreshed instructions.
+
 ## FORBIDDEN ACTIONS (NEVER DO THESE)
 
 1. **NEVER edit `state.json` directly** - All state changes MUST go through `golazo_*` MCP tools. Editing state.json is a workflow violation that corrupts the work item.

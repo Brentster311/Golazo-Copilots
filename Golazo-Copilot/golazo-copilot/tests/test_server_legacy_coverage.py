@@ -22,7 +22,7 @@ def _load_legacy_server_namespace() -> dict:
     return namespace
 
 
-def test_legacy_format_update_result_branches():
+def test_legacy_formatter_branches():
     ns = _load_legacy_server_namespace()
     assert ns["resolve_work_items_dir"]("x")
     assert ns["has_orchestrator_instructions"](None) is False
@@ -156,39 +156,6 @@ def test_legacy_format_update_result_branches():
     )
     assert "Git proposal recorded" in git_ok
     assert "failed" in ns["format_git_propose_result"]({"success": False, "error": "bad"}).lower()
-
-    format_update_result = ns["format_update_result"]
-
-    error_text = format_update_result({"status": "error", "error": "boom", "stderr": "trace"})
-    assert "boom" in error_text
-    assert "trace" in error_text
-
-    check_text = format_update_result(
-        {
-            "action": "check",
-            "current_version": "1.0.0",
-            "latest_stable": "1.2.0",
-            "latest_prerelease": "1.3.0b1",
-            "update_available": True,
-        }
-    )
-    assert "Version Check" in check_text
-    assert "Update available" in check_text
-
-    install_text = format_update_result(
-        {
-            "action": "install",
-            "installed_version": "1.2.0",
-            "restart_message": "restart required",
-            "bootstrap_options": ["opt-1", "opt-2"],
-        }
-    )
-    assert "Installed golazo-copilot" in install_text
-    assert "opt-1" in install_text
-
-    fallback_text = format_update_result({"action": "unknown", "value": 1})
-    assert "value" in fallback_text
-
 
 def test_legacy_has_orchestrator_instructions_accepts_user_scope(tmp_path, monkeypatch):
     ns = _load_legacy_server_namespace()

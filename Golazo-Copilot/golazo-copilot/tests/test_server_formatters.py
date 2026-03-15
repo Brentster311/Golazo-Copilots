@@ -192,12 +192,12 @@ class TestFormatStatusResult:
         result = {
             **self._ACTIVE_BASE,
             "tooling_warnings": [
-                "Missing required tool registration: golazo_update",
+                "Missing required tool registration: golazo_bootstrap",
             ],
         }
         text = format_status_result(result)
         assert "Tooling self-check warnings" in text
-        assert "golazo_update" in text
+        assert "golazo_bootstrap" in text
 
     def test_deviations(self):
         result = {

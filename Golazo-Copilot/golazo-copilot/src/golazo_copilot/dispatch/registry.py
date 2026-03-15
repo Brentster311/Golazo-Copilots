@@ -89,35 +89,6 @@ def get_tool_definitions() -> list[Tool]:
             }
         ),
         Tool(
-            name="golazo_update",
-            description="State-changing update/install tool for Golazo Copilot. Use action='check' for read-only version reporting, or action='install' to install a specific version to target='active' (default) or target='global'.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "action": {
-                        "type": "string",
-                        "enum": ["check", "install"],
-                        "description": "check reports versions only; install performs package installation"
-                    },
-                    "version": {
-                        "type": "string",
-                        "description": "Target version to install (required when action='install')"
-                    },
-                    "target": {
-                        "type": "string",
-                        "enum": ["active", "global"],
-                        "default": "active",
-                        "description": "Install target: active interpreter environment (default) or global/system Python launcher"
-                    },
-                    "workspace_path": {
-                        "type": "string",
-                        "description": "Workspace root path (required)"
-                    }
-                },
-                "required": ["action", "workspace_path"]
-            }
-        ),
-        Tool(
             name="golazo_bootstrap",
             description="Bootstrap Golazo Copilot in a workspace - creates copilot instructions and directories",
             inputSchema={

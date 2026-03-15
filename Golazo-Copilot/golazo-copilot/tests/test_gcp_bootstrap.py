@@ -9,8 +9,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from golazo_copilot.tools.golazo_bootstrap import golazo_bootstrap
 from golazo_copilot.dispatch.registry import get_tool_definitions
+from golazo_copilot.tools.golazo_bootstrap import golazo_bootstrap
 
 TEST_WORKSPACE_DIR = Path(__file__).parent / "test-workspace"
 
@@ -182,6 +182,20 @@ class TestBootstrapInstructionsContent:
             / "Golazo-Copilot.md"
         ).read_text()
         assert "golazo_transition" in content
+
+    @pytest.mark.asyncio
+    async def test_includes_manual_package_install_guidance(self):
+        """Should document the supported pip install path in the spine."""
+        await golazo_bootstrap(workspace_path=TEST_WORKSPACE_DIR)
+
+        content = (
+            TEST_WORKSPACE_DIR
+            / ".github"
+            / "agents"
+            / "Golazo-Copilot.md"
+        ).read_text()
+        assert "same Python environment referenced by your MCP server configuration" in content
+        assert "pip install --upgrade golazo-copilot --index-url" in content
 
 
 class TestBootstrapNoOverwrite:

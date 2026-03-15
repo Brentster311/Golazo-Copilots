@@ -16,7 +16,6 @@ from .results import (
     format_status_result,
     format_transition_result,
     format_transition_workitem_result,
-    format_update_result,
 )
 
 __all__ = [
@@ -35,5 +34,4 @@ __all__ = [
     "format_status_result",
     "format_transition_result",
     "format_transition_workitem_result",
-    "format_update_result",
 ]

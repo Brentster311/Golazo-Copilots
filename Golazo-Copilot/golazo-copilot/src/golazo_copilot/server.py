@@ -33,7 +33,6 @@ from .formatters.results import format_git_propose_result as _mod_format_git_pro
 from .formatters.results import format_role_context_result as _mod_format_role_context_result
 from .formatters.results import format_status_result as _mod_format_status_result
 from .formatters.results import format_transition_result as _mod_format_transition_result
-from .formatters.results import format_update_result as _mod_format_update_result
 from .tools.golazo_bootstrap import golazo_bootstrap
 from .tools.golazo_capabilities import golazo_capabilities
 from .tools.golazo_consent import golazo_consent
@@ -331,49 +330,6 @@ def format_git_propose_result(result: dict) -> str:
         f"Proposal count: {result['proposal_count']}"
         f"{payload_text}"
     )
-
-
-def format_update_result(result: dict) -> str:
-    """Format golazo_update result dict into display text."""
-    if result.get("status") == "error":
-        msg = f"{ICON_FAIL} {result['error']}"
-        if result.get("stderr"):
-            msg += f"\n\n```\n{result['stderr']}\n```"
-        return msg
-
-    action = result.get("action")
-
-    if action == "check":
-        lines = [
-            f"{ICON_OK} **Golazo Copilot Version Check**",
-            "",
-            "| Field | Value |",
-            "|-------|-------|",
-            f"| Current version | {result['current_version']} |",
-            f"| Latest stable | {result.get('latest_stable', 'N/A')} |",
-        ]
-        if result.get("latest_prerelease"):
-            lines.append(f"| Latest pre-release | {result['latest_prerelease']} |")
-        if result["update_available"]:
-            lines.append(f"\n{ICON_WARN} **Update available!** Use `golazo_update(action=\"install\", version=\"<version>\")` to install.")
-        else:
-            lines.append(f"\n{ICON_OK} Already up to date.")
-        return "\n".join(lines)
-
-    if action == "install":
-        lines = [
-            f"{ICON_OK} **Installed golazo-copilot {result['installed_version']}**",
-            "",
-            f"{ICON_WARN} {result['restart_message']}",
-            "",
-            "**Post-restart bootstrap options:**",
-        ]
-        for opt in result.get("bootstrap_options", []):
-            lines.append(f"- {opt}")
-        return "\n".join(lines)
-
-    # Fallback
-    return str(result)
 
 
 @server.list_tools()
@@ -802,7 +758,6 @@ format_consent_result = _mod_format_consent_result
 format_capabilities_result = _mod_format_capabilities_result
 format_role_context_result = _mod_format_role_context_result
 format_git_propose_result = _mod_format_git_propose_result
-format_update_result = _mod_format_update_result
 
 _get_tool_definitions = _mod_get_tool_definitions
 _dispatch_tool = _mod_dispatch_tool
