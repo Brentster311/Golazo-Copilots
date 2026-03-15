@@ -2,8 +2,10 @@
 
 from pathlib import Path
 
-AGENTS_ROOT = Path(".github") / "agents"
-ORCHESTRATOR_REL_PATH = AGENTS_ROOT / "Golazo-Copilot.md"
+WORKSPACE_AGENTS_ROOT = Path(".github") / "agents"
+USER_AGENTS_ROOT = Path(".copilot") / "agents"
+ORCHESTRATOR_FILENAME = "Golazo-Copilot.md"
+ORCHESTRATOR_REL_PATH = WORKSPACE_AGENTS_ROOT / ORCHESTRATOR_FILENAME
 VALID_BOOTSTRAP_SCOPES = ("Workspace", "User")
 
 
@@ -20,8 +22,8 @@ def resolve_workspace_orchestrator_instructions_path(workspace_path: Path | str)
 
 
 def resolve_user_orchestrator_instructions_path() -> Path:
-    """Return the active user's Copilot orchestrator instructions path."""
-    return Path.home() / ".copilot" / ORCHESTRATOR_REL_PATH
+    """Return the active user's current Copilot orchestrator instructions path."""
+    return Path.home() / USER_AGENTS_ROOT / ORCHESTRATOR_FILENAME
 
 
 def normalize_bootstrap_scope(scope: str | None) -> str:
@@ -47,4 +49,10 @@ def has_orchestrator_instructions(workspace_path: str | None) -> bool:
     """Return True when orchestrator instructions exist in workspace or user scope."""
     if not workspace_path:
         return False
-    return resolve_workspace_orchestrator_instructions_path(workspace_path).exists() or resolve_user_orchestrator_instructions_path().exists()
+    return any(
+        path.exists()
+        for path in (
+            resolve_workspace_orchestrator_instructions_path(workspace_path),
+            resolve_user_orchestrator_instructions_path(),
+        )
+    )

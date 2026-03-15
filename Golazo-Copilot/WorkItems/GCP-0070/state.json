@@ -5,7 +5,7 @@
   "current_phase": "closure",
   "current_role": "project-owner-assistant",
   "created_at": "2026-03-14T23:21:26.467202Z",
-  "updated_at": "2026-03-15T00:10:02.320060Z",
+  "updated_at": "2026-03-15T00:13:51.285235Z",
   "role_history": [
     {
       "role": "project-owner-assistant",
@@ -63,7 +63,17 @@
       "exited_at": null
     }
   ],
-  "deviations": [],
+  "deviations": [
+    {
+      "id": "dev-001",
+      "action": "custom",
+      "reason": "Release publication to Azure Artifacts completed after closure artifacts were already finalized; recording explicit operator consent for this post-closure operational step.",
+      "role": "project-owner-assistant",
+      "timestamp": "2026-03-15T00:13:51.285235Z",
+      "consumed": false,
+      "consumed_at": null
+    }
+  ],
   "git_actions": [
     {
       "action": "add",

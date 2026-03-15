@@ -163,7 +163,7 @@ def test_legacy_has_orchestrator_instructions_accepts_user_scope(tmp_path, monke
     workspace.mkdir()
     user_home = tmp_path / "user-home"
     monkeypatch.setattr("pathlib.Path.home", lambda: user_home)
-    agents = user_home / ".copilot" / ".github" / "agents"
+    agents = user_home / ".copilot" / "agents"
     agents.mkdir(parents=True)
     (agents / "Golazo-Copilot.md").write_text("# Instructions", encoding="utf-8")
 

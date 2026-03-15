@@ -112,7 +112,6 @@ class TestBootstrapScopeSupport:
         user_instructions = (
             user_home
             / ".copilot"
-            / ".github"
             / "agents"
             / "Golazo-Copilot.md"
         )
@@ -121,6 +120,25 @@ class TestBootstrapScopeSupport:
         assert result["target_path"] == str(user_instructions)
         assert user_instructions.exists()
         assert not workspace_instructions.exists()
+
+    @pytest.mark.asyncio
+    async def test_legacy_user_scope_path_is_not_recognized(self, monkeypatch, tmp_path):
+        from golazo_copilot.dispatch.paths import has_orchestrator_instructions
+
+        user_home = tmp_path / "user-home"
+        monkeypatch.setattr("golazo_copilot.dispatch.paths.Path.home", lambda: user_home)
+
+        legacy_instructions = (
+            user_home
+            / ".copilot"
+            / ".github"
+            / "agents"
+            / "Golazo-Copilot.md"
+        )
+        legacy_instructions.parent.mkdir(parents=True)
+        legacy_instructions.write_text("# Legacy Instructions", encoding="utf-8")
+
+        assert has_orchestrator_instructions(str(TEST_WORKSPACE_DIR)) is False
 
     @pytest.mark.asyncio
     async def test_invalid_scope_is_rejected_with_supported_values(self):

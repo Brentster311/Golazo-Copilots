@@ -13,9 +13,10 @@ from golazo_copilot.server import ICON_FAIL, ICON_OK, _dispatch_tool
 class TestWorkflowPreflight:
 
     @pytest.mark.asyncio
-    async def test_blocks_workflow_tool_when_instructions_missing(self, tmp_path):
+    async def test_blocks_workflow_tool_when_instructions_missing(self, tmp_path, monkeypatch):
         workspace = tmp_path
         (workspace / "WorkItems").mkdir()
+        monkeypatch.setattr("golazo_copilot.dispatch.paths.Path.home", lambda: tmp_path / "clean-home")
 
         result = await _dispatch_tool(
             "golazo_create_workitem",
@@ -56,7 +57,7 @@ class TestWorkflowPreflight:
         (workspace / "WorkItems").mkdir()
         user_home = tmp_path / "user-home"
         monkeypatch.setattr("golazo_copilot.dispatch.paths.Path.home", lambda: user_home)
-        agents = user_home / ".copilot" / ".github" / "agents"
+        agents = user_home / ".copilot" / "agents"
         agents.mkdir(parents=True)
         (agents / "Golazo-Copilot.md").write_text("# Instructions", encoding="utf-8")
 
@@ -89,9 +90,10 @@ class TestWorkflowPreflight:
         assert "Orchestrator instructions are required" not in text
 
     @pytest.mark.asyncio
-    async def test_git_propose_blocks_when_instructions_missing(self, tmp_path):
+    async def test_git_propose_blocks_when_instructions_missing(self, tmp_path, monkeypatch):
         workspace = tmp_path
         (workspace / "WorkItems").mkdir()
+        monkeypatch.setattr("golazo_copilot.dispatch.paths.Path.home", lambda: tmp_path / "clean-home")
 
         result = await _dispatch_tool(
             "golazo_git_propose",

@@ -391,6 +391,11 @@ MIT
 
 ## Changelog (By Version)
 
+### v5.0.1
+
+- Fixed user-scope orchestrator path handling to use the supported `~/.copilot/agents/Golazo-Copilot.md` location.
+- Preserved workspace-scope status and dispatch behavior while removing the unsupported legacy user-scope fallback path.
+
 ### v5.0.0
 
 - Removed the `golazo_update` MCP tool from the supported tool surface.

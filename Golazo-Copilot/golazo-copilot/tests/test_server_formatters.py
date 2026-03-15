@@ -235,7 +235,7 @@ class TestFormatBootstrapResult:
         result = {
             "success": True,
             "scope": "User",
-            "target_path": "C:/Users/test/.copilot/.github/agents/Golazo-Copilot.md",
+            "target_path": "C:/Users/test/.copilot/agents/Golazo-Copilot.md",
             "files_created": [
                 ".github/agents/Golazo-Copilot.md",
                 ".github/agents/golazo-copilot/roles/developer.md",
@@ -250,7 +250,7 @@ class TestFormatBootstrapResult:
         assert "architect.md" in text
         assert ICON_EMPTY in text
         assert "Target Path" in text
-        assert "C:/Users/test/.copilot/.github/agents/Golazo-Copilot.md" in text
+        assert "C:/Users/test/.copilot/agents/Golazo-Copilot.md" in text
         assert "Bootstrap complete." in text
 
     def test_success_no_files(self):
