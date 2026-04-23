@@ -1,0 +1,56 @@
+# Golazo Copilot — Capability Registry Template
+#
+# This file maps project capabilities to their key files, contracts,
+# and dependencies. The Golazo workflow uses it for impact analysis.
+#
+# Usage:
+#   golazo_capabilities(action="list")       — summary of all capabilities
+#   golazo_capabilities(action="show", capability="<name>")  — full card
+#   golazo_capabilities(action="impact", files=["path/to/file.py"])
+#   golazo_capabilities(action="validate")   — check key_files exist
+#
+# Schema:
+#   capabilities:          (required) list of capability objects
+#     - name:              (required) unique identifier, e.g. "user-auth"
+#       description:       (optional) what this capability does
+#       key_files:         (optional) list of file paths that define it
+#       contracts:         (optional) list of API/data contracts it exposes
+#       depends_on:        (optional) list of capability names it depends on
+
+capabilities:
+  - name: user-auth
+    description: "User registration, login, and JWT-based authentication"
+    key_files:
+      - server/src/services/authService.js
+      - server/src/routes/auth.js
+      - server/src/middleware/auth.js
+    contracts:
+      - "AuthService.register(email, password, name) → { user, token }"
+      - "AuthService.login(email, password) → { user, token }"
+      - "AuthService.verifyToken(token) → user | null"
+      - "POST /api/auth/register → 201 { user, token } | 400 | 409"
+      - "POST /api/auth/login → 200 { user, token } | 400 | 401"
+      - "GET /api/auth/me → 200 { user } | 401"
+    depends_on: []
+
+  - name: database
+    description: "Prisma ORM with SQLite datasource and User model"
+    key_files:
+      - server/prisma/schema.prisma
+    contracts:
+      - "User { id, email, password, name, createdAt, updatedAt }"
+    depends_on: []
+
+  - name: frontend-shell
+    description: "React SPA with auth context, routing, login/register/dashboard pages"
+    key_files:
+      - client/src/App.jsx
+      - client/src/context/AuthContext.jsx
+      - client/src/services/api.js
+      - client/src/pages/Login.jsx
+      - client/src/pages/Register.jsx
+      - client/src/pages/Dashboard.jsx
+    contracts:
+      - "useAuth() → { user, loading, loginSuccess, logout }"
+    depends_on:
+      - user-auth
