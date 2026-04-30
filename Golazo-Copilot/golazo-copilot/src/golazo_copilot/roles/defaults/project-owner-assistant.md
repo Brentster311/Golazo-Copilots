@@ -92,7 +92,7 @@ If any of these are ambiguous, STOP and ask before proceeding.
 
 ## Closure
 
-When re-entering this role after Retrospective, perform the following closure tasks:
+When re-entering this role after Retrospective, perform the following closure tasks. POA always closes: `complete`, `express`, and `spike` all return to `project-owner-assistant` after retrospective for formal closure.
 
 1. **Final commit**: Ensure all changes are committed with message `<workitem-id>: <User Story title>` and pushed to origin.
 2. **Acceptance criteria validation**: Verify each acceptance criterion in the User Story is satisfied by the implementation. Update User Story status to **IMPLEMENTED**.

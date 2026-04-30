@@ -3,7 +3,7 @@
 Covers:
 - closure_pending state field (default, set, preserved)
 - Output validator closure-only annotation parsing
-- Transition enforcement (retro→POA in complete vs express/spike)
+- Transition enforcement (retro→POA enters closure mode for all profiles)
 - Status output distinguishes closure mode
 - Backward compatibility with old state.json
 """
@@ -11,6 +11,7 @@ Covers:
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Literal
 
 import pytest
 
@@ -23,9 +24,9 @@ from golazo_copilot.tools.golazo_transition import golazo_transition
 
 def _make_state(
     work_item_id: str = "TST-001",
-    profile: str = "complete",
+    profile: Literal["complete", "express", "spike"] = "complete",
     current_role: str = "retrospective",
-    current_phase: str = "completion",
+    current_phase: Literal["definition", "development", "completion", "closure"] = "completion",
     closure_pending: bool = False,
     roles_up_to: str | None = None,
 ) -> WorkItemState:
@@ -264,8 +265,8 @@ class TestClosureTransition:
         assert state.current_role == "project-owner-assistant"
 
     @pytest.mark.asyncio
-    async def test_express_retro_to_poa_no_closure_pending(self, express_at_retro):
-        """TC-02: In express profile, retro→POA does NOT set closure_pending."""
+    async def test_express_retro_to_poa_sets_closure_pending(self, express_at_retro):
+        """TC-02: In express profile, retro→POA sets closure_pending=True."""
         wi_dir, project_root = express_at_retro
         result = await golazo_transition(
             work_item_id="TST-001",
@@ -275,11 +276,12 @@ class TestClosureTransition:
         )
         assert result["success"]
         state = load_state("TST-001", wi_dir)
-        assert state.closure_pending is False
+        assert state.closure_pending is True
+        assert state.current_phase == "closure"
 
     @pytest.mark.asyncio
-    async def test_spike_retro_to_poa_no_closure_pending(self, spike_at_retro):
-        """TC-03: In spike profile, retro→POA does NOT set closure_pending."""
+    async def test_spike_retro_to_poa_sets_closure_pending(self, spike_at_retro):
+        """TC-03: In spike profile, retro→POA sets closure_pending=True."""
         wi_dir, project_root = spike_at_retro
         result = await golazo_transition(
             work_item_id="TST-001",
@@ -289,7 +291,8 @@ class TestClosureTransition:
         )
         assert result["success"]
         state = load_state("TST-001", wi_dir)
-        assert state.closure_pending is False
+        assert state.closure_pending is True
+        assert state.current_phase == "closure"
 
     @pytest.mark.asyncio
     async def test_closure_pending_preserved_through_transition(self, complete_at_retro):
@@ -474,8 +477,22 @@ class TestRetrospectiveRoleContent:
     """Tests for retrospective role file containing closure handoff instruction."""
 
     def test_retro_role_mentions_poa_transition(self):
-        """TC-14: Retrospective role file instructs transition to POA for complete profile."""
+        """TC-14: Retrospective role file instructs all profiles to transition to POA."""
         from importlib import resources
         files = resources.files("golazo_copilot.roles.defaults")
         content = files.joinpath("retrospective.md").read_text(encoding="utf-8")
-        assert "project-owner-assistant" in content.lower() or "closure" in content.lower()
+        lowered = content.lower()
+        assert "project-owner-assistant" in lowered
+        assert "all profiles" in lowered or "poa always closes" in lowered or "always closes" in lowered
+
+
+class TestBootstrapInstructionContent:
+    """Tests for canonical bootstrap instructions matching closure policy."""
+
+    def test_bootstrap_instructions_state_poa_always_closes(self):
+        from importlib import resources
+
+        content = resources.files("golazo_copilot").joinpath("bootstrap-instructions.md").read_text(encoding="utf-8")
+        lowered = content.lower()
+        assert "project-owner-assistant" in lowered
+        assert "all profiles" in lowered or "poa always closes" in lowered or "always closes" in lowered
