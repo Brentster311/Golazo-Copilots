@@ -1,0 +1,192 @@
+# Normalized source metadata for APA assembly.
+# Keep IDs stable so we can reference them in drafts and claim mapping.
+
+sources:
+  - id: SRC-001
+    type: website
+    authors:
+      - family: Piikkila
+        given: Jessica
+    year: null
+    month: null
+    day: null
+    title: What is scaled agile framework? (SAFe)
+    container: null
+    publisher: Atlassian
+    doi: null
+    url: https://www.atlassian.com/agile/agile-at-scale/what-is-safe
+    accessed: 2026-03-13
+    apa: Piikkila, J. (n.d.). What is scaled agile framework? (SAFe). Atlassian. Retrieved March 13, 2026, from https://www.atlassian.com/agile/agile-at-scale/what-is-safe
+    notes: Overview article describing SAFe principles, core values, implementation steps, and comparison to other scaling frameworks.
+  - id: SRC-002
+    type: online-article
+    authors:
+      - family: Grover
+        given: Nikhil
+    year: 2025
+    month: 2
+    day: 20
+    title: SAFe is Dead. Here's Why - And What Mastercard Learned the Hard Way
+    container: null
+    publisher: Medium
+    doi: null
+    url: https://medium.com/@nikhilgrover4/safe-is-dead-heres-why-and-what-mastercard-learned-the-hard-way-2a9866b27251
+    accessed: 2026-03-13
+    apa: Grover, N. (2025, February 20). SAFe is dead. Here's why - and what Mastercard learned the hard way. Medium. https://medium.com/@nikhilgrover4/safe-is-dead-heres-why-and-what-mastercard-learned-the-hard-way-2a9866b27251
+    notes: Commentary piece critiquing SAFe based on enterprise experience narratives and advocating lighter-weight scaling approaches.
+  - id: SRC-003
+    type: internal-documentation-corpus
+    authors:
+      - family: Martens
+        given: Ben
+    year: null
+    month: null
+    day: null
+    title: Golazo documentation set
+    container: null
+    publisher: Golazo
+    doi: null
+    url: local-folder:Q:/src/golazo/docs
+    accessed: 2026-03-13
+    apa: Martens, B. (n.d.). Golazo documentation set [Internal documentation corpus]. Golazo.
+    notes: Source collection of Golazo docs provided from Q:/src/golazo/docs with 20 files inventoried in raw/golazo-docs-manifest.md. Authorship note: project author is user; document author is Ben Martens.
+  - id: SRC-004
+    type: presentation
+    authors:
+      - family: Jensen
+        given: Brent
+    year: null
+    month: null
+    day: null
+    title: Golazo V.92
+    container: null
+    publisher: null
+    doi: null
+    url: local-file:Q:/src/Golazo-Copilots/TimsThoughts/Agile/Golazo%20V.92.pptm
+    accessed: 2026-03-13
+    apa: Jensen, B. (n.d.). Golazo V.92 [PowerPoint slides].
+    notes: Single user-authored presentation source from Q:/src/Golazo-Copilots/TimsThoughts/Agile/Golazo V.92.pptm.
+  - id: SRC-005
+    type: internal-document-set
+    authors: []
+    year: null
+    month: null
+    day: null
+    title: TimsDocs working documents (4-file set)
+    container: null
+    publisher: null
+    doi: null
+    url: local-folder:Q:/src/Golazo-Copilots/TimsThoughts/TimsDocs
+    accessed: 2026-03-13
+    apa: TimsDocs working documents (4-file set) [Internal documents]. (n.d.).
+    notes: Four primary documents in Q:/src/Golazo-Copilots/TimsThoughts/TimsDocs are recorded in raw/timsdocs-manifest.md; sidecar files for the .htm document are support assets only.
+  - id: SRC-006
+    type: internal-analysis-memo
+    authors:
+      - family: Jensen
+        given: Brent
+    year: 2026
+    month: 3
+    day: 13
+    title: Golazo vs. Delivery Manifesto: Conversation Transcript Synthesis and Analytical Report
+    container: null
+    publisher: null
+    doi: null
+    url: local-file:Q:/src/Golazo-Copilots/TimsThoughts/Agile/Thinking.MD
+    accessed: 2026-03-13
+    apa: Jensen, B. (2026, March 13). Golazo vs. Delivery Manifesto: Conversation transcript synthesis and analytical report [Internal analysis memo].
+    notes: Internal synthesis document comparing Golazo and Delivery Manifesto assumptions, loops, and optimization targets.
+  - id: SRC-007
+    type: internal-document
+    authors:
+      - family: Mallalieu
+        given: Tim
+    year: null
+    month: null
+    day: null
+    title: "A Primer on HBR's AWARE Framework — Applied to Mission Teams and \"Delivery Is Existential\""
+    container: null
+    publisher: null
+    doi: null
+    url: local-file:Q:/src/Golazo-Copilots/TimsThoughts/TimsDocs/HBR's%20AWARE%20framework%20and%20mission%20teams.docx
+    accessed: 2026-04-07
+    apa: "Mallalieu, T. (n.d.). A primer on HBR's AWARE framework — applied to mission teams and \"Delivery Is Existential\" [Unpublished internal document]."
+    notes: Applies HBR AWARE framework (Align, Workforce, Architecture, Responsibility, Execution) to AI transformation in mission team and delivery-existential context. Argues AI advantage comes from reshaping value creation, not just automating tasks. Introduces moving-up-the-value-chain framing for PM, dev, and leader roles.
+  - id: SRC-008
+    type: internal-document
+    authors:
+      - family: Mallalieu
+        given: Tim
+    year: null
+    month: null
+    day: null
+    title: Delivery as an Infinite Game
+    container: null
+    publisher: null
+    doi: null
+    url: local-file:Q:/src/Golazo-Copilots/TimsThoughts/TimsDocs/Delivery%20is%20an%20infinite%20game.docx
+    accessed: 2026-04-07
+    apa: "Mallalieu, T. (n.d.). Delivery as an infinite game [Unpublished internal document]."
+    notes: Applies Simon Sinek finite/infinite game framework to delivery. Defines Just Cause, steel threads, product thinking as operating discipline, and trust as engineering input. Argues digital/AI platforms require infinite-game mechanics.
+  - id: SRC-009
+    type: internal-document
+    authors:
+      - family: Mallalieu
+        given: Tim
+    year: null
+    month: null
+    day: null
+    title: The Role of the Senior IC Leader
+    container: null
+    publisher: null
+    doi: null
+    url: local-file:Q:/src/Golazo-Copilots/TimsThoughts/TimsDocs/The%20Role%20of%20the%20Senior%20IC%20Leader.docx
+    accessed: 2026-04-07
+    apa: "Mallalieu, T. (n.d.). The role of the senior IC leader [Unpublished internal document]."
+    notes: Defines two-hat leadership model for PMs, Architects, Tech Leads, and EMs inside mission teams. PM = clarity engine; Architect = coherence guardian; Tech Lead = execution owner; EM = execution multiplier. Hands-on proximity required; distance creates drift.
+  - id: SRC-010
+    type: journal-article
+    authors:
+      - family: Hermann
+        given: Erik
+      - family: Puntoni
+        given: Stefano
+      - family: Morewedge
+        given: Carey K.
+    year: 2026
+    month: 3
+    day: null
+    title: Why Gen AI Feels So Threatening to Workers
+    container: Harvard Business Review
+    volume: null
+    issue: null
+    pages: null
+    publisher: Harvard Business Publishing
+    doi: null
+    url: https://hbr.org/2026/03/why-gen-ai-feels-so-threatening-to-workers
+    accessed: 2026-04-07
+    apa: "Hermann, E., Puntoni, S., & Morewedge, C. K. (2026, March\u2013April). Why gen AI feels so threatening to workers. Harvard Business Review. https://hbr.org/2026/03/why-gen-ai-feels-so-threatening-to-workers"
+    notes: "Introduces HBR AWARE framework: Acknowledge, Watch, Align, Redesign, Empower — change management for workers adapting to gen AI. Core thesis: gen AI threatens competence, autonomy, and relatedness. NOTE: Tim Mallalieu (SRC-007) uses a different AWARE expansion (Align, Workforce, Architecture, Responsibility, Execution) also attributed to HBR — these are distinct frameworks sharing an acronym. Local summary at Agile/HBR-AWARE-Summary.md."
+
+# Example record:
+# - id: SRC-001
+#   type: journal-article
+#   authors:
+#     - family: Smith
+#       given: Jordan K.
+#     - family: Lee
+#       given: Priya
+#   year: 2023
+#   month: 5
+#   day: 12
+#   title: Example article title
+#   container: Journal of Example Research
+#   volume: 18
+#   issue: 2
+#   pages: 101-122
+#   publisher: Example Press
+#   doi: 10.1000/example-doi
+#   url: https://doi.org/10.1000/example-doi
+#   accessed: null
+#   apa: Smith, J. K., & Lee, P. (2023). Example article title. Journal of Example Research, 18(2), 101-122. https://doi.org/10.1000/example-doi
+#   notes: Key finding relevant to section 2.
