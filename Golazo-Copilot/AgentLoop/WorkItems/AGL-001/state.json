@@ -2,10 +2,10 @@
   "schema_version": "1.0",
   "work_item_id": "AGL-001",
   "profile": "complete",
-  "current_phase": "completion",
-  "current_role": "builder",
+  "current_phase": "closure",
+  "current_role": "project-owner-assistant",
   "created_at": "2026-05-10T23:30:48.214345Z",
-  "updated_at": "2026-05-10T23:43:21.287863Z",
+  "updated_at": "2026-05-10T23:50:40.334120Z",
   "role_history": [
     {
       "role": "project-owner-assistant",
@@ -50,10 +50,20 @@
     {
       "role": "builder",
       "entered_at": "2026-05-10T23:43:21.287863Z",
+      "exited_at": "2026-05-10T23:50:31.227494Z"
+    },
+    {
+      "role": "retrospective",
+      "entered_at": "2026-05-10T23:50:31.227494Z",
+      "exited_at": "2026-05-10T23:50:40.334120Z"
+    },
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-05-10T23:50:40.334120Z",
       "exited_at": null
     }
   ],
   "deviations": [],
   "git_actions": [],
-  "closure_pending": false
+  "closure_pending": true
 }
