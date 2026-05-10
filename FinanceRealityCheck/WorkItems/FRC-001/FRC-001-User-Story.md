@@ -1,4 +1,4 @@
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 **User Story**
 - Title: Connect initial institutions and establish planning baseline
@@ -38,3 +38,20 @@
 
 ## Decomposition Rationale
 The full product vision includes multiple user-visible outcomes (connectivity, budgeting, investment recommendations, tax-aware suggestions, long-term planning). This story intentionally scopes to one vertical slice: connected data intake plus baseline budgeting and categorization loop. Additional outcomes should be captured in subsequent work items.
+
+## Closure
+- Summary of what was delivered:
+  - Implemented local-first account linking, 90-day transaction sync, encrypted persistence, assisted categorization with reusable rules, and monthly budget overspend alerts.
+  - Delivered automated tests and packaging pipeline for the new slice.
+- Acceptance criteria pass/fail status:
+  - AC1 (link + 90-day sync): PASS
+  - AC2 (normalization + encrypted storage): PASS
+  - AC3 (assisted categorization + reuse): PASS
+  - AC4 (category-cap overspend alert): PASS
+  - AC5 (actionable failures + retry safety): PASS
+- Future work items:
+  - FRC-002: Add unusual transaction and goal drift alerts.
+  - FRC-003: Add allocation dashboard and recommendation options with pros/cons.
+  - FRC-004: Add tax-aware planning surfaces and thresholds.
+- Final status confirmation:
+  - User Story is IMPLEMENTED for the defined FRC-001 vertical slice.
