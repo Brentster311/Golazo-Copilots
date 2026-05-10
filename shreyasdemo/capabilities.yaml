@@ -1,0 +1,41 @@
+# Golazo Copilot — Capability Registry Template
+#
+# This file maps project capabilities to their key files, contracts,
+# and dependencies. The Golazo workflow uses it for impact analysis.
+#
+# Usage:
+#   golazo_capabilities(action="list")       — summary of all capabilities
+#   golazo_capabilities(action="show", capability="<name>")  — full card
+#   golazo_capabilities(action="impact", files=["path/to/file.py"])
+#   golazo_capabilities(action="validate")   — check key_files exist
+#
+# Schema:
+#   capabilities:          (required) list of capability objects
+#     - name:              (required) unique identifier, e.g. "user-auth"
+#       description:       (optional) what this capability does
+#       key_files:         (optional) list of file paths that define it
+#       contracts:         (optional) list of API/data contracts it exposes
+#       depends_on:        (optional) list of capability names it depends on
+
+capabilities:
+  - name: tictactoe-gui
+    description: "Local Windows desktop Tic-Tac-Toe game with in-memory session stats"
+    key_files:
+      - app.py
+      - game_state.py
+      - tests/test_game_state.py
+    contracts:
+      - "GameState.make_move(index: int) -> bool"
+      - "GameState.restart_game() -> None"
+      - "check_winner(board: list[str]) -> str | None"
+      - "is_draw(board: list[str]) -> bool"
+    depends_on: []
+
+  # ── Add more capabilities below ─────────────────────────────────────
+  # - name: another-capability
+  #   description: "..."
+  #   key_files:
+  #     - src/another.py
+  #   contracts: []
+  #   depends_on:
+  #     - example-capability

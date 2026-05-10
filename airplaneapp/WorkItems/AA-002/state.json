@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "work_item_id": "AA-002",
+  "profile": "complete",
+  "current_phase": "definition",
+  "current_role": "project-owner-assistant",
+  "created_at": "2026-03-26T04:14:59.736469Z",
+  "updated_at": "2026-03-26T04:14:59.736469Z",
+  "role_history": [
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-03-26T04:14:59.736469Z",
+      "exited_at": null
+    }
+  ],
+  "deviations": [],
+  "git_actions": [],
+  "closure_pending": false
+}

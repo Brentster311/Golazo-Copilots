@@ -1,0 +1,33 @@
+**Status**: BACKLOG
+
+**User Story**
+- Title: Local Windows GUI Tic-Tac-Toe with Restart
+- As a: Windows user
+- I want: a simple desktop GUI Tic-Tac-Toe game for two local players with a restart option
+- So that: I can quickly play and replay Tic-Tac-Toe on my machine without setup or internet
+- Out of scope:
+  - AI/computer opponent
+  - Online multiplayer/network play
+  - User accounts, profiles, or saved history across app restarts
+  - Configurable board sizes or advanced game modes
+- Assumptions:
+  - Assumption (explicit): Input is mouse-driven via clickable GUI cells; keyboard controls are not required for MVP.
+  - Assumption (explicit): Two human players share one device and alternate turns (X then O).
+  - Assumption (explicit): Data persistence remains in-memory only; all game/session data resets when the app closes.
+  - Assumption (explicit): A single Restart action resets the board for a new round while keeping the app open.
+- Acceptance Criteria (bulleted, testable):
+  - Launching the app on Windows shows a 3x3 GUI board and an indicator for whose turn it is (X starts).
+  - Clicking an empty cell places the current player mark and does not allow overwriting occupied cells.
+  - After each move, the game detects and displays either a winner (X or O) or draw when applicable.
+  - Once a win or draw occurs, additional board moves are blocked until Restart is used.
+  - Clicking Restart clears the board, sets turn back to X, and enables a new game immediately.
+- Non-functional requirements:
+  - Windows-only compatibility is required for this story.
+  - App starts and is interactable without network dependency.
+  - UI is simple and readable, with clear game state messaging.
+- Telemetry / metrics expected:
+  - No external telemetry pipeline is required.
+  - In-session counters are tracked in memory only: games played, X wins, O wins, draws.
+- Rollout / rollback notes:
+  - Rollout: local desktop run for a single user environment.
+  - Rollback: remove/disable the game executable or script; no data migration needed because persistence is in-memory only.
