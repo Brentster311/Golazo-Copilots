@@ -1,0 +1,34 @@
+**Status**: IN PROGRESS
+
+**User Story**
+- Title: Build a basic Agent Loop as a Python package
+- As a: Developer
+- I want: A reusable Python package that runs a minimal agent loop with pluggable state storage
+- So that: I can integrate a predictable loop foundation into future agent features without redesigning core control flow
+- Out of scope:
+  - Networked tools or remote model calls
+  - UI/UX layers (web/desktop/CLI product surfaces)
+  - Persistent storage adapters beyond in-memory
+  - Multi-agent orchestration and concurrent scheduling
+- Assumptions:
+  - Assumption (explicit): Target runtime is Python 3.11+
+  - Assumption (explicit): The primary interface is package/library usage via Python imports
+  - Assumption (explicit): In-memory state is sufficient for this first implementation as long as a storage abstraction is provided
+  - Assumption (explicit): Security model for this slice is local process execution with no authentication boundary
+- Acceptance Criteria (bulleted, testable):
+  - A Python package exposes an AgentLoop class with a run(max_steps: int) API and typed public interfaces.
+  - The loop executes a deterministic cycle (plan -> execute -> evaluate) until success or max_steps is reached.
+  - The package defines a state store abstraction and includes an in-memory implementation used by default.
+  - Each loop iteration records a structured step result including step index, action summary, outcome, and termination signal.
+  - Unit tests cover successful termination and max-step termination for the core loop.
+- Non-functional requirements:
+  - Cross-platform support (Windows, Mac, Linux) using standard Python runtime only
+  - Deterministic behavior for identical inputs
+  - Clear type hints and concise module-level documentation
+- Telemetry / metrics expected:
+  - Total steps executed
+  - Termination reason (success or max_steps)
+  - Loop runtime duration in milliseconds
+- Rollout / rollback notes:
+  - Rollout by introducing the package in this repository and validating with unit tests
+  - Rollback by removing package entry points and restoring prior state (no external dependency migrations required)
