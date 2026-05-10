@@ -1,0 +1,35 @@
+# Golazo Copilot — Capability Registry Template
+#
+# This file maps project capabilities to their key files, contracts,
+# and dependencies. The Golazo workflow uses it for impact analysis.
+#
+# Usage:
+#   golazo_capabilities(action="list")       — summary of all capabilities
+#   golazo_capabilities(action="show", capability="<name>")  — full card
+#   golazo_capabilities(action="impact", files=["path/to/file.py"])
+#   golazo_capabilities(action="validate")   — check key_files exist
+#
+# Schema:
+#   capabilities:          (required) list of capability objects
+#     - name:              (required) unique identifier, e.g. "user-auth"
+#       description:       (optional) what this capability does
+#       key_files:         (optional) list of file paths that define it
+#       contracts:         (optional) list of API/data contracts it exposes
+#       depends_on:        (optional) list of capability names it depends on
+
+capabilities:
+  - name: financial-sync-and-budget-baseline
+    description: "Local-first account sync, encrypted transaction persistence, assisted categorization, and monthly category-cap alerts"
+    key_files:
+      - src/finance_planner/connectors.py
+      - src/finance_planner/planner.py
+      - tests/test_finance_planner_service.py
+      - pyproject.toml
+      - README.md
+    contracts:
+      - "FinancialPlannerService.link_account(institution, display_name, access_token) -> int"
+      - "FinancialPlannerService.run_sync(days=90) -> dict"
+      - "FinancialPlannerService.confirm_category(transaction_id, category) -> None"
+      - "FinancialPlannerService.set_budget(category, monthly_cap) -> None"
+      - "FinancialPlannerService.get_budget_alerts(year, month) -> list[dict]"
+    depends_on: []
