@@ -1,0 +1,48 @@
+# Golazo Copilot — Capability Registry Template
+#
+# This file maps project capabilities to their key files, contracts,
+# and dependencies. The Golazo workflow uses it for impact analysis.
+#
+# Usage:
+#   golazo_capabilities(action="list")       — summary of all capabilities
+#   golazo_capabilities(action="show", capability="<name>")  — full card
+#   golazo_capabilities(action="impact", files=["path/to/file.py"])
+#   golazo_capabilities(action="validate")   — check key_files exist
+#
+# Schema:
+#   capabilities:          (required) list of capability objects
+#     - name:              (required) unique identifier, e.g. "user-auth"
+#       description:       (optional) what this capability does
+#       key_files:         (optional) list of file paths that define it
+#       contracts:         (optional) list of API/data contracts it exposes
+#       depends_on:        (optional) list of capability names it depends on
+
+capabilities:
+  - name: financial-sync-and-budget-baseline
+    description: "Local-first account sync, encrypted transaction persistence, assisted categorization, budget alerts, unusual transaction alerts, goal drift alerts, allocation planning recommendations, and tax-aware threshold planning"
+    key_files:
+      - src/finance_planner/connectors.py
+      - src/finance_planner/planner.py
+      - tests/test_finance_planner_service.py
+      - pyproject.toml
+      - README.md
+    contracts:
+      - "FinancialPlannerService.link_account(institution, display_name, access_token) -> int"
+      - "FinancialPlannerService.run_sync(days=90) -> dict"
+      - "FinancialPlannerService.confirm_category(transaction_id, category) -> None"
+      - "FinancialPlannerService.set_budget(category, monthly_cap) -> None"
+      - "FinancialPlannerService.get_budget_alerts(year, month) -> list[dict]"
+      - "FinancialPlannerService.update_unusual_settings(minimum_amount, sensitivity_factor, min_samples=3) -> None"
+      - "FinancialPlannerService.get_unusual_transaction_alerts(days=90) -> list[dict]"
+      - "FinancialPlannerService.create_savings_goal(name, target_amount, target_date, monthly_contribution) -> int"
+      - "FinancialPlannerService.add_goal_contribution(goal_id, amount, contributed_on=None) -> None"
+      - "FinancialPlannerService.get_goal_drift_alerts(as_of=None) -> list[dict]"
+      - "FinancialPlannerService.upsert_investment_position(symbol, asset_class, account_label, market_value) -> int"
+      - "FinancialPlannerService.list_investment_positions() -> list[dict]"
+      - "FinancialPlannerService.get_allocation_dashboard() -> dict"
+      - "FinancialPlannerService.get_allocation_recommendations(target_allocations, tolerance=0.05) -> list[dict]"
+      - "FinancialPlannerService.update_tax_settings(marginal_tax_rate, annual_tax_budget, monthly_withholding) -> None"
+      - "FinancialPlannerService.get_tax_settings() -> dict"
+      - "FinancialPlannerService.get_tax_planning_surface(as_of=None) -> dict"
+      - "FinancialPlannerService.get_tax_threshold_alerts(as_of=None) -> list[dict]"
+    depends_on: []

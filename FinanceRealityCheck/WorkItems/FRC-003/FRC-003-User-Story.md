@@ -1,0 +1,31 @@
+**Status**: IMPLEMENTED
+
+**User Story**
+- Title: Add portfolio allocation dashboard and recommendation options
+- As a: single-user personal finance planner
+- I want: to record investment positions and view allocation summary with recommendation options and pros/cons
+- So that: I can make better allocation and contribution decisions without direct trade execution
+- Out of scope:
+  - Broker order execution or automatic rebalancing trades
+  - Tax-lot optimization workflows
+  - External market-data dependencies
+- Assumptions:
+  - Assumption (explicit): Desktop-first web app remains the interface.
+  - Assumption (explicit): Local encrypted persistence remains the data model.
+  - Assumption (explicit): User is non-technical and needs transparent recommendation rationale.
+- Acceptance Criteria (bulleted, testable):
+  - User can create and update investment positions with symbol, asset class, account label, and market value in local persistence.
+  - System returns an allocation dashboard with total invested value and per-asset-class percentage allocations.
+  - User can provide target allocation percentages, and the system returns recommendation options for underweight/overweight classes.
+  - Each recommendation option includes explicit pros and cons and a suggested contribution/reduction amount; no direct trade instruction is emitted.
+  - Dashboard and recommendation outputs are deterministic across repeated reads when data is unchanged.
+- Non-functional requirements:
+  - Local-only processing with deterministic output.
+  - Allocation calculations remain responsive at 1,000 positions.
+- Telemetry / metrics expected:
+  - Number of positions tracked.
+  - Allocation drift percentage by asset class.
+  - Count of recommendation options generated per run.
+- Rollout / rollback notes:
+  - Rollout as additive portfolio-planning feature.
+  - Rollback by disabling recommendation output while retaining stored positions.
