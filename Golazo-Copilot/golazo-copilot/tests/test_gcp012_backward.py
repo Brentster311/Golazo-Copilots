@@ -16,6 +16,7 @@ TEST_WORKITEMS_DIR = Path(__file__).parent / "test-workitems"
 TEST_WORKSPACE_ROOT = Path(__file__).parent
 
 ALL_ROLES = [
+    "planner",
     "project-owner-assistant", "program-manager", "domain-expert", "quality-assurance",
     "architect", "developer", "refactor-expert", "builder", "documenter", "retrospective"
 ]

@@ -7,6 +7,7 @@ Profile = Literal["complete", "express", "spike"]
 
 # Phase for each role
 PHASE_MAP: dict[str, Literal["definition", "development", "completion", "closure"]] = {
+    "planner": "definition",
     "project-owner-assistant": "definition",
     "program-manager": "definition",
     "domain-expert": "definition",
@@ -19,7 +20,7 @@ PHASE_MAP: dict[str, Literal["definition", "development", "completion", "closure
     "retrospective": "completion",
 }
 
-# Role order for determining forward/backward
+# Core workflow order from POA onward.
 ROLE_ORDER = [
     "project-owner-assistant",
     "program-manager",
@@ -33,12 +34,15 @@ ROLE_ORDER = [
     "retrospective",
 ]
 
+# Complete profile includes an optional planning pass before POA.
+COMPLETE_PROFILE_ROLE_ORDER = ["planner", *ROLE_ORDER]
+
 # All valid roles
-VALID_ROLES = set(ROLE_ORDER)
+VALID_ROLES = set(COMPLETE_PROFILE_ROLE_ORDER)
 
 # Profile-specific role sequences
 PROFILE_ROLES: dict[Profile, list[str]] = {
-    "complete": ROLE_ORDER,
+    "complete": COMPLETE_PROFILE_ROLE_ORDER,
     "express": [
         "project-owner-assistant",
         "quality-assurance",

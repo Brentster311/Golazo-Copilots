@@ -53,7 +53,7 @@ def get_tool_definitions() -> list[Tool]:
                     },
                     "role": {
                         "type": "string",
-                        "enum": ["project-owner-assistant", "program-manager", "domain-expert", "quality-assurance",
+                        "enum": ["planner", "project-owner-assistant", "program-manager", "domain-expert", "quality-assurance",
                                  "architect", "developer", "refactor-expert", "builder", "documenter", "retrospective"],
                         "description": "Target role to transition to"
                     },

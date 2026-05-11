@@ -287,6 +287,7 @@ class TestBootstrapRoleFiles:
         assert result["success"] is True
         roles_dir = TEST_WORKSPACE_DIR / ".github" / "agents" / "golazo-copilot" / "roles"
         assert roles_dir.is_dir()
+        assert (roles_dir / "planner.md").exists()
         assert (roles_dir / "project-owner-assistant.md").exists()
 
     @pytest.mark.asyncio

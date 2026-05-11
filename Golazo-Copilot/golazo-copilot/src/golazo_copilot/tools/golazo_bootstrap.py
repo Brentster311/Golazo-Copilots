@@ -16,6 +16,7 @@ ROLES_REL_DIR = AGENTS_ROOT / "golazo-copilot" / "roles"
 
 # Default role files to copy
 DEFAULT_ROLES = [
+    "planner.md",
     "project-owner-assistant.md",
     "program-manager.md",
     "domain-expert.md",

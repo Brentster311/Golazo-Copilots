@@ -18,6 +18,7 @@ from .golazo_consent import consume_consent, has_valid_consent
 
 # Role suffix mapping for notes files
 ROLE_SUFFIX_MAP = {
+    "planner": "planner",
     "project-owner-assistant": "project-owner-assistant",
     "program-manager": "program-manager",
     "quality-assurance": "quality-assurance",

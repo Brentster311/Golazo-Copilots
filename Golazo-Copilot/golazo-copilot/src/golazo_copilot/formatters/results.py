@@ -48,7 +48,7 @@ def format_status_result(result: dict) -> str:
         role_progress = result.get("role_progress", {})
         if role_progress:
             completed = role_progress.get("roles_completed", 0)
-            total = role_progress.get("roles_total", 9)
+            total = role_progress.get("roles_total", 0)
             progress_section = f"\n- Role Progress: {completed}/{total} complete"
 
         outputs_section = ""
