@@ -1,4 +1,4 @@
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 **User Story**
 - Title: Add unusual transaction and goal drift alerts
@@ -34,3 +34,20 @@
 
 ## Decomposition Rationale
 FRC-001 established ingestion, categorization, and budget baseline. This story adds only two new alerting capabilities (unusual transactions and goal drift) without expanding into portfolio allocation or tax-threshold surfaces.
+
+## Closure
+- Summary of what was delivered:
+  - Added persisted unusual-detection settings and deterministic unusual-transaction alerts.
+  - Added savings goals, contribution tracking, and goal-drift alert computation.
+  - Extended automated test suite to cover new alerting behavior and negative validation paths.
+- Acceptance criteria pass/fail status:
+  - AC1: PASS
+  - AC2: PASS
+  - AC3: PASS
+  - AC4: PASS
+  - AC5: PASS
+- Future work items:
+  - FRC-003: Add allocation dashboard and recommendation options with pros/cons.
+  - FRC-004: Add tax-aware planning surfaces and thresholds.
+- Final status confirmation:
+  - User Story is IMPLEMENTED for the scoped FRC-002 alerting increment.

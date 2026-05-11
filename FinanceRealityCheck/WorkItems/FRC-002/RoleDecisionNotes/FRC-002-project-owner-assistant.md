@@ -25,3 +25,15 @@ Excluded:
 ## Follow-on Candidates
 - FRC-003 remains allocation dashboard and recommendation options.
 - FRC-004 remains tax-aware planning thresholds.
+
+## Closure Addendum
+
+### Acceptance Validation
+- Verified test evidence: 9 passing tests with 88% coverage.
+- Verified packaging evidence: wheel and sdist built for version 0.3.0.
+- Acceptance criteria outcome: all five criteria PASS for scoped FRC-002 functionality.
+
+### Final Status
+- User Story status updated to IMPLEMENTED.
+- Closure artifact created at WorkItems/FRC-002/FRC-002-closure.md.
+- Work item FRC-002 accepted as complete for its defined scope.
