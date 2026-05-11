@@ -1,6 +1,6 @@
 # Finance Planner
 
-Local-first personal financial planning prototype focused on account ingestion, assisted categorization, budget alerts, and portfolio-allocation planning guidance.
+Local-first personal financial planning prototype focused on account ingestion, assisted categorization, budget alerts, portfolio-allocation planning guidance, and tax-aware threshold planning.
 
 ## Local development
 
@@ -11,6 +11,12 @@ Local-first personal financial planning prototype focused on account ingestion, 
    - .\.venv\Scripts\python -m pytest --cov=finance_planner --cov-report=term-missing
 
 ## Changelog
+
+### 0.5.0 - 2026-05-11
+- Added tax settings persistence for marginal rate, annual tax budget, and monthly withholding estimates.
+- Added deterministic tax planning surface with YTD taxable income and annualized tax projections.
+- Added budget-overrun and withholding-gap threshold alerts with actionable next steps.
+- Added tests for tax settings validation, planning determinism, and threshold alerts.
 
 ### 0.4.0 - 2026-05-11
 - Added local investment position persistence with upsert support.

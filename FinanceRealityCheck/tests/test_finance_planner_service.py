@@ -311,3 +311,61 @@ def test_invalid_position_inputs_and_target_allocations_raise_validation_error(s
 
     with pytest.raises(PlannerValidationError):
         planner.get_allocation_recommendations(target_allocations={"Equities": 1.0}, tolerance=0.0)
+
+
+def test_tax_settings_persist_and_tax_surface_is_deterministic(service):
+    planner, _, _ = service
+
+    planner.link_account("Fidelity", "Fidelity Brokerage", "fid-ok")
+    planner.run_sync(days=90)
+
+    planner.update_tax_settings(marginal_tax_rate=0.25, annual_tax_budget=2500.0, monthly_withholding=150.0)
+    settings = planner.get_tax_settings()
+
+    assert settings["marginal_tax_rate"] == 0.25, "Expected marginal tax rate to persist in tax settings."
+    assert settings["annual_tax_budget"] == 2500.0, "Expected annual tax budget to persist in tax settings."
+    assert settings["monthly_withholding"] == 150.0, "Expected monthly withholding estimate to persist in tax settings."
+
+    first = planner.get_tax_planning_surface(as_of=date.today())
+    second = planner.get_tax_planning_surface(as_of=date.today())
+
+    assert first == second, "Expected tax planning surface to be deterministic for unchanged inputs."
+    assert first["ytd_taxable_income"] >= 3000.0, "Expected payroll income to be included in taxable income projection."
+    assert first["projected_annual_tax"] > 0, "Expected projected annual tax to be positive with income and non-zero tax rate."
+
+
+def test_tax_threshold_alerts_include_budget_and_withholding_gaps(service):
+    planner, _, _ = service
+
+    planner.link_account("Fidelity", "Fidelity Brokerage", "fid-ok")
+    planner.run_sync(days=90)
+
+    planner.update_tax_settings(marginal_tax_rate=0.30, annual_tax_budget=1200.0, monthly_withholding=50.0)
+
+    first = planner.get_tax_threshold_alerts(as_of=date.today())
+    second = planner.get_tax_threshold_alerts(as_of=date.today())
+
+    assert first == second, "Expected deterministic tax threshold alert payload across repeated reads."
+    alert_types = {item["alert_type"] for item in first}
+    assert "budget_overrun" in alert_types, "Expected budget overrun alert when projected tax exceeds annual budget threshold."
+    assert "withholding_gap" in alert_types, "Expected withholding gap alert when projected tax exceeds projected withholding."
+
+    for alert in first:
+        assert "severity" in alert, "Expected threshold alert to include severity classification."
+        assert "next_step" in alert, "Expected threshold alert to include actionable next_step guidance."
+
+
+def test_invalid_tax_settings_raise_validation_error(service):
+    planner, _, _ = service
+
+    with pytest.raises(PlannerValidationError):
+        planner.update_tax_settings(marginal_tax_rate=0.0, annual_tax_budget=1000.0, monthly_withholding=100.0)
+
+    with pytest.raises(PlannerValidationError):
+        planner.update_tax_settings(marginal_tax_rate=1.2, annual_tax_budget=1000.0, monthly_withholding=100.0)
+
+    with pytest.raises(PlannerValidationError):
+        planner.update_tax_settings(marginal_tax_rate=0.25, annual_tax_budget=0.0, monthly_withholding=100.0)
+
+    with pytest.raises(PlannerValidationError):
+        planner.update_tax_settings(marginal_tax_rate=0.25, annual_tax_budget=1000.0, monthly_withholding=0.0)

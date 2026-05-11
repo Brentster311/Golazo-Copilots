@@ -686,6 +686,133 @@ class FinancialPlannerService:
         )
         return recommendation_rows
 
+    def update_tax_settings(
+        self,
+        marginal_tax_rate: float,
+        annual_tax_budget: float,
+        monthly_withholding: float,
+    ) -> None:
+        if marginal_tax_rate <= 0 or marginal_tax_rate > 1:
+            raise PlannerValidationError("marginal_tax_rate must be between 0 and 1")
+        if annual_tax_budget <= 0:
+            raise PlannerValidationError("annual_tax_budget must be greater than zero")
+        if monthly_withholding <= 0:
+            raise PlannerValidationError("monthly_withholding must be greater than zero")
+
+        self._connection.execute(
+            """
+            INSERT INTO tax_settings (id, marginal_tax_rate, annual_tax_budget, monthly_withholding)
+            VALUES (1, ?, ?, ?)
+            ON CONFLICT(id)
+            DO UPDATE SET
+                marginal_tax_rate = excluded.marginal_tax_rate,
+                annual_tax_budget = excluded.annual_tax_budget,
+                monthly_withholding = excluded.monthly_withholding,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (float(marginal_tax_rate), float(annual_tax_budget), float(monthly_withholding)),
+        )
+        self._connection.commit()
+
+    def get_tax_settings(self) -> dict[str, Any]:
+        row = self._connection.execute(
+            "SELECT marginal_tax_rate, annual_tax_budget, monthly_withholding FROM tax_settings WHERE id = 1"
+        ).fetchone()
+        if row is None:
+            defaults = {
+                "marginal_tax_rate": 0.22,
+                "annual_tax_budget": 5000.0,
+                "monthly_withholding": 300.0,
+            }
+            self.update_tax_settings(**defaults)
+            return defaults
+
+        return {
+            "marginal_tax_rate": float(row["marginal_tax_rate"]),
+            "annual_tax_budget": float(row["annual_tax_budget"]),
+            "monthly_withholding": float(row["monthly_withholding"]),
+        }
+
+    def get_tax_planning_surface(self, as_of: date | None = None) -> dict[str, Any]:
+        anchor_date = as_of or date.today()
+        start_of_year = date(anchor_date.year, 1, 1)
+        days_elapsed = max((anchor_date - start_of_year).days + 1, 1)
+
+        row = self._connection.execute(
+            """
+            SELECT COALESCE(SUM(amount), 0) AS taxable_income
+            FROM transactions
+            WHERE direction = 'credit'
+              AND posted_on >= ?
+              AND posted_on <= ?
+            """,
+            (start_of_year.isoformat(), anchor_date.isoformat()),
+        ).fetchone()
+
+        ytd_taxable_income = float(row["taxable_income"])
+        settings = self.get_tax_settings()
+
+        projected_annual_income = ytd_taxable_income * (365.0 / float(days_elapsed))
+        projected_annual_tax = projected_annual_income * settings["marginal_tax_rate"]
+        projected_annual_withholding = settings["monthly_withholding"] * 12.0
+
+        return {
+            "year": anchor_date.year,
+            "as_of": anchor_date.isoformat(),
+            "days_elapsed": days_elapsed,
+            "ytd_taxable_income": round(ytd_taxable_income, 2),
+            "projected_annual_income": round(projected_annual_income, 2),
+            "marginal_tax_rate": round(settings["marginal_tax_rate"], 4),
+            "projected_annual_tax": round(projected_annual_tax, 2),
+            "annual_tax_budget": round(settings["annual_tax_budget"], 2),
+            "monthly_withholding": round(settings["monthly_withholding"], 2),
+            "projected_annual_withholding": round(projected_annual_withholding, 2),
+        }
+
+    def get_tax_threshold_alerts(self, as_of: date | None = None) -> list[dict[str, Any]]:
+        surface = self.get_tax_planning_surface(as_of=as_of)
+
+        projected_annual_tax = float(surface["projected_annual_tax"])
+        annual_tax_budget = float(surface["annual_tax_budget"])
+        projected_annual_withholding = float(surface["projected_annual_withholding"])
+        monthly_withholding = float(surface["monthly_withholding"])
+
+        alerts: list[dict[str, Any]] = []
+
+        if projected_annual_tax > annual_tax_budget:
+            overrun = projected_annual_tax - annual_tax_budget
+            ratio = projected_annual_tax / annual_tax_budget if annual_tax_budget > 0 else 1.0
+            severity = "high" if ratio >= 1.25 else "medium"
+            alerts.append(
+                {
+                    "alert_type": "budget_overrun",
+                    "severity": severity,
+                    "projected_annual_tax": round(projected_annual_tax, 2),
+                    "annual_tax_budget": round(annual_tax_budget, 2),
+                    "overrun_amount": round(overrun, 2),
+                    "reason": "projected annual tax exceeds configured annual budget threshold",
+                    "next_step": "Increase tax reserve contributions or adjust annual tax budget assumptions.",
+                }
+            )
+
+        if projected_annual_tax > projected_annual_withholding:
+            gap = projected_annual_tax - projected_annual_withholding
+            severity = "high" if gap >= (monthly_withholding * 3.0) else "medium"
+            alerts.append(
+                {
+                    "alert_type": "withholding_gap",
+                    "severity": severity,
+                    "projected_annual_tax": round(projected_annual_tax, 2),
+                    "projected_annual_withholding": round(projected_annual_withholding, 2),
+                    "gap_amount": round(gap, 2),
+                    "reason": "projected annual tax exceeds projected annual withholding",
+                    "next_step": "Increase withholding estimate or set aside additional monthly tax savings.",
+                }
+            )
+
+        alerts.sort(key=lambda item: item["alert_type"])
+        return alerts
+
     def _store_transactions(self, account_id: int, transactions: list[TransactionRecord]) -> tuple[int, int]:
         imported_count = 0
         duplicates_skipped = 0
@@ -875,12 +1002,27 @@ class FinancialPlannerService:
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(symbol, account_label)
             );
+
+            CREATE TABLE IF NOT EXISTS tax_settings (
+                id INTEGER PRIMARY KEY CHECK(id = 1),
+                marginal_tax_rate REAL NOT NULL,
+                annual_tax_budget REAL NOT NULL,
+                monthly_withholding REAL NOT NULL,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
             """
         )
         self._connection.execute(
             """
             INSERT INTO alert_settings (id, minimum_amount, sensitivity_factor, min_samples)
             VALUES (1, 100.0, 2.0, 3)
+            ON CONFLICT(id) DO NOTHING
+            """
+        )
+        self._connection.execute(
+            """
+            INSERT INTO tax_settings (id, marginal_tax_rate, annual_tax_budget, monthly_withholding)
+            VALUES (1, 0.22, 5000.0, 300.0)
             ON CONFLICT(id) DO NOTHING
             """
         )
