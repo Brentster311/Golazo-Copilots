@@ -503,6 +503,189 @@ class FinancialPlannerService:
 
         return alerts
 
+    def upsert_investment_position(
+        self,
+        symbol: str,
+        asset_class: str,
+        account_label: str,
+        market_value: float,
+    ) -> int:
+        cleaned_symbol = symbol.strip().upper()
+        cleaned_asset_class = asset_class.strip()
+        cleaned_account_label = account_label.strip()
+
+        if not cleaned_symbol:
+            raise PlannerValidationError("symbol cannot be empty")
+        if not cleaned_asset_class:
+            raise PlannerValidationError("asset_class cannot be empty")
+        if not cleaned_account_label:
+            raise PlannerValidationError("account_label cannot be empty")
+        if market_value <= 0:
+            raise PlannerValidationError("market_value must be greater than zero")
+
+        self._connection.execute(
+            """
+            INSERT INTO investment_positions (symbol, asset_class, account_label, market_value)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(symbol, account_label)
+            DO UPDATE SET
+                asset_class = excluded.asset_class,
+                market_value = excluded.market_value,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (cleaned_symbol, cleaned_asset_class, cleaned_account_label, float(market_value)),
+        )
+        row = self._connection.execute(
+            "SELECT id FROM investment_positions WHERE symbol = ? AND account_label = ?",
+            (cleaned_symbol, cleaned_account_label),
+        ).fetchone()
+        self._connection.commit()
+
+        if row is None:
+            raise PlannerValidationError("Unable to persist investment position")
+        return int(row["id"])
+
+    def list_investment_positions(self) -> list[dict[str, Any]]:
+        rows = self._connection.execute(
+            """
+            SELECT id, symbol, asset_class, account_label, market_value
+            FROM investment_positions
+            ORDER BY asset_class, symbol, account_label, id
+            """
+        ).fetchall()
+
+        return [
+            {
+                "id": int(row["id"]),
+                "symbol": row["symbol"],
+                "asset_class": row["asset_class"],
+                "account_label": row["account_label"],
+                "market_value": float(row["market_value"]),
+            }
+            for row in rows
+        ]
+
+    def get_allocation_dashboard(self) -> dict[str, Any]:
+        rows = self._connection.execute(
+            """
+            SELECT asset_class, SUM(market_value) AS market_value
+            FROM investment_positions
+            GROUP BY asset_class
+            ORDER BY asset_class
+            """
+        ).fetchall()
+
+        total_market_value = sum(float(row["market_value"]) for row in rows)
+
+        allocations: list[dict[str, Any]] = []
+        for row in rows:
+            market_value = float(row["market_value"])
+            percentage = 0.0 if total_market_value == 0 else (market_value / total_market_value) * 100.0
+            allocations.append(
+                {
+                    "asset_class": row["asset_class"],
+                    "market_value": round(market_value, 2),
+                    "percentage": round(percentage, 2),
+                }
+            )
+
+        return {
+            "total_market_value": round(total_market_value, 2),
+            "allocations": allocations,
+        }
+
+    def get_allocation_recommendations(
+        self,
+        target_allocations: dict[str, float],
+        tolerance: float = 0.05,
+    ) -> list[dict[str, Any]]:
+        if not target_allocations:
+            raise PlannerValidationError("target_allocations cannot be empty")
+        if tolerance <= 0:
+            raise PlannerValidationError("tolerance must be greater than zero")
+
+        cleaned_targets: dict[str, float] = {}
+        for asset_class, target in target_allocations.items():
+            cleaned_asset_class = asset_class.strip()
+            if not cleaned_asset_class:
+                raise PlannerValidationError("target allocation asset_class cannot be empty")
+            if target <= 0 or target > 1:
+                raise PlannerValidationError("target allocation values must be between 0 and 1")
+            cleaned_targets[cleaned_asset_class] = float(target)
+
+        total_target = sum(cleaned_targets.values())
+        if abs(total_target - 1.0) > 0.001:
+            raise PlannerValidationError("target allocation values must sum to 1.0")
+
+        dashboard = self.get_allocation_dashboard()
+        total_market_value = float(dashboard["total_market_value"])
+        current_values = {
+            item["asset_class"]: float(item["market_value"])
+            for item in dashboard["allocations"]
+        }
+
+        covered_classes = sorted(set(current_values.keys()) | set(cleaned_targets.keys()))
+        recommendation_rows: list[dict[str, Any]] = []
+
+        for asset_class in covered_classes:
+            target_fraction = cleaned_targets.get(asset_class, 0.0)
+            current_fraction = 0.0
+            if total_market_value > 0:
+                current_fraction = current_values.get(asset_class, 0.0) / total_market_value
+
+            drift = current_fraction - target_fraction
+            if abs(drift) <= tolerance:
+                continue
+
+            direction = "decrease" if drift > 0 else "increase"
+            suggested_amount = abs(drift) * total_market_value
+
+            if suggested_amount <= 0:
+                continue
+
+            if direction == "increase":
+                pros = [
+                    "Moves portfolio toward target diversification.",
+                    "Reduces under-allocation risk for this asset class.",
+                ]
+                cons = [
+                    "May underperform if this asset class lags in the near term.",
+                    "Can increase short-term allocation volatility.",
+                ]
+            else:
+                pros = [
+                    "Lowers concentration risk in an overweight asset class.",
+                    "Improves balance against long-term targets.",
+                ]
+                cons = [
+                    "May limit upside if the current asset class continues to lead.",
+                    "Could increase tracking error against recent performance trends.",
+                ]
+
+            recommendation_rows.append(
+                {
+                    "asset_class": asset_class,
+                    "direction": direction,
+                    "current_percentage": round(current_fraction * 100.0, 2),
+                    "target_percentage": round(target_fraction * 100.0, 2),
+                    "suggested_amount": round(suggested_amount, 2),
+                    "summary": (
+                        f"Consider {direction} exposure to {asset_class} by approximately "
+                        f"${suggested_amount:.2f} to move closer to target allocation."
+                    ),
+                    "pros": pros,
+                    "cons": cons,
+                }
+            )
+
+        recommendation_rows.sort(
+            key=lambda item: (
+                -abs(item["current_percentage"] - item["target_percentage"]),
+                item["asset_class"],
+            )
+        )
+        return recommendation_rows
+
     def _store_transactions(self, account_id: int, transactions: list[TransactionRecord]) -> tuple[int, int]:
         imported_count = 0
         duplicates_skipped = 0
@@ -681,6 +864,16 @@ class FinancialPlannerService:
                 amount REAL NOT NULL,
                 contributed_on TEXT NOT NULL,
                 FOREIGN KEY(goal_id) REFERENCES savings_goals(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS investment_positions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT NOT NULL,
+                asset_class TEXT NOT NULL,
+                account_label TEXT NOT NULL,
+                market_value REAL NOT NULL,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(symbol, account_label)
             );
             """
         )

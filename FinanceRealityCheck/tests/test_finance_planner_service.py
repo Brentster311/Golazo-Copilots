@@ -245,3 +245,69 @@ def test_invalid_unusual_settings_and_goal_definitions_raise_validation_error(se
             target_date=date.today() - timedelta(days=1),
             monthly_contribution=50.0,
         )
+
+
+def test_position_tracking_and_allocation_dashboard_are_deterministic(service):
+    planner, _, _ = service
+
+    planner.upsert_investment_position("VTI", "Equities", "Fidelity Brokerage", 6000.0)
+    planner.upsert_investment_position("BND", "Bonds", "Fidelity Brokerage", 3000.0)
+    planner.upsert_investment_position("SPAXX", "Cash", "Fidelity Brokerage", 1000.0)
+
+    first = planner.get_allocation_dashboard()
+    second = planner.get_allocation_dashboard()
+
+    assert first == second, "Expected allocation dashboard to be deterministic when inputs are unchanged."
+    assert first["total_market_value"] == 10000.0, "Expected total market value aggregation to match all stored positions."
+
+    by_class = {item["asset_class"]: item for item in first["allocations"]}
+    assert by_class["Equities"]["percentage"] == 60.0, "Expected equities allocation percentage to match stored values."
+    assert by_class["Bonds"]["percentage"] == 30.0, "Expected bonds allocation percentage to match stored values."
+    assert by_class["Cash"]["percentage"] == 10.0, "Expected cash allocation percentage to match stored values."
+
+
+def test_allocation_recommendation_options_include_pros_and_cons(service):
+    planner, _, _ = service
+
+    planner.upsert_investment_position("VTI", "Equities", "Fidelity Brokerage", 7000.0)
+    planner.upsert_investment_position("BND", "Bonds", "Fidelity Brokerage", 2000.0)
+    planner.upsert_investment_position("SPAXX", "Cash", "Fidelity Brokerage", 1000.0)
+
+    target = {"Equities": 0.60, "Bonds": 0.30, "Cash": 0.10}
+    first = planner.get_allocation_recommendations(target_allocations=target, tolerance=0.05)
+    second = planner.get_allocation_recommendations(target_allocations=target, tolerance=0.05)
+
+    assert first == second, "Expected recommendation options to be deterministic across repeated reads."
+    assert any(
+        option["asset_class"] == "Equities" and option["direction"] == "decrease" for option in first
+    ), "Expected recommendation option to reduce overweight equities allocation."
+    assert any(
+        option["asset_class"] == "Bonds" and option["direction"] == "increase" for option in first
+    ), "Expected recommendation option to increase underweight bonds allocation."
+
+    for option in first:
+        assert option["suggested_amount"] > 0, "Expected recommendation option to include positive suggested amount."
+        assert option["pros"], "Expected recommendation option to include non-empty pros."
+        assert option["cons"], "Expected recommendation option to include non-empty cons."
+        assert "trade" not in option["summary"].lower(), "Recommendation summary should avoid execution instructions."
+
+
+def test_invalid_position_inputs_and_target_allocations_raise_validation_error(service):
+    planner, _, _ = service
+
+    with pytest.raises(PlannerValidationError):
+        planner.upsert_investment_position("", "Equities", "Fidelity Brokerage", 1000.0)
+
+    with pytest.raises(PlannerValidationError):
+        planner.upsert_investment_position("VTI", "Equities", "Fidelity Brokerage", -1.0)
+
+    planner.upsert_investment_position("VTI", "Equities", "Fidelity Brokerage", 1000.0)
+
+    with pytest.raises(PlannerValidationError):
+        planner.get_allocation_recommendations(target_allocations={}, tolerance=0.05)
+
+    with pytest.raises(PlannerValidationError):
+        planner.get_allocation_recommendations(target_allocations={"Equities": 1.2}, tolerance=0.05)
+
+    with pytest.raises(PlannerValidationError):
+        planner.get_allocation_recommendations(target_allocations={"Equities": 1.0}, tolerance=0.0)
