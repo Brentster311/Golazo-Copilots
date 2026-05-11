@@ -4,6 +4,7 @@ import json
 import sqlite3
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
+from statistics import mean, pstdev
 from typing import Any
 
 from cryptography.fernet import Fernet
@@ -275,6 +276,233 @@ class FinancialPlannerService:
 
         return alerts
 
+    def update_unusual_settings(self, minimum_amount: float, sensitivity_factor: float, min_samples: int = 3) -> None:
+        if minimum_amount < 0:
+            raise PlannerValidationError("minimum_amount cannot be negative")
+        if sensitivity_factor <= 0:
+            raise PlannerValidationError("sensitivity_factor must be greater than zero")
+        if min_samples < 1:
+            raise PlannerValidationError("min_samples must be at least 1")
+
+        self._connection.execute(
+            """
+            INSERT INTO alert_settings (id, minimum_amount, sensitivity_factor, min_samples)
+            VALUES (1, ?, ?, ?)
+            ON CONFLICT(id)
+            DO UPDATE SET
+                minimum_amount = excluded.minimum_amount,
+                sensitivity_factor = excluded.sensitivity_factor,
+                min_samples = excluded.min_samples,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (float(minimum_amount), float(sensitivity_factor), int(min_samples)),
+        )
+        self._connection.commit()
+
+    def get_unusual_settings(self) -> dict[str, Any]:
+        row = self._connection.execute(
+            "SELECT minimum_amount, sensitivity_factor, min_samples FROM alert_settings WHERE id = 1"
+        ).fetchone()
+        if row is None:
+            settings = {
+                "minimum_amount": 100.0,
+                "sensitivity_factor": 2.0,
+                "min_samples": 3,
+            }
+            self.update_unusual_settings(**settings)
+            return settings
+
+        return {
+            "minimum_amount": float(row["minimum_amount"]),
+            "sensitivity_factor": float(row["sensitivity_factor"]),
+            "min_samples": int(row["min_samples"]),
+        }
+
+    def get_unusual_transaction_alerts(self, days: int = 90) -> list[dict[str, Any]]:
+        if days <= 0:
+            raise PlannerValidationError("days must be greater than zero")
+
+        settings = self.get_unusual_settings()
+        cutoff = datetime.now(tz=UTC).date() - timedelta(days=days)
+
+        rows = self._connection.execute(
+            """
+            SELECT id, provider_transaction_id, posted_on, amount, merchant, category
+            FROM transactions
+            WHERE direction = 'debit'
+              AND posted_on >= ?
+            ORDER BY posted_on, id
+            """,
+            (cutoff.isoformat(),),
+        ).fetchall()
+
+        alerts: list[dict[str, Any]] = []
+        for row in rows:
+            amount = float(row["amount"])
+            if amount < settings["minimum_amount"]:
+                continue
+
+            normalized_merchant = self._normalize_merchant(str(row["merchant"]))
+            baseline_rows = self._connection.execute(
+                """
+                SELECT amount
+                FROM transactions
+                WHERE direction = 'debit'
+                  AND lower(trim(merchant)) = ?
+                  AND posted_on < ?
+                ORDER BY posted_on DESC, id DESC
+                LIMIT 50
+                """,
+                (normalized_merchant, row["posted_on"]),
+            ).fetchall()
+
+            baseline_values = [float(item["amount"]) for item in baseline_rows]
+            if len(baseline_values) < settings["min_samples"]:
+                continue
+
+            avg_amount = mean(baseline_values)
+            spread = pstdev(baseline_values) if len(baseline_values) > 1 else 0.0
+            spread_floor = max(spread, avg_amount * 0.25)
+            threshold = max(
+                settings["minimum_amount"],
+                avg_amount + (settings["sensitivity_factor"] * spread_floor),
+            )
+
+            if amount <= threshold:
+                continue
+
+            severity = "high" if amount >= threshold * 1.5 else "medium"
+            alerts.append(
+                {
+                    "alert_type": "unusual_transaction",
+                    "transaction_id": int(row["id"]),
+                    "provider_transaction_id": row["provider_transaction_id"],
+                    "merchant": row["merchant"],
+                    "amount": amount,
+                    "threshold": round(threshold, 2),
+                    "baseline_samples": len(baseline_values),
+                    "reason": "amount exceeds recent merchant spending baseline",
+                    "severity": severity,
+                    "next_step": "Review the transaction and confirm whether it is expected.",
+                }
+            )
+
+        return alerts
+
+    def create_savings_goal(
+        self,
+        name: str,
+        target_amount: float,
+        target_date: date,
+        monthly_contribution: float,
+    ) -> int:
+        cleaned_name = name.strip()
+        if not cleaned_name:
+            raise PlannerValidationError("goal name cannot be empty")
+        if target_amount <= 0:
+            raise PlannerValidationError("target_amount must be greater than zero")
+        if target_date <= date.today():
+            raise PlannerValidationError("target_date must be in the future")
+        if monthly_contribution <= 0:
+            raise PlannerValidationError("monthly_contribution must be greater than zero")
+
+        cursor = self._connection.execute(
+            """
+            INSERT INTO savings_goals (name, target_amount, target_date, monthly_contribution, created_on)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                cleaned_name,
+                float(target_amount),
+                target_date.isoformat(),
+                float(monthly_contribution),
+                date.today().isoformat(),
+            ),
+        )
+        self._connection.commit()
+        return int(cursor.lastrowid)
+
+    def add_goal_contribution(self, goal_id: int, amount: float, contributed_on: date | None = None) -> None:
+        if amount <= 0:
+            raise PlannerValidationError("contribution amount must be greater than zero")
+
+        goal = self._connection.execute(
+            "SELECT id FROM savings_goals WHERE id = ?",
+            (goal_id,),
+        ).fetchone()
+        if goal is None:
+            raise PlannerValidationError(f"Unknown goal id: {goal_id}")
+
+        contribution_date = contributed_on or date.today()
+        self._connection.execute(
+            """
+            INSERT INTO goal_contributions (goal_id, amount, contributed_on)
+            VALUES (?, ?, ?)
+            """,
+            (goal_id, float(amount), contribution_date.isoformat()),
+        )
+        self._connection.commit()
+
+    def get_goal_drift_alerts(self, as_of: date | None = None) -> list[dict[str, Any]]:
+        anchor_date = as_of or date.today()
+        goals = self._connection.execute(
+            """
+            SELECT id, name, target_amount, target_date, monthly_contribution, created_on
+            FROM savings_goals
+            WHERE active = 1
+            ORDER BY id
+            """
+        ).fetchall()
+
+        alerts: list[dict[str, Any]] = []
+        for goal in goals:
+            created_on = date.fromisoformat(goal["created_on"])
+            target_date = date.fromisoformat(goal["target_date"])
+            if anchor_date <= created_on:
+                continue
+
+            total_days = max((target_date - created_on).days, 1)
+            elapsed_days = min(max((anchor_date - created_on).days, 0), total_days)
+
+            target_amount = float(goal["target_amount"])
+            monthly_contribution = float(goal["monthly_contribution"])
+
+            expected_linear = target_amount * (elapsed_days / total_days)
+            expected_monthly = monthly_contribution * (elapsed_days / 30.0)
+            expected_to_date = min(target_amount, max(expected_linear, expected_monthly))
+
+            contribution_row = self._connection.execute(
+                """
+                SELECT COALESCE(SUM(amount), 0) AS total
+                FROM goal_contributions
+                WHERE goal_id = ?
+                  AND contributed_on <= ?
+                """,
+                (goal["id"], anchor_date.isoformat()),
+            ).fetchone()
+            actual_to_date = float(contribution_row["total"])
+            deficit = expected_to_date - actual_to_date
+
+            if deficit <= 0:
+                continue
+
+            severity = "high" if deficit >= monthly_contribution else "medium"
+            alerts.append(
+                {
+                    "alert_type": "goal_drift",
+                    "goal_id": int(goal["id"]),
+                    "goal_name": goal["name"],
+                    "expected_to_date": round(expected_to_date, 2),
+                    "actual_to_date": round(actual_to_date, 2),
+                    "deficit": round(deficit, 2),
+                    "severity": severity,
+                    "reason": "saved amount is behind expected pace for target date",
+                    "next_step": "Increase monthly contribution or adjust goal timeline.",
+                }
+            )
+
+        return alerts
+
     def _store_transactions(self, account_id: int, transactions: list[TransactionRecord]) -> tuple[int, int]:
         imported_count = 0
         duplicates_skipped = 0
@@ -428,6 +656,39 @@ class FinancialPlannerService:
                 monthly_cap REAL NOT NULL,
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
+
+            CREATE TABLE IF NOT EXISTS alert_settings (
+                id INTEGER PRIMARY KEY CHECK(id = 1),
+                minimum_amount REAL NOT NULL,
+                sensitivity_factor REAL NOT NULL,
+                min_samples INTEGER NOT NULL,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS savings_goals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                target_amount REAL NOT NULL,
+                target_date TEXT NOT NULL,
+                monthly_contribution REAL NOT NULL,
+                created_on TEXT NOT NULL,
+                active INTEGER NOT NULL DEFAULT 1
+            );
+
+            CREATE TABLE IF NOT EXISTS goal_contributions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                goal_id INTEGER NOT NULL,
+                amount REAL NOT NULL,
+                contributed_on TEXT NOT NULL,
+                FOREIGN KEY(goal_id) REFERENCES savings_goals(id) ON DELETE CASCADE
+            );
+            """
+        )
+        self._connection.execute(
+            """
+            INSERT INTO alert_settings (id, minimum_amount, sensitivity_factor, min_samples)
+            VALUES (1, 100.0, 2.0, 3)
+            ON CONFLICT(id) DO NOTHING
             """
         )
         self._connection.commit()

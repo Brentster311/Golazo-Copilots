@@ -12,6 +12,11 @@ Local-first personal financial planning prototype focused on account ingestion, 
 
 ## Changelog
 
+### 0.3.0 - 2026-05-10
+- Added configurable unusual transaction detection with deterministic actionable alerts.
+- Added savings goal tracking with contribution recording and goal-drift alerts.
+- Added regression and feature tests covering alert and goal-drift behaviors.
+
 ### 0.1.1 - 2026-05-10
 - Added local encrypted account and transaction persistence.
 - Added fixture connector model for institution sync simulations.

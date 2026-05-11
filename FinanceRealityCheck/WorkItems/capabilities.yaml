@@ -19,7 +19,7 @@
 
 capabilities:
   - name: financial-sync-and-budget-baseline
-    description: "Local-first account sync, encrypted transaction persistence, assisted categorization, and monthly category-cap alerts"
+    description: "Local-first account sync, encrypted transaction persistence, assisted categorization, budget alerts, unusual transaction alerts, and goal drift alerts"
     key_files:
       - src/finance_planner/connectors.py
       - src/finance_planner/planner.py
@@ -32,4 +32,9 @@ capabilities:
       - "FinancialPlannerService.confirm_category(transaction_id, category) -> None"
       - "FinancialPlannerService.set_budget(category, monthly_cap) -> None"
       - "FinancialPlannerService.get_budget_alerts(year, month) -> list[dict]"
+      - "FinancialPlannerService.update_unusual_settings(minimum_amount, sensitivity_factor, min_samples=3) -> None"
+      - "FinancialPlannerService.get_unusual_transaction_alerts(days=90) -> list[dict]"
+      - "FinancialPlannerService.create_savings_goal(name, target_amount, target_date, monthly_contribution) -> int"
+      - "FinancialPlannerService.add_goal_contribution(goal_id, amount, contributed_on=None) -> None"
+      - "FinancialPlannerService.get_goal_drift_alerts(as_of=None) -> list[dict]"
     depends_on: []

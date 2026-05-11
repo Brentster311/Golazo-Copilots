@@ -162,3 +162,86 @@ def test_validation_errors_for_invalid_budget_and_unknown_transaction(service):
 
     with pytest.raises(PlannerValidationError):
         planner.confirm_category(99999, "Dining")
+
+
+def test_unusual_settings_persist_and_unusual_alerts_are_deterministic(service):
+    planner, _, fidelity = service
+    planner.link_account("Fidelity", "Fidelity Brokerage", "fid-unusual")
+
+    fidelity.set_transactions(
+        "fid-unusual",
+        [
+            _record("u-001", "Electronics Hub", 100.0, 30),
+            _record("u-002", "Electronics Hub", 110.0, 25),
+            _record("u-003", "Electronics Hub", 90.0, 20),
+            _record("u-004", "Electronics Hub", 120.0, 15),
+            _record("u-005", "Electronics Hub", 550.0, 1),
+        ],
+    )
+
+    planner.update_unusual_settings(minimum_amount=80.0, sensitivity_factor=1.0, min_samples=3)
+    settings = planner.get_unusual_settings()
+
+    assert settings["minimum_amount"] == 80.0, "Expected persisted minimum_amount to match latest configured value."
+    assert settings["sensitivity_factor"] == 1.0, "Expected persisted sensitivity_factor to match latest configured value."
+    assert settings["min_samples"] == 3, "Expected persisted min_samples to match latest configured value."
+
+    planner.run_sync(days=90)
+    first = planner.get_unusual_transaction_alerts(days=90)
+    second = planner.get_unusual_transaction_alerts(days=90)
+
+    assert first == second, "Expected deterministic unusual alert payload/order across repeated reads."
+    assert first, "Expected at least one unusual alert for clear outlier transaction."
+    alert = first[0]
+    assert alert["provider_transaction_id"] == "u-005", "Expected outlier transaction id to be flagged as unusual."
+    assert alert["severity"] in {"medium", "high"}, "Expected unusual alert to include severity classification."
+    assert "next_step" in alert, "Expected unusual alert to include actionable next_step field."
+
+
+def test_goal_creation_contributions_and_drift_alerts(service):
+    planner, _, _ = service
+
+    target_date = date.today() + timedelta(days=120)
+    goal_id = planner.create_savings_goal(
+        name="Emergency Fund",
+        target_amount=3000.0,
+        target_date=target_date,
+        monthly_contribution=150.0,
+    )
+
+    planner.add_goal_contribution(goal_id=goal_id, amount=50.0, contributed_on=date.today() - timedelta(days=40))
+
+    alerts = planner.get_goal_drift_alerts(as_of=date.today() + timedelta(days=45))
+    assert alerts, "Expected goal drift alert with deficit details for behind-schedule goal."
+
+    drift = alerts[0]
+    assert drift["goal_id"] == goal_id, "Expected drift alert to reference the created goal id."
+    assert drift["expected_to_date"] > drift["actual_to_date"], "Expected goal drift to show expected progress ahead of actual."
+    assert drift["deficit"] > 0, "Expected positive deficit for behind-schedule goal."
+    assert "next_step" in drift, "Expected goal drift alert to include actionable next_step field."
+
+
+def test_invalid_unusual_settings_and_goal_definitions_raise_validation_error(service):
+    planner, _, _ = service
+
+    with pytest.raises(PlannerValidationError):
+        planner.update_unusual_settings(minimum_amount=-1.0, sensitivity_factor=1.2, min_samples=3)
+
+    with pytest.raises(PlannerValidationError):
+        planner.update_unusual_settings(minimum_amount=50.0, sensitivity_factor=0.0, min_samples=3)
+
+    with pytest.raises(PlannerValidationError):
+        planner.create_savings_goal(
+            name="",
+            target_amount=500.0,
+            target_date=date.today() + timedelta(days=30),
+            monthly_contribution=50.0,
+        )
+
+    with pytest.raises(PlannerValidationError):
+        planner.create_savings_goal(
+            name="Vacation",
+            target_amount=500.0,
+            target_date=date.today() - timedelta(days=1),
+            monthly_contribution=50.0,
+        )

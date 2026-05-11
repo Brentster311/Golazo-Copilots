@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.0",
+  "work_item_id": "FRC-002",
+  "profile": "complete",
+  "current_phase": "completion",
+  "current_role": "builder",
+  "created_at": "2026-05-10T23:55:25.420116Z",
+  "updated_at": "2026-05-10T23:59:07.135015Z",
+  "role_history": [
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-05-10T23:55:25.420116Z",
+      "exited_at": "2026-05-10T23:55:45.799185Z"
+    },
+    {
+      "role": "program-manager",
+      "entered_at": "2026-05-10T23:55:45.799185Z",
+      "exited_at": "2026-05-10T23:56:04.012498Z"
+    },
+    {
+      "role": "domain-expert",
+      "entered_at": "2026-05-10T23:56:04.012498Z",
+      "exited_at": "2026-05-10T23:56:13.228733Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-05-10T23:56:13.228733Z",
+      "exited_at": "2026-05-10T23:56:31.761915Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-05-10T23:56:31.761915Z",
+      "exited_at": "2026-05-10T23:57:11.953181Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-05-10T23:57:11.953181Z",
+      "exited_at": "2026-05-10T23:58:40.463829Z"
+    },
+    {
+      "role": "refactor-expert",
+      "entered_at": "2026-05-10T23:58:40.463829Z",
+      "exited_at": "2026-05-10T23:58:53.558430Z"
+    },
+    {
+      "role": "documenter",
+      "entered_at": "2026-05-10T23:58:53.558430Z",
+      "exited_at": "2026-05-10T23:59:07.135015Z"
+    },
+    {
+      "role": "builder",
+      "entered_at": "2026-05-10T23:59:07.135015Z",
+      "exited_at": null
+    }
+  ],
+  "deviations": [],
+  "git_actions": [],
+  "closure_pending": false
+}
