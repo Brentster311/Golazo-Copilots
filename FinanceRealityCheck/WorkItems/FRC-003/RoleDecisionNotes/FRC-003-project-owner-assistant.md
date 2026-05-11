@@ -15,3 +15,8 @@ Focused on portfolio visibility and recommendation options only:
 
 ## Follow-on candidate
 - FRC-004 tax-aware thresholds and planning surfaces.
+
+## Closure validation
+- Verified acceptance criteria coverage through FRC-003 test additions and passing suite.
+- Verified build artifact generation for release version 0.4.0.
+- Confirmed user story status updated to IMPLEMENTED.

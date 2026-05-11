@@ -2,10 +2,10 @@
   "schema_version": "1.0",
   "work_item_id": "FRC-003",
   "profile": "complete",
-  "current_phase": "completion",
-  "current_role": "builder",
+  "current_phase": "closure",
+  "current_role": "project-owner-assistant",
   "created_at": "2026-05-11T00:01:19.177447Z",
-  "updated_at": "2026-05-11T00:08:50.935563Z",
+  "updated_at": "2026-05-11T00:09:33.935603Z",
   "role_history": [
     {
       "role": "project-owner-assistant",
@@ -50,10 +50,20 @@
     {
       "role": "builder",
       "entered_at": "2026-05-11T00:08:50.935563Z",
+      "exited_at": "2026-05-11T00:09:24.874229Z"
+    },
+    {
+      "role": "retrospective",
+      "entered_at": "2026-05-11T00:09:24.874229Z",
+      "exited_at": "2026-05-11T00:09:33.935603Z"
+    },
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-05-11T00:09:33.935603Z",
       "exited_at": null
     }
   ],
   "deviations": [],
   "git_actions": [],
-  "closure_pending": false
+  "closure_pending": true
 }
