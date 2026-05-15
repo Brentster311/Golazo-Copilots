@@ -2,7 +2,7 @@
 
 AC1: Express profile enforces 5-role sequence (POA → QA → Dev → Builder → Retro)
 AC2: Spike profile enforces 5-role sequence (POA → Domain-Expert → Architect → Dev → Retro)
-AC3: Complete profile behavior unchanged (all 10 roles)
+AC3: Complete profile includes planner + core workflow roles
 AC4: golazo_status reports correct role sequence for active profile
 AC5: All existing tests pass with zero regressions; new tests cover express and spike
 AC6: Backward transitions within a profile's role sequence work correctly
@@ -31,6 +31,7 @@ TEST_WORKITEMS_DIR = Path(__file__).parent / "test-workitems-profiles"
 TEST_WORKSPACE_ROOT = Path(__file__).parent
 
 ALL_ROLES = [
+    "planner",
     "project-owner-assistant", "program-manager", "domain-expert", "quality-assurance",
     "architect", "developer", "refactor-expert", "builder", "documenter", "retrospective"
 ]
@@ -210,17 +211,18 @@ class TestSpikeProfileSequence:
 
 
 class TestCompleteProfileUnchanged:
-    """AC3: Complete profile behavior is unchanged — all 10 roles."""
+    """AC3: Complete profile includes planner + the 10 core workflow roles."""
 
     def test_complete_role_order_matches_original(self):
-        """Complete profile uses the full ROLE_ORDER."""
-        assert PROFILE_ROLES["complete"] is ROLE_ORDER
+        """Complete profile prepends planner to ROLE_ORDER."""
+        assert PROFILE_ROLES["complete"] == ["planner", *ROLE_ORDER]
 
     def test_complete_forward_transitions_all_valid(self):
-        """All 10 sequential forward transitions are valid for complete."""
-        for i in range(len(ROLE_ORDER) - 1):
-            valid, err = validate_transition(ROLE_ORDER[i], ROLE_ORDER[i + 1], profile="complete")
-            assert valid is True, f"Should allow {ROLE_ORDER[i]} → {ROLE_ORDER[i+1]}"
+        """All sequential forward transitions are valid for complete."""
+        complete_roles = get_role_order_for_profile("complete")
+        for i in range(len(complete_roles) - 1):
+            valid, err = validate_transition(complete_roles[i], complete_roles[i + 1], profile="complete")
+            assert valid is True, f"Should allow {complete_roles[i]} → {complete_roles[i+1]}"
 
     def test_complete_no_skipping(self):
         """Skipping a role in complete profile is rejected."""
@@ -276,8 +278,8 @@ class TestStatusProfileAware:
         ]
 
     @pytest.mark.asyncio
-    async def test_complete_status_shows_10_roles(self):
-        """Status for complete work item still shows 10 roles."""
+    async def test_complete_status_shows_11_roles(self):
+        """Status for complete work item shows planner + 10 core roles."""
         await golazo_create_workitem(
             work_item_id="CMP-010", profile="complete", work_items_dir=TEST_WORKITEMS_DIR
         )
@@ -285,7 +287,7 @@ class TestStatusProfileAware:
             work_item_id="CMP-010", work_items_dir=TEST_WORKITEMS_DIR
         )
         assert result["active"] is True
-        assert result["role_progress"]["roles_total"] == 10
+        assert result["role_progress"]["roles_total"] == 11
 
 
 # ── AC6: Backward transitions within profile sequence ────────────────

@@ -31,6 +31,7 @@ _VERSION_PATTERN = re.compile(r'<!-- Last Updated in Golazo Copilot Version: ([\
 # Each entry: (deployed_rel_path, package_name, resource_filename)
 _DEPLOYED_TO_SOURCE: list[tuple[str, str, str]] = [
     (".github/agents/Golazo-Copilot.md", "golazo_copilot", "bootstrap-instructions.md"),
+    (".github/agents/golazo-copilot/roles/planner.md", "golazo_copilot.roles.defaults", "planner.md"),
     (".github/agents/golazo-copilot/roles/project-owner-assistant.md", "golazo_copilot.roles.defaults", "project-owner-assistant.md"),
     (".github/agents/golazo-copilot/roles/program-manager.md", "golazo_copilot.roles.defaults", "program-manager.md"),
     (".github/agents/golazo-copilot/roles/domain-expert.md", "golazo_copilot.roles.defaults", "domain-expert.md"),

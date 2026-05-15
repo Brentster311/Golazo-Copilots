@@ -20,6 +20,7 @@ TEST_WORKSPACE_ROOT = Path(__file__).parent
 
 # All roles that need empty role files for testing (no Required Outputs)
 ALL_ROLES = [
+    "planner",
     "project-owner-assistant", "program-manager", "domain-expert", "quality-assurance",
     "architect", "developer", "refactor-expert", "builder", "documenter", "retrospective"
 ]

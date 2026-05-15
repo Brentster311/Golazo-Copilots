@@ -1,0 +1,31 @@
+**Status**: IMPLEMENTED
+
+**User Story**
+- Title: Add tax-aware planning surface and threshold alerts
+- As a: single-user personal finance planner
+- I want: tax projection surfaces and configurable tax thresholds
+- So that: I can proactively adjust withholding and savings before year-end surprises
+- Out of scope:
+  - Tax filing automation
+  - Jurisdiction-specific tax law modeling
+  - Investment tax-lot optimization
+- Assumptions:
+  - Assumption (explicit): Desktop-first web app remains the interface.
+  - Assumption (explicit): Planner uses simplified tax-rate and threshold modeling, not full tax-prep logic.
+  - Assumption (explicit): User is non-technical and needs plain-language tax guidance.
+- Acceptance Criteria (bulleted, testable):
+  - User can save tax planning settings including marginal tax rate, annual tax budget threshold, and monthly withholding estimate.
+  - System returns a deterministic tax planning surface with YTD taxable income, projected annual tax, and configured thresholds.
+  - System returns threshold alerts when projected annual tax exceeds annual budget threshold.
+  - System returns withholding-gap alerts when projected annual tax exceeds projected annual withholding.
+  - Tax planning and alert outputs are deterministic across repeated reads when data is unchanged.
+- Non-functional requirements:
+  - Local deterministic calculations only.
+  - Tax projection calculations complete quickly for typical household transaction volumes.
+- Telemetry / metrics expected:
+  - Count of tax threshold alerts.
+  - Projected annual tax vs annual budget ratio.
+  - Estimated withholding gap amount.
+- Rollout / rollback notes:
+  - Rollout as additive planning feature with conservative language.
+  - Rollback by hiding tax surfaces while retaining stored tax settings.

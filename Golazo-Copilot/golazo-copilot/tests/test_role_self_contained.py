@@ -16,8 +16,9 @@ import yaml
 
 from golazo_copilot.core.output_validator import parse_required_outputs
 
-# All 10 role file names (excludes TechBestPractices.md)
+# All workflow role file names (excludes TechBestPractices.md)
 ROLE_FILES = [
+    "planner",
     "project-owner-assistant",
     "program-manager",
     "domain-expert",

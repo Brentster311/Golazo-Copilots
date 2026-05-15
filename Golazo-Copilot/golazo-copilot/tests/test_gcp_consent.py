@@ -19,6 +19,7 @@ TEST_CONSENT_WORKITEMS_DIR = TEST_WORKSPACE / "WorkItems"
 TEST_WORKSPACE_ROOT = Path(__file__).parent
 
 ALL_ROLES = [
+    "planner",
     "project-owner-assistant", "program-manager", "quality-assurance",
     "architect", "developer", "refactor-expert", "builder", "documenter", "retrospective"
 ]
