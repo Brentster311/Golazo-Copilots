@@ -9,7 +9,7 @@ from typing import Any
 
 from cryptography.fernet import Fernet
 
-from .connectors import ConnectorError, FixtureConnector, TransactionRecord
+from .connectors import ConnectorError, ConnectorProtocol, TransactionRecord
 
 
 class PlannerValidationError(ValueError):
@@ -21,7 +21,7 @@ class FinancialPlannerService:
         self,
         db_path: Path | str,
         key_path: Path | str,
-        connectors: dict[str, FixtureConnector],
+        connectors: dict[str, ConnectorProtocol],
     ) -> None:
         self._db_path = Path(db_path)
         self._key_path = Path(key_path)

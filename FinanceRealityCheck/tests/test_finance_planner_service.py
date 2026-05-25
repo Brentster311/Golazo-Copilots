@@ -4,7 +4,15 @@ from datetime import UTC, date, datetime, timedelta
 
 import pytest
 
-from finance_planner.connectors import FixtureConnector, TransactionRecord
+from finance_planner.connectors import (
+    DirectConnectorAuthError,
+    DirectConnectorConnectivityError,
+    DirectConnectorProviderError,
+    FidelityDirectConnector,
+    FirstTechDirectConnector,
+    FixtureConnector,
+    TransactionRecord,
+)
 from finance_planner.planner import FinancialPlannerService, PlannerValidationError
 
 
@@ -17,6 +25,53 @@ def _record(txn_id: str, merchant: str, amount: float, days_ago: int, direction:
         merchant=merchant,
         direction=direction,
     )
+
+
+class DirectProviderStub:
+    def __init__(
+        self,
+        auth_token: str,
+        transactions: list[TransactionRecord] | None = None,
+    ) -> None:
+        self.auth_token = auth_token
+        self.transactions = list(transactions or [])
+        self.authenticate_calls = 0
+        self.fetch_calls = 0
+
+    def authenticate(self, username: str, password: str) -> str:
+        self.authenticate_calls += 1
+        if not username.strip() or not password.strip():
+            raise DirectConnectorAuthError("username/password required")
+        return self.auth_token
+
+    def fetch_transactions(self, access_token: str, start_at: datetime) -> list[TransactionRecord]:
+        self.fetch_calls += 1
+        if not access_token.strip():
+            raise DirectConnectorAuthError("access token required")
+        return [record for record in self.transactions if record.posted_at >= start_at]
+
+
+class ErroringProviderStub:
+    def __init__(self, error: Exception) -> None:
+        self._error = error
+
+    def authenticate(self, username: str, password: str) -> str:
+        return "unused-auth-token"
+
+    def fetch_transactions(self, access_token: str, start_at: datetime) -> list[TransactionRecord]:
+        raise self._error
+
+
+class FlakyProviderStub(DirectProviderStub):
+    def __init__(self, auth_token: str, transactions: list[TransactionRecord], failures_before_success: int) -> None:
+        super().__init__(auth_token=auth_token, transactions=transactions)
+        self._failures_before_success = failures_before_success
+
+    def fetch_transactions(self, access_token: str, start_at: datetime) -> list[TransactionRecord]:
+        if self._failures_before_success > 0:
+            self._failures_before_success -= 1
+            raise DirectConnectorConnectivityError("temporary network timeout")
+        return super().fetch_transactions(access_token=access_token, start_at=start_at)
 
 
 @pytest.fixture
@@ -369,3 +424,150 @@ def test_invalid_tax_settings_raise_validation_error(service):
 
     with pytest.raises(PlannerValidationError):
         planner.update_tax_settings(marginal_tax_rate=0.25, annual_tax_budget=1000.0, monthly_withholding=0.0)
+
+
+def test_direct_connectors_authenticate_accounts_in_non_test_mode(tmp_path):
+    first_tech_provider = DirectProviderStub(auth_token="ft-live-token")
+    fidelity_provider = DirectProviderStub(auth_token="fid-live-token")
+
+    first_tech = FirstTechDirectConnector(provider=first_tech_provider, mode="live")
+    fidelity = FidelityDirectConnector(provider=fidelity_provider, mode="live")
+
+    first_tech_token = first_tech.authenticate_account(username="ft-user", password="ft-pass")
+    fidelity_token = fidelity.authenticate_account(username="fid-user", password="fid-pass")
+
+    assert first_tech_token == "ft-live-token", "Expected First Tech direct connector to return provider auth token."
+    assert fidelity_token == "fid-live-token", "Expected Fidelity direct connector to return provider auth token."
+    assert first_tech_provider.authenticate_calls == 1, "Expected First Tech provider authenticate path to be called exactly once."
+    assert fidelity_provider.authenticate_calls == 1, "Expected Fidelity provider authenticate path to be called exactly once."
+
+
+def test_run_sync_uses_direct_connector_path_for_90_day_window(tmp_path):
+    first_tech_provider = DirectProviderStub(
+        auth_token="ft-live-token",
+        transactions=[
+            _record("ft-live-001", "Coffee Hut", 9.50, 2),
+            _record("ft-live-older", "Old Merchant", 10.00, 120),
+        ],
+    )
+    fidelity_provider = DirectProviderStub(
+        auth_token="fid-live-token",
+        transactions=[
+            _record("fid-live-001", "Rent Payment", 1200.00, 5),
+            _record("fid-live-002", "Payroll Deposit", 3000.00, 4, direction="credit"),
+        ],
+    )
+
+    first_tech = FirstTechDirectConnector(provider=first_tech_provider, mode="live")
+    fidelity = FidelityDirectConnector(provider=fidelity_provider, mode="live")
+
+    planner = FinancialPlannerService(
+        db_path=tmp_path / "direct-planner.db",
+        key_path=tmp_path / "direct-planner.key",
+        connectors={
+            "First Tech Federal Credit Union": first_tech,
+            "Fidelity": fidelity,
+        },
+    )
+
+    planner.link_account(
+        "First Tech Federal Credit Union",
+        "First Tech Checking",
+        first_tech.authenticate_account("ft-user", "ft-pass"),
+    )
+    planner.link_account(
+        "Fidelity",
+        "Fidelity Brokerage",
+        fidelity.authenticate_account("fid-user", "fid-pass"),
+    )
+
+    report = planner.run_sync(days=90)
+
+    assert report["overall_status"] == "success", "Expected direct connector sync to succeed for both institutions."
+    assert first_tech_provider.fetch_calls == 1, "Expected direct First Tech provider fetch path to be used exactly once."
+    assert fidelity_provider.fetch_calls == 1, "Expected direct Fidelity provider fetch path to be used exactly once."
+
+    provider_ids = {item["provider_transaction_id"] for item in planner.list_transactions()}
+    assert "ft-live-001" in provider_ids, "Expected in-window First Tech transaction to be imported."
+    assert "fid-live-001" in provider_ids, "Expected Fidelity transaction to be imported."
+    assert "ft-live-older" not in provider_ids, "Expected older-than-window First Tech transaction to be excluded."
+
+
+@pytest.mark.parametrize(
+    ("raised_error", "expected_category", "expected_phrase"),
+    [
+        (
+            DirectConnectorConnectivityError("network timeout"),
+            "connectivity_error",
+            "retry",
+        ),
+        (
+            DirectConnectorAuthError("credentials rejected"),
+            "auth_error",
+            "re-link",
+        ),
+        (
+            DirectConnectorProviderError("invalid payload"),
+            "provider_error",
+            "retry",
+        ),
+    ],
+)
+def test_direct_connector_errors_are_classified_with_actionable_guidance(
+    tmp_path,
+    raised_error,
+    expected_category,
+    expected_phrase,
+):
+    first_tech = FirstTechDirectConnector(provider=ErroringProviderStub(raised_error), mode="live")
+    planner = FinancialPlannerService(
+        db_path=tmp_path / "direct-errors.db",
+        key_path=tmp_path / "direct-errors.key",
+        connectors={"First Tech Federal Credit Union": first_tech},
+    )
+    planner.link_account(
+        "First Tech Federal Credit Union",
+        "First Tech Checking",
+        "ft-live-token",
+    )
+
+    report = planner.run_sync(days=90)
+    failed = report["account_results"][0]
+
+    assert failed["status"] == "failed", "Expected direct connector failure to be surfaced in run_sync results."
+    assert failed["error_category"] == expected_category, "Expected direct connector error category normalization."
+    assert expected_phrase in failed["actionable_message"].lower(), "Expected actionable retry guidance in normalized error message."
+
+
+def test_direct_connector_retry_after_transient_failure_is_duplicate_safe(tmp_path):
+    provider = FlakyProviderStub(
+        auth_token="ft-live-token",
+        transactions=[
+            _record("ft-live-retry-001", "Coffee Hut", 12.25, 1),
+            _record("ft-live-retry-002", "Grocery Mart", 80.00, 2),
+        ],
+        failures_before_success=1,
+    )
+    first_tech = FirstTechDirectConnector(provider=provider, mode="live")
+
+    planner = FinancialPlannerService(
+        db_path=tmp_path / "direct-retry.db",
+        key_path=tmp_path / "direct-retry.key",
+        connectors={"First Tech Federal Credit Union": first_tech},
+    )
+    planner.link_account(
+        "First Tech Federal Credit Union",
+        "First Tech Checking",
+        "ft-live-token",
+    )
+
+    first_report = planner.run_sync(days=90)
+    assert first_report["overall_status"] == "failed", "Expected transient direct connector outage to fail first sync."
+
+    second_report = planner.run_sync(days=90)
+    assert second_report["overall_status"] == "success", "Expected second sync to succeed after transient failure clears."
+    after_recovery_count = len(planner.list_transactions())
+
+    third_report = planner.run_sync(days=90)
+    assert third_report["duplicates_skipped"] > 0, "Expected duplicate detection on repeated direct-connector sync runs."
+    assert len(planner.list_transactions()) == after_recovery_count, "Expected duplicate-safe storage on repeated direct sync runs."

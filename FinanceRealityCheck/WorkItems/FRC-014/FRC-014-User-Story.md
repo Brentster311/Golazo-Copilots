@@ -1,0 +1,32 @@
+**Status**: BACKLOG
+
+**User Story**
+- Title: Build required-vs-optional spend classification and realistic monthly spend baseline
+- As a: non-technical personal finance user
+- I want: transactions classified as required, optional, excluded, or uncertain with a realistic monthly baseline calculated from my real history
+- So that: I can understand true monthly obligations and avoid underestimating what I actually spend
+- Out of scope:
+  - Quarterly and retirement projection surfaces
+  - Investment allocation and recommendation enhancements
+  - Cloud-hosted ML inference or third-party scoring services
+- Assumptions:
+  - Assumption (explicit): Interface type is API-backed workflow consumed by local UI.
+  - Assumption (explicit): Target platform remains local desktop use (Windows-first, cross-platform-compatible logic).
+  - Assumption (explicit): Data persistence remains local encrypted storage.
+  - Assumption (explicit): Initial classification is deterministic rule-based logic with user overrides.
+- Acceptance Criteria (bulleted, testable):
+  - For eligible debit transactions, the system stores spend classification fields: `spend_type` (`required|optional|excluded|uncertain`), `confidence`, and `reason_code`.
+  - User can override classification at transaction and merchant levels; overrides persist locally and are applied in subsequent reads.
+  - System computes recurring-charge rollups by month and spend type using transparent recurrence rules (for example, appears in >=2 of last 4 months with configurable amount tolerance).
+  - Planner exposes deterministic spend-profile output for a selected month, including required total, optional total, excluded total, recurring required total, recurring optional total, and baseline range (`p50`, `p80`) derived from rolling history.
+  - Transactions tagged as transfers, debt payments, or one-off events are excluded from baseline and recurring calculations, and this exclusion is reflected in output fields.
+- Non-functional requirements:
+  - End-to-end spend-profile computation remains local-only and deterministic.
+  - Spend-profile read latency remains practical for 10,000 stored transactions.
+- Telemetry / metrics expected:
+  - Count of user classification overrides by month.
+  - Ratio of uncertain-classification transactions over time.
+  - Baseline volatility metric (difference between rolling `p50` and `p80`).
+- Rollout / rollback notes:
+  - Rollout as additive spend-intelligence feature over existing planner contracts.
+  - Rollback by disabling spend-classification reads while preserving stored override data.

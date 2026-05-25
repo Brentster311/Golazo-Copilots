@@ -1,0 +1,32 @@
+**Status**: BACKLOG
+
+**User Story**
+- Title: Add unsafe spending habit risk alerts and month-end guardrails
+- As a: non-technical personal finance user
+- I want: proactive warnings when my spending pace becomes unsafe relative to my baseline and cash capacity
+- So that: I can correct behavior before month-end and avoid avoidable financial stress
+- Out of scope:
+  - Fraud dispute workflows with institutions
+  - Tax filing calculations and filing guidance
+  - Investment allocation and rebalancing recommendations
+- Assumptions:
+  - Assumption (explicit): Interface type is API-backed alerts consumed by local UI.
+  - Assumption (explicit): Target platform remains local desktop use.
+  - Assumption (explicit): Data persistence remains local encrypted storage.
+  - Assumption (explicit): Risk model is deterministic and rule-based with user-configurable thresholds.
+- Acceptance Criteria (bulleted, testable):
+  - System computes a deterministic spending-risk score and alert level (`green|yellow|red`) using spend pace vs baseline, optional-spend share, and cash-buffer runway inputs.
+  - User can configure and persist threshold settings for yellow/red alert triggers and optional-spend sensitivity.
+  - Planner returns spending-safety alerts with actionable payload fields including alert level, driver reasons, projected month-end spend, projected overrun amount, and recommended next action.
+  - Alert logic honors exclusions and spend-classification overrides so known transfers, debt payments, and one-off events do not trigger unsafe alerts.
+  - System raises elevated habit-risk alert when unsafe conditions persist across configurable consecutive months.
+- Non-functional requirements:
+  - Alert computation remains local-only and deterministic.
+  - Alert evaluation runtime remains practical for daily checks on local datasets.
+- Telemetry / metrics expected:
+  - Count of yellow/red alerts by month.
+  - Projected month-end overrun trend.
+  - Consecutive unsafe-month streak count.
+- Rollout / rollback notes:
+  - Rollout as additive warning capability over spend-profile outputs.
+  - Rollback by disabling risk-alert surfaces while keeping historical alert records.

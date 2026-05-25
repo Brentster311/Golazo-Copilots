@@ -1,0 +1,31 @@
+**Status**: IMPLEMENTED
+
+**User Story**
+- Title: Add runnable local web API entrypoint for Finance Planner
+- As a: non-technical end user running on desktop Windows
+- I want: a single command that starts a local HTTP API for the planner service
+- So that: I can run the application reliably and integrate a UI against stable endpoints
+- Out of scope:
+  - React UI implementation
+  - Direct OFX/API institution connectors
+  - Cloud deployment and remote hosting
+- Assumptions:
+  - Assumption (explicit): Interface type is web API served locally.
+  - Assumption (explicit): Target platform is desktop Windows first, cross-platform-friendly command behavior.
+  - Assumption (explicit): Data persistence remains local encrypted files.
+  - Assumption (explicit): User type is non-technical end user; startup and health checks must be simple.
+- Acceptance Criteria (bulleted, testable):
+  - Running `python -m finance_planner.api --host 127.0.0.1 --port 8000` starts the application without traceback.
+  - `GET /health` returns HTTP 200 with deterministic JSON including `status: "ok"` and package version.
+  - `GET /planner/summary` returns HTTP 200 with deterministic JSON containing current capabilities (budget alerts, unusual alerts, goals, allocation, tax thresholds).
+  - `README.md` includes a runnable start command and quick verification steps for health endpoint.
+  - Automated tests cover startup and both endpoints with deterministic assertions.
+- Non-functional requirements:
+  - Startup under 3 seconds on local dev machine.
+  - No network dependency required for app startup.
+- Telemetry / metrics expected:
+  - Placeholder server startup timestamp and configured host/port in logs.
+  - Health endpoint hit count exposed in process memory during runtime.
+- Rollout / rollback notes:
+  - Rollout as additive API layer over existing planner service.
+  - Rollback by disabling API module while preserving core service package.

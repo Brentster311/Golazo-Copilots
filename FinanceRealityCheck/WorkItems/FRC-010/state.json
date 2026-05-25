@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "work_item_id": "FRC-010",
+  "profile": "complete",
+  "current_phase": "definition",
+  "current_role": "project-owner-assistant",
+  "created_at": "2026-05-11T23:42:04.041301Z",
+  "updated_at": "2026-05-11T23:42:04.041301Z",
+  "role_history": [
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-05-11T23:42:04.041301Z",
+      "exited_at": null
+    }
+  ],
+  "deviations": [],
+  "git_actions": [],
+  "closure_pending": false
+}

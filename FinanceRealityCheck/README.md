@@ -10,6 +10,39 @@ Local-first personal financial planning prototype focused on account ingestion, 
 3. Run tests:
    - .\.venv\Scripts\python -m pytest --cov=finance_planner --cov-report=term-missing
 
+## Run the local API app
+
+1. Start the server:
+   - .\.venv\Scripts\python -m finance_planner.api --host 127.0.0.1 --port 8000
+2. Verify health in a second terminal:
+   - Invoke-RestMethod http://127.0.0.1:8000/health
+3. Verify planner summary:
+   - Invoke-RestMethod http://127.0.0.1:8000/planner/summary
+
+## Run the local UI shell (FRC-006)
+
+1. Open a second terminal and install frontend dependencies once:
+   - Set-Location frontend
+   - npm install
+2. Start the frontend dev server:
+   - npm run dev -- --host 127.0.0.1 --port 5173
+3. Open the UI at:
+   - http://127.0.0.1:5173
+4. Verify deterministic UI contracts:
+   - Health view shows status/version from `/health`
+   - Planner Summary view shows capability list from `/planner/summary`
+5. Run frontend automated tests:
+   - npm run test
+
+## Direct connector integration (FRC-007)
+
+- Direct connector classes are available in `finance_planner.connectors`:
+   - `FirstTechDirectConnector`
+   - `FidelityDirectConnector`
+- Direct connectors are intentionally disabled in `mode="test"`.
+- Use non-test mode (for example `mode="live"`) to enable provider-backed authentication and sync fetches.
+- `run_sync(days=90)` continues to enforce the 90-day ingestion window and duplicate-safe persistence behavior.
+
 ## Changelog
 
 ### 0.5.0 - 2026-05-11
