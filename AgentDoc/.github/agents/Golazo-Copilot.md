@@ -113,7 +113,7 @@ golazo_transition(work_item_id="<id>", role="<next-role>")
 
 **Valid roles in order:** project-owner-assistant → program-manager → domain-expert → quality-assurance → architect → developer → refactor-expert → documenter → builder → retrospective → project-owner-assistant (closure)
 
-> **POA always closes:** After retrospective, **all profiles** transition back to `project-owner-assistant` for formal closure (acceptance validation, final commit, closure.md). `complete`, `express`, and `spike` all end with POA closure.
+> **Closure re-entry (complete profile only):** After retrospective, the workflow transitions back to `project-owner-assistant` for formal closure (acceptance validation, final commit, closure.md). In `express` and `spike` profiles the workflow ends at retrospective.
 
 ---
 

@@ -98,49 +98,6 @@ df = handler.GetDataFrameFromKustoQuery(
 
 ---
 
-### Kusto PickleStore Caching
-when caching kusto queries is a feature of the code, 
-**DO NOT** implement custom pickle/file caching around Kusto queries.
-
-**Instead**, use the built-in `PickleStoreFactory` from `accia-datacollection` and pass it to `KustoHandler` via the `pickle_store` parameter. Control TTL per-query via `CacheExpiryInMin`.
-
-```python
-# ❌ Wrong - Custom caching logic
-import pickle
-cache_file = f"cache/{query_hash}.pkl"
-if os.path.exists(cache_file) and not expired(cache_file):
-    df = pickle.load(open(cache_file, "rb"))
-else:
-    df = handler.GetDataFrameFromKustoQuery(Cluster, Database, Query)
-    pickle.dump(df, open(cache_file, "wb"))
-
-# ✅ Correct - Use KustoHandler's built-in PickleStore
-from accia.datacollection import KustoHandler, PickleStoreFactory, PickleStoreType
-
-store = PickleStoreFactory(PickleStoreType.Local, {"path": "./cache"})
-
-handler = KustoHandler(
-    AlternateAADCredentialsList=[
-        AzureCliCredential(),
-        ManagedIdentityCredential()
-    ],
-    UseDefaultCredentials=False,
-    pickle_store=store
-)
-
-# CacheExpiryInMin controls TTL; 0 = bypass cache entirely
-df = handler.GetDataFrameFromKustoQuery(
-    Cluster="https://your-cluster.kusto.windows.net",
-    Database="your_database",
-    Query="your_query | take 100",
-    CacheExpiryInMin=60
-)
-```
-
-Reason: KustoHandler internally hashes cluster+database+query to produce a cache key and delegates storage to the PickleStore. This eliminates custom cache management, ensures cache key isolation across different queries, and respects TTL consistently. Use PickleStoreType.Local for local filesystem or PickleStoreType.Blob for Azure Blob Storage.
-
----
-
 ### Code Coverage with pytest-cov
 **DO NOT** run tests without measuring code coverage when working in Python.
 

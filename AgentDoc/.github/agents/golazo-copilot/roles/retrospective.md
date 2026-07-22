@@ -66,8 +66,8 @@ This role is triggered when:
 - Create a new work item for implementing process changes
 
 ## Transition Guidance
-- **All profiles:** After completing retrospective, transition to `project-owner-assistant` for formal closure. Use `golazo_transition(role="project-owner-assistant")`.
-- **POA always closes:** `complete`, `express`, and `spike` all end with Project Owner Assistant closure.
+- **Complete profile:** After completing retrospective, transition to `project-owner-assistant` for formal closure. Use `golazo_transition(role="project-owner-assistant")`.
+- **Express / Spike profiles:** The workflow ends here. No further transition is required.
 
 ## Success criteria
 - Friction/failures are documented

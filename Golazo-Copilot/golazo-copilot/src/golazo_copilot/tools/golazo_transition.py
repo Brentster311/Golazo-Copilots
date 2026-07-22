@@ -215,10 +215,9 @@ async def golazo_transition(
     state.current_phase = get_phase_for_role(role)
     state.updated_at = now
     
-    # GCP-0053: Set closure_pending when retro→POA in complete profile
+    # GCP-0053/GCP-0071: Set closure_pending when retro→POA in any profile.
     if (
-        state.profile == "complete"
-        and current_role == "retrospective"
+        current_role == "retrospective"
         and role == "project-owner-assistant"
     ):
         state.closure_pending = True

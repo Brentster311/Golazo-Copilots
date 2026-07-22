@@ -120,6 +120,12 @@ class TestExpressProfileSequence:
             valid, err = validate_transition("project-owner-assistant", skipped_role, profile="express")
             assert valid is False, f"Should reject transition to {skipped_role}"
 
+    def test_express_allows_retro_to_poa_for_closure(self):
+        """Express profile may re-enter POA after retrospective for closure."""
+        valid, err = validate_transition("retrospective", "project-owner-assistant", profile="express")
+        assert valid is True
+        assert err is None
+
     @pytest.mark.asyncio
     async def test_express_full_traversal(self):
         """Can traverse all 5 express roles end-to-end."""
@@ -186,6 +192,12 @@ class TestSpikeProfileSequence:
         for skipped_role in skipped:
             valid, err = validate_transition("project-owner-assistant", skipped_role, profile="spike")
             assert valid is False, f"Should reject transition to {skipped_role}"
+
+    def test_spike_allows_retro_to_poa_for_closure(self):
+        """Spike profile may re-enter POA after retrospective for closure."""
+        valid, err = validate_transition("retrospective", "project-owner-assistant", profile="spike")
+        assert valid is True
+        assert err is None
 
     @pytest.mark.asyncio
     async def test_spike_full_traversal(self):
