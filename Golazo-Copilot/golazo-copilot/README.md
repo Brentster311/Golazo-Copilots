@@ -9,7 +9,7 @@ Golazo is a structured development methodology that ensures high-quality softwar
 ## Features
 
 - **Persistent state tracking** – Workflow progress is saved to `state.json` files, surviving session restarts
-- **Automated role transitions** – Enforce the correct sequence by profile (complete includes Domain Expert and closure re-entry)
+- **Automated role transitions** – Enforce the correct sequence by profile, with Project Owner Assistant always performing final closure
 - **Role-based output validation** – Each role defines required outputs (files, directories) that are automatically validated on transition
 - **Multi-session support** – Switch between work items while preserving context
 - **Workflow profiles** – Choose `complete`, `express`, or `spike` modes based on task complexity
@@ -40,7 +40,7 @@ When work reaches the **Developer** role, the role instructions require creating
 `git checkout -b <useralias>/<workitem-id>`
 This branch format requirement is documented in the default Developer role file and validated by repository tests.
 
-For the `complete` profile, retrospective transitions to Project Owner Assistant again for formal closure.
+For all profiles, retrospective transitions to Project Owner Assistant again for formal closure.
 
 Transitions are validated—you cannot skip roles or jump directly to Developer without completing earlier phases. Backward transitions to any prior role are always allowed.
 
@@ -73,9 +73,9 @@ Choose the right level of process for the task:
 
 | Profile | Roles | Use Case |
 |---------|-------|----------|
-| **Complete** | Full 10-role workflow + closure re-entry | Production features, complex changes |
-| **Express** | Streamlined subset of roles | Small bug fixes, minor enhancements |
-| **Spike** | Minimal roles | Prototypes, research, proof-of-concept |
+| **Complete** | Full 10-role workflow + POA closure | Production features, complex changes |
+| **Express** | Streamlined subset of roles + POA closure | Small bug fixes, minor enhancements |
+| **Spike** | Minimal roles + POA closure | Prototypes, research, proof-of-concept |
 
 All profiles use the same output validation mechanism—role files define what's required, and the system enforces it on transition.
 
@@ -390,6 +390,11 @@ Then reload VS Code and re-bootstrap your workspace to pick up the new version:
 MIT
 
 ## Changelog (By Version)
+
+### v5.0.2
+
+- Corrected workflow semantics so Project Owner Assistant always performs formal closure after retrospective for `complete`, `express`, and `spike` profiles.
+- Updated canonical bootstrap, retrospective, POA, and README guidance to remove the incorrect claim that express and spike end at retrospective.
 
 ### v5.0.1
 

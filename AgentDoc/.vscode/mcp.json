@@ -1,0 +1,19 @@
+{
+  "servers": {
+    "ms-internal-browser": {
+      "type": "stdio",
+      "command": "C:\\Users\\brentj\\AppData\\Local\\Python\\pythoncore-3.14-64\\Scripts\\uv.exe",
+      "args": [
+        "--directory",
+        "Q:\\src\\microsoft-internal-browser-mcp",
+        "run",
+        "server.py"
+      ]
+    },
+    "golazo-copilot": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "golazo_copilot.server"]
+    }
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "schema_version": "1.0",
+  "work_item_id": "AD-001",
+  "profile": "express",
+  "current_phase": "completion",
+  "current_role": "retrospective",
+  "created_at": "2026-04-27T21:53:26.479588Z",
+  "updated_at": "2026-04-27T21:58:50.785390Z",
+  "role_history": [
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-04-27T21:53:26.479588Z",
+      "exited_at": "2026-04-27T21:55:53.000394Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-04-27T21:55:53.000394Z",
+      "exited_at": "2026-04-27T21:56:15.858408Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-04-27T21:56:15.858408Z",
+      "exited_at": "2026-04-27T21:58:39.964412Z"
+    },
+    {
+      "role": "builder",
+      "entered_at": "2026-04-27T21:58:39.964412Z",
+      "exited_at": "2026-04-27T21:58:50.785390Z"
+    },
+    {
+      "role": "retrospective",
+      "entered_at": "2026-04-27T21:58:50.785390Z",
+      "exited_at": null
+    }
+  ],
+  "deviations": [
+    {
+      "id": "dev-001",
+      "action": "skip_role",
+      "reason": "PO authorized bypassing intermediate roles to accelerate document-only deliverable; only PO role is mandatory",
+      "role": "project-owner-assistant",
+      "timestamp": "2026-04-27T21:55:49.299792Z",
+      "consumed": false,
+      "consumed_at": null
+    },
+    {
+      "id": "dev-002",
+      "action": "skip_outputs",
+      "reason": "Document-only deliverable; QA design review and test cases not applicable. PO authorized bypassing intermediate roles.",
+      "role": "quality-assurance",
+      "timestamp": "2026-04-27T21:56:11.524707Z",
+      "consumed": true,
+      "consumed_at": "2026-04-27T21:56:15.856391Z"
+    }
+  ],
+  "git_actions": [],
+  "closure_pending": false
+}
