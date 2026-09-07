@@ -1,14 +1,19 @@
 capabilities:
   - name: workflow-orchestration
-    description: "Enforces profile-specific role sequences, output gates, and role context for Golazo work items"
+    description: "Creates and initializes work items, then enforces profile-specific role sequences, output gates, and role context"
     key_files:
       - golazo-copilot/src/golazo_copilot/core/transitions.py
       - golazo-copilot/src/golazo_copilot/core/output_validator.py
       - golazo-copilot/src/golazo_copilot/tools/golazo_transition.py
       - golazo-copilot/src/golazo_copilot/tools/golazo_role_context.py
+      - golazo-copilot/src/golazo_copilot/tools/golazo_create_workitem.py
+      - golazo-copilot/src/golazo_copilot/bootstrap-instructions.md
       - golazo-copilot/tests/test_gcp_transition.py
       - golazo-copilot/tests/test_gcp055_profile_roles.py
+      - golazo-copilot/tests/test_gcp0079_planner_offer.py
     contracts:
+      - "golazo_create_workitem(work_item_id, profile, initial_role, workspace_path) -> dict"
+      - "Planner may initialize only the first Complete-profile work item; POA remains the default"
       - "golazo_transition(work_item_id, role, force, workspace_path) -> dict"
       - "golazo_role_context(work_item_id, workspace_path) -> dict"
       - "Profiles: complete, express, spike"

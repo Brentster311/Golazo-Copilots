@@ -36,6 +36,12 @@ def get_tool_definitions() -> list[Tool]:
                         "default": "complete",
                         "description": "Workflow profile determining which gates are enforced"
                     },
+                    "initial_role": {
+                        "type": "string",
+                        "enum": ["project-owner-assistant", "planner"],
+                        "default": "project-owner-assistant",
+                        "description": "Initial role. Planner is available only for the first Complete work item"
+                    },
                     "workspace_path": {
                         "type": "string",
                         "description": "Workspace root path containing the WorkItems folder (required)"

@@ -181,7 +181,10 @@ async def test_legacy_dispatch_tool_branches(monkeypatch, tmp_path):
     agents.mkdir(parents=True)
     (agents / "Golazo-Copilot.md").write_text("# ok", encoding="utf-8")
 
-    async def fake_create_workitem(**_kwargs):
+    create_arguments = {}
+
+    async def fake_create_workitem(**kwargs):
+        create_arguments.update(kwargs)
         return {
             "success": True,
             "work_item_id": "GCP-1",
@@ -243,9 +246,10 @@ async def test_legacy_dispatch_tool_branches(monkeypatch, tmp_path):
     monkeypatch.setitem(ns, "golazo_role_context", fake_role_context)
     monkeypatch.setitem(ns, "golazo_git_propose", fake_git_propose)
 
-    common = {"workspace_path": str(workspace), "work_item_id": "GCP-1"}
+    common = {"workspace_path": str(workspace), "work_item_id": "GCP-1", "initial_role": "planner"}
 
     assert "created" in (await dispatch("golazo_create_workitem", common))[0].text.lower()
+    assert create_arguments["initial_role"] == "planner"
     assert "Transitioned" in (await dispatch("golazo_transition", {**common, "role": "program-manager"}))[0].text
     assert "Golazo Copilot" in (await dispatch("golazo_status", {"workspace_path": str(workspace)}))[0].text
     assert "none" in (await dispatch("golazo_status", common))[0].text

@@ -28,6 +28,7 @@ def _ensure_capabilities_registry(workspace_root: Path) -> None:
 async def golazo_create_workitem(
     work_item_id: str,
     profile: str = DEFAULT_PROFILE,
+    initial_role: str = "project-owner-assistant",
     work_items_dir: Path = DEFAULT_WORKITEMS_DIR,
     project_root: Path | None = None,
 ) -> dict:
@@ -37,6 +38,7 @@ async def golazo_create_workitem(
     Args:
         work_item_id: Unique identifier for the work item
         profile: Workflow profile ("complete", "express", "spike")
+        initial_role: Initial role ("project-owner-assistant" or "planner")
         work_items_dir: Directory for work items (default: WorkItems)
         project_root: Project root for local role overrides
     
@@ -47,6 +49,33 @@ async def golazo_create_workitem(
     valid, error = validate_work_item_id(work_item_id)
     if not valid:
         return {"success": False, "error": error}
+
+    valid_initial_roles = {"project-owner-assistant", "planner"}
+    if initial_role not in valid_initial_roles:
+        return {
+            "success": False,
+            "error": f"Invalid initial_role '{initial_role}'. Must be one of: {sorted(valid_initial_roles)}",
+        }
+
+    if initial_role == "planner":
+        if profile != "complete":
+            return {
+                "success": False,
+                "error": "Planner can only be the initial role for the complete profile.",
+            }
+        existing_states = (
+            any(
+                child.is_dir() and (child / "state.json").is_file()
+                for child in work_items_dir.iterdir()
+            )
+            if work_items_dir.is_dir()
+            else False
+        )
+        if existing_states:
+            return {
+                "success": False,
+                "error": "Planner can only be the initial role for the first work item in a workspace.",
+            }
     
     # Validate profile
     valid, error = validate_profile(profile)
@@ -57,7 +86,10 @@ async def golazo_create_workitem(
     if work_item_exists(work_item_id, work_items_dir):
         return {
             "success": False,
-            "error": f"Work item '{work_item_id}' already exists. Use golazo_switch to resume.",
+            "error": (
+                f"Work item '{work_item_id}' already exists. Resume it by passing its "
+                "work_item_id to golazo_status or golazo_role_context."
+            ),
         }
 
     workspace_root = Path(project_root) if project_root is not None else Path(work_items_dir).parent
@@ -70,7 +102,7 @@ async def golazo_create_workitem(
         }
     
     # Create initial state
-    state = create_initial_state(work_item_id, profile)  # type: ignore
+    state = create_initial_state(work_item_id, profile, initial_role)  # type: ignore
     
     # Save state to file
     try:

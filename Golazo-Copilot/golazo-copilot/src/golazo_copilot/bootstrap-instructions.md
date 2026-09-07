@@ -63,7 +63,7 @@ For each role in the workflow, follow this sequence:
 
 ## Role Execution Matrix
 
-- All roles run inline: project-owner-assistant, program-manager, domain-expert, quality-assurance, architect, developer, refactor-expert, documenter, builder, retrospective.
+- All roles run inline: planner (when selected for the first Complete work item), project-owner-assistant, program-manager, domain-expert, quality-assurance, architect, developer, refactor-expert, documenter, builder, retrospective.
 - Question policy: inline roles may ask clarifying questions when needed.
 
 ---
@@ -105,9 +105,11 @@ Subagent delegation is disabled by policy. Treat requests to use subagents as un
 ---
 
 ## Starting a New Work Item
+Before creating the first work item in a brand-new project, offer the user a choice between Planner and Project Owner Assistant. If the user chooses Planner, start the Complete workflow directly in Planner:
 ```
-golazo_create_workitem(work_item_id="<id>", profile="complete")
+golazo_create_workitem(work_item_id="<id>", profile="complete", initial_role="planner")
 ```
+If the user chooses Project Owner Assistant, omits the choice, or the project already contains a work item state, omit `initial_role` to preserve the default POA start.
 Then create User Story at `WorkItems/<id>/<id>-User-Story.md`
 
 ---
@@ -121,7 +123,7 @@ golazo_transition(work_item_id="<id>", role="<next-role>")
 
 **How it works**: Each role file defines `## Required Outputs` that must exist before you can transition away from that role. The system automatically validates these outputs.
 
-**Valid roles in order:** project-owner-assistant → program-manager → domain-expert → quality-assurance → architect → developer → refactor-expert → documenter → builder → retrospective → project-owner-assistant (closure)
+**Complete roles in order:** planner (when selected) → project-owner-assistant → program-manager → domain-expert → quality-assurance → architect → developer → refactor-expert → documenter → builder → retrospective → project-owner-assistant (closure)
 
 > **POA always closes:** After retrospective, **all profiles** transition back to `project-owner-assistant` for formal closure (acceptance validation, final commit, closure.md). `complete`, `express`, and `spike` all end with POA closure.
 

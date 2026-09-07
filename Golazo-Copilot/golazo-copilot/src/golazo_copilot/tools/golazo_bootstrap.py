@@ -77,9 +77,11 @@ This workspace uses Golazo Copilot MCP server for workflow management.
 3. Follow the role instructions returned
 
 ## Starting a New Work Item
+Before creating the first work item in a brand-new project, offer Planner or Project Owner Assistant. To start in Planner:
 ```
-golazo_create_workitem(work_item_id="<id>", profile="complete")
+golazo_create_workitem(work_item_id="<id>", profile="complete", initial_role="planner")
 ```
+Otherwise omit `initial_role` to start in Project Owner Assistant. Planner is available only for the first Complete work item.
 
 ## Role Transitions
 ```

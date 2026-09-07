@@ -10,7 +10,11 @@ Profile = Literal["complete", "express", "spike"]
 VALID_PROFILES = {"complete", "express", "spike"}
 
 
-def create_initial_state(work_item_id: str, profile: Profile) -> WorkItemState:
+def create_initial_state(
+    work_item_id: str,
+    profile: Profile,
+    initial_role: str = "project-owner-assistant",
+) -> WorkItemState:
     """Create initial state for a new work item."""
     now = datetime.now(timezone.utc)
     
@@ -19,12 +23,12 @@ def create_initial_state(work_item_id: str, profile: Profile) -> WorkItemState:
         work_item_id=work_item_id,
         profile=profile,
         current_phase="definition",
-        current_role="project-owner-assistant",
+        current_role=initial_role,
         created_at=now,
         updated_at=now,
         role_history=[
             RoleHistoryEntry(
-                role="project-owner-assistant",
+                role=initial_role,
                 entered_at=now,
                 exited_at=None,
             )

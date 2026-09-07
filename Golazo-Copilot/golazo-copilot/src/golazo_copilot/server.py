@@ -677,6 +677,7 @@ async def _dispatch_tool(name: str, arguments: dict) -> list[TextContent]:
         result = await golazo_create_workitem(
             work_item_id=arguments["work_item_id"],
             profile=arguments.get("profile", "complete"),
+            initial_role=arguments.get("initial_role", "project-owner-assistant"),
             work_items_dir=work_items_dir
         )
         return [TextContent(type="text", text=format_create_workitem_result(result))]

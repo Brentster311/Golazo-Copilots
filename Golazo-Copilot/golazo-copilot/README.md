@@ -33,7 +33,7 @@ The Golazo workflow enforces a structured progression through roles:
 10. **Builder** – Own release metadata, verify builds, commit, and push
 11. **Retrospective** – Review what worked and what didn't
 
-New work items initialize at **Project Owner Assistant**. In the Complete profile, transition backward to Planner when the optional planning pass is needed, then proceed to Project Owner Assistant.
+New work items initialize at **Project Owner Assistant** by default. Before the first work item in a brand-new project, the orchestrator offers the optional **Planner** pass. Accepting initializes that Complete-profile item directly in Planner; declining or omitting the choice uses the default. Later work items, plus all Express and Spike items, initialize at Project Owner Assistant.
 
 When work reaches the **Developer** role, the role instructions require creating a feature branch using:
 `git checkout -b <useralias>/<workitem-id>`
@@ -273,7 +273,10 @@ Create a new Golazo Copilot work item with persistent state tracking.
 |-------|------|----------|-------------|
 | `work_item_id` | string | **Yes** | Unique identifier for the work item. Format: 1-4 letters, dash, 3+ digits (e.g., `GCP-0001`, `AB-001`, `TEST-1234`) |
 | `profile` | string | No | Workflow profile: `complete` (default), `express`, or `spike` |
+| `initial_role` | string | No | Initial role: `project-owner-assistant` (default) or `planner`. Planner is valid only for the first Complete work item in a workspace |
 | `workspace_path` | string | **Yes** | Workspace root path containing the WorkItems folder |
+
+On a brand-new project, the orchestrator offers Planner or Project Owner Assistant before creating the first work item. Choosing Planner calls `golazo_create_workitem(work_item_id="<id>", profile="complete", initial_role="planner")`; declining or omitting the choice preserves the POA default. Later work items cannot start in Planner.
 
 #### `golazo_status`
 Read-only workflow status reporting for a work item. Returns current role, phase, required outputs, next steps, deviations, and the Golazo Copilot version number. This tool does not modify workflow state or install software.
@@ -426,6 +429,12 @@ MIT
 ## Changelog (By Version)
 
 Documenter reviews user-facing documentation; Builder owns versioning, changelog, build, commit, and push.
+
+### v6.1.0
+
+- Offers Planner or Project Owner Assistant before the first work item in a brand-new project.
+- Adds optional `initial_role` creation support while preserving Project Owner Assistant as the default.
+- Restricts Planner initialization to the first Complete-profile work item and rejects ineligible requests before workspace mutation.
 
 ### v6.0.4
 

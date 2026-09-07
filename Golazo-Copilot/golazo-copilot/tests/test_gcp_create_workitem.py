@@ -204,7 +204,8 @@ class TestGcpCreateWorkitemErrorHandling:
 
         assert result["success"] is False
         assert "already exists" in result["error"]
-        assert "golazo_switch" in result["error"]
+        assert "work_item_id" in result["error"]
+        assert "golazo_status" in result["error"]
 
     @pytest.mark.asyncio
     async def test_rejects_empty_id(self):
