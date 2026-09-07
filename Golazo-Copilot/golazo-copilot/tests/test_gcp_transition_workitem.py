@@ -3,6 +3,7 @@
 import json
 import shutil
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -10,6 +11,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from golazo_copilot.core.persistence import load_state, save_state
+from golazo_copilot.core.types import RoleHistoryEntry
 from golazo_copilot.tools.golazo_create_workitem import golazo_create_workitem
 from golazo_copilot.tools.golazo_transition_workitem import golazo_transition_workitem
 
@@ -44,10 +46,39 @@ def _set_role(work_item_id: str, role: str, phase: str = "completion"):
     save_state(work_item_id, state, TEST_WORKITEMS_DIR)
 
 
+def _set_closed(work_item_id: str):
+    now = datetime.now(timezone.utc)
+    state = load_state(work_item_id, TEST_WORKITEMS_DIR)
+    state.role_history[-1].exited_at = now
+    state.role_history.append(
+        RoleHistoryEntry(role="retrospective", entered_at=now, exited_at=now)
+    )
+    state.role_history.append(
+        RoleHistoryEntry(role="project-owner-assistant", entered_at=now, exited_at=None)
+    )
+    state.current_role = "project-owner-assistant"
+    state.current_phase = "closure"
+    state.closure_pending = True
+    save_state(work_item_id, state, TEST_WORKITEMS_DIR)
+
+    work_item_dir = TEST_WORKITEMS_DIR / work_item_id
+    (work_item_dir / f"{work_item_id}-User-Story.md").write_text(
+        "# Story\n\n**Status**: IMPLEMENTED\n",
+        encoding="utf-8",
+    )
+    notes_dir = work_item_dir / "RoleDecisionNotes"
+    notes_dir.mkdir(parents=True, exist_ok=True)
+    (notes_dir / f"{work_item_id}-project-owner-assistant.md").write_text(
+        "# POA closure\n",
+        encoding="utf-8",
+    )
+    (work_item_dir / f"{work_item_id}-closure.md").write_text("# Closure\n", encoding="utf-8")
+
+
 @pytest.mark.asyncio
-async def test_transition_workitem_succeeds_from_retrospective_and_returns_next_id():
+async def test_transition_workitem_succeeds_from_poa_closure_and_returns_next_id():
     await _create_work_item("GCP-0061")
-    _set_role("GCP-0061", "retrospective")
+    _set_closed("GCP-0061")
 
     result = await golazo_transition_workitem(
         work_item_id="GCP-0061",
@@ -60,7 +91,7 @@ async def test_transition_workitem_succeeds_from_retrospective_and_returns_next_
 
 
 @pytest.mark.asyncio
-async def test_transition_workitem_fails_when_not_retrospective():
+async def test_transition_workitem_fails_when_not_closed():
     await _create_work_item("GCP-0061")
     _set_role("GCP-0061", "builder")
 
@@ -70,14 +101,14 @@ async def test_transition_workitem_fails_when_not_retrospective():
     )
 
     assert result["success"] is False
-    assert result["error_code"] == "role_precondition_failed"
+    assert result["error_code"] == "closure_precondition_failed"
     assert result["current_role"] == "builder"
 
 
 @pytest.mark.asyncio
 async def test_transition_workitem_creates_global_state_when_missing():
     await _create_work_item("GCP-0061")
-    _set_role("GCP-0061", "retrospective")
+    _set_closed("GCP-0061")
 
     result = await golazo_transition_workitem(
         work_item_id="GCP-0061",
@@ -98,7 +129,7 @@ async def test_transition_workitem_creates_global_state_when_missing():
 @pytest.mark.asyncio
 async def test_transition_workitem_updates_existing_global_state():
     await _create_work_item("GCP-0061")
-    _set_role("GCP-0061", "retrospective")
+    _set_closed("GCP-0061")
 
     TEST_ROOT.mkdir(parents=True, exist_ok=True)
     GLOBAL_STATE_PATH.write_text(
@@ -131,7 +162,7 @@ async def test_transition_workitem_updates_existing_global_state():
 @pytest.mark.asyncio
 async def test_transition_workitem_guides_creation_when_next_missing():
     await _create_work_item("GCP-0061")
-    _set_role("GCP-0061", "retrospective")
+    _set_closed("GCP-0061")
 
     result = await golazo_transition_workitem(
         work_item_id="GCP-0061",
@@ -146,7 +177,7 @@ async def test_transition_workitem_guides_creation_when_next_missing():
 @pytest.mark.asyncio
 async def test_transition_workitem_is_idempotent_for_completed_list():
     await _create_work_item("GCP-0061")
-    _set_role("GCP-0061", "retrospective")
+    _set_closed("GCP-0061")
 
     first = await golazo_transition_workitem(
         work_item_id="GCP-0061",

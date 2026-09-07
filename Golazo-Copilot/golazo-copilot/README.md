@@ -184,7 +184,7 @@ You should see the Golazo Copilot tools listed:
 - `golazo_create_workitem` – Initialize a new work item
 - `golazo_status` – Check workflow status
 - `golazo_transition` – Move between roles
-- `golazo_transition_workitem` – Mark retrospective-complete work item and set next work item
+- `golazo_transition_workitem` – Finalize a work item after completed POA closure and set the next work item
 - `golazo_consent` – Record consent for bypassing workflow gates
 - `golazo_git_propose` – Record proposal-only git action intent for auditability
 - `golazo_bootstrap` – Bootstrap Golazo instructions in a workspace
@@ -290,7 +290,7 @@ Transition to a new role in the Golazo Copilot workflow.
 | `workspace_path` | string | **Yes** | Workspace root path containing the WorkItems folder |
 
 #### `golazo_transition_workitem`
-Mark a retrospective-complete work item as completed and set the next sequential work item in workspace-level `global_state.json`.
+Finalize a work item after Retrospective has returned it to completed POA closure, then set the next sequential work item in workspace-level `global_state.json`. Finalization requires closure mode, completed Retrospective history, an `IMPLEMENTED` User Story, and the final POA and closure artifacts.
 
 | Input | Type | Required | Description |
 |-------|------|----------|-------------|

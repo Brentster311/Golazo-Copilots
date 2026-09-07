@@ -13,6 +13,7 @@ from typing import Any
 from ..core.persistence import DEFAULT_WORKITEMS_DIR, load_state, work_item_exists
 
 WORK_ITEM_ID_PATTERN = re.compile(r"^([A-Za-z]{1,4})-(\d{3,})$")
+STORY_STATUS_PATTERN = re.compile(r"^\*\*Status\*\*:\s*(.+?)\s*$", re.MULTILINE)
 
 
 def _utc_iso8601_z() -> str:
@@ -74,11 +75,76 @@ def _save_global_state(path: Path, payload: dict[str, Any]) -> None:
         raise
 
 
+def _validate_closure_eligibility(state: Any, work_item_id: str, work_items_dir: Path) -> dict | None:
+    """Return an actionable error when a work item is not ready for finalization."""
+    if state.current_role != "project-owner-assistant" or not state.closure_pending:
+        return {
+            "success": False,
+            "error_code": "closure_precondition_failed",
+            "error": (
+                f"Work item '{work_item_id}' must be in POA closure mode to finalize. "
+                f"Current role is '{state.current_role}' and closure_pending is {state.closure_pending}."
+            ),
+            "current_role": state.current_role,
+        }
+
+    retrospective_complete = any(
+        entry.role == "retrospective" and entry.exited_at is not None
+        for entry in state.role_history
+    )
+    if not retrospective_complete:
+        return {
+            "success": False,
+            "error_code": "closure_precondition_failed",
+            "error": f"Work item '{work_item_id}' has no completed retrospective in role history.",
+            "current_role": state.current_role,
+        }
+
+    work_item_dir = work_items_dir / work_item_id
+    user_story_path = work_item_dir / f"{work_item_id}-User-Story.md"
+    required_paths = [
+        user_story_path,
+        work_item_dir / "RoleDecisionNotes" / f"{work_item_id}-project-owner-assistant.md",
+        work_item_dir / f"{work_item_id}-closure.md",
+    ]
+    missing_paths = [path for path in required_paths if not path.is_file()]
+    if missing_paths:
+        missing_text = ", ".join(str(path) for path in missing_paths)
+        return {
+            "success": False,
+            "error_code": "closure_evidence_missing",
+            "error": f"Work item '{work_item_id}' is missing required closure evidence: {missing_text}",
+        }
+
+    try:
+        user_story = user_story_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as error:
+        return {
+            "success": False,
+            "error_code": "closure_evidence_missing",
+            "error": f"Could not read closure evidence '{user_story_path}': {type(error).__name__}",
+        }
+
+    status_match = STORY_STATUS_PATTERN.search(user_story)
+    status = status_match.group(1).strip() if status_match else None
+    if status != "IMPLEMENTED":
+        return {
+            "success": False,
+            "error_code": "closure_status_invalid",
+            "error": (
+                f"Work item '{work_item_id}' must have canonical User Story status 'IMPLEMENTED' "
+                f"before finalization. Current status: {status or 'missing'}."
+            ),
+        }
+
+    return None
+
+
 async def golazo_transition_workitem(
     work_item_id: str,
     work_items_dir: Path = DEFAULT_WORKITEMS_DIR,
 ) -> dict:
-    """Mark a retrospective-complete work item as completed and set next work item id."""
+    """Mark a POA-closed work item as completed and set the next work item id."""
     if not work_item_exists(work_item_id, work_items_dir):
         return {
             "success": False,
@@ -87,16 +153,9 @@ async def golazo_transition_workitem(
         }
 
     state = load_state(work_item_id, work_items_dir)
-    if state.current_role != "retrospective":
-        return {
-            "success": False,
-            "error_code": "role_precondition_failed",
-            "error": (
-                f"Work item '{work_item_id}' must be in role 'retrospective' to transition at project level. "
-                f"Current role is '{state.current_role}'."
-            ),
-            "current_role": state.current_role,
-        }
+    eligibility_error = _validate_closure_eligibility(state, work_item_id, work_items_dir)
+    if eligibility_error:
+        return eligibility_error
 
     next_work_item_id = _compute_next_work_item_id(work_item_id)
     if not next_work_item_id:
