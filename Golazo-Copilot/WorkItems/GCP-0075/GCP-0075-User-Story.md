@@ -1,6 +1,6 @@
 # GCP-0075 User Story
 
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 **User Story**
 - Title: Reconcile Builder and Documenter release-order instructions
@@ -20,3 +20,20 @@
 - Non-functional requirements: Keep guidance concise and unambiguous; preserve semantic-versioning and PEP 440 requirements; avoid changing runtime APIs or workflow state schemas.
 - Telemetry / metrics expected: No external telemetry. Tests provide deterministic policy validation.
 - Rollout / rollback notes: Deliver as an instruction and policy-test update. Rollback restores prior text only; no state or data migration is required.
+
+## Closure
+
+Delivered a forward-only release process in which Documenter reviews implementation documentation and Builder owns version selection, the canonical `pyproject.toml` update, PEP 440 monotonicity validation, README changelog maintenance, build, commit, and push.
+
+### Acceptance Criteria
+
+- PASS: Packaged Builder and Documenter instructions define one non-circular Builder-owned release sequence.
+- PASS: Complete orders Documenter before Builder, while Express includes Builder without Documenter and remains executable.
+- PASS: Packaged defaults, forced-bootstrap output, and README guidance are checked for consistency.
+- PASS: Policy tests reject backward transitions, future-role prerequisites, and contradictory ownership wording.
+
+### Future Work
+
+No follow-up work item is required. The retrospective recommendation to check mandatory ownership against all profiles is captured as a process practice.
+
+Final status: **IMPLEMENTED**.
