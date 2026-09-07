@@ -31,7 +31,8 @@ Verify build and commit all changes.
 - Document build commands used
 - Report any build warnings or errors
 
-### Python Versioning (before final commit)
+### Release Metadata (before final commit)
+- Builder owns release metadata: version selection, canonical version update, and changelog maintenance.
 - If the repository contains `pyproject.toml` with `[project].version`, bump the version for this release using **PEP 440** format.
 - Determine bump type from delivered scope:
   - Patch: bugfixes/refactors/internal-only behavior-preserving changes
@@ -39,8 +40,10 @@ Verify build and commit all changes.
   - Major: breaking changes
 - Update exactly one canonical version source (`pyproject.toml`) unless project conventions explicitly require additional synced files.
 - Verify the new version is valid PEP 440 and monotonically higher than the previous version.
+- Add the matching newest-first release entry to the changelog at the end of `README.md` after updating `pyproject.toml`.
+- Verify the changelog version exactly matches the canonical version.
 - Document old version, new version, and bump rationale in builder notes.
-- Complete this version update before transitioning to **Documenter** so changelog maintenance can reference the final release version.
+- Complete version and changelog updates before the final commit.
 
 ### Capability Registry Validation (before final commit)
 - Run `golazo_capabilities(action="validate")` to confirm all `key_files` still exist
@@ -50,7 +53,7 @@ Verify build and commit all changes.
 - If no `capabilities.yaml` exists in the project, skip this section
 - Document validation results in builder notes under a **Capability Registry** heading
 
-### Git Operations (Commit - after Documenter)
+### Git Operations
 - Stage all changes: `git add .`
 - Commit with message: `<workitem-id>: <User Story title>`
 - Push to origin: `git push -u origin <workitem-id>`
@@ -79,4 +82,4 @@ Verify build and commit all changes.
 - Build passes with no errors
 - Build artifacts created successfully
 - Commands documented for reproducibility
-- Python package version updated per PEP 440 with rationale captured
+- Python package version and changelog updated consistently with PEP 440 rationale captured

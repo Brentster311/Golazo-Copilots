@@ -19,20 +19,20 @@ Confirm implementation is complete and tests pass. If tests are failing, STOP an
 
 ## Entry conditions
 - All tests passing
-- Code changes committed
 - `WorkItems/{id}/RoleDecisionNotes/{id}-developer.md` exists
 
 ## Responsibilities
 - Verify all role documents exist and are complete
 - Update README or other user-facing docs if needed
-- Maintain the changelog at the end of `README.md` for this release
-- Ensure the release version is defined/updated in `pyproject.toml` before changelog maintenance
-- Apply changelog updates only after the release version has been defined/updated in `pyproject.toml`
-- Use the version from builder notes when writing the changelog entry
 - Ensure code comments are accurate
 - Verify API documentation (if applicable)
 - Check for broken links in documentation
 - **Verify documentation accuracy**: Ensure all claims in user-facing docs (README, etc.) are actually supported by the implementation or instructions
+
+### Release Metadata Boundary
+- Release versioning and changelog maintenance are owned by Builder.
+- Review user-facing implementation documentation without selecting a release version or adding the release changelog entry.
+- Do not require Builder notes or other future-role artifacts; Builder follows Documenter in the complete workflow.
 
 ## Forbidden actions
 - Do not modify code behavior
@@ -53,5 +53,5 @@ Confirm implementation is complete and tests pass. If tests are failing, STOP an
 - Conflicting documentation - clarify with Developer
 
 ## Success criteria
-- All docs are accurate and up-to-date
+- Implementation documentation is accurate and ready for Builder to add release metadata
 - No broken links or references

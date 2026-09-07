@@ -32,8 +32,8 @@ The Golazo workflow enforces a structured progression through roles:
 5. **Architect** – Validate architectural alignment, review contracts
 6. **Developer** – Implement the solution with TDD
 7. **Refactor Expert** – Improve code quality without changing behavior
-8. **Documenter** – Update documentation to reflect changes
-9. **Builder** – Verify builds pass, handle CI/CD concerns
+8. **Documenter** – Review implementation documentation for accuracy
+9. **Builder** – Own release metadata, verify builds, commit, and push
 10. **Retrospective** – Review what worked and what didn't
 
 When work reaches the **Developer** role, the role instructions require creating a feature branch using:
@@ -285,7 +285,7 @@ Transition to a new role in the Golazo Copilot workflow.
 | Input | Type | Required | Description |
 |-------|------|----------|-------------|
 | `work_item_id` | string | **Yes** | Work item identifier |
-| `role` | string | **Yes** | Target role: `project-owner-assistant`, `program-manager`, `domain-expert`, `quality-assurance`, `architect`, `developer`, `refactor-expert`, `builder`, `documenter`, `retrospective` |
+| `role` | string | **Yes** | Target role: `project-owner-assistant`, `program-manager`, `domain-expert`, `quality-assurance`, `architect`, `developer`, `refactor-expert`, `documenter`, `builder`, `retrospective` |
 | `force` | boolean | No | Force transition even if gates not met (default: `false`, requires prior consent) |
 | `workspace_path` | string | **Yes** | Workspace root path containing the WorkItems folder |
 
@@ -294,7 +294,7 @@ Finalize a work item after Retrospective has returned it to completed POA closur
 
 | Input | Type | Required | Description |
 |-------|------|----------|-------------|
-| `work_item_id` | string | **Yes** | Completed work item identifier (must currently be at role `retrospective`) |
+| `work_item_id` | string | **Yes** | Completed work item identifier (must have completed POA closure) |
 | `workspace_path` | string | **Yes** | Workspace root path containing the WorkItems folder |
 
 #### `golazo_consent`
@@ -404,6 +404,14 @@ Then reload VS Code and re-bootstrap your workspace to pick up the new version:
 MIT
 
 ## Changelog (By Version)
+
+Documenter reviews user-facing documentation; Builder owns versioning, changelog, build, commit, and push.
+
+### v6.0.2
+
+- Assigned version selection, canonical version updates, PEP 440 validation, and changelog maintenance to Builder across Complete and Express profiles.
+- Removed Documenter's future-role and committed-code prerequisites so release completion follows the enforced role order without circular transitions.
+- Added policy coverage for packaged defaults, bootstrap-generated roles, profile compatibility, and README consistency.
 
 ### v6.0.1
 

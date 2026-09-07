@@ -2,18 +2,90 @@
   "schema_version": "1.0",
   "work_item_id": "GCP-0075",
   "profile": "complete",
-  "current_phase": "definition",
-  "current_role": "project-owner-assistant",
+  "current_phase": "completion",
+  "current_role": "builder",
   "created_at": "2026-09-07T20:48:36.598778Z",
-  "updated_at": "2026-09-07T20:48:36.598778Z",
+  "updated_at": "2026-09-07T22:12:08.566215Z",
   "role_history": [
     {
       "role": "project-owner-assistant",
       "entered_at": "2026-09-07T20:48:36.598778Z",
+      "exited_at": "2026-09-07T22:03:56.366033Z"
+    },
+    {
+      "role": "program-manager",
+      "entered_at": "2026-09-07T22:03:56.366033Z",
+      "exited_at": "2026-09-07T22:04:26.987267Z"
+    },
+    {
+      "role": "domain-expert",
+      "entered_at": "2026-09-07T22:04:26.987267Z",
+      "exited_at": "2026-09-07T22:04:32.669887Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-09-07T22:04:32.669887Z",
+      "exited_at": "2026-09-07T22:04:46.043366Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-09-07T22:04:46.043366Z",
+      "exited_at": "2026-09-07T22:05:02.299436Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-09-07T22:05:02.299436Z",
+      "exited_at": "2026-09-07T22:05:25.521411Z"
+    },
+    {
+      "role": "program-manager",
+      "entered_at": "2026-09-07T22:05:25.521411Z",
+      "exited_at": "2026-09-07T22:05:47.920588Z"
+    },
+    {
+      "role": "domain-expert",
+      "entered_at": "2026-09-07T22:05:47.920588Z",
+      "exited_at": "2026-09-07T22:05:55.084857Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-09-07T22:05:55.084857Z",
+      "exited_at": "2026-09-07T22:06:08.591042Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-09-07T22:06:08.591042Z",
+      "exited_at": "2026-09-07T22:06:17.861935Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-09-07T22:06:17.861935Z",
+      "exited_at": "2026-09-07T22:11:12.002066Z"
+    },
+    {
+      "role": "refactor-expert",
+      "entered_at": "2026-09-07T22:11:12.002066Z",
+      "exited_at": "2026-09-07T22:11:47.052596Z"
+    },
+    {
+      "role": "documenter",
+      "entered_at": "2026-09-07T22:11:47.052596Z",
+      "exited_at": "2026-09-07T22:12:08.566215Z"
+    },
+    {
+      "role": "builder",
+      "entered_at": "2026-09-07T22:12:08.566215Z",
       "exited_at": null
     }
   ],
   "deviations": [],
-  "git_actions": [],
+  "git_actions": [
+    {
+      "action": "branch",
+      "status": "proposed",
+      "timestamp": "2026-09-07T22:03:50.153Z",
+      "branch": "brentj/GCP-0075"
+    }
+  ],
   "closure_pending": false
 }
