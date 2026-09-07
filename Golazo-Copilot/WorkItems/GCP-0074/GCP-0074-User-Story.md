@@ -1,6 +1,6 @@
 # GCP-0074 User Story
 
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 **User Story**
 - Title: Align project-level finalization with POA closure semantics
@@ -20,3 +20,11 @@
 - Non-functional requirements: Preserve state integrity and append-only audit history; never require direct `state.json` edits; maintain backward compatibility for valid callers; provide actionable failure messages.
 - Telemetry / metrics expected: No external telemetry. Tool results and state history record finalization outcome and reason for rejection.
 - Rollout / rollback notes: Ship with migration-free state compatibility. Rollback restores the previous precondition without rewriting existing work-item state.
+
+## Closure
+
+- Delivered compound POA closure eligibility for project-level finalization, preserving atomic and idempotent global-state updates.
+- Acceptance criteria: PASS (4/4).
+- Validation: 16 focused tests passed at 81% touched-module coverage; full suite passed with 538 tests and 3 skips at 89% coverage; Ruff, package build, metadata, and capability validation passed.
+- Future work: GCP-0075 will remove the circular Builder/Documenter release-order instructions observed during this workflow.
+- Final status: IMPLEMENTED.
