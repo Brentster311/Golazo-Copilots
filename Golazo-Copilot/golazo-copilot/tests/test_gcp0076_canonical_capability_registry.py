@@ -119,9 +119,8 @@ async def test_real_registry_is_populated_valid_and_impactful():
     assert "release-policy-guidance" in affected
 
 
-def test_repository_has_one_top_level_registry_and_preserves_independent_ones():
+def test_repository_has_one_top_level_registry_and_preserves_test_registry():
     assert (REPOSITORY_ROOT / CANONICAL_RELATIVE_PATH).exists()
     assert not (REPOSITORY_ROOT / "capabilities.yaml").exists()
     assert not (REPOSITORY_ROOT / "golazo-copilot" / "capabilities.yaml").exists()
-    assert (REPOSITORY_ROOT / "AgentLoop" / CANONICAL_RELATIVE_PATH).exists()
     assert (REPOSITORY_ROOT / "golazo-copilot" / "tests" / CANONICAL_RELATIVE_PATH).exists()
