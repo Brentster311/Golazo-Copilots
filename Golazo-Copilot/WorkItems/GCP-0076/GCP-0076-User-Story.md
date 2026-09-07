@@ -1,6 +1,6 @@
 # GCP-0076 User Story
 
-**Status**: IN PROGRESS
+**Status**: IMPLEMENTED
 
 **User Story**
 - Title: Unify and populate the capability registry
@@ -22,3 +22,21 @@
 - Non-functional requirements: Preserve existing MCP contracts; avoid data loss during migration; use structured YAML; keep all paths workspace-relative.
 - Telemetry / metrics expected: Deterministic tests plus registry `list`, `impact`, and `validate` results; no external telemetry.
 - Rollout / rollback notes: Ship as a patch release. Rollback restores prior path behavior and registry files; no runtime state migration beyond deterministic legacy-file movement.
+
+## Closure
+
+Delivered one canonical capability registry per workspace boundary, shared canonical/legacy resolution across all registry-aware tools, five meaningful Golazo capability cards, and scoped duplicate cleanup.
+
+### Acceptance Criteria
+
+- PASS: Bootstrap, work-item creation, status, and capability operations consistently resolve `WorkItems/capabilities.yaml`; legacy root data remains migration input.
+- PASS: Canonical data wins on coexistence, mutating callers preserve legacy-only data, and status remains read-only.
+- PASS: Five current Golazo capability cards have descriptions, contracts, dependencies, valid key files, and representative impact coverage.
+- PASS: Obsolete top-level/package registries are removed while AgentLoop and canonical test-workspace registries remain.
+- PASS: Focused and legacy regression tests protect path agreement, migration, population, impact, validation, and layout.
+
+### Future Work
+
+Consider a separate reliability work item for instrumentation-resistant timing assertions and Windows fixture cleanup retries. It is not required for this acceptance decision.
+
+Final status: **IMPLEMENTED**.
