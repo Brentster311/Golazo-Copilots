@@ -50,7 +50,7 @@ def _frontmatter(skill_markdown: str) -> dict:
 
 def test_bootstrap_schema_exposes_skill_defaults_and_confirmation():
     tool = next(tool for tool in get_tool_definitions() if tool.name == "golazo_bootstrap")
-    properties = tool.inputSchema["properties"]
+    properties = tool.input_schema["properties"]
 
     assert properties["install_ado_sync_skill"]["default"] is False
     assert properties["ado_sync_config_confirmed"]["default"] is False
@@ -300,7 +300,7 @@ async def test_legacy_server_schema_exposes_skill_contract():
     from golazo_copilot import server as server_module
 
     tool = next(tool for tool in await server_module.list_tools() if tool.name == "golazo_bootstrap")
-    properties = tool.inputSchema["properties"]
+    properties = tool.input_schema["properties"]
 
     assert properties["install_ado_sync_skill"]["default"] is False
     assert properties["ado_sync_config_confirmed"]["default"] is False

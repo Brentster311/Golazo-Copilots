@@ -5,9 +5,16 @@ import asyncio
 import sys
 from pathlib import Path
 
-from mcp.server import Server
+from mcp.server import Server, ServerRequestContext
 from mcp.server.stdio import stdio_server
-from mcp.types import TextContent, Tool
+from mcp.types import (
+    CallToolRequestParams,
+    CallToolResult,
+    ListToolsResult,
+    PaginatedRequestParams,
+    TextContent,
+    Tool,
+)
 
 from . import __version__
 from .dispatch.paths import has_orchestrator_instructions as _mod_has_orchestrator_instructions
@@ -43,8 +50,42 @@ from .tools.golazo_role_context import golazo_role_context
 from .tools.golazo_status import golazo_status
 from .tools.golazo_transition import golazo_transition
 
-# Create server instance with version in name
-server = Server(f"golazo-copilot v{__version__}")
+_STARTUP_TOOL_WARNINGS: list[str] = []
+
+
+async def handle_list_tools(
+    _context: ServerRequestContext,
+    _params: PaginatedRequestParams | None,
+) -> ListToolsResult:
+    """Return the canonical Golazo tool registry to MCP clients."""
+    return ListToolsResult(tools=_mod_get_tool_definitions())
+
+
+async def handle_call_tool(
+    _context: ServerRequestContext,
+    params: CallToolRequestParams,
+) -> CallToolResult:
+    """Adapt an MCP tool request to the canonical Golazo dispatcher."""
+    try:
+        content = await _mod_dispatch_tool(
+            params.name,
+            params.arguments or {},
+            _STARTUP_TOOL_WARNINGS,
+        )
+    except ValueError as exc:
+        content = [TextContent(type="text", text=f"{_mod_icon_fail} {exc}")]
+
+    text = content[0].text if content and isinstance(content[0], TextContent) else ""
+    is_error = text.startswith(_mod_icon_fail) or text.startswith("Unknown tool:")
+    return CallToolResult(content=content, is_error=is_error)
+
+
+server = Server(
+    f"golazo-copilot v{__version__}",
+    version=__version__,
+    on_list_tools=handle_list_tools,
+    on_call_tool=handle_call_tool,
+)
 
 # Status icons (using ASCII to avoid encoding issues)
 ICON_OK = "[OK]"
@@ -55,7 +96,6 @@ ICON_CHECK = "[x]"
 ICON_EMPTY = "[ ]"
 
 _REQUIRED_TOOL_NAMES: set[str] = set()
-_STARTUP_TOOL_WARNINGS: list[str] = []
 _WORKFLOW_TOOLS_REQUIRING_INSTRUCTIONS: set[str] = {
     "golazo_create_workitem",
     "golazo_transition",
@@ -313,7 +353,6 @@ def format_git_propose_result(result: dict) -> str:
     )
 
 
-@server.list_tools()
 async def list_tools() -> list[Tool]:
     """List available tools."""
     return _get_tool_definitions()
@@ -602,13 +641,13 @@ async def _runtime_tool_self_check() -> list[str]:
     return warnings
 
 
-@server.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     """Handle tool calls."""
-    try:
-        return await _dispatch_tool(name, arguments, _STARTUP_TOOL_WARNINGS)
-    except ValueError as exc:
-        return [TextContent(type="text", text=f"{ICON_FAIL} {exc}")]
+    result = await handle_call_tool(
+        None,  # type: ignore[arg-type]
+        CallToolRequestParams(name=name, arguments=arguments),
+    )
+    return list(result.content)
 
 
 async def _dispatch_tool(name: str, arguments: dict) -> list[TextContent]:

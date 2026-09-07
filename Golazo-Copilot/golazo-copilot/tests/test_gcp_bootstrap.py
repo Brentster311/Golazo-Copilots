@@ -154,7 +154,7 @@ class TestBootstrapScopeSupport:
             tool for tool in get_tool_definitions() if tool.name == "golazo_bootstrap"
         )
 
-        scope_schema = bootstrap_tool.inputSchema["properties"]["scope"]
+        scope_schema = bootstrap_tool.input_schema["properties"]["scope"]
         assert scope_schema["enum"] == ["Workspace", "User"]
         assert scope_schema["default"] == "Workspace"
 
