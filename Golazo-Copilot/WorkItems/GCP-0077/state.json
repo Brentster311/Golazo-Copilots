@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.0",
+  "work_item_id": "GCP-0077",
+  "profile": "express",
+  "current_phase": "closure",
+  "current_role": "project-owner-assistant",
+  "created_at": "2026-09-07T22:33:21.566014Z",
+  "updated_at": "2026-09-07T22:35:59.377984Z",
+  "role_history": [
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-09-07T22:33:21.566014Z",
+      "exited_at": "2026-09-07T22:33:34.003723Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-09-07T22:33:34.003723Z",
+      "exited_at": "2026-09-07T22:33:48.555261Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-09-07T22:33:48.555261Z",
+      "exited_at": "2026-09-07T22:34:07.545418Z"
+    },
+    {
+      "role": "builder",
+      "entered_at": "2026-09-07T22:34:07.545418Z",
+      "exited_at": "2026-09-07T22:35:50.570736Z"
+    },
+    {
+      "role": "retrospective",
+      "entered_at": "2026-09-07T22:35:50.570736Z",
+      "exited_at": "2026-09-07T22:35:59.377984Z"
+    },
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-09-07T22:35:59.377984Z",
+      "exited_at": null
+    }
+  ],
+  "deviations": [],
+  "git_actions": [],
+  "closure_pending": true
+}

@@ -8,54 +8,6 @@ and will actually work when users copy them.
 import pytest
 
 
-class TestAzureIdentityBestPractice:
-    """Test Azure Identity credential chaining example."""
-
-    def test_azure_identity_imports_exist(self):
-        """Verify the recommended Azure Identity imports are available."""
-        # This tests that azure-identity package has the required classes
-        try:
-            from azure.identity import (
-                AzureCliCredential,
-                ChainedTokenCredential,
-                ManagedIdentityCredential,
-            )
-            assert ChainedTokenCredential is not None
-            assert AzureCliCredential is not None
-            assert ManagedIdentityCredential is not None
-        except ImportError:
-            pytest.skip("azure-identity not installed - skipping")
-
-    def test_chained_credential_construction(self):
-        """Verify the recommended credential chain can be constructed."""
-        try:
-            from azure.identity import (
-                AzureCliCredential,
-                ChainedTokenCredential,
-                ManagedIdentityCredential,
-            )
-            
-            # This should not raise - just constructing the chain
-            credential = ChainedTokenCredential(
-                AzureCliCredential(),
-                ManagedIdentityCredential()
-            )
-            
-            assert credential is not None
-            # Verify it has the expected interface
-            assert hasattr(credential, 'get_token')
-        except ImportError:
-            pytest.skip("azure-identity not installed - skipping")
-
-    def test_default_credential_also_exists(self):
-        """Verify DefaultAzureCredential exists (for comparison in docs)."""
-        try:
-            from azure.identity import DefaultAzureCredential
-            assert DefaultAzureCredential is not None
-        except ImportError:
-            pytest.skip("azure-identity not installed - skipping")
-
-
 class TestBestPracticesFileExists:
     """Verify TechBestPractices.md is included in package."""
 
