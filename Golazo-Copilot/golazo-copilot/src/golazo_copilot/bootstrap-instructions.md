@@ -1,4 +1,4 @@
-<!-- Last Updated in Golazo Copilot Version: 4.3.1 -->
+<!-- Last Updated in Golazo Copilot Version: 5.1.0 -->
 # Golazo Copilot v2
 
 This workspace uses Golazo Copilot MCP server for workflow management.
@@ -12,6 +12,16 @@ pip install --upgrade golazo-copilot --index-url https://msazure.pkgs.visualstud
 ```
 
 After installation, reload VS Code and rerun `golazo_bootstrap` if you need refreshed instructions.
+
+## Installing Packaged Skills
+
+During a full bootstrap, offer to install the packaged `golazo-ado-sync` skill at the selected Workspace or User scope. Before calling bootstrap with `install_ado_sync_skill=true`:
+
+1. Read the defaults exposed by the `ado_sync_config` tool schema.
+2. Show every default to the user and ask them to accept the set or provide replacements.
+3. Call bootstrap only after confirmation, setting `ado_sync_config_confirmed=true` and passing any replacements in `ado_sync_config`.
+
+Workspace scope installs the skill under `.github/skills/golazo-ado-sync/`. User scope installs it under `~/.copilot/skills/golazo-ado-sync/`. Never infer confirmation or include credentials and access tokens in the configuration.
 
 ## FORBIDDEN ACTIONS (NEVER DO THESE)
 

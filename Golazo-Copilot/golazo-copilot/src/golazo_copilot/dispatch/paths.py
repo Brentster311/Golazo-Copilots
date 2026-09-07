@@ -4,6 +4,8 @@ from pathlib import Path
 
 WORKSPACE_AGENTS_ROOT = Path(".github") / "agents"
 USER_AGENTS_ROOT = Path(".copilot") / "agents"
+WORKSPACE_SKILLS_ROOT = Path(".github") / "skills"
+USER_SKILLS_ROOT = Path(".copilot") / "skills"
 ORCHESTRATOR_FILENAME = "Golazo-Copilot.md"
 ORCHESTRATOR_REL_PATH = WORKSPACE_AGENTS_ROOT / ORCHESTRATOR_FILENAME
 VALID_BOOTSTRAP_SCOPES = ("Workspace", "User")
@@ -43,6 +45,18 @@ def resolve_orchestrator_bootstrap_path(workspace_path: Path | str, scope: str |
     if normalized == "User":
         return resolve_user_orchestrator_instructions_path()
     return resolve_workspace_orchestrator_instructions_path(workspace_path)
+
+
+def resolve_skill_bootstrap_path(
+    workspace_path: Path | str,
+    scope: str | None,
+    skill_name: str,
+) -> Path:
+    """Resolve a packaged skill destination for the requested scope."""
+    normalized = normalize_bootstrap_scope(scope)
+    if normalized == "User":
+        return Path.home() / USER_SKILLS_ROOT / skill_name
+    return Path(workspace_path) / WORKSPACE_SKILLS_ROOT / skill_name
 
 
 def has_orchestrator_instructions(workspace_path: str | None) -> bool:

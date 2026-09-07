@@ -197,6 +197,7 @@ In GitHub Copilot Chat, say one of:
 - *"Run golazo bootstrap in orchestrator-only mode"* (minimal workspace-scoped setup)
 - *"Run golazo bootstrap in orchestrator-only mode with user scope"* (install orchestrator instructions into the active user Copilot directory)
 - *"Please bootstrap GCP"* (full setup)
+- *"Bootstrap GCP and install the ADO Sync skill"* (full setup plus confirmed skill installation)
 
 `orchestrator-only` creates only the orchestrator instructions file. By default this is written to workspace scope:
 - `.github/agents/Golazo-Copilot.md` – Orchestrator instructions required for workflow execution
@@ -207,6 +208,13 @@ Full bootstrap creates the Golazo Copilot directory structure and instruction fi
 - `WorkItems/` – Directory for work item artifacts
 - `.github/agents/Golazo-Copilot.md` – Workflow enforcement rules for Copilot when bootstrap uses the default workspace scope
 - `.github/agents/golazo-copilot/roles/` – Role-specific instruction files (including `TechBestPractices.md`)
+
+Full bootstrap can also install the packaged `golazo-ado-sync` skill. Copilot first displays the packaged organization, project, team, board, work item type, area, iteration, assignee, and board-field defaults. Installation proceeds only after you accept those values or provide replacements.
+
+- Workspace scope installs to `.github/skills/golazo-ado-sync/`.
+- User scope installs to `~/.copilot/skills/golazo-ado-sync/`.
+- Existing skill directories are skipped unless `force=true`.
+- `orchestrator-only` mode does not install skills.
 
 ### Step 6: Select the Golazo-Copilot Agent in Chat
 
@@ -307,11 +315,16 @@ Bootstrap Golazo Copilot in a workspace — creates copilot instructions and dir
 | `mode` | string | No | Bootstrap mode: `full` (default) or `orchestrator-only` |
 | `force` | boolean | No | Overwrite existing files if they exist (default: `false`) |
 | `include_roles` | boolean | No | Also copy default role files to `.github/agents/golazo-copilot/roles/` (default: `true`) |
+| `install_ado_sync_skill` | boolean | No | Install the packaged `golazo-ado-sync` skill at the selected scope (default: `false`) |
+| `ado_sync_config_confirmed` | boolean | No | Confirm that the user reviewed and accepted or replaced the ADO Sync defaults (default: `false`) |
+| `ado_sync_config` | object | No | Overrides for confirmed defaults; omitted values retain their packaged defaults |
 | `workspace_path` | string | **Yes** | Workspace root path |
 
 Notes:
 - Omitted or empty `scope` behaves the same as `Workspace`.
-- `scope="User"` redirects only the orchestrator instructions file to the active user Copilot directory; other full-bootstrap artifacts remain workspace-scoped.
+- `scope="User"` redirects the orchestrator instructions and requested skill installation to the active user Copilot directories; other full-bootstrap artifacts remain workspace-scoped.
+- Skill installation requires `mode="full"`, `install_ado_sync_skill=true`, and `ado_sync_config_confirmed=true`.
+- Empty, non-string, or unknown configuration values fail before skill installation. Bootstrap reports the skill destination, created/replaced/skipped status, and whether defaults or customized values were used.
 - Workflow preflight accepts orchestrator instructions from either workspace scope or active user scope.
 
 #### `golazo_capabilities`
@@ -390,6 +403,12 @@ Then reload VS Code and re-bootstrap your workspace to pick up the new version:
 MIT
 
 ## Changelog (By Version)
+
+### v5.1.0
+
+- Added opt-in installation of the packaged `golazo-ado-sync` skill during full bootstrap at workspace or user scope.
+- Added explicit confirmation and structured overrides for packaged ADO Sync defaults, with validated staged installation and safe overwrite behavior.
+- Added structured skill outcomes to bootstrap results and updated orchestrator guidance to present defaults before installation.
 
 ### v5.0.2
 

@@ -16,6 +16,9 @@ WORKFLOW_TOOLS_REQUIRING_INSTRUCTIONS: set[str] = {
 
 def get_tool_definitions() -> list[Tool]:
     """Build tool definitions advertised by this MCP server."""
+    from ..tools.ado_sync_skill import get_ado_sync_default_config
+
+    ado_sync_defaults = get_ado_sync_default_config()
     return [
         Tool(
             name="golazo_create_workitem",
@@ -115,6 +118,25 @@ def get_tool_definitions() -> list[Tool]:
                         "type": "boolean",
                         "default": True,
                         "description": "Also copy default role files to .github/agents/golazo-copilot/roles/"
+                    },
+                    "install_ado_sync_skill": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Install the packaged golazo-ado-sync skill at the selected scope"
+                    },
+                    "ado_sync_config_confirmed": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Confirms the user reviewed and accepted or replaced the ADO Sync defaults"
+                    },
+                    "ado_sync_config": {
+                        "type": "object",
+                        "description": "Optional overrides for the confirmed Golazo ADO Sync defaults",
+                        "properties": {
+                            name: {"type": "string", "default": value}
+                            for name, value in ado_sync_defaults.items()
+                        },
+                        "additionalProperties": False
                     },
                     "workspace_path": {
                         "type": "string",

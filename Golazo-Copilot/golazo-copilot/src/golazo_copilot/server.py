@@ -33,6 +33,7 @@ from .formatters.results import format_git_propose_result as _mod_format_git_pro
 from .formatters.results import format_role_context_result as _mod_format_role_context_result
 from .formatters.results import format_status_result as _mod_format_status_result
 from .formatters.results import format_transition_result as _mod_format_transition_result
+from .tools.ado_sync_skill import get_ado_sync_default_config
 from .tools.golazo_bootstrap import golazo_bootstrap
 from .tools.golazo_capabilities import golazo_capabilities
 from .tools.golazo_consent import golazo_consent
@@ -198,27 +199,7 @@ def format_status_result(result: dict) -> str:
 
 def format_bootstrap_result(result: dict) -> str:
     """Format golazo_bootstrap result dict into display text."""
-    if result["success"]:
-        created = "\n".join(f"  {ICON_CHECK} {f}" for f in result["files_created"]) or "  (none)"
-        skipped = "\n".join(f"  {ICON_EMPTY} {f}" for f in result["files_skipped"]) or "  (none)"
-        return f"""{ICON_OK} Golazo Copilot bootstrapped!
-
-**Files Created:**
-{created}
-
-**Files Skipped (already exist):**
-{skipped}
-
-{result['message']}
-"""
-    error_msg = result['error']
-    if "No workspace markers found" in error_msg:
-        error_msg += (
-            "\n\n**Next step:** Confirm with the user that the workspace_path is correct. "
-            "If it is, create a `WorkItems` folder at that path (e.g. `mkdir <workspace_path>/WorkItems`) "
-            "and then re-run `golazo_bootstrap`."
-        )
-    return f"{ICON_FAIL} Bootstrap failed: {error_msg}"
+    return _mod_format_bootstrap_result(result)
 
 
 def format_consent_result(result: dict) -> str:
@@ -340,6 +321,7 @@ async def list_tools() -> list[Tool]:
 
 def _get_tool_definitions() -> list[Tool]:
     """Build tool definitions advertised by this MCP server."""
+    ado_sync_defaults = get_ado_sync_default_config()
     return [
         Tool(
             name="golazo_create_workitem",
@@ -439,6 +421,25 @@ def _get_tool_definitions() -> list[Tool]:
                         "type": "boolean",
                         "default": True,
                         "description": "Also copy default role files to .github/agents/golazo-copilot/roles/"
+                    },
+                    "install_ado_sync_skill": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Install the packaged golazo-ado-sync skill at the selected scope"
+                    },
+                    "ado_sync_config_confirmed": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Confirms the user reviewed and accepted or replaced the ADO Sync defaults"
+                    },
+                    "ado_sync_config": {
+                        "type": "object",
+                        "description": "Optional overrides for the confirmed Golazo ADO Sync defaults",
+                        "properties": {
+                            name: {"type": "string", "default": value}
+                            for name, value in ado_sync_defaults.items()
+                        },
+                        "additionalProperties": False
                     },
                     "workspace_path": {
                         "type": "string",
@@ -677,7 +678,10 @@ async def _dispatch_tool(name: str, arguments: dict) -> list[TextContent]:
             scope=arguments.get("scope"),
             mode=arguments.get("mode", "full"),
             force=arguments.get("force", False),
-            include_roles=arguments.get("include_roles", True)
+            include_roles=arguments.get("include_roles", True),
+            install_ado_sync_skill=arguments.get("install_ado_sync_skill", False),
+            ado_sync_config_confirmed=arguments.get("ado_sync_config_confirmed", False),
+            ado_sync_config=arguments.get("ado_sync_config"),
         )
         return [TextContent(type="text", text=format_bootstrap_result(result))]
 

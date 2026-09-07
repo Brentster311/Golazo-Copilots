@@ -113,6 +113,16 @@ def format_bootstrap_result(result: dict) -> str:
         skipped = "\n".join(f"  {ICON_EMPTY} {item}" for item in result["files_skipped"]) or "  (none)"
         scope_line = f"\n**Scope:** {result['scope']}" if result.get("scope") else ""
         target_line = f"\n**Target Path:** {result['target_path']}" if result.get("target_path") else ""
+        skills = result.get("skills", [])
+        skills_section = ""
+        if skills:
+            skill_lines = "\n".join(
+                f"  {ICON_CHECK if skill['status'] != 'skipped' else ICON_EMPTY} "
+                f"{skill['name']}: {skill['status']} at {skill['target_path']} "
+                f"({skill['configuration_source']})"
+                for skill in skills
+            )
+            skills_section = f"\n\n**Skills:**\n{skill_lines}"
         return f"""{ICON_OK} Golazo Copilot bootstrapped!
 
 {scope_line}{target_line}
@@ -121,7 +131,7 @@ def format_bootstrap_result(result: dict) -> str:
 {created}
 
 **Files Skipped (already exist):**
-{skipped}
+{skipped}{skills_section}
 
 {result['message']}
 """
