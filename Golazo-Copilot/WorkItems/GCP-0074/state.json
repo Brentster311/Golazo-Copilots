@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "work_item_id": "GCP-0074",
+  "profile": "complete",
+  "current_phase": "definition",
+  "current_role": "project-owner-assistant",
+  "created_at": "2026-09-07T20:48:33.491321Z",
+  "updated_at": "2026-09-07T20:48:33.491321Z",
+  "role_history": [
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-09-07T20:48:33.491321Z",
+      "exited_at": null
+    }
+  ],
+  "deviations": [],
+  "git_actions": [],
+  "closure_pending": false
+}
