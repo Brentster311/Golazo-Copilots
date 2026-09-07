@@ -1,24 +1,35 @@
-# Golazo Copilot — Capability Registry Template
-#
-# This file maps project capabilities to their key files, contracts,
-# and dependencies. The Golazo workflow uses it for impact analysis.
-#
-# Usage:
-#   golazo_capabilities(action="list")       — summary of all capabilities
-#   golazo_capabilities(action="show", capability="<name>")  — full card
-#   golazo_capabilities(action="impact", files=["path/to/file.py"])
-#   golazo_capabilities(action="validate")   — check key_files exist
-#
-# Schema:
-#   capabilities:          (required) list of capability objects
-#     - name:              (required) unique identifier, e.g. "user-auth"
-#       description:       (optional) what this capability does
-#       key_files:         (optional) list of file paths that define it
-#       contracts:         (optional) list of API/data contracts it exposes
-#       depends_on:        (optional) list of capability names it depends on
-
 capabilities:
-  # ── Example capability (replace with your own) ──────────────────────
+  - name: workflow-orchestration
+    description: "Enforces profile-specific role sequences, output gates, and role context for Golazo work items"
+    key_files:
+      - golazo-copilot/src/golazo_copilot/core/transitions.py
+      - golazo-copilot/src/golazo_copilot/core/output_validator.py
+      - golazo-copilot/src/golazo_copilot/tools/golazo_transition.py
+      - golazo-copilot/src/golazo_copilot/tools/golazo_role_context.py
+      - golazo-copilot/tests/test_gcp_transition.py
+      - golazo-copilot/tests/test_gcp055_profile_roles.py
+    contracts:
+      - "golazo_transition(work_item_id, role, force, workspace_path) -> dict"
+      - "golazo_role_context(work_item_id, workspace_path) -> dict"
+      - "Profiles: complete, express, spike"
+    depends_on: []
+
+  - name: capability-registry-management
+    description: "Resolves, migrates, queries, validates, and reports the canonical workspace capability registry"
+    key_files:
+      - WorkItems/capabilities.yaml
+      - golazo-copilot/src/golazo_copilot/tools/golazo_capabilities.py
+      - golazo-copilot/src/golazo_copilot/tools/golazo_status.py
+      - golazo-copilot/src/golazo_copilot/tools/golazo_create_workitem.py
+      - golazo-copilot/tests/test_gcp_capabilities.py
+      - golazo-copilot/tests/test_gcp0076_canonical_capability_registry.py
+    contracts:
+      - "Canonical registry path: WorkItems/capabilities.yaml"
+      - "Legacy root capabilities.yaml is migration input only"
+      - "golazo_capabilities(list|show|impact|validate) -> dict"
+    depends_on:
+      - workflow-orchestration
+
   - name: bootstrap-skill-installation
     description: "Installs packaged Golazo skills with confirmed defaults at workspace or user scope during full bootstrap"
     key_files:
@@ -36,7 +47,38 @@ capabilities:
       - "Workspace skill destination: .github/skills/golazo-ado-sync/"
       - "User skill destination: ~/.copilot/skills/golazo-ado-sync/"
       - "Bootstrap result skills[] reports name, scope, target_path, status, and configuration_source"
-    depends_on: []
+    depends_on:
+      - capability-registry-management
+
+  - name: project-finalization
+    description: "Finalizes POA-closed work items and advances global project state without bypassing closure gates"
+    key_files:
+      - golazo-copilot/src/golazo_copilot/tools/golazo_transition_workitem.py
+      - golazo-copilot/src/golazo_copilot/dispatch/registry.py
+      - golazo-copilot/tests/test_gcp0074_transition_workitem_closure.py
+      - golazo-copilot/tests/test_gcp_transition_workitem.py
+    contracts:
+      - "golazo_transition_workitem(work_item_id, workspace_path) -> dict"
+      - "Requires completed Retrospective history and POA closure evidence"
+      - "Advances global_state.json to the next sequential work item"
+    depends_on:
+      - workflow-orchestration
+
+  - name: release-policy-guidance
+    description: "Defines forward-only documentation, versioning, changelog, build, commit, and push ownership"
+    key_files:
+      - golazo-copilot/src/golazo_copilot/roles/defaults/documenter.md
+      - golazo-copilot/src/golazo_copilot/roles/defaults/builder.md
+      - golazo-copilot/tests/test_gcp0066_documenter_changelog_policy.py
+      - golazo-copilot/tests/test_gcp0075_release_order_policy.py
+      - golazo-copilot/README.md
+      - golazo-copilot/pyproject.toml
+    contracts:
+      - "Documenter reviews non-release implementation documentation"
+      - "Builder owns versioning, changelog, build, commit, and push"
+      - "pyproject.toml is the canonical PEP 440 version source"
+    depends_on:
+      - workflow-orchestration
 
   # ── Add more capabilities below ─────────────────────────────────────
   # - name: another-capability

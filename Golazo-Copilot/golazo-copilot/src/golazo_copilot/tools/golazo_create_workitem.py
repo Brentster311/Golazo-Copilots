@@ -7,17 +7,14 @@ from typing import Literal
 from ..core.persistence import DEFAULT_WORKITEMS_DIR, save_state, work_item_exists
 from ..core.state import create_initial_state, validate_profile, validate_work_item_id
 from ..roles.loader import load_role_instructions
+from .golazo_capabilities import ensure_registry_path
 
 Profile = Literal["complete", "express", "spike"]
 DEFAULT_PROFILE: Profile = "complete"
 
 
 def _ensure_capabilities_registry(workspace_root: Path) -> None:
-    """Create capabilities.yaml in workspace root if it does not exist."""
-    capabilities_path = workspace_root / "capabilities.yaml"
-    if capabilities_path.exists():
-        return
-
+    """Create or migrate the canonical capabilities registry."""
     try:
         files_pkg = resources.files("golazo_copilot")
         template = files_pkg.joinpath("capabilities-template.yaml")
@@ -25,7 +22,7 @@ def _ensure_capabilities_registry(workspace_root: Path) -> None:
     except (FileNotFoundError, TypeError):
         content = "capabilities: []\n"
 
-    capabilities_path.write_text(content, encoding="utf-8")
+    ensure_registry_path(workspace_root, content)
 
 
 async def golazo_create_workitem(

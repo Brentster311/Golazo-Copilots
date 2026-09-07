@@ -188,6 +188,7 @@ You should see the Golazo Copilot tools listed:
 - `golazo_consent` – Record consent for bypassing workflow gates
 - `golazo_git_propose` – Record proposal-only git action intent for auditability
 - `golazo_bootstrap` – Bootstrap Golazo instructions in a workspace
+- `golazo_capabilities` – Query and validate the canonical capability registry
 
 ### Step 5: Bootstrap Your Workspace
 
@@ -207,6 +208,7 @@ If you run bootstrap with `scope="User"`, the same orchestrator instructions fil
 
 Full bootstrap creates the Golazo Copilot directory structure and instruction files in your workspace:
 - `WorkItems/` – Directory for work item artifacts
+- `WorkItems/capabilities.yaml` – Canonical project capability registry
 - `.github/agents/Golazo-Copilot.md` – Workflow enforcement rules for Copilot when bootstrap uses the default workspace scope
 - `.github/agents/golazo-copilot/roles/` – Role-specific instruction files (including `TechBestPractices.md`)
 
@@ -406,6 +408,13 @@ MIT
 ## Changelog (By Version)
 
 Documenter reviews user-facing documentation; Builder owns versioning, changelog, build, commit, and push.
+
+### v6.0.3
+
+- Unified bootstrap, work-item creation, status, and capability operations on canonical `WorkItems/capabilities.yaml` resolution.
+- Preserved legacy-only migration and canonical precedence while removing obsolete same-project duplicate registries.
+- Populated the canonical registry with five current Golazo capabilities and added path, migration, impact, validation, and layout regression coverage.
+- Cleared all repository-wide Ruff findings.
 
 ### v6.0.2
 

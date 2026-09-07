@@ -372,35 +372,39 @@ class TestBootstrapCapabilitiesTemplate:
 
     @pytest.mark.asyncio
     async def test_creates_capabilities_yaml(self):
-        """TC1: Bootstrap creates capabilities.yaml when absent."""
+        """TC1: Bootstrap creates canonical capabilities.yaml when absent."""
         result = await golazo_bootstrap(workspace_path=TEST_WORKSPACE_DIR)
 
         assert result["success"] is True
-        cap_path = TEST_WORKSPACE_DIR / "capabilities.yaml"
+        cap_path = TEST_WORKSPACE_DIR / "WorkItems" / "capabilities.yaml"
         assert cap_path.exists()
-        assert "capabilities.yaml" in result["files_created"]
+        assert "WorkItems/capabilities.yaml" in result["files_created"]
 
     @pytest.mark.asyncio
     async def test_skips_capabilities_yaml_when_exists(self):
-        """TC2: Bootstrap skips capabilities.yaml when exists and force=False."""
+        """TC2: Bootstrap migrates legacy data and does not overwrite it."""
         cap_path = TEST_WORKSPACE_DIR / "capabilities.yaml"
         cap_path.write_text("custom: content\n", encoding="utf-8")
 
         result = await golazo_bootstrap(workspace_path=TEST_WORKSPACE_DIR, force=False)
 
-        assert "capabilities.yaml" in result["files_skipped"]
-        assert cap_path.read_text(encoding="utf-8") == "custom: content\n"
+        canonical_path = TEST_WORKSPACE_DIR / "WorkItems" / "capabilities.yaml"
+        assert "WorkItems/capabilities.yaml" in result["files_skipped"]
+        assert canonical_path.read_text(encoding="utf-8") == "custom: content\n"
+        assert not cap_path.exists()
 
     @pytest.mark.asyncio
     async def test_does_not_overwrite_capabilities_yaml_when_force(self):
-        """TC3: Bootstrap never overwrites capabilities.yaml, even when force=True."""
+        """TC3: Bootstrap never overwrites migrated data, even when force=True."""
         cap_path = TEST_WORKSPACE_DIR / "capabilities.yaml"
         cap_path.write_text("custom: content\n", encoding="utf-8")
 
         result = await golazo_bootstrap(workspace_path=TEST_WORKSPACE_DIR, force=True)
 
-        assert "capabilities.yaml" in result["files_skipped"]
-        assert cap_path.read_text(encoding="utf-8") == "custom: content\n"
+        canonical_path = TEST_WORKSPACE_DIR / "WorkItems" / "capabilities.yaml"
+        assert "WorkItems/capabilities.yaml" in result["files_skipped"]
+        assert canonical_path.read_text(encoding="utf-8") == "custom: content\n"
+        assert not cap_path.exists()
 
     def test_template_is_valid_yaml(self):
         """TC4: Template is valid YAML with capabilities key."""
@@ -449,8 +453,8 @@ class TestBootstrapCapabilitiesTemplate:
         )
 
         assert result["success"] is True
-        assert "capabilities.yaml" in result["files_created"]
-        assert (TEST_WORKSPACE_DIR / "capabilities.yaml").exists()
+        assert "WorkItems/capabilities.yaml" in result["files_created"]
+        assert (TEST_WORKSPACE_DIR / "WorkItems" / "capabilities.yaml").exists()
 
 
 class TestBootstrapModes:
@@ -466,7 +470,7 @@ class TestBootstrapModes:
 
         assert result["success"] is True
         assert ".github/agents/Golazo-Copilot.md" in result["files_created"]
-        assert not (TEST_WORKSPACE_DIR / "capabilities.yaml").exists()
+        assert not (TEST_WORKSPACE_DIR / "WorkItems" / "capabilities.yaml").exists()
         assert not (TEST_WORKSPACE_DIR / ".github" / "agents" / "golazo-copilot" / "roles").exists()
         assert not (TEST_WORKSPACE_DIR / "WorkItems" / ".gitkeep").exists()
 
@@ -492,5 +496,5 @@ class TestBootstrapModes:
 
         assert result["success"] is True
         assert ".github/agents/Golazo-Copilot.md" in result["files_created"]
-        assert (TEST_WORKSPACE_DIR / "capabilities.yaml").exists()
+        assert (TEST_WORKSPACE_DIR / "WorkItems" / "capabilities.yaml").exists()
         assert (TEST_WORKSPACE_DIR / ".github" / "agents" / "golazo-copilot" / "roles").exists()
