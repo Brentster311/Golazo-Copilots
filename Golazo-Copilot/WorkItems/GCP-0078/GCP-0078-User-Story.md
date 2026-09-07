@@ -1,6 +1,6 @@
 # GCP-0078: Correct README Product Contract
 
-**Status**: IN PROGRESS
+**Status**: IMPLEMENTED
 
 **User Story**
 - **Title:** Correct README product contract
@@ -18,3 +18,18 @@
 - **Non-functional requirements:** Keep changes documentation-focused, use concise language, preserve existing public APIs, and publish with a PEP 440 patch version and matching changelog entry.
 - **Telemetry / metrics expected:** None.
 - **Rollout / rollback notes:** Publish as v6.0.4; revert the release commit to roll back.
+
+## Closure
+
+Delivered an accurate v6.0.4 README contract with source-backed regression tests.
+
+- **PASS:** Unsupported role-note bypass wording was removed while valid output-gate bypass guidance remains.
+- **PASS:** Complete-profile documentation now includes Planner, 11-role progress, and Project Owner Assistant initialization behavior.
+- **PASS:** `golazo_role_context`, configured-interpreter installation, proposal-only Git behavior, and unsupported automation boundaries are documented.
+- **PASS:** Persistence claims are consolidated and work-item finalization is distinguished from creation.
+- **PASS:** Six focused tests, 557 full-suite tests, coverage validation, Ruff, capability validation, and wheel build passed.
+
+Future work candidates: align Express QA design inputs, resolve the public `skip_role` consent mismatch, separate timing tests from coverage guidance, and align Builder branch push instructions. These candidates have not been created as work items.
+
+Final status: **IMPLEMENTED**.
+
