@@ -1,6 +1,6 @@
 # GCP-0079: Offer Planner for New Projects
 
-**Status**: IN PROGRESS
+**Status**: IMPLEMENTED
 
 **User Story**
 - **Title:** Offer Planner before the first work item
@@ -18,3 +18,23 @@
 - **Non-functional requirements:** Preserve backward compatibility, return actionable validation errors, and use filesystem-based detection consistently across Windows, macOS, and Linux.
 - **Telemetry / metrics expected:** Existing role history records the selected initial role; no new telemetry.
 - **Rollout / rollback notes:** Release as a backward-compatible minor version; revert the creation schema, orchestration guidance, tests, and documentation to roll back.
+
+## Closure
+
+### Delivered
+
+Golazo Copilot now offers Planner or Project Owner Assistant before the first work item in a brand-new project. The optional `initial_role` contract starts an eligible Complete item directly in Planner while preserving POA defaults and rejecting ineligible requests before mutation. Version 6.1.0 artifacts were built and validated.
+
+### Acceptance Criteria
+
+- **PASS:** Packaged and fallback orchestrator instructions require the first-item Planner/POA offer.
+- **PASS:** `golazo_create_workitem` accepts `initial_role="planner"` and persists Planner as current role and initial history for the first Complete item.
+- **PASS:** Planner is rejected for Express, Spike, and established direct-child work-item state, with no state or registry side effects.
+- **PASS:** Omitted and explicit POA behavior preserve the existing default.
+- **PASS:** Focused tests passed 12/12, documentation contracts passed 53/53, and the final full suite passed 569/569.
+
+### Future Work
+
+- Isolate legacy server source-loading tests so collection order cannot affect modern module imports.
+
+**Final Status:** IMPLEMENTED
