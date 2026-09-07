@@ -405,6 +405,12 @@ MIT
 
 ## Changelog (By Version)
 
+### v6.0.1
+
+- Aligned project-level finalization with mandatory POA closure semantics.
+- Added validation for completed Retrospective history, closure mode, `IMPLEMENTED` status, and required closure artifacts before global-state mutation.
+- Preserved idempotent completion tracking and added focused closure-contract coverage.
+
 ### v6.0.0
 
 - Migrated low-level MCP tool registration and dispatch to supported MCP Python SDK 2.x typed handlers.
