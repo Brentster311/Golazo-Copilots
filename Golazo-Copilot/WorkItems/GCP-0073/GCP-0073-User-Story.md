@@ -1,6 +1,6 @@
 # GCP-0073 User Story
 
-**Status**: BACKLOG
+**Status**: IMPLEMENTED
 
 **User Story**
 - Title: Migrate Golazo Copilot to MCP SDK 2.x
@@ -20,3 +20,16 @@
 - Non-functional requirements: Declare `mcp>=2,<3` using valid PEP 440 dependency constraints so MCP 3.x requires an explicit compatibility release; keep validation cross-platform and deterministic; avoid duplicate legacy and modular registration paths where MCP 2.x provides one canonical integration surface; do not require Azure credentials after the artifact is available to the test environment.
 - Telemetry / metrics expected: No external telemetry. CI records resolved package versions and startup success or failure.
 - Rollout / rollback notes: Release as an MCP compatibility update only after minimum/latest MCP 2.x, clean-install, and full-regression validation pass. MCP 3.x adoption requires explicit compatibility validation and a new release. Roll back by restoring the last supported MCP 1.x package version and server integration together; do not retain a mixed API/dependency state.
+
+## Closure
+
+Delivered MCP 2.x typed low-level handlers, preserved the Golazo tool contract, constrained package metadata to `mcp>=2,<3`, added compatibility and stdio tests, documented the supported range, and built version `6.0.0`.
+
+- **PASS:** MCP 2.x constructor registration, typed listing, and typed dispatch replace removed MCP 1.x decorators.
+- **PASS:** Existing tool names, schemas, result formatting, and workflow behavior pass the full regression suite.
+- **PASS:** The clean-installed 6.0.0 wheel completes stdio initialize/list/call/shutdown with MCP 2.1.1.
+- **PASS:** MCP 2.0.0 and latest available MCP 2.1.1 pass migration tests; failures report resolved Golazo/MCP versions and lifecycle stage.
+
+Future work items: GCP-0074 for POA finalization semantics and GCP-0075 for Builder/Documenter release-order guidance. A reusable CI dependency-matrix job remains a retrospective proposal and was not created as a work item.
+
+Final status: **IMPLEMENTED**.
