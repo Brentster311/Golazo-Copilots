@@ -8,33 +8,32 @@ Golazo is a structured development methodology that ensures high-quality softwar
 
 ## Features
 
-- **Persistent state tracking** – Workflow progress is saved to `state.json` files, surviving session restarts
 - **Automated role transitions** – Enforce the correct sequence by profile, with Project Owner Assistant always performing final closure
 - **Role-based output validation** – Each role defines required outputs (files, directories) that are automatically validated on transition
-- **Multi-session support** – Switch between work items while preserving context
+- **Independent workflow-state persistence** – Preserve each work item's workflow progress across sessions
 - **Workflow profiles** – Choose `complete`, `express`, or `spike` modes based on task complexity
 - **Deviation recording** – Audit trail when gates are bypassed with justification
-- **Role notes enforcement** – Blocks transitions when role decision notes are missing (bypass with consent)
+- **Role notes enforcement** – Blocks transitions when role decision notes are missing
 - **Version sync warning** – Alerts when the deployed workspace instructions don't match the running MCP server version
 - **Role progress display** – Shows completion progress (X/N roles) for each work item profile
 
 ### Feature Details
 
-#### Persistent State Tracking
-Each work item maintains its own `state.json` file in the `WorkItems/<id>/` directory. This file records the current role, phase, role history with timestamps, and any deviations. State survives VS Code restarts, allowing you to resume exactly where you left off.
-
 #### Automated Role Transitions
 The Golazo workflow enforces a structured progression through roles:
-1. **Project Owner** – Define the user story and acceptance criteria
-2. **Program Manager** – Break down work, create design document
-3. **Domain Expert** – Provide domain-specific guidance when needed
-4. **Quality Assurance** – Review design, define test cases
-5. **Architect** – Validate architectural alignment, review contracts
-6. **Developer** – Implement the solution with TDD
-7. **Refactor Expert** – Improve code quality without changing behavior
-8. **Documenter** – Review implementation documentation for accuracy
-9. **Builder** – Own release metadata, verify builds, commit, and push
-10. **Retrospective** – Review what worked and what didn't
+1. **Planner** – Perform an optional planning pass for the Complete profile
+2. **Project Owner Assistant** – Define the user story and acceptance criteria
+3. **Program Manager** – Break down work, create design document
+4. **Domain Expert** – Provide domain-specific guidance when needed
+5. **Quality Assurance** – Review design, define test cases
+6. **Architect** – Validate architectural alignment, review contracts
+7. **Developer** – Implement the solution with TDD
+8. **Refactor Expert** – Improve code quality without changing behavior
+9. **Documenter** – Review implementation documentation for accuracy
+10. **Builder** – Own release metadata, verify builds, commit, and push
+11. **Retrospective** – Review what worked and what didn't
+
+New work items initialize at **Project Owner Assistant**. In the Complete profile, transition backward to Planner when the optional planning pass is needed, then proceed to Project Owner Assistant.
 
 When work reaches the **Developer** role, the role instructions require creating a feature branch using:
 `git checkout -b <useralias>/<workitem-id>`
@@ -42,7 +41,7 @@ This branch format requirement is documented in the default Developer role file 
 
 For all profiles, retrospective transitions to Project Owner Assistant again for formal closure.
 
-Transitions are validated—you cannot skip roles or jump directly to Developer without completing earlier phases. Backward transitions to any prior role are always allowed.
+Transitions are validated—you cannot skip roles or jump directly to Developer without completing earlier phases. Backward transitions to a prior role in the active profile are allowed.
 
 #### Role-Based Output Validation
 Each role file (in `.github/agents/golazo-copilot/roles/`) defines a `## Required Outputs` section listing the files or directories that must exist before you can transition away from that role. The system automatically validates these on transition.
@@ -58,22 +57,24 @@ When you call `golazo_transition`, the system:
 1. Reads the current role's `## Required Outputs` section
 2. Checks that each listed file/directory exists in the workspace
 3. Blocks the transition if any output is missing, with a clear error message listing what's needed
-4. Allows bypass via `golazo_consent` + `force=True` when justified
+4. Allows output-gate bypass via `golazo_consent` + `force=True` when justified
 
 This replaces manual checklist marking with automated, file-based validation.
 
-#### Multi-Session Support
-Work on multiple features simultaneously. Each work item has independent state, allowing you to:
-- Switch between work items without losing progress
+#### Independent Workflow-State Persistence
+Each work item has independent persisted workflow state, allowing you to:
+- Address different work items without losing their recorded workflow progress
 - Check status of any work item at any time
 - Resume interrupted work days or weeks later
+
+This persistence does not isolate Git branches, working trees, indexes, or uncommitted changes. Use separate Git worktrees when developing multiple work items concurrently.
 
 #### Workflow Profiles
 Choose the right level of process for the task:
 
 | Profile | Roles | Use Case |
 |---------|-------|----------|
-| **Complete** | Full 10-role workflow + POA closure | Production features, complex changes |
+| **Complete** | Full 11-role workflow + POA closure | Production features, complex changes |
 | **Express** | Streamlined subset of roles + POA closure | Small bug fixes, minor enhancements |
 | **Spike** | Minimal roles + POA closure | Prototypes, research, proof-of-concept |
 
@@ -89,7 +90,7 @@ When you need to bypass a gate (e.g., force a transition when outputs are missin
 #### Role Notes Enforcement
 The Golazo workflow requires every role to produce a decision notes document. The system enforces this by:
 1. **Blocking on transition** – When you transition away from a role, `golazo_transition` checks if decision notes exist for that role. If missing, the transition **fails** with an error indicating the expected file path.
-2. **Force with consent** – If you need to bypass, use `golazo_consent(action='skip_role')` first, then `golazo_transition(..., force=True)`.
+2. **No public bypass** – Role-note bypass is not exposed through the public MCP interface; create the expected notes file before transitioning.
 3. **Status visibility** – `golazo_status` includes a `missing_notes` list showing which completed roles lack decision notes.
 4. **Expected file naming** – Notes should be at `WorkItems/<id>/RoleDecisionNotes/<id>-<role>.md`
 
@@ -99,7 +100,7 @@ This ensures an audit trail of decisions made at each workflow stage.
 When you call `golazo_status`, the system compares the running MCP server version against the version comment in your workspace's `.github/agents/Golazo-Copilot.md`. If they differ, a warning is displayed so you know to re-bootstrap or update the package.
 
 #### Role Progress Display
-`golazo_status` shows profile-aware progress (e.g., `4/10` in complete profile, `3/5` in express/spike), giving visibility into overall workflow progress.
+`golazo_status` shows profile-aware progress (e.g., `4/11` in complete profile, `3/5` in express/spike), giving visibility into overall workflow progress.
 
 #### TechBestPractices Reference
 When bootstrapping a workspace, a `.github/agents/golazo-copilot/roles/TechBestPractices.md` file is deployed alongside the role files. This shared reference document is referenced by the Architect, Developer, and Refactor Expert roles to ensure consistent technical standards.
@@ -121,7 +122,7 @@ You should see `Python 3.10.x` or later. If Python is not found, download and in
 
 ## Installation
 
-Install the Azure Artifacts credential provider first, then install `golazo-copilot` into your **global Python environment**:
+Install the Azure Artifacts credential provider first, then install `golazo-copilot` into the same Python environment referenced by your VS Code MCP configuration:
 
 ```bash
 # Install credential providers for Azure Artifacts authentication
@@ -137,7 +138,7 @@ pip install golazo-copilot --index-url https://msazure.pkgs.visualstudio.com/One
 
 In GitHub Copilot Chat, ask: **"GCP version?"**
 
-It will run `golazo_status` and display the running version (e.g., `v4.3.7`).
+It will run `golazo_status` and display the running version (e.g., `v6.0.4`).
 
 ## VS Code Configuration
 
@@ -184,11 +185,12 @@ You should see the Golazo Copilot tools listed:
 - `golazo_create_workitem` – Initialize a new work item
 - `golazo_status` – Check workflow status
 - `golazo_transition` – Move between roles
-- `golazo_transition_workitem` – Finalize a work item after completed POA closure and set the next work item
+- `golazo_transition_workitem` – Finalize a work item and record the next sequential identifier
 - `golazo_consent` – Record consent for bypassing workflow gates
 - `golazo_git_propose` – Record proposal-only git action intent for auditability
 - `golazo_bootstrap` – Bootstrap Golazo instructions in a workspace
 - `golazo_capabilities` – Query and validate the canonical capability registry
+- `golazo_role_context` – Assemble the current role's instructions and input artifacts
 
 ### Step 5: Bootstrap Your Workspace
 
@@ -287,12 +289,12 @@ Transition to a new role in the Golazo Copilot workflow.
 | Input | Type | Required | Description |
 |-------|------|----------|-------------|
 | `work_item_id` | string | **Yes** | Work item identifier |
-| `role` | string | **Yes** | Target role: `project-owner-assistant`, `program-manager`, `domain-expert`, `quality-assurance`, `architect`, `developer`, `refactor-expert`, `documenter`, `builder`, `retrospective` |
-| `force` | boolean | No | Force transition even if gates not met (default: `false`, requires prior consent) |
+| `role` | string | **Yes** | Target role: `planner`, `project-owner-assistant`, `program-manager`, `domain-expert`, `quality-assurance`, `architect`, `developer`, `refactor-expert`, `documenter`, `builder`, `retrospective` |
+| `force` | boolean | No | Force output-gate bypass (default: `false`, requires prior `skip_outputs` consent) |
 | `workspace_path` | string | **Yes** | Workspace root path containing the WorkItems folder |
 
 #### `golazo_transition_workitem`
-Finalize a work item after Retrospective has returned it to completed POA closure, then set the next sequential work item in workspace-level `global_state.json`. Finalization requires closure mode, completed Retrospective history, an `IMPLEMENTED` User Story, and the final POA and closure artifacts.
+Finalize a work item after Retrospective has returned it to completed POA closure, then record the next sequential work-item identifier in workspace-level `global_state.json`. This does not create the next work item. Finalization requires closure mode, completed Retrospective history, an `IMPLEMENTED` User Story, and the final POA and closure artifacts.
 
 | Input | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -340,8 +342,17 @@ Query the project capability registry for impact analysis. Reads canonical `Work
 | `files` | array of strings | No | File paths to check impact for (required for `action="impact"`) |
 | `workspace_path` | string | **Yes** | Workspace root path containing `WorkItems/capabilities.yaml` (legacy root `capabilities.yaml` is migration input) |
 
+#### `golazo_role_context`
+Assemble a self-contained context bundle for the current or requested role, including role instructions, workflow state, declared input artifacts, and previous role notes.
+
+| Input | Type | Required | Description |
+|-------|------|----------|-------------|
+| `work_item_id` | string | **Yes** | Work item identifier |
+| `role` | string | No | Role to bundle; defaults to the work item's current role |
+| `workspace_path` | string | **Yes** | Workspace root path containing the WorkItems folder |
+
 #### `golazo_git_propose`
-Record proposal-only git action intent in work-item state as append-only `git_actions` history.
+Record proposal-only git action intent in work-item state as append-only `git_actions` history. This tool does not execute Git commands.
 
 | Input | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -351,6 +362,13 @@ Record proposal-only git action intent in work-item state as append-only `git_ac
 | `message` | string | No | Required for `action="commit"` |
 | `branch` | string | No | Required for `action="push"` and `action="branch"` |
 | `workspace_path` | string | **Yes** | Workspace root path containing the WorkItems folder |
+
+### Operational Boundaries
+
+- Resume an existing work item by passing its `work_item_id` to `golazo_status`, `golazo_role_context`, or other workflow tools; there is no separate switch operation.
+- No MCP tool cancels or deletes a work item. Remove an accidental work-item directory manually only after confirming it contains no work that must be retained.
+- Golazo Copilot does not automatically create or switch branches, stash changes, create worktrees, merge branches, or open pull requests. Role instructions may direct the agent to run Git commands, while `golazo_git_propose` records intent only.
+- `golazo_transition_workitem` records completion and the next sequential identifier in `global_state.json`; call `golazo_create_workitem` separately to create that work item.
 
 ### Workflow Profiles
 
@@ -408,6 +426,12 @@ MIT
 ## Changelog (By Version)
 
 Documenter reviews user-facing documentation; Builder owns versioning, changelog, build, commit, and push.
+
+### v6.0.4
+
+- Corrected Complete-profile role counts, Planner guidance, role-note bypass semantics, and configured-interpreter installation instructions.
+- Documented the complete MCP tool surface, including `golazo_role_context`, and clarified finalization, Git, resume, and work-item deletion boundaries.
+- Added focused README contract tests tied to registered tools and workflow profile definitions.
 
 ### v6.0.3
 
