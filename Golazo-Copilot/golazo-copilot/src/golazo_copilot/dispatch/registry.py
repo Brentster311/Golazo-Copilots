@@ -261,13 +261,13 @@ def get_tool_definitions() -> list[Tool]:
         ),
         Tool(
             name="golazo_transition_workitem",
-            description="Mark a retrospective-complete work item as completed and set the next sequential work item in global project state.",
+            description="Mark a work item with completed POA closure as completed and set the next sequential work item in global project state.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "work_item_id": {
                         "type": "string",
-                        "description": "Completed work item identifier (must currently be at role 'retrospective')"
+                        "description": "Completed work item identifier (must have completed POA closure)"
                     },
                     "workspace_path": {
                         "type": "string",
