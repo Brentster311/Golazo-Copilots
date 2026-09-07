@@ -54,7 +54,7 @@ class TestGCP0061ContractParity:
             "golazo_transition_workitem": ["work_item_id", "workspace_path"],
         }
         for tool_name, required in expected_required.items():
-            assert tool_map[tool_name].inputSchema.get("required") == required
+            assert tool_map[tool_name].input_schema.get("required") == required
 
     @pytest.mark.asyncio
     async def test_tool_not_found_message_intent_is_stable(self):

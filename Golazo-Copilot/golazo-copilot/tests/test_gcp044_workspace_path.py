@@ -35,7 +35,7 @@ class TestSchemaRequiresWorkspacePath:
             f"Missing required tools. Expected at least {sorted(expected_tool_names)}, got {sorted(actual_tool_names)}"
         )
         for tool in tools:
-            required = tool.inputSchema.get("required", [])
+            required = tool.input_schema.get("required", [])
             assert "workspace_path" in required, (
                 f"Tool '{tool.name}' does not include workspace_path in required params"
             )

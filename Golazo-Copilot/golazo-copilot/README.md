@@ -107,6 +107,7 @@ When bootstrapping a workspace, a `.github/agents/golazo-copilot/roles/TechBestP
 ## Prerequisites
 
 - **Python 3.10 or later** installed and available in your system PATH
+- **MCP Python SDK 2.x** (`mcp>=2,<3`); MCP 3.x requires a separately validated Golazo release
 - **Visual Studio Code** with GitHub Copilot extension
 - Access to the Azure Artifacts feed (for installation)
 
@@ -403,6 +404,12 @@ Then reload VS Code and re-bootstrap your workspace to pick up the new version:
 MIT
 
 ## Changelog (By Version)
+
+### v6.0.0
+
+- Migrated low-level MCP tool registration and dispatch to supported MCP Python SDK 2.x typed handlers.
+- Constrained the runtime dependency to `mcp>=2,<3` so future MCP major versions require explicit validation.
+- Added minimum/latest MCP 2.x coverage and clean installed-wheel stdio startup validation while preserving existing Golazo tool contracts.
 
 ### v5.1.0
 
