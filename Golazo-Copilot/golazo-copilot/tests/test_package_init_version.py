@@ -12,8 +12,9 @@ def test_init_uses_installed_package_version(monkeypatch):
 
 
 def test_init_falls_back_when_package_missing(monkeypatch):
-    import golazo_copilot
     from importlib.metadata import PackageNotFoundError
+
+    import golazo_copilot
 
     def raise_missing(_):
         raise PackageNotFoundError

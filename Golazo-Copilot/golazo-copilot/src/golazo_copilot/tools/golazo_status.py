@@ -100,8 +100,10 @@ def _get_registry_hint(workspace_root: Path) -> str | None:
     - Missing 'capabilities' key → warning string
     - Valid → count string with usage hint
     """
-    yaml_path = workspace_root / "capabilities.yaml"
-    if not yaml_path.exists():
+    from .golazo_capabilities import find_registry_path
+
+    yaml_path = find_registry_path(workspace_root)
+    if yaml_path is None:
         return None
     try:
         content = yaml_path.read_text(encoding="utf-8")

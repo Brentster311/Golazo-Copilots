@@ -158,9 +158,9 @@ class TestGcpCreateWorkitemCapabilitiesRegistry:
 
     @pytest.mark.asyncio
     async def test_creates_capabilities_yaml_on_first_create(self, tmp_path):
-        """Should create capabilities.yaml in workspace root when missing."""
+        """Should create canonical capabilities.yaml when missing."""
         work_items_dir = tmp_path / "WorkItems"
-        capabilities_path = tmp_path / "capabilities.yaml"
+        capabilities_path = work_items_dir / "capabilities.yaml"
 
         assert not capabilities_path.exists()
 
@@ -175,11 +175,12 @@ class TestGcpCreateWorkitemCapabilitiesRegistry:
 
     @pytest.mark.asyncio
     async def test_does_not_overwrite_existing_capabilities_yaml(self, tmp_path):
-        """Should preserve existing capabilities.yaml content."""
+        """Should migrate and preserve existing legacy registry content."""
         work_items_dir = tmp_path / "WorkItems"
-        capabilities_path = tmp_path / "capabilities.yaml"
+        legacy_path = tmp_path / "capabilities.yaml"
+        capabilities_path = work_items_dir / "capabilities.yaml"
         original_content = "capabilities:\n  - name: existing\n"
-        capabilities_path.write_text(original_content, encoding="utf-8")
+        legacy_path.write_text(original_content, encoding="utf-8")
 
         result = await golazo_create_workitem(
             work_item_id="CPY-002",
@@ -188,6 +189,7 @@ class TestGcpCreateWorkitemCapabilitiesRegistry:
 
         assert result["success"] is True
         assert capabilities_path.read_text(encoding="utf-8") == original_content
+        assert not legacy_path.exists()
 
 
 class TestGcpCreateWorkitemErrorHandling:

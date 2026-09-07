@@ -17,6 +17,11 @@ from .ado_sync_skill import (
 from .ado_sync_skill import (
     install_ado_sync_skill as _install_ado_sync_skill,
 )
+from .golazo_capabilities import (
+    CANONICAL_REGISTRY_REL_PATH,
+    ensure_registry_path,
+    find_registry_path,
+)
 
 # Workspace markers - at least one must exist
 WORKSPACE_MARKERS = ["pyproject.toml", "package.json", "Cargo.toml", ".hg", "WorkItems"]
@@ -101,6 +106,7 @@ async def golazo_bootstrap(
     Creates:
     - .github/agents/Golazo-Copilot.md
     - WorkItems/.gitkeep
+    - WorkItems/capabilities.yaml
     - .github/agents/golazo-copilot/roles/*.md (default role files)
     
     Args:
@@ -216,21 +222,19 @@ async def golazo_bootstrap(
         gitkeep_path.write_text("", encoding="utf-8")
         files_created.append("WorkItems/.gitkeep")
 
-    # Create capabilities.yaml from template, but never overwrite existing file.
-    # This protects project-specific capability registry data even in force mode.
-    capabilities_path = workspace_path / "capabilities.yaml"
-    if capabilities_path.exists():
-        files_skipped.append("capabilities.yaml")
-    else:
-        try:
-            files_pkg = resources.files("golazo_copilot")
-            template = files_pkg.joinpath("capabilities-template.yaml")
-            capabilities_path.write_text(
-                template.read_text(encoding="utf-8"), encoding="utf-8"
-            )
-            files_created.append("capabilities.yaml")
-        except (FileNotFoundError, TypeError):
-            pass  # Graceful degradation if resource missing
+    # Create or migrate the canonical registry, but never overwrite project data.
+    try:
+        registry_existed = find_registry_path(workspace_path) is not None
+        files_pkg = resources.files("golazo_copilot")
+        template = files_pkg.joinpath("capabilities-template.yaml")
+        ensure_registry_path(workspace_path, template.read_text(encoding="utf-8"))
+        registry_name = CANONICAL_REGISTRY_REL_PATH.as_posix()
+        if registry_existed:
+            files_skipped.append(registry_name)
+        else:
+            files_created.append(registry_name)
+    except (FileNotFoundError, TypeError):
+        pass  # Graceful degradation if resource missing
     
     # Optionally copy role files
     if include_roles:

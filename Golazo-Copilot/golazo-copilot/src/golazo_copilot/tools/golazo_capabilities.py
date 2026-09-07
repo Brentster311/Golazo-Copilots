@@ -1,18 +1,17 @@
 """golazo_capabilities tool - Query project capability registry for impact analysis."""
 
+import shutil
 from collections import defaultdict, deque
 from pathlib import Path
-import shutil
 
 import yaml
-
 
 CANONICAL_REGISTRY_REL_PATH = Path("WorkItems") / "capabilities.yaml"
 LEGACY_REGISTRY_REL_PATH = Path("capabilities.yaml")
 
 
-def _resolve_registry_path(workspace_path: Path) -> Path:
-    """Resolve canonical registry location, migrating legacy file when needed."""
+def find_registry_path(workspace_path: Path) -> Path | None:
+    """Find the active registry without modifying the workspace."""
     canonical_path = workspace_path / CANONICAL_REGISTRY_REL_PATH
     legacy_path = workspace_path / LEGACY_REGISTRY_REL_PATH
 
@@ -20,20 +19,45 @@ def _resolve_registry_path(workspace_path: Path) -> Path:
         return canonical_path
 
     if legacy_path.exists():
-        canonical_path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            shutil.move(str(legacy_path), str(canonical_path))
-        except OSError as e:
-            raise ValueError(
-                f"Failed to move legacy capabilities registry from {legacy_path} "
-                f"to {canonical_path}: {e}"
-            ) from e
-        return canonical_path
+        return legacy_path
 
-    raise ValueError(
-        "Capability registry not found. Expected canonical path: "
-        f"{CANONICAL_REGISTRY_REL_PATH.as_posix()}"
-    )
+    return None
+
+
+def resolve_registry_path(workspace_path: Path, *, migrate_legacy: bool = True) -> Path:
+    """Resolve the registry, optionally moving legacy data to the canonical path."""
+    registry_path = find_registry_path(workspace_path)
+    if registry_path is None:
+        raise ValueError(
+            "Capability registry not found. Expected canonical path: "
+            f"{CANONICAL_REGISTRY_REL_PATH.as_posix()}"
+        )
+
+    legacy_path = workspace_path / LEGACY_REGISTRY_REL_PATH
+    if registry_path != legacy_path or not migrate_legacy:
+        return registry_path
+
+    canonical_path = workspace_path / CANONICAL_REGISTRY_REL_PATH
+    canonical_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        shutil.move(str(legacy_path), str(canonical_path))
+    except OSError as e:
+        raise ValueError(
+            f"Failed to move legacy capabilities registry from {legacy_path} "
+            f"to {canonical_path}: {e}"
+        ) from e
+    return canonical_path
+
+
+def ensure_registry_path(workspace_path: Path, default_content: str) -> Path:
+    """Return the canonical registry, migrating or creating it when necessary."""
+    if find_registry_path(workspace_path) is not None:
+        return resolve_registry_path(workspace_path)
+
+    canonical_path = workspace_path / CANONICAL_REGISTRY_REL_PATH
+    canonical_path.parent.mkdir(parents=True, exist_ok=True)
+    canonical_path.write_text(default_content, encoding="utf-8")
+    return canonical_path
 
 
 def _load_registry(workspace_path: Path) -> dict:
@@ -41,7 +65,7 @@ def _load_registry(workspace_path: Path) -> dict:
 
     Raises ValueError when the file is missing or malformed.
     """
-    yaml_path = _resolve_registry_path(workspace_path)
+    yaml_path = resolve_registry_path(workspace_path)
 
     content = yaml_path.read_text(encoding="utf-8")
     try:

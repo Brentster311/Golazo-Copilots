@@ -546,12 +546,12 @@ class TestRegistryHint:
 
     @pytest.mark.asyncio
     async def test_status_includes_registry_hint_key(self):
-        """TC6: golazo_status includes registry_hint key when capabilities.yaml exists."""
+        """TC6: golazo_status reads the canonical registry."""
         wi_id = "RH-001"
         await golazo_create_workitem(work_item_id=wi_id, work_items_dir=TEST_WORKITEMS_DIR)
-        # Create capabilities.yaml in workspace root (parent of WorkItems)
         workspace_root = TEST_WORKITEMS_DIR.parent
-        cap_path = workspace_root / "capabilities.yaml"
+        cap_path = workspace_root / "WorkItems" / "capabilities.yaml"
+        original_content = cap_path.read_text(encoding="utf-8")
         cap_path.write_text("capabilities:\n  - name: test\n", encoding="utf-8")
         try:
             result = await golazo_status(work_item_id=wi_id, work_items_dir=TEST_WORKITEMS_DIR)
@@ -559,22 +559,12 @@ class TestRegistryHint:
             assert result["registry_hint"] is not None
             assert "1" in result["registry_hint"]
         finally:
-            cap_path.unlink(missing_ok=True)
+            cap_path.write_text(original_content, encoding="utf-8")
 
     @pytest.mark.asyncio
-    async def test_status_registry_hint_none_when_absent(self):
-        """TC7: golazo_status registry_hint is None when no capabilities.yaml."""
+    async def test_status_registry_hint_created_with_work_item(self):
+        """TC7: Work-item creation guarantees a registry hint is available."""
         wi_id = "RH-002"
         await golazo_create_workitem(work_item_id=wi_id, work_items_dir=TEST_WORKITEMS_DIR)
-        workspace_root = TEST_WORKITEMS_DIR.parent
-        cap_path = workspace_root / "capabilities.yaml"
-        original_content = None
-        if cap_path.exists():
-            original_content = cap_path.read_text(encoding="utf-8")
-            cap_path.unlink(missing_ok=True)
-        try:
-            result = await golazo_status(work_item_id=wi_id, work_items_dir=TEST_WORKITEMS_DIR)
-            assert result.get("registry_hint") is None
-        finally:
-            if original_content is not None:
-                cap_path.write_text(original_content, encoding="utf-8")
+        result = await golazo_status(work_item_id=wi_id, work_items_dir=TEST_WORKITEMS_DIR)
+        assert result.get("registry_hint") is not None
