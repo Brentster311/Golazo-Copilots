@@ -1,0 +1,103 @@
+{
+  "schema_version": "1.0",
+  "work_item_id": "GCP-0072",
+  "profile": "complete",
+  "current_phase": "closure",
+  "current_role": "project-owner-assistant",
+  "created_at": "2026-09-07T20:30:12.299821Z",
+  "updated_at": "2026-09-07T20:44:14.486915Z",
+  "role_history": [
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-09-07T20:30:12.299821Z",
+      "exited_at": "2026-09-07T20:31:21.611251Z"
+    },
+    {
+      "role": "program-manager",
+      "entered_at": "2026-09-07T20:31:21.611251Z",
+      "exited_at": "2026-09-07T20:31:43.493427Z"
+    },
+    {
+      "role": "domain-expert",
+      "entered_at": "2026-09-07T20:31:43.493427Z",
+      "exited_at": "2026-09-07T20:31:56.478713Z"
+    },
+    {
+      "role": "quality-assurance",
+      "entered_at": "2026-09-07T20:31:56.478713Z",
+      "exited_at": "2026-09-07T20:32:22.990555Z"
+    },
+    {
+      "role": "architect",
+      "entered_at": "2026-09-07T20:32:22.990555Z",
+      "exited_at": "2026-09-07T20:33:03.114083Z"
+    },
+    {
+      "role": "developer",
+      "entered_at": "2026-09-07T20:33:03.114083Z",
+      "exited_at": "2026-09-07T20:39:03.184695Z"
+    },
+    {
+      "role": "refactor-expert",
+      "entered_at": "2026-09-07T20:39:03.184695Z",
+      "exited_at": "2026-09-07T20:40:55.065045Z"
+    },
+    {
+      "role": "documenter",
+      "entered_at": "2026-09-07T20:40:55.065045Z",
+      "exited_at": "2026-09-07T20:41:32.186068Z"
+    },
+    {
+      "role": "builder",
+      "entered_at": "2026-09-07T20:41:32.186068Z",
+      "exited_at": "2026-09-07T20:42:59.514455Z"
+    },
+    {
+      "role": "retrospective",
+      "entered_at": "2026-09-07T20:42:59.514455Z",
+      "exited_at": "2026-09-07T20:43:13.739409Z"
+    },
+    {
+      "role": "project-owner-assistant",
+      "entered_at": "2026-09-07T20:43:13.739409Z",
+      "exited_at": null
+    }
+  ],
+  "deviations": [],
+  "git_actions": [
+    {
+      "action": "add",
+      "status": "proposed",
+      "timestamp": "2026-09-07T20:44:10.225Z",
+      "files": [
+        "WorkItems/GCP-0072",
+        "WorkItems/capabilities.yaml",
+        "golazo-copilot/README.md",
+        "golazo-copilot/pyproject.toml",
+        "golazo-copilot/src/golazo_copilot/bootstrap-instructions.md",
+        "golazo-copilot/src/golazo_copilot/dispatch/paths.py",
+        "golazo-copilot/src/golazo_copilot/dispatch/registry.py",
+        "golazo-copilot/src/golazo_copilot/formatters/results.py",
+        "golazo-copilot/src/golazo_copilot/handlers/tools.py",
+        "golazo-copilot/src/golazo_copilot/server.py",
+        "golazo-copilot/src/golazo_copilot/skills",
+        "golazo-copilot/src/golazo_copilot/tools/ado_sync_skill.py",
+        "golazo-copilot/src/golazo_copilot/tools/golazo_bootstrap.py",
+        "golazo-copilot/tests/test_gcp0072_skill_bootstrap.py"
+      ]
+    },
+    {
+      "action": "commit",
+      "status": "proposed",
+      "timestamp": "2026-09-07T20:44:14.469Z",
+      "message": "GCP-0072: Install Golazo ADO Sync skill during bootstrap"
+    },
+    {
+      "action": "push",
+      "status": "proposed",
+      "timestamp": "2026-09-07T20:44:14.486Z",
+      "branch": "brentj/GCP-0072"
+    }
+  ],
+  "closure_pending": true
+}

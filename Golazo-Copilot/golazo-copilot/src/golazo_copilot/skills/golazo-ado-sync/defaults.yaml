@@ -1,0 +1,11 @@
+organization: https://dev.azure.com/msazure
+project: One
+team: EngOps Supportability DS
+board: Backlog items
+work_item_type: Product Backlog Item
+area: One\Azure CXP\Product and Platform\Data\Data Science\SupportabilityDS
+iteration: One\FY27
+assignee: brentj@microsoft.com
+planned_swimlane_field: WEF_3685ECC254584507922BD78681CF0942_Kanban.Lane
+board_column_field: WEF_3685ECC254584507922BD78681CF0942_Kanban.Column
+board_done_field: WEF_3685ECC254584507922BD78681CF0942_Kanban.Column.Done

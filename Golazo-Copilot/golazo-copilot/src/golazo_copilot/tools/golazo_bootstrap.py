@@ -2,8 +2,21 @@
 
 from importlib import resources
 from pathlib import Path
+from typing import Any
+
+import yaml
 
 from golazo_copilot import __version__
+
+from .ado_sync_skill import (
+    ADO_SYNC_SKILL_NAME,
+)
+from .ado_sync_skill import (
+    effective_ado_sync_config as _effective_ado_sync_config,
+)
+from .ado_sync_skill import (
+    install_ado_sync_skill as _install_ado_sync_skill,
+)
 
 # Workspace markers - at least one must exist
 WORKSPACE_MARKERS = ["pyproject.toml", "package.json", "Cargo.toml", ".hg", "WorkItems"]
@@ -78,6 +91,9 @@ async def golazo_bootstrap(
     include_roles: bool = True,
     mode: str = "full",
     scope: str | None = "Workspace",
+    install_ado_sync_skill: bool = False,
+    ado_sync_config_confirmed: bool = False,
+    ado_sync_config: dict[str, Any] | None = None,
 ) -> dict:
     """
     Bootstrap Golazo Copilot in a workspace.
@@ -128,6 +144,33 @@ async def golazo_bootstrap(
             "files_created": [],
             "files_skipped": [],
         }
+
+    effective_ado_sync_config: dict[str, str] | None = None
+    configuration_source: str | None = None
+    if install_ado_sync_skill:
+        if mode != "full":
+            return {
+                "success": False,
+                "error": "golazo-ado-sync installation is not supported in orchestrator-only mode",
+                "files_created": [],
+                "files_skipped": [],
+            }
+        if not ado_sync_config_confirmed:
+            return {
+                "success": False,
+                "error": "Confirm the golazo-ado-sync configuration before installation",
+                "files_created": [],
+                "files_skipped": [],
+            }
+        try:
+            effective_ado_sync_config, configuration_source = _effective_ado_sync_config(ado_sync_config)
+        except ValueError as exc:
+            return {
+                "success": False,
+                "error": str(exc),
+                "files_created": [],
+                "files_skipped": [],
+            }
     
     # Validate workspace
     if not _is_workspace(workspace_path):
@@ -210,6 +253,39 @@ async def golazo_bootstrap(
         except Exception:
             # If package resources fail, still succeed but note it
             pass
+
+    installed_skills = []
+    if effective_ado_sync_config is not None:
+        from golazo_copilot.dispatch.paths import resolve_skill_bootstrap_path
+
+        skill_path = resolve_skill_bootstrap_path(
+            workspace_path,
+            normalized_scope,
+            ADO_SYNC_SKILL_NAME,
+        )
+        try:
+            skill_status = _install_ado_sync_skill(
+                skill_path,
+                effective_ado_sync_config,
+                force,
+            )
+        except (OSError, TypeError, ValueError, yaml.YAMLError) as exc:
+            return {
+                "success": False,
+                "error": f"Failed to install golazo-ado-sync: {exc}",
+                "files_created": files_created,
+                "files_skipped": files_skipped,
+                "skills": [],
+            }
+        installed_skills.append(
+            {
+                "name": ADO_SYNC_SKILL_NAME,
+                "scope": normalized_scope,
+                "target_path": str(skill_path),
+                "status": skill_status,
+                "configuration_source": configuration_source,
+            }
+        )
     
     return {
         "success": True,
@@ -217,6 +293,7 @@ async def golazo_bootstrap(
         "target_path": str(instructions_path),
         "files_created": files_created,
         "files_skipped": files_skipped,
+        "skills": installed_skills,
         "message": (
             f"Bootstrapped Golazo Copilot in {workspace_path} "
             f"(mode: full, scope: {normalized_scope})"

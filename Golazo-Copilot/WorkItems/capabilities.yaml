@@ -19,12 +19,23 @@
 
 capabilities:
   # ── Example capability (replace with your own) ──────────────────────
-  - name: example-capability
-    description: "A placeholder capability — replace with a real one"
+  - name: bootstrap-skill-installation
+    description: "Installs packaged Golazo skills with confirmed defaults at workspace or user scope during full bootstrap"
     key_files:
-      - src/example.py
+      - golazo-copilot/src/golazo_copilot/tools/golazo_bootstrap.py
+      - golazo-copilot/src/golazo_copilot/tools/ado_sync_skill.py
+      - golazo-copilot/src/golazo_copilot/dispatch/paths.py
+      - golazo-copilot/src/golazo_copilot/dispatch/registry.py
+      - golazo-copilot/src/golazo_copilot/handlers/tools.py
+      - golazo-copilot/src/golazo_copilot/formatters/results.py
+      - golazo-copilot/src/golazo_copilot/skills/golazo-ado-sync/SKILL.md
+      - golazo-copilot/src/golazo_copilot/skills/golazo-ado-sync/defaults.yaml
+      - golazo-copilot/tests/test_gcp0072_skill_bootstrap.py
     contracts:
-      - "ExampleClass.run() -> dict"
+      - "golazo_bootstrap(install_ado_sync_skill, ado_sync_config_confirmed, ado_sync_config) -> dict"
+      - "Workspace skill destination: .github/skills/golazo-ado-sync/"
+      - "User skill destination: ~/.copilot/skills/golazo-ado-sync/"
+      - "Bootstrap result skills[] reports name, scope, target_path, status, and configuration_source"
     depends_on: []
 
   # ── Add more capabilities below ─────────────────────────────────────

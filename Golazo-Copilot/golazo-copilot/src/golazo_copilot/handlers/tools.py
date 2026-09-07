@@ -84,6 +84,9 @@ async def handle_registered_tool(name: str, arguments: dict, startup_tool_warnin
             mode=arguments.get("mode", "full"),
             force=arguments.get("force", False),
             include_roles=arguments.get("include_roles", True),
+            install_ado_sync_skill=arguments.get("install_ado_sync_skill", False),
+            ado_sync_config_confirmed=arguments.get("ado_sync_config_confirmed", False),
+            ado_sync_config=arguments.get("ado_sync_config"),
         )
         return [TextContent(type="text", text=format_bootstrap_result(result))]
 
